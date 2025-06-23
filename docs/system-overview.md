@@ -79,7 +79,7 @@ It is designed to be resilient, portable, and able to rebuild itself from logs a
 
 1. **Restore backup**:  
    ```bash
-   python src/restore.py --zip backup.zip --key keyfile.key
+   python -m silhouette_core.restore --zip backup.zip --key keyfile.key
    ```
 
 2. **Or manually rebuild:**
@@ -89,7 +89,7 @@ It is designed to be resilient, portable, and able to rebuild itself from logs a
    - Reinstall requirements
    - Run CLI:
      ```bash
-     python src/cli/main.py
+     python cli/main.py
      ```
 
 ---
@@ -102,8 +102,8 @@ It is designed to be resilient, portable, and able to rebuild itself from logs a
 | Modules  | `modules/*.py/json` |
 | Persona  | `docs/alignment_kernel/persona.dsl` |
 | Alignment DSL | `values.dsl` |
-| Core Logic | All logic files are in `src/` and reloadable |
-| Codex Dev State | `auto_dev.yaml`, `codex_controller.py`, `PROJECT_MANIFEST.json` |
+| Core Logic | All logic files are in `silhouette_core/` and reloadable |
+| Codex Dev State | `auto_dev.yaml`, `silhouette_core/codex_controller.py`, `PROJECT_MANIFEST.json` |
 
 ---
 

@@ -57,6 +57,7 @@ def main():
 
     zip_with_encryption(out_path, DEFAULT_FILES, key)
     print(f"[✓] Backup created: {out_path}")
+    print("Backup complete")
 
 if __name__ == "__main__":
     main()

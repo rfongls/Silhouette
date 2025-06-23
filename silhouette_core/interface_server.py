@@ -1,9 +1,9 @@
-from fastapi import FastAPI, Request
+from fastapi import FastAPI
 from pydantic import BaseModel
-from src.intent_engine import IntentEngine
-from src.memory_core import append_to_memory, query_memory
-from src.tone_parser import detect_tone
-from src.embedding_engine import query_knowledge
+from silhouette_core.intent_engine import IntentEngine
+from silhouette_core.memory_core import append_to_memory, query_memory
+from silhouette_core.tone_parser import detect_tone
+from silhouette_core.embedding_engine import query_knowledge
 
 app = FastAPI()
 engine = IntentEngine()

@@ -20,7 +20,7 @@ Silhouette Core is a foundational package for running lightweight, alignment-pre
 ## 📦 Structure
 
 ```
-/src                - Source code for CLI and runtime
+/silhouette_core    - Core runtime modules
 /docs               - Documentation and DSL alignment files
 /models             - Local or referenced model binaries
 /modules            - Drop-in capability modules

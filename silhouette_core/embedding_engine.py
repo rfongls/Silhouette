@@ -1,8 +1,12 @@
 import json
 import os
 from difflib import SequenceMatcher
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.metrics.pairwise import cosine_similarity
+try:
+    from sklearn.feature_extraction.text import TfidfVectorizer
+    from sklearn.metrics.pairwise import cosine_similarity
+except ModuleNotFoundError:  # Fallback if sklearn not installed
+    TfidfVectorizer = None
+    cosine_similarity = None
 
 def load_memory_texts(memory_path):
     with open(memory_path, 'r') as f:
@@ -11,11 +15,15 @@ def load_memory_texts(memory_path):
     return entries, texts
 
 def query_similarity(prompt, texts, top_n=3):
-    vectorizer = TfidfVectorizer().fit(texts + [prompt])
-    vectors = vectorizer.transform(texts + [prompt])
-    similarities = cosine_similarity(vectors[-1], vectors[:-1]).flatten()
-    top_indices = similarities.argsort()[-top_n:][::-1]
-    return top_indices, similarities
+    if TfidfVectorizer and cosine_similarity:
+        vectorizer = TfidfVectorizer().fit(texts + [prompt])
+        vectors = vectorizer.transform(texts + [prompt])
+        sims = cosine_similarity(vectors[-1], vectors[:-1]).flatten()
+    else:
+        # crude fallback using SequenceMatcher ratio
+        sims = [SequenceMatcher(None, prompt, t).ratio() for t in texts]
+    top_indices = sorted(range(len(texts)), key=lambda i: sims[i], reverse=True)[:top_n]
+    return top_indices, sims
 
 def query_knowledge(memory_path="logs/memory.jsonl", prompt="", top_n=3):
     if not os.path.exists(memory_path):
