@@ -89,7 +89,18 @@ def launch_repl(alignment, modules, module_funcs):
                 log.write(f"You: {user_input}\nSilhouette: system state exported.\n")
                 continue
 
-            if user_input.strip() == ":restore":
+            if user_input.startswith(":search"):
+                prompt = user_input[len(":search"):].strip()
+                if not prompt:
+                    print("Please provide a search query.")
+                    continue
+                from src.embedding_engine import query_knowledge
+                results = query_knowledge(prompt=prompt)
+                for r in results:
+                    print(f"[{r['score']}] {r['content']}")
+                log.write(f"You: {user_input}\nSilhouette: search returned {len(results)} results.\n")
+
+            elif user_input.strip() == ":restore":
                 print("🗃 Restoring system state...")
                 zip_path = input("Enter path to backup ZIP: ").strip()
                 key_path = input("Enter path to key file: ").strip()
