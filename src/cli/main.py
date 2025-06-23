@@ -89,7 +89,25 @@ def launch_repl(alignment, modules, module_funcs):
                 log.write(f"You: {user_input}\nSilhouette: system state exported.\n")
                 continue
 
-            if user_input.startswith(":search"):
+            if user_input.startswith(":summarize"):
+                from src.graph_engine import build_graph, summarize_thread
+                memory_path = "logs/memory.jsonl"
+                graph = build_graph(memory_path)
+                last_id = list(graph)[-1]
+                summary = summarize_thread(last_id, graph)
+                print(f"🧠 Summary: {summary}")
+                log.write(f"You: {user_input}\nSilhouette: summarized thread.\n")
+
+            elif user_input.startswith(":related"):
+                from src.embedding_engine import query_knowledge
+                prompt = user_input[len(":related"):].strip()
+                results = query_knowledge(prompt=prompt)
+                print("🔍 Related:")
+                for r in results:
+                    print(f"[{r['score']}] {r['content']}")
+                log.write(f"You: {user_input}\nSilhouette: related entries returned.\n")
+
+            elif user_input.startswith(":search"):
                 prompt = user_input[len(":search"):].strip()
                 if not prompt:
                     print("Please provide a search query.")

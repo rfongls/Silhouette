@@ -17,23 +17,39 @@ Silhouette Core is built in progressive, resilient phases to support modular AI 
 - FastAPI server with endpoints:
   - `/intent`, `/tone`, `/memory` (POST), `/memory?q=` (GET)
 
-## ⏳ Phase 3 – Interoperable Context Engine
+## ✅ Phase 3 – Contextual Graph Intelligence
 - Link memory entries to form a conversation graph
-- Memory embeddings (or lightweight approximation)
-- Session summarization & lookup
+- Enable graph traversal and summarization
+- Implement Codex-controlled development flow
+- Establish knowledge ingestion and semantic memory indexing
 
-## ⏳ Phase 4 – Persona, Alignment, and Ethical Guardrails
+## ✅ Phase 4 – Persona, Search, and CLI Evolution
 - DSL-defined behavior/personality profiles
-- Tone adjustment modules (e.g. sarcastic, helpful)
-- Alignment boundaries in configuration
+- Tone and deny rule enforcement in responses
+- Semantic memory search (TF-IDF + cosine similarity)
+- CLI commands `:search`, `:related`, `:summarize`
+- RESTful `/search` endpoint
+- Response formatting and alignment enforcement
 
 ## ⏳ Phase 5 – Offline-First + Recovery
-- Fallback to logs and static config when memory/core fails
-- Stateless mode w/ auto-generated recovery prompts
-- Tools to regenerate modules/docs from prior usage
+- Run without external dependencies
+- Stateless mode with config/log/memory regeneration
+- Self-check and integrity verification
+- Snapshot memory and logs for backup
 
 ## ⏳ Phase 6 – Scaling from Edge to Core
-- Load throttling and modular resource prioritization
-- Profiles for low/mid/high tier hardware:
-  - Raspberry Pi, Docker container, high-memory VM
-- Distributed processing support
+- Profiles for edge, mid-tier, and high-capacity deployments
+- Throttle and prioritize modules based on system load
+- Enable parallel or distributed module execution
+
+## ⏳ Phase 7 – Multi-Agent Interface & Messaging
+- Run multiple Silhouette agents with unique memory
+- Memory sharing and persona diffing
+- Socket- or API-based inter-agent messaging
+- Commands to spawn/fork/merge agents
+
+## ⏳ Phase 8 – Self-Reflective Monitoring
+- Detect drift in tone, intent, or behavior
+- Summarize changes since last session
+- Audit persona alignment
+- Introduce `:selfcheck` command and audit engine
