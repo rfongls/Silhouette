@@ -1,31 +1,44 @@
-
-name: Silhouette Core CI
+name: CI
 
 on:
   push:
-    branches: [ main ]
+    branches: [main]
   pull_request:
-    branches: [ main ]
 
 jobs:
-  lint:
-    name: Python Lint Check
+  build-and-test:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout repository
+    - name: Checkout code
       uses: actions/checkout@v3
 
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
-        python-version: '3.11'
+        python-version: '3.x'
 
-    - name: Install dependencies
+    - name: Install dev deps
       run: |
         python -m pip install --upgrade pip
-        pip install ruff
+        pip install -r requirements-dev.txt
 
-    - name: Run ruff linter
+    - name: Lint
       run: |
-        ruff src/ docs/ --output-format=github || true
+        ruff .
+
+    - name: Run unit tests
+      run: |
+        pytest --maxfail=1 --disable-warnings -q
+
+    - name: Smoke-test CLI
+      run: |
+        python -m cli.main --no-repl
+        printf ":replay\n:exit\n" | python -m cli.main | grep -q "Replayed"
+        printf ":selfcheck\n:exit\n" | python -m cli.main | grep -q "Missing required files"
+        printf ":backup\n:exit\n" | python -m cli.main | grep -q "Backup complete"
+
+    - name: Doc-link check
+      run: |
+        pip install markdown-link-check
+        markdown-link-check "docs/**/*.md"
