@@ -2,7 +2,7 @@ phase: 3
 next_task: build_conversation_graph
 depends_on: memory_core
 generate:
-  - file: src/graph_engine.py
+  - file: silhouette_core/graph_engine.py
     type: module
     description: "Link memory nodes by intent, time, and tone"
   - file: tests/test_graph.py

@@ -5,7 +5,7 @@ Thank you for considering a contribution to **Silhouette Core**, the next-genera
 
 ## 🛠️ Project Structure
 ```
-src/                # Runtime logic and CLI tools
+silhouette_core/    # Runtime logic modules
 docs/               # Alignment DSL, model info, setup scripts
 models/             # Local model binaries (.gguf, .onnx)
 modules/            # Optional modular extensions
@@ -34,13 +34,13 @@ We use labels to track the type of contribution:
 ## 🧭 Guidelines
 - Keep PRs focused: One feature or fix per PR
 - Maintain formatting and style consistency
-- For philosophical or roadmap changes, reference `PHILOSOPHY.md` or `TODO.md`
+- For philosophical or roadmap changes, reference `docs/philosophy.md` or `TODO.md`
 
 ## 🙏 Code of Conduct
 This is a cooperative, purpose-driven space. Please keep interactions constructive and aligned with the mission: resilience, adaptability, and mutual empowerment.
 
 ## 🔗 Resources
-- [PHILOSOPHY.md](./PHILOSOPHY.md)
-- [TODO.md](./TODO.md)
-- [MILESTONES.md](./MILESTONES.md)
-- [PHASE_1_ISSUES.md](./PHASE_1_ISSUES.md)
+- [philosophy.md](./philosophy.md)
+- [TODO.md](../TODO.md)
+- [MILESTONES.md](../MILESTONES.md)
+

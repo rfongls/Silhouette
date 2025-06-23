@@ -51,7 +51,7 @@ This marks the successful collaboration of manual design + Codex automation.
 ✅ Graph traversal and summarization logic supports multi-hop context  
 ✅ `test_graph.py` validates link structure and query results  
 ✅ CLI REPL updated to write logs in a uniform, cleanly parsed format  
-✅ Codex dev cycle bootstrapped via `codex_controller.py` and `auto_dev.yaml`
+✅ Codex dev cycle bootstrapped via `silhouette_core/codex_controller.py` and `auto_dev.yaml`
 ✅ Knowledge ingestion pipeline added via:
  • `trainer.py` — parses markdown into memory  
  • `embedding_engine.py` — fuzzy recall of prior entries  
