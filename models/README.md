@@ -1,3 +1,3 @@
-# Models
+# models
 
-This directory contains the `models` components of the Silhouette Core project.
+This directory contains the `models` components.

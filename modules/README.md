@@ -1,3 +1,3 @@
-# Modules
+# modules
 
-This directory contains the `modules` components of the Silhouette Core project.
+This directory contains the `modules` components.
