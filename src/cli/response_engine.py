@@ -1,17 +1,8 @@
+from src.alignment_engine import load_persona_config, violates_alignment, format_response
 
-from datetime import datetime
+persona = load_persona_config()
 
-def format_response(user_input, mode="structured"):
-    timestamp = datetime.utcnow().isoformat()
-    if mode == "structured":
-        return f"[Structured @ {timestamp}] Silhouette: I have received your message: '{user_input}'. Let's explore it."
-    elif mode == "empathic":
-        return f"Silhouette (Empathic): I understand this may be complex. Let's work through it together. You said: '{user_input}'"
-    elif mode == "raw":
-        return f"You said: {user_input}"
-    else:
-        return f"[Fallback] Silhouette: I’m not sure how to format this, but I hear you: '{user_input}'"
-
-def get_response(user_input, alignment):
-    mode = alignment.get("values", {}).get("response_mode", "structured")
-    return format_response(user_input, mode)
+def get_response(prompt, alignment):
+    if violates_alignment(prompt, persona["limits"]["deny_on"]):
+        return format_response("I'm not permitted to assist with that request.", persona["tone"].get("style"))
+    return format_response("Acknowledged. Processing your request...", persona["tone"].get("style"))
