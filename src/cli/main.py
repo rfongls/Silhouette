@@ -52,7 +52,9 @@ def display_modules(modules):
 def launch_repl(alignment, modules, module_funcs):
     """Run REPL loop handling special commands and logging."""
     LOG_DIR.mkdir(exist_ok=True)
-    log_file = LOG_DIR / f"silhouette_session_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}.txt"
+    log_file = LOG_DIR / (
+        f"silhouette_session_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}.txt"
+    )
 
     with open(log_file, "a") as log:
         print("\n🟣 Silhouette CLI – Alignment Mode\nType 'exit' to quit.\n")
@@ -73,7 +75,9 @@ def launch_repl(alignment, modules, module_funcs):
                 print("🔄 Alignment and modules reloaded.")
                 display_alignment(alignment)
                 display_modules(modules)
-                log.write(f"You: {user_input}\nSilhouette: reloaded configuration.\n")
+                log.write(
+                    f"You: {user_input}\nSilhouette: reloaded configuration.\n"
+                )
                 continue
 
             if user_input.strip() == ":modules":

@@ -1,14 +1,24 @@
+"""Intent detection engine placeholder."""
+
 import json
-from difflib import get_close_matches
+from pathlib import Path
 
-class IntentEngine:
-    def __init__(self, examples_file="INTENT_EXAMPLES.json"):
-        with open(examples_file, "r") as f:
-            self.examples = json.load(f)["examples"]
-        self.intents = {e["phrase"]: e["intent"] for e in self.examples}
+EXAMPLES_FILE = Path("INTENT_EXAMPLES.json")
 
-    def classify(self, phrase):
-        close = get_close_matches(phrase, self.intents.keys(), n=1, cutoff=0.5)
-        if close:
-            return {"intent": self.intents[close[0]], "confidence": 0.9}
-        return {"intent": "unknown", "confidence": 0.2}
+
+def load_examples():
+    """Load intent examples from the reference file."""
+    if not EXAMPLES_FILE.exists():
+        return []
+    with open(EXAMPLES_FILE, "r") as f:
+        data = json.load(f)
+    return data.get("examples", [])
+
+
+def detect_intent(text: str) -> str:
+    """Very simple phrase match intent detection."""
+    examples = load_examples()
+    for ex in examples:
+        if ex["phrase"].lower() in text.lower():
+            return ex["intent"]
+    return "unknown"
