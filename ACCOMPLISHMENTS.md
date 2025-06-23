@@ -56,3 +56,14 @@ This marks the successful collaboration of manual design + Codex automation.
  • `trainer.py` — parses markdown into memory  
  • `embedding_engine.py` — fuzzy recall of prior entries  
 ✅ Knowledge base initiated in `knowledge_store/hierarchy.md`
+
+## Phase 4: Persona Enforcement and Semantic Recall
+
+✅ Persona alignment loaded from `persona.dsl`  
+✅ Response formatting updated with tone modifiers (e.g., friendly adds emoji)  
+✅ Deny list logic blocks malicious, deceptive, or violent prompts  
+✅ Semantic search enhanced with TF-IDF and cosine similarity  
+✅ CLI supports `:search` for semantic memory recall  
+✅ API supports `/search?q=...` endpoint  
+✅ Alignment engine and persona enforcement fully tested  
+✅ System overview file created to document rebuild, modules, and logic  
