@@ -1,6 +1,5 @@
 import json
 import uuid
-from datetime import datetime, timedelta
 
 def build_graph(memory_path="logs/memory.jsonl"):
     with open(memory_path, "r") as f:
@@ -21,8 +20,6 @@ def build_graph(memory_path="logs/memory.jsonl"):
                 graph[id2]["links"].append(id1)
 
     return graph
-    return graph
-
 
 def query_graph(graph, start_id, depth=1):
     """Return node ids within given depth from start_id."""

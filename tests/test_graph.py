@@ -1,5 +1,4 @@
 import json
-from pathlib import Path
 from silhouette_core import graph_engine
 
 

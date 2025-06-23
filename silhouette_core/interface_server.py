@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Request
+from fastapi import FastAPI
 from pydantic import BaseModel
 from silhouette_core.intent_engine import IntentEngine
 from silhouette_core.memory_core import append_to_memory, query_memory
