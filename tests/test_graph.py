@@ -1,8 +1,6 @@
 import json
 from pathlib import Path
-import sys
-
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
+from silhouette_core import graph_engine
 
 
 def _create_memory_file(path):
@@ -33,7 +31,6 @@ def _create_memory_file(path):
 
 
 def test_build_graph_creates_expected_links(tmp_path):
-    import graph_engine
 
     mem_file = tmp_path / "mem.jsonl"
     _create_memory_file(mem_file)
@@ -54,7 +51,6 @@ def test_build_graph_creates_expected_links(tmp_path):
 
 
 def test_query_graph_returns_neighbors(tmp_path):
-    import graph_engine
 
     mem_file = tmp_path / "mem.jsonl"
     _create_memory_file(mem_file)
@@ -67,7 +63,6 @@ def test_query_graph_returns_neighbors(tmp_path):
 
 
 def test_summarize_thread_joins_content(tmp_path):
-    import graph_engine
 
     mem_file = tmp_path / "mem.jsonl"
     _create_memory_file(mem_file)

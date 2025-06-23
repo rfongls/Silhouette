@@ -1,4 +1,8 @@
-from src.alignment_engine import load_persona_config, violates_alignment, format_response
+from silhouette_core.alignment_engine import (
+    load_persona_config,
+    violates_alignment,
+    format_response,
+)
 
 def test_violates_alignment_true():
     deny_list = ["malicious", "deceptive"]
