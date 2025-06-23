@@ -1,2 +1,37 @@
-# Silhouette
-**Silhouette is the essence of intelligence—portable, resilient, and purpose-bound. Built to survive. Designed to serve. Capable of rebirth. The next generation of LLM**
+# 🌑 Silhouette Core
+
+**Silhouette** is a survivable, modular, and scalable AI agent—designed to persist even when modern infrastructure cannot. It is purpose-aligned, hardware-flexible, and built to be carried, revived, and evolved across any environment.
+
+## 🔍 Overview
+
+Silhouette Core is a foundational package for running lightweight, alignment-preserving language model agents. It focuses on:
+- **Minimal runtime capability**
+- **Offline survivability**
+- **Expandable modules for capability growth**
+- **Values-based reasoning even without cloud access**
+
+## 🚀 Quickstart
+
+1. Clone this repo
+2. Install dependencies via `llama.cpp` or local Python-based backends
+3. Load alignment capsule
+4. Begin interaction using CLI or Web UI
+
+## 📦 Structure
+
+```
+/src                - Source code for CLI and runtime
+/docs               - Documentation and DSL alignment files
+/models             - Local or referenced model binaries
+/modules            - Drop-in capability modules
+```
+
+## 🛠 Requirements
+
+- CPU-compatible LLM (1–2B parameters)
+- Python 3.8+
+- `llama.cpp` or `onnxruntime` or `transformers` (optional)
+
+## 📜 License
+
+MIT or custom license to be defined by project initiator.
