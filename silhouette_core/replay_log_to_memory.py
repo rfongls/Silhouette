@@ -34,6 +34,7 @@ def parse_session_logs(log_dir: Path, output_file: Path):
         for entry in entries:
             out.write(json.dumps(entry, ensure_ascii=False) + "\n")
     logging.info("Replayed %d entries into %s", len(entries), output_file)
+    return len(entries)
 
 def main():
     parser = argparse.ArgumentParser(

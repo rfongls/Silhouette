@@ -3,6 +3,8 @@
 from pathlib import Path
 from datetime import datetime
 import subprocess
+import os
+import argparse
 
 from silhouette_core.dsl_parser import parse_dsl_file
 from silhouette_core.module_loader import discover_modules
@@ -68,6 +70,25 @@ def launch_repl(alignment, modules, module_funcs):
                 print(response)
                 log.write(f"You: {user_input}\n{response}\n")
                 break
+
+            if user_input.strip() == ":replay":
+                from silhouette_core.replay_log_to_memory import parse_session_logs
+                count = parse_session_logs(Path("logs"), Path("memory.jsonl"))
+                print(f"Replayed {count} entries")
+                log.write(f"You: {user_input}\nSilhouette: replayed {count} entries.\n")
+                continue
+
+            if user_input.strip() == ":selfcheck":
+                from silhouette_core.selfcheck_engine import main as run_selfcheck
+                run_selfcheck()
+                log.write(f"You: {user_input}\nSilhouette: selfcheck run.\n")
+                continue
+
+            if user_input.strip() == ":backup":
+                from silhouette_core.export import main as export_main
+                export_main()
+                log.write(f"You: {user_input}\nSilhouette: backup complete.\n")
+                continue
 
             if user_input.strip() == ":reload":
                 alignment = load_alignment()
@@ -145,6 +166,16 @@ def launch_repl(alignment, modules, module_funcs):
 
 
 def main():
+    parser = argparse.ArgumentParser(description="Silhouette CLI")
+    parser.add_argument("--no-repl", action="store_true", help="Exit without starting REPL")
+    args = parser.parse_args()
+
+    if os.getenv("SILHOUETTE_OFFLINE"):
+        print("[SAFE MODE] Offline detected")
+
+    if args.no_repl:
+        return
+
     if not DSL_PATH.exists():
         print("⚠️ Alignment file not found.")
         return
