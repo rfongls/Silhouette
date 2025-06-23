@@ -1,16 +1,28 @@
-"""Placeholder web/local interface server."""
+from fastapi import FastAPI, Request
+from pydantic import BaseModel
+from src.intent_engine import IntentEngine
+from src.memory_core import append_to_memory, query_memory
+from src.tone_parser import detect_tone
 
-from http.server import BaseHTTPRequestHandler, HTTPServer
+app = FastAPI()
+engine = IntentEngine()
 
+class InputText(BaseModel):
+    text: str
 
-def run_server(host: str = "127.0.0.1", port: int = 8000):
-    """Run a minimal HTTP server that echoes requests."""
+@app.post("/intent")
+def get_intent(input: InputText):
+    return engine.classify(input.text)
 
-    class Handler(BaseHTTPRequestHandler):
-        def do_GET(self):
-            self.send_response(200)
-            self.send_header("Content-Type", "text/plain")
-            self.end_headers()
-            self.wfile.write(b"Silhouette interface placeholder")
+@app.post("/tone")
+def get_tone(input: InputText):
+    return detect_tone(input.text)
 
-    HTTPServer((host, port), Handler).serve_forever()
+@app.post("/memory")
+def save_memory(input: InputText):
+    append_to_memory({"text": input.text})
+    return {"status": "saved"}
+
+@app.get("/memory")
+def search_memory(q: str):
+    return query_memory(q)
