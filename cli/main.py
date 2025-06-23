@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Silhouette Core CLI entrypoint.
-Adds :replay, :selfcheck, and :backup commands.
+Adds :replay, :selfcheck, :backup, and offline detection.
 """
 
 import argparse
@@ -11,8 +11,11 @@ from pathlib import Path
 from export import export_state
 from replay_log_to_memory import parse_session_logs
 from selfcheck_engine import main as run_selfcheck
+from offline_mode import is_offline
 
 def repl():
+    if is_offline():
+        print("[SAFE MODE] Offline detected: throttling modules, no network calls.")
     print("Silhouette Core CLI. Type :help for commands.")
     while True:
         try:
