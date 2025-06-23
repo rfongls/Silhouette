@@ -1,0 +1,5 @@
+{
+    "name": "Math",
+    "description": "Simple arithmetic evaluation module",
+    "entrypoint": "modules.math"
+}

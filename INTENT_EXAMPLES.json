@@ -1,0 +1,9 @@
+{
+  "examples": [
+    {"phrase": "Reload everything", "intent": "reload_config"},
+    {"phrase": "What modules are available?", "intent": "list_modules"},
+    {"phrase": "Add a math module", "intent": "load_module"},
+    {"phrase": "Save this session", "intent": "log_session"},
+    {"phrase": "What did I ask yesterday?", "intent": "query_memory"}
+  ]
+}
