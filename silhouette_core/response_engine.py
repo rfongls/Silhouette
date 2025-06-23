@@ -1,4 +1,8 @@
-from src.alignment_engine import load_persona_config, violates_alignment, format_response
+from silhouette_core.alignment_engine import (
+    load_persona_config,
+    violates_alignment,
+    format_response,
+)
 
 persona = load_persona_config()
 

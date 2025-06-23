@@ -28,4 +28,4 @@ jobs:
 
     - name: Run ruff linter
       run: |
-        ruff src/ docs/ --output-format=github || true
+        ruff silhouette_core/ docs/ --output-format=github || true
