@@ -1,13 +1,12 @@
-
 """Silhouette command line interface."""
 
 from pathlib import Path
 from datetime import datetime
+import subprocess
 
 from dsl_parser import parse_dsl_file
 from module_loader import discover_modules
 from cli.response_engine import get_response
-
 
 DSL_PATH = Path("docs/alignment_kernel/values.dsl")
 LOG_DIR = Path("logs")
@@ -49,6 +48,7 @@ def display_modules(modules):
             print(f"- {m.name}: {m.description}")
     print()
 
+
 def launch_repl(alignment, modules, module_funcs):
     """Run REPL loop handling special commands and logging."""
     LOG_DIR.mkdir(exist_ok=True)
@@ -75,14 +75,26 @@ def launch_repl(alignment, modules, module_funcs):
                 print("🔄 Alignment and modules reloaded.")
                 display_alignment(alignment)
                 display_modules(modules)
-                log.write(
-                    f"You: {user_input}\nSilhouette: reloaded configuration.\n"
-                )
+                log.write(f"You: {user_input}\nSilhouette: reloaded configuration.\n")
                 continue
 
             if user_input.strip() == ":modules":
                 display_modules(modules)
                 log.write(f"You: {user_input}\nSilhouette: listed modules.\n")
+                continue
+
+            if user_input.strip() == ":export":
+                print("📦 Exporting system state...")
+                subprocess.run(["python", "src/export.py"])
+                log.write(f"You: {user_input}\nSilhouette: system state exported.\n")
+                continue
+
+            if user_input.strip() == ":restore":
+                print("🗃 Restoring system state...")
+                zip_path = input("Enter path to backup ZIP: ").strip()
+                key_path = input("Enter path to key file: ").strip()
+                subprocess.run(["python", "src/restore.py", "--zip", zip_path, "--key", key_path])
+                log.write(f"You: {user_input}\nSilhouette: system state restored.\n")
                 continue
 
             if user_input.startswith("calculate") and "Math" in module_funcs:
