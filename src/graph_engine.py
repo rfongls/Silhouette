@@ -83,3 +83,4 @@ def summarize_thread(start_id: str, graph: dict) -> str:
             texts.append(text)
         queue.extend(graph[nid]["links"])
     return " ".join(texts)
+

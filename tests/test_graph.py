@@ -77,4 +77,3 @@ def test_summarize_thread_joins_content(tmp_path):
     assert "Hello" in summary
     assert "Hi" in summary
     assert "Angry message" not in summary
-

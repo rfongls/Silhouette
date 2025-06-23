@@ -23,4 +23,5 @@ def query_memory(term: str) -> list[str]:
         for line in mem:
             if term.lower() in line.lower():
                 results.append(line.strip())
+
     return results

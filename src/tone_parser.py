@@ -9,3 +9,4 @@ def score_tone(text: str) -> str:
     if any(x in lowered for x in [":)", "thank", "great"]):
         return "positive"
     return "neutral"
+
