@@ -45,3 +45,5 @@ Run monitoring tools via the CLI:
 - `:summary` to summarize the latest session
 - `:persona-audit` to verify persona adherence
 - `:selfcheck --full` for the complete audit
+- `:export-profile` to bundle persona, memory, and modules
+
