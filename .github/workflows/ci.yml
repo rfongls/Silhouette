@@ -45,6 +45,13 @@ jobs:
         printf ":selfcheck\n:exit\n" | python -m cli.main | grep -q "Missing required files"
         printf ":backup\n:exit\n" | python -m cli.main | grep -q "Backup complete"
 
+    - name: Self-deploy smoke
+      run: |
+        python -m silhouette_core.profile_exporter --output profile.json
+        python -m silhouette_core.distiller --output distillate.json
+        python -m silhouette_core.package_clone --profile profile.json --distillate distillate.json --version 1
+        printf ":agent deploy tmp_deploy\n:exit\n" | python -m cli.main | grep -q "Deployed clone"
+
     - name: Doc-link check
       run: |
         pip install markdown-link-check
