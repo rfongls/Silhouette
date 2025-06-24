@@ -106,4 +106,3 @@ def test_agent_deploy(tmp_path):
     (root / "silhouette_clone_v1.zip").write_bytes(archive.read_bytes())
     run_cmd(f":agent deploy {tmp_path}", "Deployed clone")
     (root / "silhouette_clone_v1.zip").unlink()
-
