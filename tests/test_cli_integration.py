@@ -61,3 +61,24 @@ def test_offline_mode_banner(monkeypatch):
         capture_output=True,
     )
     assert "[SAFE MODE] Offline detected" in result.stdout
+
+
+def test_drift_report_command():
+    run_cmd(":drift-report", "No tone drift")
+
+
+def test_summary_command(tmp_path):
+    root = Path(__file__).parent.parent.resolve()
+    log_dir = root / "logs"
+    log_dir.mkdir(exist_ok=True)
+    (log_dir / "silhouette_session_test.txt").write_text("hello\n")
+    run_cmd(":summary", "Session summary saved")
+
+
+def test_persona_audit_command(tmp_path):
+    mem = Path("memory.jsonl")
+    mem.write_text('{"content": "malicious"}\n')
+    persona = Path("persona.dsl")
+    persona.write_text("[limits]\ndeny_on = malicious")
+    run_cmd(":persona-audit", "Persona violations")
+    persona.unlink()

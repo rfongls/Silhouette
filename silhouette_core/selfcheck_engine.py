@@ -10,6 +10,10 @@ import json
 import sys
 from pathlib import Path
 
+from .persona_audit import audit_memory
+from .drift_detector import main as drift_main
+from .session_summarizer import main as summary_main
+
 REQUIRED_FILES = ["persona.dsl", "memory.jsonl"]
 
 def check_files():
@@ -33,7 +37,7 @@ def check_memory(path: Path):
             print("  ", err)
     return errors
 
-def main():
+def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(
         description="Run self-checks on system state"
     )
@@ -41,10 +45,23 @@ def main():
         "--strict", action="store_true",
         help="Exit with error if warnings are found"
     )
-    args = parser.parse_args()
+    parser.add_argument(
+        "--full",
+        action="store_true",
+        help="Run extended monitoring checks",
+    )
+    args = parser.parse_args(argv)
     missing = check_files()
     errors = check_memory(Path("memory.jsonl"))
-    if missing or errors:
+    violations = audit_memory(Path("memory.jsonl"), Path("persona.dsl"))
+    if args.full:
+        drift_main([])
+        summary_main([])
+    if missing or errors or violations:
+        if violations:
+            print("Persona violations detected:")
+            for v in violations:
+                print("  ", v)
         if args.strict:
             sys.exit(1)
         else:
