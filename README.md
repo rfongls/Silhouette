@@ -17,6 +17,7 @@ Silhouette Core is a foundational package for running lightweight, alignment-pre
 2. Install dependencies via `llama.cpp` or local Python-based backends
 3. Load alignment capsule
 4. Begin interaction using CLI or Web UI
+5. Optionally spawn additional agents with `agent_controller.spawn_agent()`
 
 ## 📦 Structure
 
