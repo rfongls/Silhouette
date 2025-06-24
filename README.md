@@ -484,9 +484,10 @@ Silhouette Core can fully automate its LLM training pipeline by leveraging Codex
      codex-training:
        runs-on: ubuntu-latest
        steps:
-         - uses: actions/checkout@v3
-         - name: Run Codex controller
-           run: python -m silhouette_core.codex_controller
+        - uses: actions/checkout@v3
+        - name: Run Codex controller
+          run: python -m silhouette_core.codex_controller
+        # Runs offline using only this repo's scripts
    ```
 
 2. **Trigger on Changes**
