@@ -1,6 +1,6 @@
 [run]
 branch = True
-source = .
+source = silhouette_core
 omit =
     tests/*
 
