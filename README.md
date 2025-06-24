@@ -18,6 +18,7 @@ Silhouette Core is a foundational package for running lightweight, alignment-pre
 3. Load alignment capsule
 4. Begin interaction using CLI or Web UI
 5. Optionally spawn additional agents with `agent_controller.spawn_agent()`
+6. Build and deploy a clone via `python -m silhouette_core.package_clone` and `:agent deploy`
 
 ## 📦 Structure
 
@@ -49,4 +50,14 @@ Run monitoring tools via the CLI:
 - `python -m silhouette_core.distiller` to create distilled knowledge
 - `python -m silhouette_core.package_clone --profile silhouette_profile.json` to build a clone archive
 - `:agent deploy <path>` to deploy the latest `silhouette_clone_v1.zip`
+
+## 🛰 Clone & Deploy
+
+1. `python -m silhouette_core.profile_exporter`
+2. `python -m silhouette_core.distiller`
+3. `python -m silhouette_core.package_clone`
+4. `:agent deploy <target>`
+
+For more details see `docs/self_replication.md` and the sample config in
+`docs/examples/distillation_config.yml`.
 

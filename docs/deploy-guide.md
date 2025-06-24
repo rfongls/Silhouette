@@ -5,6 +5,7 @@ To create a portable clone archive, run:
 ```
 python -m silhouette_core.profile_exporter
 python -m silhouette_core.distiller
+python -m silhouette_core.quantize_models
 python -m silhouette_core.package_clone --version 1
 ```
 
