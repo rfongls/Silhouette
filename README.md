@@ -542,6 +542,18 @@ Silhouette Core can fully automate its LLM training pipeline by leveraging Codex
 
 This ensures your “brain” is maintained, upgraded, and versioned entirely by automation—exactly as we discussed.
 
+### Codex Quickstart
+
+`auto_dev.yaml` uses the Codex action to generate the training helpers shown above. To invoke Codex manually, run:
+
+```bash
+python -m silhouette_core.codex_controller
+```
+
+Set the `OPENAI_API_KEY` environment variable (or GitHub Action secret) so the
+Codex training job can authenticate with OpenAI.
+
+
 ---
 
 ## 🤝 Contributing & Roadmap
