@@ -17,6 +17,10 @@ def cleanup():
                 shutil.rmtree(p)
             else:
                 p.unlink()
+    for prof in root.glob("silhouette_profile_*.json"):
+        prof.unlink()
+    for prof in root.glob("silhouette_profile_*.zip"):
+        prof.unlink()
     yield
     for p in (root / "logs", root / "memory.jsonl"):
         if p.exists():
@@ -24,6 +28,10 @@ def cleanup():
                 shutil.rmtree(p)
             else:
                 p.unlink()
+    for prof in root.glob("silhouette_profile_*.json"):
+        prof.unlink()
+    for prof in root.glob("silhouette_profile_*.zip"):
+        prof.unlink()
 
 def run_cmd(cmd, expect):
     root = Path(__file__).parent.parent.resolve()
@@ -82,3 +90,6 @@ def test_persona_audit_command(tmp_path):
     persona.write_text("[limits]\ndeny_on = malicious")
     run_cmd(":persona-audit", "Persona violations")
     persona.unlink()
+
+def test_export_profile_command():
+    run_cmd(":export-profile", "Profile exported")

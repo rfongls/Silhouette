@@ -1,7 +1,6 @@
 from silhouette_core.drift_detector import detect_drift
 
 
-
 def test_detect_drift_simple():
     base = {"positive": 0.5, "negative": 0.5}
     recent = {"positive": 0.1, "negative": 0.9}

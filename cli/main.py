@@ -121,6 +121,10 @@ def launch_repl(alignment, modules, module_funcs):
                 from silhouette_core.persona_audit import main as audit_main
                 audit_main([])
                 log.write(f"You: {user_input}\nSilhouette: persona audit run.\n")
+            elif cmd == ":export-profile":
+                from silhouette_core.profile_exporter import main as profile_main
+                profile_main([])
+                log.write(f"You: {user_input}\nSilhouette: profile exported.\n")
             elif cmd == ":backup":
                 from silhouette_core.export import main as export_main
                 export_main()
