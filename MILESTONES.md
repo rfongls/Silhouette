@@ -19,7 +19,7 @@ Recommended duration: 4–6 weeks
 - `dsl_parser.py`
 - `logs/`
 - `.github/workflows/ci.yml`
-- `PHASE_1_ISSUES.md`, `TODO.md`
+- `TODO.md`
 
 ---
 
@@ -56,7 +56,7 @@ Enable deeper memory modeling using graphs and semantic knowledge. Add Codex-dri
 - `graph_engine.py` for memory linking and traversal
 - Summarization logic for threads
 - `trainer.py` and `embedding_engine.py` for ingesting markdown knowledge
-- Codex automation via `codex_controller.py`, `auto_dev.yaml`
+- Codex automation via `silhouette_core/codex_controller.py`, `auto_dev.yaml`
 - Enable CLI-driven evolution from Codex prompts
 
 ## Duration
@@ -65,7 +65,7 @@ Enable deeper memory modeling using graphs and semantic knowledge. Add Codex-dri
 ## Related Files
 - `graph_engine.py`
 - `trainer.py`, `embedding_engine.py`
-- `codex_controller.py`, `auto_dev.yaml`
+- `silhouette_core/codex_controller.py`, `auto_dev.yaml`
 - `tests/test_graph.py`
 
 ---
@@ -112,7 +112,7 @@ Ensure Silhouette Core can function and restore state without any external depen
 ## Related Files
 - `export.py`, `restore.py`
 - `logs/`, `memory.jsonl`
-- `SYSTEM_OVERVIEW.md`, `RECOVERY.md`
+- `docs/system-overview.md`, `docs/recovery.md`
 
 ---
 
@@ -132,7 +132,7 @@ Scale Silhouette Core from local CLI to multi-core or remote module execution wi
 
 ## Related Files
 - `PROJECT_MANIFEST.json`
-- `MODULE_API.md`
+- `docs/module-api.md`
 - `load_controller.py` (planned)
 - `distributed_executor.py` (planned)
 
