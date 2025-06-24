@@ -453,7 +453,9 @@ Reload this persona in the REPL with:
 
 Now every session will automatically include the ChatGPT‑style assistant and its purpose memory in the conversation context.
 
-Refer to [docs/persona\_authoring.md](docs/persona_authoring.md) for full DSL syntax and advanced behaviors.
+Refer to [docs/persona\_authoring.md](docs/persona_authoring.md) for full DSL syntax and advanced behaviors
+
+> **Tip:** You can tie your core philosophy—defined in `docs/philosophy.md`—directly into your persona by importing its key statements. For example, load the philosophy file at startup and inject each top-level bullet into your `persona.dsl` `memory` section so the agent always recalls its guiding principles.
 
 ### Performance Profiles
 
@@ -468,6 +470,77 @@ Refer to [docs/persona\_authoring.md](docs/persona_authoring.md) for full DSL sy
 * `SILHOUETTE_OFFLINE=1` — Force safe/offline mode
 * `SILHOUETTE_LOG_DIR` — Custom log directory (default `logs/`)
 * `SILHOUETTE_PROFILE` — Default profile for `edge_launcher.py`
+
+---
+
+## 🤖 Automated LLM Training with Codex
+
+Silhouette Core can fully automate its LLM training pipeline by leveraging Codex in your `auto_dev.yaml`. With a few well-crafted prompts, Codex will generate or update every script needed—without manual coding.
+
+1. **Define CI Steps in `auto_dev.yaml`**
+
+   ```yaml
+   jobs:
+     codex-training:
+       runs-on: ubuntu-latest
+       steps:
+         - uses: actions/checkout@v3
+         - name: Install dependencies
+           run: pip install openai
+
+         - name: Generate Data Prep Script
+           uses: openai-codex/action@v1
+           with:
+             prompt: |
+               "Write a Python script 'prepare_reasoning_data.py' that:
+               - loads 'modules/{module}/embeddings/chunks.jsonl'
+               - constructs a JSONL file of <prompt, completion> pairs
+               - supports argparse: --module, --out"
+             output_path: silhouette_core/prepare_reasoning_data.py
+
+         - name: Generate Adapter Trainer
+           uses: openai-codex/action@v1
+           with:
+             prompt: |
+               "Write 'train_adapter.py' that:
+               - accepts --base-model, --train-file, --method, --adapter-output
+               - loads a Hugging Face LLM, applies LoRA or QLoRA via peft
+               - fine-tunes on JSONL data and saves adapter weights"
+             output_path: silhouette_core/train_adapter.py
+
+         - name: Generate Quantizer
+           uses: openai-codex/action@v1
+           with:
+             prompt: |
+               "Write 'quantize_models.py' that:
+               - takes --input and --bits
+               - loads a model or adapter via bitsandbytes
+               - dumps a quantized checkpoint"
+             output_path: silhouette_core/quantize_models.py
+
+         - name: Update Module Executor
+           uses: openai-codex/action@v1
+           with:
+             prompt: |
+               "Enhance 'module_executor.py' to:
+               - load and run a quantized adapter using transformers + peft
+               - execute generated Python in a sandbox subprocess"
+             output_path: silhouette_core/module_executor.py
+   ```
+
+2. **Trigger on Changes**
+
+   * Watch for changes in `modules/**/docs/`, `trainer.py`, or `distiller.py`.
+   * Codex will regenerate training scripts and your CI can then run them immediately.
+
+3. **End-to-End Self-Updating**
+   On each commit or schedule, your pipeline will:
+
+   * Call Codex to update or recreate boilerplate.
+   * Run `prepare_reasoning_data.py` → `train_adapter.py` → `quantize_models.py`.
+   * Version and publish new adapter and index artifacts.
+
+This ensures your “brain” is maintained, upgraded, and versioned entirely by automation—exactly as we discussed.
 
 ---
 
