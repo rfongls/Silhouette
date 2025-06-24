@@ -1,5 +1,4 @@
 from silhouette_core import selfcheck_engine as sce
-from pathlib import Path
 
 
 def test_check_files_missing(tmp_path, monkeypatch):

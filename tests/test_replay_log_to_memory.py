@@ -1,5 +1,4 @@
 from silhouette_core.replay_log_to_memory import parse_session_logs
-from pathlib import Path
 
 
 def test_parse_session_logs(tmp_path):

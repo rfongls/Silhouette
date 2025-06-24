@@ -1,7 +1,5 @@
-import os
 from pathlib import Path
 import time
-import pytest
 
 from agent_controller import (
     spawn_agent,
