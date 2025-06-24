@@ -31,8 +31,7 @@ jobs:
       run: |
         coverage run -m pytest --maxfail=1 --disable-warnings -q
         coverage xml
-        coverage report --fail-under=20
-
+        coverage report --fail-under=30
 
     - name: Smoke-test CLI
       run: |
