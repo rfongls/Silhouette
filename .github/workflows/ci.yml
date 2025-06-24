@@ -33,7 +33,6 @@ jobs:
         coverage xml
         coverage report --fail-under=30
 
-
     - name: Smoke-test CLI
       run: |
         python -m cli.main --no-repl
