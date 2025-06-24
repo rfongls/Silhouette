@@ -550,6 +550,9 @@ This ensures your “brain” is maintained, upgraded, and versioned entirely by
 python -m silhouette_core.codex_controller
 ```
 
+Set the `OPENAI_API_KEY` environment variable (or GitHub Action secret) so the
+Codex training job can authenticate with OpenAI.
+
 
 ---
 
