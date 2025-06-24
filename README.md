@@ -512,9 +512,6 @@ This ensures your “brain” is maintained, upgraded, and versioned entirely by
 python -m silhouette_core.codex_controller
 ```
 
-
-
-
 ---
 
 ## 🤝 Contributing & Roadmap
