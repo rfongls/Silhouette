@@ -27,9 +27,16 @@ jobs:
       run: |
         ruff .
 
-    - name: Run unit tests
+    - name: Run unit tests with coverage
       run: |
-        pytest --maxfail=1 --disable-warnings -q
+        coverage run -m pytest --maxfail=1 --disable-warnings -q
+        coverage xml
+        coverage report --fail-under=80
+
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v3
+      with:
+        fail_ci_if_error: true
 
     - name: Smoke-test CLI
       run: |

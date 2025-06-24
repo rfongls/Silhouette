@@ -1,4 +1,5 @@
 # 🌑 Silhouette Core
+[![Coverage](https://codecov.io/gh/your-org/Silhouette/branch/main/graph/badge.svg)](https://codecov.io/gh/your-org/Silhouette)
 
 **Silhouette** is a survivable, modular, and scalable AI agent—designed to persist even when modern infrastructure cannot. It is purpose-aligned, hardware-flexible, and built to be carried, revived, and evolved across any environment.
 
