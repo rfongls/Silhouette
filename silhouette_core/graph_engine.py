@@ -21,7 +21,6 @@ def build_graph(memory_path="logs/memory.jsonl"):
 
     return graph
 
-
 def query_graph(graph, start_id, depth=1):
     """Return node ids within given depth from start_id."""
     visited = set([start_id])
