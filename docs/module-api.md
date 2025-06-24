@@ -65,3 +65,30 @@ To list loaded modules:
 ```
 
 Ensure your `.json` and `.py` file pairs share the same base name and are located under `modules/`.
+
+---
+
+## 🌐 Distributed Execution Protocol
+
+Silhouette nodes can delegate module work to peers using a simple JSON payload:
+
+```json
+{
+  "task": "module_name",
+  "args": [],
+  "kwargs": {},
+  "priority": 0
+}
+```
+
+Responses mirror this structure:
+
+```json
+{
+  "result": "<value>",
+  "metrics": {"duration": 0.1}
+}
+```
+
+Transport is left to the environment (socket, HTTP, message queue).
+`distributed_executor.py` contains a stub implementation ready for custom wiring.

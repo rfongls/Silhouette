@@ -2,7 +2,11 @@ import os
 import zipfile
 import argparse
 from datetime import datetime
-from cryptography.fernet import Fernet
+try:
+    from cryptography.fernet import Fernet
+    HAVE_CRYPTO = True
+except ModuleNotFoundError:  # pragma: no cover - optional dependency
+    HAVE_CRYPTO = False
 
 EXPORT_DIR = "exports"
 DEFAULT_FILES = [
@@ -15,29 +19,36 @@ DEFAULT_FILES = [
 ]
 
 def zip_with_encryption(zip_path, files, key):
-    fernet = Fernet(key)
-    with zipfile.ZipFile(zip_path, 'w', compression=zipfile.ZIP_DEFLATED) as zipf:
+    """Zip and optionally encrypt a list of files."""
+    with zipfile.ZipFile(zip_path, "w", compression=zipfile.ZIP_DEFLATED) as zipf:
         for item in files:
             if os.path.isdir(item):
                 for root, _, filenames in os.walk(item):
                     for filename in filenames:
                         full_path = os.path.join(root, filename)
                         arcname = os.path.relpath(full_path)
-                        with open(full_path, 'rb') as f:
+                        with open(full_path, "rb") as f:
                             data = f.read()
-                        encrypted = fernet.encrypt(data)
-                        enc_path = arcname + ".enc"
-                        zipf.writestr(enc_path, encrypted)
+                        if HAVE_CRYPTO:
+                            data = Fernet(key).encrypt(data)
+                            arcname += ".enc"
+                        zipf.writestr(arcname, data)
             elif os.path.isfile(item):
-                with open(item, 'rb') as f:
+                with open(item, "rb") as f:
                     data = f.read()
-                encrypted = fernet.encrypt(data)
-                arcname = os.path.relpath(item) + ".enc"
-                zipf.writestr(arcname, encrypted)
+                arcname = os.path.relpath(item)
+                if HAVE_CRYPTO:
+                    data = Fernet(key).encrypt(data)
+                    arcname += ".enc"
+                zipf.writestr(arcname, data)
 
 def generate_key(key_path):
-    key = Fernet.generate_key()
-    with open(key_path, 'wb') as f:
+    """Generate an encryption key if possible, otherwise random bytes."""
+    if HAVE_CRYPTO:
+        key = Fernet.generate_key()
+    else:
+        key = os.urandom(32)
+    with open(key_path, "wb") as f:
         f.write(key)
     return key
 
@@ -53,10 +64,13 @@ def main():
     key_path = args.key or os.path.join(EXPORT_DIR, f"key_{timestamp}.key")
 
     key = generate_key(key_path)
-    print(f"[✓] Key generated: {key_path}")
+    # Use ASCII-only output for compatibility with Windows consoles
+    print(f"[OK] Key generated: {key_path}")
+    if not HAVE_CRYPTO:
+        print("[!] 'cryptography' not installed - archive will not be encrypted")
 
     zip_with_encryption(out_path, DEFAULT_FILES, key)
-    print(f"[✓] Backup created: {out_path}")
+    print(f"[OK] Backup created: {out_path}")
     print("Backup complete")
 
 if __name__ == "__main__":
