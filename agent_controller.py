@@ -3,6 +3,9 @@ import itertools
 import shutil
 import time
 from pathlib import Path
+import subprocess
+import sys
+import zipfile
 from typing import Dict, List
 
 from memory_merge import merge_memories
@@ -77,3 +80,29 @@ def import_agent(agent_id: int, src: Path) -> None:
     text = src.read_text()
     with open(mem, "a", encoding="utf-8") as f:
         f.write(text)
+
+
+def deploy_clone(archive: Path, target: str) -> bool:
+    """Deploy a packaged clone to a target directory or ssh host."""
+    if target.startswith("ssh://"):
+        host = target[len("ssh://") :]
+        subprocess.run(["scp", str(archive), f"{host}:/tmp/clone.zip"], check=False)
+        subprocess.run(
+            [
+                "ssh",
+                host,
+                "unzip -o /tmp/clone.zip -d /tmp/clone && python /tmp/clone/edge_launcher.py --profile silhouette_profile.json",
+            ],
+            check=False,
+        )
+        return True
+    else:
+        dest = Path(target)
+        dest.mkdir(parents=True, exist_ok=True)
+        with zipfile.ZipFile(archive, "r") as zf:
+            zf.extractall(dest)
+        subprocess.run(
+            [sys.executable, str(dest / "edge_launcher.py"), "--profile", "silhouette_profile.json"],
+            check=False,
+        )
+        return True

@@ -17,6 +17,10 @@ def cleanup():
                 shutil.rmtree(p)
             else:
                 p.unlink()
+    for prof in root.glob("silhouette_profile_*.json"):
+        prof.unlink()
+    for prof in root.glob("silhouette_profile_*.zip"):
+        prof.unlink()
     yield
     for p in (root / "logs", root / "memory.jsonl"):
         if p.exists():
@@ -24,6 +28,10 @@ def cleanup():
                 shutil.rmtree(p)
             else:
                 p.unlink()
+    for prof in root.glob("silhouette_profile_*.json"):
+        prof.unlink()
+    for prof in root.glob("silhouette_profile_*.zip"):
+        prof.unlink()
 
 def run_cmd(cmd, expect):
     root = Path(__file__).parent.parent.resolve()
@@ -61,3 +69,41 @@ def test_offline_mode_banner(monkeypatch):
         capture_output=True,
     )
     assert "[SAFE MODE] Offline detected" in result.stdout
+
+
+def test_drift_report_command():
+    run_cmd(":drift-report", "No tone drift")
+
+
+def test_summary_command(tmp_path):
+    root = Path(__file__).parent.parent.resolve()
+    log_dir = root / "logs"
+    log_dir.mkdir(exist_ok=True)
+    (log_dir / "silhouette_session_test.txt").write_text("hello\n")
+    run_cmd(":summary", "Session summary saved")
+
+
+def test_persona_audit_command(tmp_path):
+    mem = Path("memory.jsonl")
+    mem.write_text('{"content": "malicious"}\n')
+    persona = Path("persona.dsl")
+    persona.write_text("[limits]\ndeny_on = malicious")
+    run_cmd(":persona-audit", "Persona violations")
+    persona.unlink()
+
+
+def test_export_profile_command():
+    run_cmd(":export-profile", "Profile exported")
+
+
+def test_agent_deploy(tmp_path):
+    from silhouette_core.package_clone import package_clone
+    profile = tmp_path / "silhouette_profile.json"
+    profile.write_text('{}')
+    dist = tmp_path / "distillate.json"
+    dist.write_text('{}')
+    archive = package_clone(profile, dist, version=1, output_dir=tmp_path)
+    root = Path(__file__).parent.parent.resolve()
+    (root / "silhouette_clone_v1.zip").write_bytes(archive.read_bytes())
+    run_cmd(f":agent deploy {tmp_path}", "Deployed clone")
+    (root / "silhouette_clone_v1.zip").unlink()
