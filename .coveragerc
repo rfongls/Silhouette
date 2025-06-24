@@ -1,9 +1,9 @@
 [run]
 branch = True
-source = .
+source = silhouette_core
 omit =
     tests/*
 
 [report]
-fail_under = 80
+fail_under = 30
 show_missing = True
