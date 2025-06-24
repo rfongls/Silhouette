@@ -104,3 +104,4 @@ jobs:
           - load and run a quantized adapter using transformers + peft
           - execute generated Python in a sandbox subprocess"
         output_path: silhouette_core/module_executor.py
+
