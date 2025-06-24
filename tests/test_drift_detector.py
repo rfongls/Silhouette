@@ -1,4 +1,5 @@
-from silhouette_core.drift_detector import detect_drift, tone_distribution
+from silhouette_core.drift_detector import detect_drift
+
 
 
 def test_detect_drift_simple():
