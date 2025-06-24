@@ -1,5 +1,6 @@
 import subprocess
 import os
+import sys
 
 try:
     import yaml  # type: ignore
@@ -66,7 +67,7 @@ def generate_code(task):
             print(f"Skipped: {path} already exists")
 
 def run_tests():
-    result = subprocess.run(["pytest", "-q"], capture_output=True, text=True)
+    result = subprocess.run([sys.executable, "-m", "pytest", "-q"], capture_output=True, text=True)
     print("TEST RESULTS:")
     print(result.stdout)
     if result.returncode != 0:
