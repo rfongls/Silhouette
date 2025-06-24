@@ -74,15 +74,15 @@ def launch_repl(alignment, modules, module_funcs):
         f"silhouette_session_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}.txt"
     )
 
-    with open(log_file, "a") as log:
-        # Welcome banner
+    # Ensure unicode characters are preserved regardless of system locale
+    with open(log_file, "a", encoding="utf-8") as log:
         print("\n🟣 Silhouette CLI – Alignment Mode\nType 'exit' to quit.\n")
         display_alignment(alignment)
         display_modules(modules)
 
         while True:
             user_input = input("You: ")
-            if user_input.lower() in ["exit", "quit"]:
+            if user_input.lower() in ["exit", "quit", ":exit", ":quit"]:
                 response = "Silhouette: Purpose acknowledged. Session closed."
                 print(response)
                 log.write(f"You: {user_input}\n{response}\n")
