@@ -37,3 +37,12 @@ Silhouette Core is a foundational package for running lightweight, alignment-pre
 ## 📜 License
 
 MIT or custom license to be defined by project initiator.
+
+## 🧭 Self-Reflective Monitoring
+
+Run monitoring tools via the CLI:
+- `:drift-report` to check tone drift
+- `:summary` to summarize the latest session
+- `:persona-audit` to verify persona adherence
+- `:selfcheck --full` for the complete audit
+- `:export-profile` to bundle persona, memory, and modules

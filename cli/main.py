@@ -1,14 +1,29 @@
 """Silhouette command line interface."""
 
-import builtins
 import argparse
-import sys
-from pathlib import Path
-from datetime import datetime
+import builtins
 import subprocess
+from datetime import datetime
+from pathlib import Path
+
+from silhouette_core.offline_mode import is_offline
+from silhouette_core.dsl_parser import parse_dsl_file
+from silhouette_core.module_loader import discover_modules
+from silhouette_core.response_engine import get_response
+from agent_controller import (
+    export_agent,
+    fork_agent,
+    import_agent,
+    list_agents,
+    merge_agents,
+    spawn_agent,
+)
+from persona_diff import diff_with_base
 
 # Global safe print to handle Unicode on all platforms
 _orig_print = builtins.print
+
+
 def print(*args, **kwargs):
     try:
         _orig_print(*args, **kwargs)
@@ -16,25 +31,10 @@ def print(*args, **kwargs):
         safe_args = []
         for arg in args:
             if isinstance(arg, str):
-                safe_args.append(arg.encode('ascii', 'ignore').decode('ascii'))
+                safe_args.append(arg.encode("ascii", "ignore").decode("ascii"))
             else:
                 safe_args.append(arg)
         _orig_print(*safe_args, **kwargs)
-
-from silhouette_core.offline_mode import is_offline
-from silhouette_core.dsl_parser import parse_dsl_file
-from silhouette_core.module_loader import discover_modules
-from silhouette_core.response_engine import get_response
-from agent_controller import (
-    spawn_agent,
-    fork_agent,
-    merge_agents,
-    list_agents,
-    export_agent,
-    import_agent,
-    shutdown_agent,
-)
-from persona_diff import diff_with_base
 
 DSL_PATH = Path("docs/alignment_kernel/values.dsl")
 LOG_DIR = Path("logs")
@@ -104,10 +104,27 @@ def launch_repl(alignment, modules, module_funcs):
                 count = parse_session_logs(Path("logs"), Path("memory.jsonl"))
                 print(f"Replayed {count} entries")
                 log.write(f"You: {user_input}\nSilhouette: replayed {count} entries.\n")
-            elif cmd == ":selfcheck":
+            elif cmd.startswith(":selfcheck"):
+                args = cmd.split()[1:]
                 from silhouette_core.selfcheck_engine import main as run_selfcheck
-                run_selfcheck()
+                run_selfcheck(args)
                 log.write(f"You: {user_input}\nSilhouette: selfcheck run.\n")
+            elif cmd == ":drift-report":
+                from silhouette_core.drift_detector import main as drift_main
+                drift_main([])
+                log.write(f"You: {user_input}\nSilhouette: drift report generated.\n")
+            elif cmd == ":summary":
+                from silhouette_core.session_summarizer import main as summary_main
+                summary_main([])
+                log.write(f"You: {user_input}\nSilhouette: summary generated.\n")
+            elif cmd == ":persona-audit":
+                from silhouette_core.persona_audit import main as audit_main
+                audit_main([])
+                log.write(f"You: {user_input}\nSilhouette: persona audit run.\n")
+            elif cmd == ":export-profile":
+                from silhouette_core.profile_exporter import main as profile_main
+                profile_main([])
+                log.write(f"You: {user_input}\nSilhouette: profile exported.\n")
             elif cmd == ":backup":
                 from silhouette_core.export import main as export_main
                 export_main()
