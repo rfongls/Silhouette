@@ -59,13 +59,83 @@ Silhouette Core is built in progressive, resilient phases to support modular AI 
    - Add integration tests simulating multi-node or concurrent execution  
 
 ## ⏳ Phase 7 – Multi-Agent Interface & Messaging
-- Run multiple Silhouette agents with unique memory  
-- Memory sharing and persona diffing  
-- Socket- or API-based inter-agent messaging  
-- Commands to spawn/fork/merge agents  
+
+**High-Level Goals:**
+- Run multiple Silhouette agents in parallel, each with its own memory store  
+- Enable memory sharing, merging and persona diffing between agents  
+- Provide socket- or HTTP-based inter-agent messaging  
+- Add REPL commands to spawn, fork, merge, audit agents  
+
+**Actionable Subtasks:**
+
+1. **Agent Lifecycle & CLI Commands**  
+   - Create `agent_controller.py` to manage agent processes (spawn, fork, merge, shutdown)  
+   - Extend `cli/main.py` with new commands:  
+     - `:agent spawn <template>`  
+     - `:agent fork <agent_id>`  
+     - `:agent merge <target_id> <source_id>`  
+     - `:agent list`  
+
+2. **Isolated Memory Stores & Sharing**  
+   - Implement per-agent `memory_<agent_id>.jsonl` files  
+   - Build `memory_merge.py` to diff & merge two agent memories  
+   - Add `:agent export <agent_id> <path>` and `:agent import <agent_id> <path>`  
+
+3. **Persona Diff & Audit**  
+   - Develop `persona_diff.py` that compares `persona.dsl` across agents and highlights divergences  
+   - Add `:agent audit <agent_id>` CLI to run selfcheck and persona-diff together  
+
+4. **Inter-Agent Messaging Layer**  
+   - Prototype `agent_messaging.py` using WebSockets or HTTP endpoints for agent-to-agent calls  
+   - Define message formats & routes in `docs/agent_api.md`  
+   - Secure communications via token or mutual TLS  
+
+5. **Integration Tests & CI**  
+   - Write pytest scenarios for:  
+     - Spawning and terminating agents  
+     - Forking and merging memory  
+     - Exchanging messages and verifying responses  
+   - Extend GitHub Actions to launch multiple agent instances in the matrix  
+
+6. **Documentation & Examples**  
+   - Create `docs/agent_scenarios.md` with end-to-end recipes (e.g., “Spawn two agents, share memory, merge results”)  
+   - Update `README.md` quickstart to include multi-agent usage  
 
 ## ⏳ Phase 8 – Self-Reflective Monitoring
-- Detect drift in tone, intent, or behavior  
-- Summarize changes since last session  
-- Audit persona alignment  
-- Introduce `:selfcheck` command and audit engine  
+
+**High-Level Goals:**
+- Detect drift in tone, intent, or behavior over time  
+- Summarize what’s changed since the last session or checkpoint  
+- Audit persona alignment continuously and report deviations  
+- Extend the `:selfcheck` command into a full audit engine  
+
+**Actionable Subtasks:**
+
+1. **Drift Detection Engine**  
+   - Implement `drift_detector.py` that compares recent memory entries against historical baselines  
+   - Define drift metrics (e.g. topic, sentiment, intent distributions) and thresholds in `config/drift.yml`  
+   - Add `:drift-report` CLI to generate a concise drift summary  
+
+2. **Session Summarization & Trends**  
+   - Build `session_summarizer.py` to produce human-readable summaries of each session  
+   - Track key statistics (number of intents, tone shifts, module usage) and output to `reports/`  
+   - Create `:summary` CLI to view the latest session summary or a range of sessions  
+
+3. **Persona Audit Tool**  
+   - Enhance `selfcheck_engine.py` to validate current behavior against `persona.dsl` rules  
+   - Implement `persona_audit.py` to highlight any responses or memory entries that violate persona constraints  
+   - Add `:persona-audit <agent_id?>` CLI to run a targeted persona audit  
+
+4. **Extended `:selfcheck` Command**  
+   - Consolidate drift reports, session summaries, and persona audits under `:selfcheck --full`  
+   - Output a multi-part report with actionable warnings and remediation suggestions  
+
+5. **Integration Tests & CI**  
+   - Write pytest scenarios for drift detection using synthetic memory logs  
+   - Add tests for `:drift-report`, `:summary`, and `:persona-audit` CLI commands  
+   - Update CI to fail if any audit warnings exceed critical thresholds  
+
+6. **Documentation & Examples**  
+   - Document the monitoring workflow in `docs/monitoring.md`  
+   - Provide example configs in `docs/examples/drift_config.yml`  
+   - Update `README.md` to include “Self-Reflective Monitoring” usage guide  
