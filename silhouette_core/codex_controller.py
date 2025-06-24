@@ -1,10 +1,59 @@
 import subprocess
-import yaml
 import os
 
-def load_next_task(config_path="auto_dev.yaml"):
+try:
+    import yaml  # type: ignore
+except Exception:  # pragma: no cover - PyYAML may not be installed
+    yaml = None
+
+def _fallback_load(config_path: str) -> dict:
+    """Parse a tiny subset of YAML used by auto_dev.yaml."""
+    config: dict[str, object] = {"generate": []}
     with open(config_path, "r") as f:
-        return yaml.safe_load(f)
+        lines = f.readlines()
+
+    i = 0
+    while i < len(lines):
+        line = lines[i].rstrip()
+        if not line or line.lstrip().startswith("#"):
+            i += 1
+            continue
+
+        if line.startswith("generate:"):
+            i += 1
+            while i < len(lines) and lines[i].startswith("  -"):
+                item: dict[str, str] = {}
+                first = lines[i].strip()
+                if "file:" in first:
+                    item["file"] = first.split("file:", 1)[1].strip()
+                i += 1
+                while i < len(lines) and lines[i].startswith("    "):
+                    sub = lines[i].strip()
+                    if ":" in sub:
+                        k, v = sub.split(":", 1)
+                        item[k.strip()] = v.strip().strip('"')
+                    i += 1
+                config["generate"].append(item)
+            continue
+
+        if line.startswith("jobs:"):
+            break
+
+        if ":" in line:
+            key, value = line.split(":", 1)
+            config[key.strip()] = value.strip()
+
+        i += 1
+
+    return config
+
+
+def load_next_task(config_path: str = "auto_dev.yaml") -> dict:
+    """Load the next Codex task without requiring PyYAML."""
+    if yaml:
+        with open(config_path, "r") as f:
+            return yaml.safe_load(f)
+    return _fallback_load(config_path)
 
 def generate_code(task):
     for item in task["generate"]:
