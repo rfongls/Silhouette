@@ -5,7 +5,7 @@ from datetime import datetime
 import subprocess
 import os
 import argparse
-
+from silhouette_core.offline_mode import is_offline
 from silhouette_core.dsl_parser import parse_dsl_file
 from silhouette_core.module_loader import discover_modules
 from silhouette_core.response_engine import get_response
@@ -170,7 +170,8 @@ def main():
     parser.add_argument("--no-repl", action="store_true", help="Exit without starting REPL")
     args = parser.parse_args()
 
-    if os.getenv("SILHOUETTE_OFFLINE"):
+    if is_offline():
+
         print("[SAFE MODE] Offline detected")
 
     if args.no_repl:

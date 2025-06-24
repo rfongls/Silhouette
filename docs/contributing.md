@@ -43,4 +43,3 @@ This is a cooperative, purpose-driven space. Please keep interactions constructi
 - [philosophy.md](./philosophy.md)
 - [TODO.md](../TODO.md)
 - [MILESTONES.md](../MILESTONES.md)
-

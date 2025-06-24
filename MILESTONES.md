@@ -19,7 +19,7 @@ Recommended duration: 4–6 weeks
 - `dsl_parser.py`
 - `logs/`
 - `.github/workflows/ci.yml`
-- `PHASE_1_ISSUES.md`, `TODO.md`
+- `TODO.md`
 
 ---
 

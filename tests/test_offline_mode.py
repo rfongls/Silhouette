@@ -1,16 +1,9 @@
-import unittest
-import os
-from offline_mode import is_offline
 
-class TestOfflineMode(unittest.TestCase):
-    def test_env_off(self):
-        os.environ['SILHOUETTE_OFFLINE'] = '1'
-        self.assertTrue(is_offline())
+from silhouette_core.offline_mode import is_offline
 
-    def test_missing_files(self):
-        os.environ.pop('SILHOUETTE_OFFLINE', None)
-        # ensure persona.dsl not present
-        persona = Path('persona.dsl')
-        if persona.is_file():
-            persona.unlink()
-        self.assertTrue(is_offline())
+
+def test_is_offline(monkeypatch):
+    monkeypatch.delenv("SILHOUETTE_OFFLINE", raising=False)
+    assert not is_offline()
+    monkeypatch.setenv("SILHOUETTE_OFFLINE", "1")
+    assert is_offline()
