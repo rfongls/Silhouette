@@ -91,7 +91,6 @@ def test_persona_audit_command(tmp_path):
     run_cmd(":persona-audit", "Persona violations")
     persona.unlink()
 
-
 def test_export_profile_command():
     run_cmd(":export-profile", "Profile exported")
 
@@ -107,3 +106,4 @@ def test_agent_deploy(tmp_path):
     (root / "silhouette_clone_v1.zip").write_bytes(archive.read_bytes())
     run_cmd(f":agent deploy {tmp_path}", "Deployed clone")
     (root / "silhouette_clone_v1.zip").unlink()
+

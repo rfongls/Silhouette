@@ -12,3 +12,4 @@ Use the commands below to generate various reports.
 - `python -m silhouette_core.distiller` – produce a compact knowledge distillate.
 - `python -m silhouette_core.package_clone` – build `silhouette_clone_vX.zip`.
 - `:agent deploy <target>` – deploy a clone archive to a host path or `ssh://` URL.
+
