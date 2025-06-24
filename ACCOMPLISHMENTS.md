@@ -77,3 +77,11 @@ This marks the successful collaboration of manual design + Codex automation.
 ✅ Backup works even without `cryptography`
 ✅ `:exit` and `:quit` commands close the session
 
+## Phase 6: Scaling from Edge to Core
+
+✅ Performance profiler measures CPU, memory and I/O usage
+✅ Configurable profiles for edge, mid-tier and core deployments
+✅ Priority-based module executor with parallel threads
+✅ Stub distributed executor documented for future remote nodes
+✅ Integration tests cover concurrency and stubbed networking
+

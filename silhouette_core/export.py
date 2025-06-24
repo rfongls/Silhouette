@@ -66,7 +66,7 @@ def main():
     key = generate_key(key_path)
     # Use ASCII-only output for compatibility with Windows consoles
     print(f"[OK] Key generated: {key_path}")
-    
+
     if not HAVE_CRYPTO:
         print("[!] 'cryptography' not installed - archive will not be encrypted")
 

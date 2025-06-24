@@ -50,3 +50,16 @@ All notable changes to this project will be documented here.
 - Accept `:exit` and `:quit` aliases in the REPL
 - Backup status messages use ASCII output
 
+
+## [Phase 6] - Scalable Execution
+
+### Added
+- `performance_profiler.py` to capture CPU, memory and I/O metrics
+- `config/performance.yml` defines edge, mid-tier and core profiles
+- `module_executor.py` executes modules in parallel using a priority queue
+- `distributed_executor.py` stub lays groundwork for multi-node execution
+- `offline_mode.load_throttle` delays tasks when system load is high
+- Tests for concurrent and distributed execution stubs
+
+### Changed
+- Documentation updated with distributed execution protocol
