@@ -1,0 +1,21 @@
+# Python artifacts
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+
+# Coverage and test artifacts
+.pytest_cache/
+.ruff_cache/
+coverage.xml
+
+# Build outputs
+silhouette_clone_v*.zip
+
+# OS artifacts
+.DS_Store
+# Runtime artifacts
+exports/
+reports/
+memory_*.jsonl

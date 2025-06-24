@@ -91,6 +91,7 @@ def test_persona_audit_command(tmp_path):
     run_cmd(":persona-audit", "Persona violations")
     persona.unlink()
 
+
 def test_export_profile_command():
     run_cmd(":export-profile", "Profile exported")
 
