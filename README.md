@@ -1,4 +1,3 @@
-````markdown
 # 🌑 Silhouette Core
 
 **Silhouette** is a survivable, modular, and scalable AI agent—designed to persist even when modern infrastructure cannot. It is purpose-aligned, hardware-flexible, and built to be carried, revived, and evolved across any environment.
@@ -7,24 +6,25 @@
 
 ## 🔍 What It Does
 
-- **Alignment-First**: Loads persona constraints and values from DSL configuration (`persona.dsl`).  
-- **Memory & Context**: Records conversations in logs and replays them into structured memory for recall.  
-- **Capability Modules**: Supports plug-in modules that extend functionality (math, graph, search, etc.).  
-- **Offline-First**: Detects network absence and throttles or bypasses non-critical modules.  
-- **Scalable Execution**: Profiles system resources to choose edge, mid-tier, or full-node behavior; executes modules in parallel or across multiple hosts.  
-- **Self-Monitoring**: Provides CLI commands for drift detection, session summarization, and persona auditing.  
-- **Self-Replication**: Exports a profile, distills knowledge, quantizes models, packages a clone, and deploys to other environments.
+* **Alignment-First**: Loads persona constraints and values from DSL configuration (`persona.dsl`).
+* **Memory & Context**: Records conversations in logs and replays them into structured memory for recall.
+* **Capability Modules**: Supports plug-in modules that extend functionality (math, graph, search, etc.).
+* **Offline-First**: Detects network absence and throttles or bypasses non-critical modules.
+* **Scalable Execution**: Profiles system resources to choose edge, mid-tier, or full-node behavior; executes modules in parallel or across multiple hosts.
+* **Self-Monitoring**: Provides CLI commands for drift detection, session summarization, and persona auditing.
+* **Self-Replication**: Exports a profile, distills knowledge, quantizes models, packages a clone, and deploys to other environments.
 
 ---
 
 ## 🖥️ System Requirements
 
-- **Python**: 3.8+ (3.10 recommended)  
-- **RAM**:  
-  - Edge devices (e.g., Raspberry Pi 4): ≥ 1 GB  
-  - Mid-tier deployments: ≥ 4 GB  
-- **Disk**: 500 MB for code + models, plus space for logs and memory  
-- **Optional**: GPU or DSP for accelerated quantized models  
+* **Python**: 3.8+ (3.10 recommended)
+* **RAM**:
+
+  * Edge devices (e.g., Raspberry Pi 4): ≥ 1 GB
+  * Mid-tier deployments: ≥ 4 GB
+* **Disk**: 500 MB for code + models, plus space for logs and memory
+* **Optional**: GPU or DSP for accelerated quantized models
 
 ---
 
@@ -34,21 +34,25 @@
 git clone https://github.com/your-org/Silhouette.git
 cd Silhouette
 pip install -r requirements-dev.txt
-````
+```
 
 > **Note:** For production, you may install only runtime requirements (`requirements.txt`) and include optional backends (`llama.cpp`, `onnxruntime`, or `transformers`).
 > **Docker**: A containerized image is available:
 >
 > ```bash
-> docker pull your-org/silhouette:latest
-> docker run -it your-org/silhouette:latest
+> ```
+
+docker pull your-org/silhouette\:latest
+docker run -it your-org/silhouette\:latest
+
+> ```
 > ```
 
 ---
 
 ## 📂 Project Structure
 
-```
+```text
 Silhouette/
 ├── cli/                        # CLI entrypoint with REPL commands
 │   └── main.py
@@ -151,52 +155,265 @@ python -m agent_controller deploy user@remote:/path
 python -m silhouette_core.edge_launcher --profile silhouette_profile.json
 ```
 
-### Troubleshooting Common Issues
+---
 
-* **Profile Export Fails**: Ensure `persona.dsl` and `memory.jsonl` exist and are readable.
-* **Distillation Errors**: Verify `config/distillation.yml` parameters (summary length, quantization levels).
-* **Quantization Failures**: Install required libs (`onnxruntime`, `tflite-runtime`) and compatible hardware.
-* **SSH Deploy Issues**: Confirm SSH keys are configured and target host is reachable.
+## Module Training & Deployment
 
-For full details, see [Self-Replication Guide](docs/self_replication.md) and [Deploy Guide](docs/deploy-guide.md).
+This pipeline ensures each module has its own knowledge ingestion, index, fine‑tuned adapter, and runtime deployment:
+
+1. **Prepare Content**
+   Place raw source files under `modules/<module_name>/docs/`.
+
+2. **Embed & Index**
+
+   ```bash
+   python embedding_engine.py --module=<module_name>
+   python index_builder.py   --module=<module_name> --index-type=faiss
+   ```
+
+   * Generates `modules/<module_name>/embeddings/` with `chunks.jsonl` and `vectors.npy`.
+   * Builds a FAISS index in `modules/<module_name>/index/faiss.index`.
+
+3. **Train Adapter**
+
+   ```bash
+   python trainer.py \
+     --module=<module_name> \
+     --method=lora \
+     --adapter-output=modules/<module_name>/adapter/
+   ```
+
+   * Loads base model, applies LoRA training over module chunks, and outputs `adapter/pytorch_adapter.bin`.
+
+4. **Registry Metadata**
+   Ensure each module folder contains `module.json`, for example:
+
+   ```json
+   {
+     "name": "hl7_transform",
+     "version": "0.1.3",
+     "base_model": "gpt-base-v1",
+     "adapter_path": "adapter/pytorch_adapter.bin",
+     "index_path": "index/faiss.index"
+   }
+   ```
+
+5. **Publish & Version**
+
+   * CI automatically bumps version, tags artifacts, and pushes to your registry.
+
+6. **Serve**
+   At runtime, the API Gateway and Router pick top‑K modules, spin up Module Runner workers that:
+
+   * Load `module.json`, FAISS index, and adapter weights.
+   * Retrieve top context chunks.
+   * Run inference with the adapter loaded.
+     Results are merged by the Combiner into a unified response.
+
+7. **Self‑Updating Loop**
+   On changes to docs or code, CI re‑runs ingestion, indexing, and training—ensuring modules are always up to date.
 
 ---
 
-## 👩‍💻 Developer & Training Workflow
+## ❓ LLM Integration
 
-Silhouette provides a pipeline for ingestion, retraining, and continuous evolution:
+To give Silhouette Core a true “brain,” you need to plug in a pretrained LLM and inference engine. Without an LLM, the framework can only perform semantic search and deterministic module logic.
 
-1. **Log Generation & Replay**
+1. **Choose a Base Checkpoint**
 
-   ```bash
-   python -m cli.main --no-repl --cmd :replay
-   ```
+   * e.g. Llama 2, MPT, GPT-2, or any compatible model artifact.
 
-2. **Knowledge Ingestion & Embedding**
+2. **Install Inference Runtime**
 
-   ```bash
-   python -m silhouette_core.trainer \
-     --source docs/knowledge_store/ \
-     --memory memory.jsonl \
-     --out knowledge_corpus.jsonl
-   python -m silhouette_core.embedding_engine \
-     --build-index \
-     --input knowledge_corpus.jsonl
-   ```
+   * For PyTorch: `pip install torch transformers peft`
+   * For CPU‐optimized: `pip install onnxruntime`
+   * For ultra‐lightweight: compile and use `llama.cpp`
 
-3. **Auto-Development Loop**
+3. **Adapter Training**
 
    ```bash
-   python -m silhouette_core.codex_controller run
+   python trainer.py \
+     --module=<module_name> \
+     --base-model=/path/to/base/model \
+     --method=lora \
+     --adapter-output=modules/<module_name>/adapter/
    ```
 
-   * Define Codex steps in `auto_dev.yaml`, review generated code, then commit.
+   Yields a small adapter file: `adapter/pytorch_adapter.bin`
 
-4. **Continuous Integration**
-   Configure GitHub Actions to replay logs, retrain embeddings, lint, test, and regenerate docs in one pipeline.
+4. **Runtime Wiring**
+   In `silhouette_core/module_executor.py`, load the model and adapter:
 
-5. **Scheduled Retraining**
-   Use GitHub Scheduled Workflows or a CRON job to run the above steps nightly or weekly.
+   ```python
+   from transformers import AutoModelForCausalLM, AutoTokenizer
+   from peft import PeftModel
+
+   base = "/path/to/base/model"
+   adapter = f"modules/{module_name}/adapter"
+
+   tokenizer = AutoTokenizer.from_pretrained(base)
+   model = AutoModelForCausalLM.from_pretrained(base)
+   model = PeftModel.from_pretrained(model, adapter)
+
+   inputs = tokenizer(prompt, return_tensors="pt")
+   outputs = model.generate(**inputs)
+   answer = tokenizer.decode(outputs[0], skip_special_tokens=True)
+   ```
+
+5. **Prompt+Retrieve+Generate**
+
+   * Retrieve top‑K chunks from FAISS.
+   * Prepend them to your prompt.
+   * Call `generate()` on the combined prompt to get free‑form answers.
+
+6. **Combiner Logic**
+   If multiple modules run, feed their outputs into a small “merge” prompt or heuristic to form the final response.
+
+---
+
+## 🧠 Edge-Deployment LLM Distillation & Quantization
+
+To run a capable generative model on resource-constrained hardware, use a teacher–student distillation plus quantization pipeline:
+
+1. **Teacher–Student Distillation**
+
+   * **Teacher**: Run a large cloud-based LLM (e.g. GPT-3.5, Llama 2-70B) to generate `<prompt, response>` pairs over your module prompts and retrieved context.
+   * **Student**: Choose a compact model (e.g. Llama 2-7B or GPT-NeoX-3B). Fine-tune the student on the distilled data using QLoRA or adapter-LoRA:
+
+     ```bash
+     python train_adapter.py \
+       --base-model path/to/student-model \
+       --train-file distill_data.jsonl \
+       --method qlora \
+       --adapter-output modules/<module>/adapter/qlora
+     ```
+   * Produces a student adapter (e.g. `modules/<module>/adapter/qlora/pytorch_adapter.bin`) that approximates teacher behavior.
+
+2. **Quantization**
+
+   * Convert the student (or adapter-enhanced checkpoint) to 4‑ or 8‑bit using bitsandbytes or similar:
+
+     ```bash
+     python quantize_models.py \
+       --input modules/<module>/adapter/qlora/pytorch_adapter.bin \
+       --bits 4 \
+       --out modules/<module>/adapter/qlora4b.bin
+     ```
+   * Reduces memory footprint from several GBs to under 1 GB with minimal accuracy loss.
+
+3. **Edge Inference**
+
+   * Use a lightweight runtime (e.g. `llama.cpp`, `ggml`, `onnxruntime`) that supports quantized weights.
+   * In `module_executor.py`, load the quantized student:
+
+     ```python
+     model = load_quantized_model("modules/<module>/adapter/qlora4b.bin")
+     answer = model.generate_with_retrieval(query, retrieve_fn)
+     ```
+
+4. **Retention of RAG Pipeline**
+
+   * Continue using FAISS retrieval to fetch context chunks.
+   * Prepend chunks to student prompts so the model grounds answers in your module data.
+
+5. **Final Recipe**
+
+   ```bash
+   # 1. Generate distillation data
+   python teacher_generate.py --module hl7_transform --model gpt-3.5 --out distill.jsonl
+
+   # 2. Train student via QLoRA
+   python train_adapter.py \
+     --base-model llama-7b \
+     --train-file distill.jsonl \
+     --method qlora \
+     --adapter-output modules/hl7_transform/adapter/qlora
+
+   # 3. Quantize to 4-bit
+   python quantize_models.py \
+     --input modules/hl7_transform/adapter/qlora/pytorch_adapter.bin \
+     --bits 4 \
+     --out modules/hl7_transform/adapter/qlora4b.bin
+
+   # 4. Run on edge (see module_executor snippet above)
+   ```
+
+This approach gives you near–large-model quality on hardware with only a few GB of RAM and no GPU.
+
+---
+
+## 🧩 Python Reasoning & Coding Module
+
+For focused complex reasoning and Python-based problem solving, introduce a dedicated **reasoner** module:
+
+1. **Base Model Selection**
+
+   * **Recommended**: Code Llama 7B (best Python synthesis, quantizes to \~2–3 GB at 4‑bit).
+   * **Alternatives**: StarCoder 7B, Llama 2 7B, or distilled GPT‑NeoX 3B (for <2 GB targets).
+
+2. **Adapter-Tune on Reasoning Data**
+
+   * Prepare a JSONL of `<prompt, code_solution>` pairs (Project Euler, StackOverflow examples):
+
+     ```bash
+     python prepare_reasoning_data.py --out reasoning_data.jsonl
+     ```
+   * Fine-tune via QLoRA:
+
+     ```bash
+     python train_adapter.py \
+       --base-model code-llama-7b \
+       --train-file reasoning_data.jsonl \
+       --method qlora \
+       --adapter-output modules/reasoner/adapter/
+     ```
+
+3. **Quantize for Edge**
+
+   ```bash
+   python quantize_models.py \
+     --input modules/reasoner/adapter/pytorch_adapter.bin \
+     --bits 4 \
+     --out modules/reasoner/adapter/qlora4b.bin
+   ```
+
+4. **Module Executor Wiring**
+   In `silhouette_core/module_executor.py`:
+
+   ```python
+   from transformers import AutoModelForCausalLM, AutoTokenizer
+   from peft import PeftModel
+
+   def load_reasoner():
+       base = "code-llama-7b"
+       adapter = "modules/reasoner/adapter/qlora4b.bin"
+       tok = AutoTokenizer.from_pretrained(base)
+       model = AutoModelForCausalLM.from_pretrained(base)
+       model = PeftModel.from_pretrained(model, adapter)
+       return tok, model
+
+   def reason(query: str):
+       tok, model = load_reasoner()
+       inputs = tok(query, return_tensors="pt").to(model.device)
+       out = model.generate(**inputs, max_new_tokens=256)
+       return tok.decode(out[0], skip_special_tokens=True)
+   ```
+
+5. **Optional Code Execution Sandbox**
+
+   * To validate generated Python, run in a secure subprocess:
+
+     ```python
+     import subprocess, tempfile
+
+     def run_python(code: str):
+         with tempfile.NamedTemporaryFile(suffix=".py", delete=False) as f:
+             f.write(code.encode())
+         proc = subprocess.run(["python", f.name], capture_output=True, text=True)
+         return proc.stdout, proc.stderr
+     ```
+
+**Workflow**: User query → Router picks **reasoner** → Retrieve (if needed) → Generate code + explanation → Optionally execute → Return result.
 
 ---
 
@@ -227,6 +444,8 @@ Silhouette provides a pipeline for ingestion, retraining, and continuous evoluti
 
 Contributions are welcome! See [docs/contributing.md](docs/contributing.md) for guidelines and our GitHub Projects board for upcoming phases.
 
+---
+
 ## 💬 Support
 
 If you encounter issues or have questions:
@@ -239,6 +458,3 @@ If you encounter issues or have questions:
 ## 📜 License
 
 MIT or custom license defined by project initiator.
-
-```
-```
