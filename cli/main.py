@@ -104,10 +104,23 @@ def launch_repl(alignment, modules, module_funcs):
                 count = parse_session_logs(Path("logs"), Path("memory.jsonl"))
                 print(f"Replayed {count} entries")
                 log.write(f"You: {user_input}\nSilhouette: replayed {count} entries.\n")
-            elif cmd == ":selfcheck":
+            elif cmd.startswith(":selfcheck"):
+                args = cmd.split()[1:]
                 from silhouette_core.selfcheck_engine import main as run_selfcheck
-                run_selfcheck()
+                run_selfcheck(args)
                 log.write(f"You: {user_input}\nSilhouette: selfcheck run.\n")
+            elif cmd == ":drift-report":
+                from silhouette_core.drift_detector import main as drift_main
+                drift_main([])
+                log.write(f"You: {user_input}\nSilhouette: drift report generated.\n")
+            elif cmd == ":summary":
+                from silhouette_core.session_summarizer import main as summary_main
+                summary_main([])
+                log.write(f"You: {user_input}\nSilhouette: summary generated.\n")
+            elif cmd == ":persona-audit":
+                from silhouette_core.persona_audit import main as audit_main
+                audit_main([])
+                log.write(f"You: {user_input}\nSilhouette: persona audit run.\n")
             elif cmd == ":backup":
                 from silhouette_core.export import main as export_main
                 export_main()
