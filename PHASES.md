@@ -139,3 +139,59 @@ Silhouette Core is built in progressive, resilient phases to support modular AI 
    - Document the monitoring workflow in `docs/monitoring.md`  
    - Provide example configs in `docs/examples/drift_config.yml`  
    - Update `README.md` to include “Self-Reflective Monitoring” usage guide  
+
+## ⏳ Phase 9 – Self-Replication & Knowledge Distillation
+
+**Why?**  
+To truly “clone” the agent—including its persona, memory, and capabilities—you need a self-contained profile plus a distillation pipeline that produces a lightweight, edge-ready package.
+
+**High-Level Goals:**
+- Export a complete “Silhouette Profile” (persona, alignment rules, memory summary)  
+- Distill and compress knowledge for smaller footprints  
+- Package code, profile, and distillate into a deployable “clone” archive  
+- Automate deployment of that clone to new hosts or devices  
+
+**Actionable Subtasks:**
+
+1. **Persona & State Exporter**  
+   - Implement `profile_exporter.py` to bundle:  
+     - `persona.dsl` (alignment rules)  
+     - A snapshot of `memory.jsonl` (or its summary)  
+     - Installed module manifests and versions  
+   - Output a single `silhouette_profile.json` or `.zip`  
+
+2. **Knowledge Distillation**  
+   - Create `distiller.py` that reads the exported memory and DSL, then:  
+     - Summarizes long-form memory into a concise “core knowledge” JSON  
+     - Extracts key embedding vectors and quantizes them for edge use  
+   - Define a `config/distillation.yml` to control summary length and quantization levels  
+
+3. **Micro-Agent Packaging**  
+   - Develop `package_clone.py` to assemble:  
+     - Core code subset (essential modules only)  
+     - The profile and distilled knowledge  
+     - A minimalist runtime launcher (`edge_launcher.py`)  
+   - Produce versioned archives like `silhouette_clone_vX.zip`  
+
+4. **Self-Deploy CLI**  
+   - Extend `agent_controller.py` with `:agent deploy <target>` that:  
+     - Pushes the clone archive to a remote host or device  
+     - Boots the `edge_launcher.py` with the correct profile  
+   - Support local container/VM deployment via Docker or SSH  
+
+5. **Edge Runtime Optimization**  
+   - Implement `quantize_models.py` to convert any ML weights or embeddings into ONNX/TFLite  
+   - Integrate these into the `edge_launcher.py` startup sequence  
+
+6. **Integration Tests & CI**  
+   - Write tests for:  
+     - `profile_exporter` output correctness  
+     - Distillation producing expected summaries and vector formats  
+     - Clone packaging archives and their integrity  
+     - `:agent deploy` spinning up a fresh container or VM and verifying a heartbeat  
+   - Update CI pipeline to run containerized self-deployment smoke tests  
+
+7. **Documentation & Examples**  
+   - Add `docs/self_replication.md` describing the clone workflow  
+   - Provide sample configs in `docs/examples/distillation_config.yml`  
+   - Update `README.md` and Quickstart to include “Clone & Deploy” section  
