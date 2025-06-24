@@ -77,7 +77,6 @@ This marks the successful collaboration of manual design + Codex automation.
 ✅ Backup works even without `cryptography`
 ✅ `:exit` and `:quit` commands close the session
 
-
 ## Phase 6: Scaling from Edge to Core
 
 ✅ Performance profiler measures CPU, memory and I/O usage
