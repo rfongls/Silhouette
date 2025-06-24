@@ -136,6 +136,35 @@ For full details, see [Self-Replication Guide](docs/self_replication.md) and [De
 
 ---
 
+---
+
+## 📈 CI & Code Coverage
+
+Silhouette uses GitHub Actions and Codecov for automated testing and coverage reporting:
+
+1. **Generate coverage report**:
+
+   ```yaml
+   - name: Run tests with coverage
+     run: |
+       pytest --cov=silhouette_core --cov-report=xml
+   ```
+2. **Upload to Codecov**:
+
+   ```yaml
+   - name: Upload coverage to Codecov
+     uses: codecov/codecov-action@v3
+     with:
+       files: coverage.xml
+       flags: unittests
+       token: ${{ secrets.CODECOV_TOKEN }}  # Only needed for private repos
+   ```
+3. **Add the Codecov badge** to your README:
+
+   ```markdown
+   [![Coverage](https://codecov.io/gh/your-org/Silhouette/branch/main/graph/badge.svg)](https://codecov.io/gh/your-org/Silhouette)
+   ```
+
 ## 📜 License
 
 MIT or custom license defined by project initiator.
