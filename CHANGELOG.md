@@ -35,3 +35,31 @@ All notable changes to this project will be documented here.
 ### Changed
 - CLI (`main.py`) prompts for file paths during `:restore`
 - Response engine now formats based on persona config
+
+## [Phase 5] - Offline-First & Recovery
+
+### Added
+- `offline_mode.py` detects offline mode and throttles commands
+- `selfcheck_engine.py` verifies required files and memory integrity
+- `replay_log_to_memory.py` rebuilds memory from session logs
+- CLI commands `:replay` and `:selfcheck`
+- Backup works without `cryptography` installed
+
+### Changed
+- CLI log files opened with UTF-8 encoding
+- Accept `:exit` and `:quit` aliases in the REPL
+- Backup status messages use ASCII output
+
+
+## [Phase 6] - Scalable Execution
+
+### Added
+- `performance_profiler.py` to capture CPU, memory and I/O metrics
+- `config/performance.yml` defines edge, mid-tier and core profiles
+- `module_executor.py` executes modules in parallel using a priority queue
+- `distributed_executor.py` stub lays groundwork for multi-node execution
+- `offline_mode.load_throttle` delays tasks when system load is high
+- Tests for concurrent and distributed execution stubs
+
+### Changed
+- Documentation updated with distributed execution protocol

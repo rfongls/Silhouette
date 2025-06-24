@@ -9,6 +9,7 @@ import os
 import time
 import functools
 from pathlib import Path
+from performance_profiler import get_cpu_load
 
 def is_offline():
     """
@@ -35,4 +36,21 @@ def throttle(min_interval: float):
                 last_called['time'] = time.time()
             return fn(*args, **kwargs)
         return wrapper
+    return decorator
+
+
+def load_throttle(threshold: float, interval: float):
+    """Delay execution when CPU load exceeds threshold."""
+
+    def decorator(fn):
+        base = throttle(interval)(fn)
+
+        @functools.wraps(fn)
+        def wrapper(*args, **kwargs):
+            if get_cpu_load() > threshold:
+                time.sleep(interval)
+            return base(*args, **kwargs)
+
+        return wrapper
+
     return decorator

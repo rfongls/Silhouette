@@ -9,6 +9,16 @@ from silhouette_core.offline_mode import is_offline
 from silhouette_core.dsl_parser import parse_dsl_file
 from silhouette_core.module_loader import discover_modules
 from silhouette_core.response_engine import get_response
+from agent_controller import (
+    spawn_agent,
+    fork_agent,
+    merge_agents,
+    list_agents,
+    export_agent,
+    import_agent,
+    shutdown_agent,
+)
+from persona_diff import diff_with_base
 
 DSL_PATH = Path("docs/alignment_kernel/values.dsl")
 LOG_DIR = Path("logs")
@@ -58,14 +68,15 @@ def launch_repl(alignment, modules, module_funcs):
         f"silhouette_session_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}.txt"
     )
 
-    with open(log_file, "a") as log:
+    # Ensure unicode characters are preserved regardless of system locale
+    with open(log_file, "a", encoding="utf-8") as log:
         print("\n🟣 Silhouette CLI – Alignment Mode\nType 'exit' to quit.\n")
         display_alignment(alignment)
         display_modules(modules)
 
         while True:
             user_input = input("You: ")
-            if user_input.lower() in ["exit", "quit"]:
+            if user_input.lower() in ["exit", "quit", ":exit", ":quit"]:
                 response = "Silhouette: Purpose acknowledged. Session closed."
                 print(response)
                 log.write(f"You: {user_input}\n{response}\n")
@@ -153,6 +164,48 @@ def launch_repl(alignment, modules, module_funcs):
                     key_path,
                 ])
                 log.write(f"You: {user_input}\nSilhouette: system state restored.\n")
+                continue
+
+            elif user_input.startswith(":agent"):
+                parts = user_input.split()
+                if len(parts) < 2:
+                    print("Usage: :agent <command>")
+                    continue
+                sub = parts[1]
+                if sub == "spawn":
+                    aid = spawn_agent()
+                    print(f"Spawned agent {aid}")
+                elif sub == "fork" and len(parts) >= 3:
+                    aid = int(parts[2])
+                    nid = fork_agent(aid)
+                    print(f"Forked agent {aid} -> {nid}")
+                elif sub == "merge" and len(parts) >= 4:
+                    tgt = int(parts[2])
+                    src = int(parts[3])
+                    count = merge_agents(tgt, src)
+                    print(f"Merged {count} entries from {src} into {tgt}")
+                elif sub == "list":
+                    print("Agents:", list_agents())
+                elif sub == "export" and len(parts) >= 4:
+                    aid = int(parts[2])
+                    path = Path(parts[3])
+                    export_agent(aid, path)
+                    print(f"Exported {aid} to {path}")
+                elif sub == "import" and len(parts) >= 4:
+                    aid = int(parts[2])
+                    path = Path(parts[3])
+                    import_agent(aid, path)
+                    print(f"Imported {path} into {aid}")
+                elif sub == "audit" and len(parts) >= 3:
+                    aid = int(parts[2])
+                    diff = diff_with_base(aid)
+                    for line in diff:
+                        print(line)
+                    from silhouette_core.selfcheck_engine import main as run_selfcheck
+                    run_selfcheck()
+                else:
+                    print("Unknown agent command")
+                log.write(f"You: {user_input}\nSilhouette: agent command executed.\n")
                 continue
 
             if user_input.startswith("calculate") and "Math" in module_funcs:

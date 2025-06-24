@@ -67,3 +67,35 @@ This marks the successful collaboration of manual design + Codex automation.
 ✅ API supports `/search?q=...` endpoint  
 ✅ Alignment engine and persona enforcement fully tested  
 ✅ System overview file created to document rebuild, modules, and logic  
+
+## Phase 5: Offline First and Recovery
+
+✅ Offline mode detection via `offline_mode.py`
+✅ Self-check command validates config and memory
+✅ Replay command rebuilds memory from session logs
+✅ CLI logs opened with UTF-8 encoding for Windows
+✅ Backup works even without `cryptography`
+✅ `:exit` and `:quit` commands close the session
+
+
+## Phase 6: Scaling from Edge to Core
+
+✅ Performance profiler measures CPU, memory and I/O usage
+✅ Configurable profiles for edge, mid-tier and core deployments
+✅ Priority-based module executor with parallel threads
+✅ Stub distributed executor documented for future remote nodes
+✅ Integration tests cover concurrency and stubbed networking
+
+## Phase 7 – Multi-Agent Interface & Messaging
+
+**Summary**  
+- Introduced `agent_controller.py` to spawn, fork, merge, and shut down agents  
+- Added `:agent` CLI commands for spawning, merging memory, auditing, listing, import/export  
+- Documented the inter-agent message schema in `docs/agent_api.md`  
+- Provided example workflows in `docs/agent_scenarios.md`  
+- Updated Quickstart in `README.md` to cover multi-agent usage  
+
+**Testing**  
+✅ `pytest -q` (all integration and unit tests pass)
+
+**Changed / Added Files (23):**  
