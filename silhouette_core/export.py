@@ -64,12 +64,14 @@ def main():
     key_path = args.key or os.path.join(EXPORT_DIR, f"key_{timestamp}.key")
 
     key = generate_key(key_path)
-    print(f"[✓] Key generated: {key_path}")
+    # Use ASCII-only output for compatibility with Windows consoles
+    print(f"[OK] Key generated: {key_path}")
+    
     if not HAVE_CRYPTO:
         print("[!] 'cryptography' not installed - archive will not be encrypted")
 
     zip_with_encryption(out_path, DEFAULT_FILES, key)
-    print(f"[✓] Backup created: {out_path}")
+    print(f"[OK] Backup created: {out_path}")
     print("Backup complete")
 
 if __name__ == "__main__":
