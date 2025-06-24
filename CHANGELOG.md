@@ -4,8 +4,13 @@ All notable changes to this project will be documented here.
 
 ## [Unreleased]
 
-### Added 
-- (reserved for upcoming Phase 9 work)
+### Added
+- Profile exporter (`profile_exporter.py`) and `:export-profile` CLI command  
+- Knowledge distiller (`distiller.py`) and `:distill` CLI command  
+- Clone packager (`package_clone.py`), edge launcher (`edge_launcher.py`), and provisioning tools  
+- Quantization helper (`quantize_models.py`) for embeddings/models  
+- Self-replication guide (`docs/self_replication.md`) and deploy guide updates  
+- `:agent deploy <target>` for remote/self-hosted clone deployment  
 
 ## [Phase 4] - Persona & Embedding Enhancements
 
@@ -55,7 +60,7 @@ All notable changes to this project will be documented here.
 - `agent_controller.py` to manage agent processes (spawn, fork, merge, shutdown)  
 - `agent_messaging.py` for socket- or HTTP-based inter-agent communication  
 - `memory_merge.py` for diffing and merging agent memory stores  
-- CLI commands under `:agent` in `cli/main.py`: `spawn`, `fork`, `merge`, `list`, `export`, `import`, `audit`  
+- CLI `:agent` commands in `cli/main.py`: `spawn`, `fork`, `merge`, `list`, `export`, `import`, `audit`  
 - `docs/agent_api.md` documenting the inter-agent message schema  
 - `docs/agent_scenarios.md` with example multi-agent workflows  
 - `tests/test_agent_controller.py` and `tests/test_agent_messaging.py` for agent functionality  
@@ -81,3 +86,15 @@ All notable changes to this project will be documented here.
 ### Changed
 - `cli/main.py` updated to support new monitoring commands  
 - `README.md` extended to include self-reflective monitoring usage  
+
+## [Phase 9] - Self-Replication & Knowledge Distillation
+
+###Added
+
+- Profile exporter (profile_exporter.py) and :export-profile CLI command
+- Knowledge distiller (distiller.py) and :distill CLI command
+- Clone packager (package_clone.py) and edge runtime launcher (edge_launcher.py)
+- Quantization helper (quantize_models.py) for embeddings/models
+- Self-replication CLI :agent deploy <target> in agent_controller.py
+- Documentation in docs/self_replication.md and docs/deploy-guide.md
+- Tests covering profile export, distillation, packaging, quantization, and deployment
