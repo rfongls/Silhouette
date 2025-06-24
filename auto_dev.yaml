@@ -8,3 +8,12 @@ generate:
   - file: tests/test_graph.py
     type: test
     scenario: "Given memory, create graph edges based on common intent or proximity"
+
+jobs:
+  codex-training:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Run Codex controller
+        run: python -m silhouette_core.codex_controller
