@@ -93,3 +93,17 @@ def test_persona_audit_command(tmp_path):
 
 def test_export_profile_command():
     run_cmd(":export-profile", "Profile exported")
+
+
+def test_agent_deploy(tmp_path):
+    from silhouette_core.package_clone import package_clone
+    profile = tmp_path / "silhouette_profile.json"
+    profile.write_text('{}')
+    dist = tmp_path / "distillate.json"
+    dist.write_text('{}')
+    archive = package_clone(profile, dist, version=1, output_dir=tmp_path)
+    root = Path(__file__).parent.parent.resolve()
+    (root / "silhouette_clone_v1.zip").write_bytes(archive.read_bytes())
+    run_cmd(f":agent deploy {tmp_path}", "Deployed clone")
+    (root / "silhouette_clone_v1.zip").unlink()
+

@@ -47,3 +47,6 @@ Run monitoring tools via the CLI:
 - `:selfcheck --full` for the complete audit
 - `:export-profile` to bundle persona, memory, and modules
 - `python -m silhouette_core.distiller` to create distilled knowledge
+- `python -m silhouette_core.package_clone --profile silhouette_profile.json` to build a clone archive
+- `:agent deploy <path>` to deploy the latest `silhouette_clone_v1.zip`
+

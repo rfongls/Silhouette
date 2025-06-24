@@ -209,6 +209,15 @@ def launch_repl(alignment, modules, module_funcs):
                     path = Path(parts[3])
                     import_agent(aid, path)
                     print(f"Imported {path} into {aid}")
+                elif sub == "deploy" and len(parts) >= 3:
+                    target = parts[2]
+                    from agent_controller import deploy_clone
+                    archive = Path("silhouette_clone_v1.zip")
+                    if not archive.exists():
+                        print("Clone archive silhouette_clone_v1.zip not found")
+                    else:
+                        deploy_clone(archive, target)
+                        print(f"Deployed clone to {target}")
                 elif sub == "audit" and len(parts) >= 3:
                     aid = int(parts[2])
                     diff = diff_with_base(aid)
