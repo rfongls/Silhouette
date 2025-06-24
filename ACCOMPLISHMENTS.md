@@ -67,3 +67,13 @@ This marks the successful collaboration of manual design + Codex automation.
 ✅ API supports `/search?q=...` endpoint  
 ✅ Alignment engine and persona enforcement fully tested  
 ✅ System overview file created to document rebuild, modules, and logic  
+
+## Phase 5: Offline First and Recovery
+
+✅ Offline mode detection via `offline_mode.py`
+✅ Self-check command validates config and memory
+✅ Replay command rebuilds memory from session logs
+✅ CLI logs opened with UTF-8 encoding for Windows
+✅ Backup works even without `cryptography`
+✅ `:exit` and `:quit` commands close the session
+
