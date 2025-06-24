@@ -33,10 +33,6 @@ jobs:
         coverage xml
         coverage report --fail-under=80
 
-    - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v3
-      with:
-        fail_ci_if_error: true
 
     - name: Smoke-test CLI
       run: |
@@ -56,52 +52,4 @@ jobs:
       run: |
         pip install markdown-link-check
         markdown-link-check "docs/**/*.md"
-
-  codex-training:
-    runs-on: ubuntu-latest
-
-    steps:
-    - uses: actions/checkout@v3
-
-    - name: Install dependencies
-      run: pip install openai
-
-    - name: Generate Data Prep Script
-      uses: openai-codex/action@v1
-      with:
-        prompt: |
-          "Write a Python script 'prepare_reasoning_data.py' that:
-          - loads 'modules/{module}/embeddings/chunks.jsonl'
-          - constructs a JSONL file of <prompt, completion> pairs
-          - supports argparse: --module, --out"
-        output_path: silhouette_core/prepare_reasoning_data.py
-
-    - name: Generate Adapter Trainer
-      uses: openai-codex/action@v1
-      with:
-        prompt: |
-          "Write 'train_adapter.py' that:
-          - accepts --base-model, --train-file, --method, --adapter-output
-          - loads a Hugging Face LLM, applies LoRA or QLoRA via peft
-          - fine-tunes on JSONL data and saves adapter weights"
-        output_path: silhouette_core/train_adapter.py
-
-    - name: Generate Quantizer
-      uses: openai-codex/action@v1
-      with:
-        prompt: |
-          "Write 'quantize_models.py' that:
-          - takes --input and --bits
-          - loads a model or adapter via bitsandbytes
-          - dumps a quantized checkpoint"
-        output_path: silhouette_core/quantize_models.py
-
-    - name: Update Module Executor
-      uses: openai-codex/action@v1
-      with:
-        prompt: |
-          "Enhance 'module_executor.py' to:
-          - load and run a quantized adapter using transformers + peft
-          - execute generated Python in a sandbox subprocess"
-        output_path: silhouette_core/module_executor.py
 
