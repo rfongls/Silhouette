@@ -1,7 +1,5 @@
 # 🌑 Silhouette Core
 
-[![Coverage](https://codecov.io/gh/your-org/Silhouette/branch/main/graph/badge.svg)](https://codecov.io/gh/your-org/Silhouette)
-
 **Silhouette** is a survivable, modular, and scalable AI agent—designed to persist even when modern infrastructure cannot. It is purpose‑aligned, hardware‑flexible, and built to be carried, revived, and evolved across any environment.
 
 ---
@@ -137,46 +135,3 @@ For full details, see [Self-Replication Guide](docs/self_replication.md) and [De
 ---
 
 ---
-
-## 📈 CI & Code Coverage
-
-Silhouette uses GitHub Actions and Codecov for automated testing and coverage reporting:
-
-1. **Generate coverage report**:
-
-   ```yaml
-   - name: Run tests with coverage
-     run: |
-       pytest --cov=silhouette_core --cov-report=xml
-   ```
-2. **Upload to Codecov**:
-
-   ```yaml
-   - name: Upload coverage to Codecov
-     uses: codecov/codecov-action@v3
-     with:
-       files: coverage.xml
-       flags: unittests
-       token: ${{ secrets.CODECOV_TOKEN }}  # Only needed for private repos
-   ```
-3. **Add the Codecov badge** to your README:
-
-   ```markdown
-   [![Coverage](https://codecov.io/gh/your-org/Silhouette/branch/main/graph/badge.svg)](https://codecov.io/gh/your-org/Silhouette)
-   ```
-4. **Configure your GitHub repository secret** (repo-level):
-
-   * Go to **YourProject/Silhouette** on GitHub.
-   * Click **Settings** → **Secrets and variables** → **Actions**.
-   * Click **New repository secret**, then add:
-
-     ```text
-     Name: CODECOV_TOKEN
-     Value: <your Codecov upload token>
-     ```
-
-Once saved, re-run your workflow; the badge will update with live coverage data.
-
-## 📜 License
-
-MIT or custom license defined by project initiator.
