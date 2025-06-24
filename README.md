@@ -164,6 +164,18 @@ Silhouette uses GitHub Actions and Codecov for automated testing and coverage re
    ```markdown
    [![Coverage](https://codecov.io/gh/your-org/Silhouette/branch/main/graph/badge.svg)](https://codecov.io/gh/your-org/Silhouette)
    ```
+4. **Configure your GitHub repository secret** (repo-level):
+
+   * Go to **YourProject/Silhouette** on GitHub.
+   * Click **Settings** → **Secrets and variables** → **Actions**.
+   * Click **New repository secret**, then add:
+
+     ```text
+     Name: CODECOV_TOKEN
+     Value: <your Codecov upload token>
+     ```
+
+Once saved, re-run your workflow; the badge will update with live coverage data.
 
 ## 📜 License
 
