@@ -9,3 +9,4 @@ Use the commands below to generate various reports.
 - `:persona-audit` – check memory entries against persona rules.
 - `:selfcheck --full` – run all of the above and standard checks together.
 - `:export-profile` – generate a portable agent profile.
+- `python -m silhouette_core.distiller` – produce a compact knowledge distillate.
