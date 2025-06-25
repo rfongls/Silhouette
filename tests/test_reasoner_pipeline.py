@@ -1,6 +1,6 @@
 import json
 
-from merge_teacher_outputs import merge_teacher_outputs
+from silhouette_core.merge_teacher_outputs import merge_teacher_outputs
 from evaluate_student import load_model, run_tests
 
 
