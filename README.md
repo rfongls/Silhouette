@@ -40,12 +40,8 @@ pip install -r requirements-dev.txt
 > **Docker**: A containerized image is available:
 >
 > ```bash
-> ```
-
-docker pull your-org/silhouette\:latest
-docker run -it your-org/silhouette\:latest
-
-> ```
+> docker pull your-org/silhouette:latest
+> docker run -it your-org/silhouette:latest
 > ```
 
 ---
@@ -340,6 +336,108 @@ To run a capable generative model on resource-constrained hardware, use a teache
 
 This approach gives you near–large-model quality on hardware with only a few GB of RAM and no GPU.
 
+### Walkthrough: Teacher–Student Distillation Step-by-Step
+
+1. **Teacher Setup & Data Generation**
+
+   * Use a locally hosted or Hugging Face–hosted teacher model (e.g. a large Llama 2 or GPT-style checkpoint) to generate high-quality `<prompt, response>` pairs without relying on an external API key.
+   * Example `teacher_generate.py` using `transformers` and a local model:
+
+     ```python
+     import json
+     from transformers import AutoModelForCausalLM, AutoTokenizer, pipeline
+
+     # Load your teacher model (path can be local or Hugging Face ID)
+     TEACHER_MODEL = "/path/to/teacher-model"  # e.g. llama-2-70b, or another large checkpoint
+
+     tokenizer = AutoTokenizer.from_pretrained(TEACHER_MODEL)
+     model = AutoModelForCausalLM.from_pretrained(
+         TEACHER_MODEL,
+         device_map="auto"
+     )
+     generator = pipeline(
+         "text-generation",
+         model=model,
+         tokenizer=tokenizer,
+         max_length=512,
+         do_sample=False
+     )
+
+     def generate_examples(prompts, out_file="distill.jsonl"):
+         with open(out_file, "w") as fout:
+             for prompt in prompts:
+                 full_prompt = "You are an expert code assistant.
+     ```
+
+" + prompt
+outputs = generator(full\_prompt)
+generated = outputs\[0]\["generated\_text"]
+\# Strip the prompt prefix from the generated text
+completion = generated\[len(full\_prompt):]
+example = {"prompt": prompt, "completion": completion}
+fout.write(json.dumps(example) + "
+")
+
+````
+ if __name__ == "__main__":
+     # Example usage
+     sample_prompts = ["How do I merge two sorted lists in Python?", "Compute the nth Fibonacci number."]
+     generate_examples(sample_prompts)
+ ```
+````
+
+2\. **Review and Clean Data**
+
+* Manually inspect `distill.jsonl` for formatting or content issues; remove or correct any outliers.
+
+3. **Adapter Training**
+
+   * Run your QLoRA/LoRA trainer to fine-tune the student model on the distilled examples:
+
+     ```bash
+     python train_adapter.py \
+       --base-model /path/to/llama-7b \
+       --train-file distill.jsonl \
+       --method qlora \
+       --adapter-output modules/<module>/adapter/qlora
+     ```
+   * Outputs a student adapter at `modules/<module>/adapter/qlora/pytorch_adapter.bin`.
+
+4. **Quantization**
+
+   * Quantize the adapter-enhanced weights to 4‑bit:
+
+     ```bash
+     python quantize_models.py \
+       --input modules/<module>/adapter/qlora/pytorch_adapter.bin \
+       --bits 4 \
+       --out modules/<module>/adapter/qlora4b.bin
+     ```
+
+5. **Evaluation**
+
+   * Validate student performance with a test suite (`evaluate_student.py`), for example:
+
+     ```bash
+     python evaluate_student.py \
+       --adapter modules/<module>/adapter/qlora4b.bin \
+       --test-file test_prompts.jsonl
+     ```
+   * Compare answers against expected outputs and review quality.
+
+6. **Deploy & Verify**
+
+   * Update your `module.json` version, then restart or hot‑reload the agent.
+   * Verify inference end-to-end:
+
+     ```bash
+     python -m cli.main --no-repl --cmd ":modules" --cmd "How do I sort a list in Python?"
+     ```
+
+Now you have a clear path from a powerful teacher model to a resource‑efficient student deployed in Silhouette Core.
+
+---
+
 ---
 
 ## 🧩 Python Reasoning & Coding Module
@@ -475,42 +573,41 @@ Refer to [docs/persona\_authoring.md](docs/persona_authoring.md) for full DSL sy
 
 ## 🤖 Automated LLM Training with Codex
 
-Silhouette Core can fully automate its LLM training pipeline by leveraging Codex in your `auto_dev.yaml`. With a few well-crafted prompts, Codex will generate or update every script needed—without manual coding.
+Silhouette Core includes a built-in Codex controller that can automatically generate and update all of your training and inference helper scripts without external API calls.
 
-1. **Define CI Steps in `auto_dev.yaml`**
+Add this job to your GitHub Actions workflow (e.g. `.github/workflows/auto_dev.yaml`):
 
-   ```yaml
-   jobs:
-     codex-training:
-       runs-on: ubuntu-latest
-       steps:
-        - uses: actions/checkout@v3
-        - name: Run Codex controller
-          run: python -m silhouette_core.codex_controller
-        # Runs offline using only this repo's scripts
-   ```
-
-2. **Trigger on Changes**
-
-   * Watch for changes in `modules/**/docs/`, `trainer.py`, or `distiller.py`.
-   * Codex will regenerate training scripts and your CI can then run them immediately.
-
-3. **End-to-End Self-Updating**
-   On each commit or schedule, your pipeline will:
-
-   * Call Codex to update or recreate boilerplate.
-   * Run `prepare_reasoning_data.py` → `train_adapter.py` → `quantize_models.py`.
-   * Version and publish new adapter and index artifacts.
-
-This ensures your “brain” is maintained, upgraded, and versioned entirely by automation—exactly as we discussed.
-
-### Codex Quickstart
-
-`auto_dev.yaml` calls the bundled Codex controller to generate the training helpers. To invoke Codex manually, run:
-
-```bash
-python -m silhouette_core.codex_controller
+```yaml
+name: Auto-Development
+on:
+  push:
+    paths:
+      - 'modules/**/docs/**'
+      - 'silhouette_core/**'
+      - 'trainer.py'
+      - 'distiller.py'
+jobs:
+  codex-training:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Install dependencies
+        run: pip install -r requirements-dev.txt
+      - name: Run Codex Controller
+        run: python -m silhouette_core.codex_controller
 ```
+
+This workflow will:
+
+1. Regenerate or update:
+
+   * `prepare_reasoning_data.py`
+   * `train_adapter.py`
+   * `quantize_models.py`
+   * `module_executor.py`
+2. Execute the generated scripts in CI (if configured) to ingest data, train adapters, quantize models, and publish artifacts.
+
+By using the local Codex controller, you maintain full offline capability and avoid external API dependencies.
 
 ---
 
