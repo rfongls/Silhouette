@@ -198,7 +198,27 @@ This pipeline ensures each module has its own knowledge ingestion, index, fine�
 
    * CI automatically bumps version, tags artifacts, and pushes to your registry.
 
-6. **Serve**
+   * **Optional**: Publish adapters and indexes to the Hugging Face Hub for distribution:
+
+     ```bash
+     python -c "from peft import PeftModel;\
+     ```
+
+from peft import PeftModel; m=PeftModel.from\_pretrained('modules/<module>/adapter'); m.push\_to\_hub('your-org/<module>-adapter')"
+python -c "from silhouette\_core.index import ModuleIndex; idx=ModuleIndex.load('modules/<module>/index'); idx.push\_to\_hub('your-org/<module>-index')"
+\`\`\`
+
+* Consumers can then load via:
+
+  ```python
+  from peft import PeftModel
+  from silhouette_core.index import ModuleIndex
+
+  model = PeftModel.from_pretrained('your-org/<module>-adapter')
+  idx = ModuleIndex.from_hub('your-org/<module>-index')
+  ```
+
+6. **Serve**\*\*
    At runtime, the API Gateway and Router pick top‑K modules, spin up Module Runner workers that:
 
    * Load `module.json`, FAISS index, and adapter weights.
@@ -512,6 +532,31 @@ For focused complex reasoning and Python-based problem solving, introduce a dedi
      ```
 
 **Workflow**: User query → Router picks **reasoner** → Retrieve (if needed) → Generate code + explanation → Optionally execute → Return result.
+
+---
+
+## 💻 Training Infrastructure Options
+
+Silhouette Core supports multiple training setups to fit your hardware, budget, and timeline:
+
+1. **Local GPU (Laptop)** – QLoRA fine-tuning on 2×6 GB GPUs (e.g., gaming laptop).
+2. **Local GPU (Workstation)** – High-memory GPU (e.g., NVIDIA A100 40 GB or RTX 4090).
+3. **Local CPU-only** – CPU with offload and 32 GB system RAM (no GPU).
+4. **Hugging Face Managed Training** – Spin up a managed job on the Hugging Face Hub.
+5. **Hugging Face Inference API (Teacher Only)** – Use a large HF-inference endpoint for distillation without training infra.
+
+### Comparative Overview
+
+| Setup                     | Model Params | GPU        | Host Memory | Train Time        | Cost Estimate                |
+| ------------------------- | ------------ | ---------- | ----------- | ----------------- | ---------------------------- |
+| Local Laptop              | 7 B          | 2×6 GB     | 32 GB RAM   | 3–5 hrs           | \$0 (owned hardware)         |
+| Local Workstation         | 70 B         | 1×40 GB    | 64 GB RAM   | 30–45 min         | \$0 (owned hardware)         |
+| Local CPU-only            | 7 B          | None       | 32 GB RAM   | 12–24 hrs         | \$0                          |
+| HF Managed (7 B student)  | 7 B          | A100 40 GB | —           | 1–2 hrs           | \$1.50–\$3 / hr              |
+| HF Managed (70 B teacher) | 70 B         | A100 80 GB | —           | 30–45 min         | \$3–\$6 / hr                 |
+| HF API Teacher–Student    | 100 B → 7 B  | None (API) | —           | Distill time only | \$0.02 / 1k tokens (approx.) |
+
+> *Train Time estimates assume QLoRA with 3 epochs on \~2 000 examples. Costs reflect GPU‐hourly rates or API token pricing.*
 
 ---
 
