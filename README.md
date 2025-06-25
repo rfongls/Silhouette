@@ -90,6 +90,10 @@ Silhouette/
 ├── ACCOMPLISHMENTS.md
 ├── PHASES.md
 ├── MILESTONES.md
+├── training_data/              # Curriculum datasets per module
+│   └── reasoner/
+│       ├── stage1_sample.jsonl   # Seed examples for Stage 1
+│       └── stage1_full.jsonl     # Full Stage 1 dataset (to be generated)
 └── README.md                   # This file
 ```
 
@@ -222,12 +226,15 @@ python -c "from silhouette\_core.index import ModuleIndex; idx=ModuleIndex.load(
    At runtime, the API Gateway and Router pick top‑K modules, spin up Module Runner workers that:
 
    * Load `module.json`, FAISS index, and adapter weights.
-   * Retrieve top context chunks.
-   * Run inference with the adapter loaded.
-     Results are merged by the Combiner into a unified response.
+ * Retrieve top context chunks.
+ * Run inference with the adapter loaded.
+   Results are merged by the Combiner into a unified response.
 
 7. **Self‑Updating Loop**
    On changes to docs or code, CI re‑runs ingestion, indexing, and training—ensuring modules are always up to date.
+
+For the Codex handoff prompt and validation steps, see
+`training_data/reasoner/CODEX_HANDOFF_STAGE1.md`
 
 ---
 
