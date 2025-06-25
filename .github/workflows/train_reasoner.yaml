@@ -28,7 +28,7 @@ jobs:
       - name: Quantize models
         run: python quantize_models.py
       - name: Upload adapter
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: reasoner-adapter
           path: modules/reasoner/adapter/qlora4b
