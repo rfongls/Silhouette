@@ -233,6 +233,12 @@ python -c "from silhouette\_core.index import ModuleIndex; idx=ModuleIndex.load(
 7. **Self‑Updating Loop**
    On changes to docs or code, CI re‑runs ingestion, indexing, and training—ensuring modules are always up to date.
 
+*After generating teacher responses, merge them into a single training set with:*
+
+```bash
+python silhouette_core/merge_teacher_outputs.py
+```
+
 For the Codex handoff prompt and validation steps, see
 `training_data/reasoner/CODEX_HANDOFF_STAGE1.md`
 
@@ -447,8 +453,8 @@ fout.write(json.dumps(example) + "
 
      ```bash
      python evaluate_student.py \
-       --adapter modules/<module>/adapter/qlora4b.bin \
-       --test-file test_prompts.jsonl
+       --model-path modules/<module>/adapter/qlora4b \
+       --test-file training_data/reasoner/stage1_test.jsonl
      ```
    * Compare answers against expected outputs and review quality.
 

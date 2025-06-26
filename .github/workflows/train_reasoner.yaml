@@ -20,7 +20,7 @@ jobs:
       - name: Generate teacher outputs
         run: python teacher_generate_multi.py
       - name: Merge teacher outputs
-        run: python merge_teacher_outputs.py
+        run: python silhouette_core/merge_teacher_outputs.py
       - name: Evaluate student
         run: python evaluate_student.py
       - name: Train adapter
@@ -28,7 +28,7 @@ jobs:
       - name: Quantize models
         run: python quantize_models.py
       - name: Upload adapter
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: reasoner-adapter
           path: modules/reasoner/adapter/qlora4b
