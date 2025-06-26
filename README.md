@@ -671,6 +671,8 @@ By using the local Codex controller, you maintain full offline capability and av
 
 ## 🤝 Contributing & Roadmap
 
+* For detailed handoff & pipeline instructions, see [Handoff & Developer Guide](docs/HANDOFF_GUIDE.md).
+
 Contributions are welcome! See [docs/contributing.md](docs/contributing.md) for guidelines and our GitHub Projects board for upcoming phases.
 
 ---
