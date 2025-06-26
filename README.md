@@ -453,8 +453,8 @@ fout.write(json.dumps(example) + "
 
      ```bash
      python evaluate_student.py \
-       --adapter modules/<module>/adapter/qlora4b.bin \
-       --test-file test_prompts.jsonl
+       --model-path modules/<module>/adapter/qlora4b \
+       --test-file training_data/reasoner/stage1_test.jsonl
      ```
    * Compare answers against expected outputs and review quality.
 
