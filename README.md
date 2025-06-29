@@ -56,7 +56,6 @@ Silhouette/
 │   ├── offline_mode.py         # Safe-mode & throttling utilities
 │   ├── selfcheck_engine.py     # File & memory integrity checks
 │   ├── replay_log_to_memory.py # Rebuild memory.jsonl from logs
-│   ├── performance_profiler.py # Resource usage measurement
 │   ├── module_executor.py      # Local parallel executor
 │   ├── distributed_executor.py # Stub for multi-node execution
 │   ├── agent_controller.py     # Spawn/fork/merge agents
@@ -666,6 +665,12 @@ This workflow will:
 2. Execute the generated scripts in CI (if configured) to ingest data, train adapters, quantize models, and publish artifacts.
 
 By using the local Codex controller, you maintain full offline capability and avoid external API dependencies.
+
+---
+
+## Manual Training
+
+For step-by-step local training instructions, see [docs/manual_training_guide.md](docs/manual_training_guide.md).
 
 ---
 
