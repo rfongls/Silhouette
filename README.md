@@ -33,7 +33,7 @@
 ```bash
 git clone https://github.com/your-org/Silhouette.git
 cd Silhouette
-pip install -r requirements-dev.txt
+pip install -r requirements.txt -r requirements-dev.txt
 ```
 
 > **Note:** For production, you may install only runtime requirements (`requirements.txt`) and include optional backends (`llama.cpp`, `onnxruntime`, or `transformers`).
@@ -649,7 +649,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - name: Install dependencies
-        run: pip install -r requirements-dev.txt
+        run: pip install -r requirements.txt -r requirements-dev.txt
       - name: Run Codex Controller
         run: python -m silhouette_core.codex_controller
 ```
