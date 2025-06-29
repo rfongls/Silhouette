@@ -18,7 +18,7 @@ def train_codex(cfg):
     # 0) Make sure your token is present
     hf_token = os.environ.get("HF_TOKEN")
     if not hf_token:
-        raise RuntimeError("HF_TOKEN not found in environment; please add it as a Space secret")
+        raise RuntimeError("HF_TOKEN not found in environment; please set it as an environment variable")
 
     # 1) Load tokenizer & base model from the correct repo
     tokenizer = AutoTokenizer.from_pretrained(

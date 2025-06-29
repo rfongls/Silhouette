@@ -1,5 +1,0 @@
-accelerate
-transformers
-huggingface_hub
-gradio
-psutil

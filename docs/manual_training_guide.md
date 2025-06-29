@@ -99,4 +99,4 @@ pytest -q
 coverage html
 ```
 
-Automated runs are configured through the [spaces/train_silhouette](../spaces/train_silhouette/) directory and the [train.yml](../.github/workflows/train.yml) workflow.
+Automated runs are configured through the [train.yml](../.github/workflows/train.yml) workflow.

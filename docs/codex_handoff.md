@@ -3,7 +3,7 @@
 **Purpose:**  
 1. Audit the entire Silhouette Core repo.  
 2. Remove irrelevant/unused files from the core framework.  
-3. Ensure both **automated** (HF Space + CI) and **manual** training modules are wired and documented.  
+3. Ensure both **automated** CI and **manual** training modules are wired and documented.
 4. Prepare everything for smooth training via Hugging Face.
 
 ---
@@ -37,26 +37,8 @@ Based on `cleanup_report.md`:
 
 ---
 
-## 3. Automated Training Module
 
-Ensure the existing HF Space folder (`spaces/train_silhouette/`) and CI workflow (`.github/workflows/train.yml`):
-
-- **Verify** `spaces/train_silhouette/` contains:
-  - `app.py` (Gradio launcher invoking `accelerate launch ...`)
-  - `train_silhouette.py` wrapper
-  - `requirements.txt`
-- **Update** `train_silhouette.py` wrapper to:
-  - Use explicit `--cpu`, `--num_processes`, `--num_machines`, `--mixed_precision no`, `--dynamo_backend no`
-  - Point to `../training/train_silhouette.py` and `../config/train_config.yaml`
-- **Validate** `.github/workflows/train.yml`:
-  - Runs on `push` to `main` and `train/*`
-  - Sets up venv, installs both `requirements.txt` & `requirements-dev.txt`
-  - Calls `accelerate launch ... training/train_silhouette.py --config config/train_config.yaml`
-  - Uploads best checkpoint via `accelerate upload ...`
-
----
-
-## 4. Manual Training Module
+## 3. Manual Training Module
 
 Under `docs/manual_training_guide.md`:
 
@@ -80,7 +62,7 @@ Under `docs/manual_training_guide.md`:
 - Title: “Repo cleanup & training modules audit”
 - Description listing:  
   - Files removed/archived  
-  - Updates to HF Space & CI  
+  - CI updates
   - Manual guide enhancements
 
 Once merged, CI will validate the cleanup, run tests, and ensure training workflows are operational.
@@ -95,7 +77,7 @@ You are Codex. Your tasks:
 
 1. Audit the entire repo and produce `cleanup_report.md` listing unreferenced or deprecated files.
 2. Remove/ archive items per the report.
-3. Update `spaces/train_silhouette/` and `.github/workflows/train.yml` for explicit accelerate flags.
+3. Update `.github/workflows/train.yml` for explicit accelerate flags.
 4. Verify/augment `docs/manual_training_guide.md` with manual training steps.
 5. Link the manual guide in `README.md`.
 6. Commit to branch `codex/repo-cleanup-and-training-setup` and open a PR.
