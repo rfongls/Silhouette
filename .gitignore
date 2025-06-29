@@ -24,3 +24,4 @@ memory_*.jsonl
 training_data/reasoner/stage1_full.jsonl
 modules/reasoner/distill_data.jsonl
 
+archive/
