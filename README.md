@@ -56,7 +56,6 @@ Silhouette/
 │   ├── offline_mode.py         # Safe-mode & throttling utilities
 │   ├── selfcheck_engine.py     # File & memory integrity checks
 │   ├── replay_log_to_memory.py # Rebuild memory.jsonl from logs
-│   ├── performance_profiler.py # Resource usage measurement
 │   ├── module_executor.py      # Local parallel executor
 │   ├── distributed_executor.py # Stub for multi-node execution
 │   ├── agent_controller.py     # Spawn/fork/merge agents
