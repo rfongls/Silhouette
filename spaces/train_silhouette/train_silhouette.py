@@ -5,7 +5,7 @@ import sys
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.append(str(ROOT))
 
-from training import train_silhouette as core
+from training import train_silhouette as core  # noqa: E402
 
 
 def main():

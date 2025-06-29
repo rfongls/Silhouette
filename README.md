@@ -669,6 +669,12 @@ By using the local Codex controller, you maintain full offline capability and av
 
 ---
 
+## Manual Training
+
+For step-by-step local training instructions, see [docs/manual_training_guide.md](docs/manual_training_guide.md).
+
+---
+
 ## 🤝 Contributing & Roadmap
 
 * For detailed handoff & pipeline instructions, see [Handoff & Developer Guide](docs/HANDOFF_GUIDE.md).

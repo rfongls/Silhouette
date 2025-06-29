@@ -81,3 +81,20 @@ Below are the fine-tuning workflows, data sources, model choices, and deployment
 | **Quantization**       | INT8; prune adapter weights if needed                                                                          |
 | **Artifact**           | `models/automation-agent/`                                                                                     |
 | **Inference**          | On workstation/server; for Pi/phone, distill a minimal adapter covering a core subset of actions               |
+
+---
+
+## Manual Training
+
+To run the Silhouette training pipeline locally:
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt -r requirements-dev.txt
+accelerate config default
+accelerate launch training/train_silhouette.py --config config/train_config.yaml
+ruff .
+pytest
+pytest --cov=.
+```
