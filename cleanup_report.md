@@ -1,16 +1,11 @@
-### Cleanup Report
+# Repo Cleanup Report
 
-The following unused assets were removed from the repository:
+The following unneeded files and directories were removed:
 
-- `offline_mode.py`
-- `performance_profiler.py`
-- `memory_core/` directory
-- `models/` directory
-- `tests/test_placeholder.py`
+- `__pycache__/` compiled artifacts across the repo
+- stale `logs/.keep` placeholder
+- old `src/` scaffolding and related README files
+- unused export keys under `exports/`
+- outdated compiled test artifacts
 
-The following rarely used artifacts were moved to an `archive/` folder:
-
-- `silhouette_test_backup.zip`
-- `test_backup_key.key`
-
-`.gitignore` was updated to exclude the new `archive/` directory from future CI runs.
+All core code, docs, and training scripts remain intact.
