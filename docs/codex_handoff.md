@@ -1,112 +1,103 @@
-# Codex Training Handoff
+# Codex Training & Cleanup Handoff
 
 **Purpose:**  
-Wire up end-to-end automated training of the Silhouette model via your pre-configured Hugging Face Space and CI, so that pushes to `main` (or `train/*`) trigger a full training cycle, publish to the Hub, and allow manual kick-offs via the Space’s UI.
+1. Audit the entire Silhouette Core repo.  
+2. Remove irrelevant/unused files from the core framework.  
+3. Ensure both **automated** (HF Space + CI) and **manual** training modules are wired and documented.  
+4. Prepare everything for smooth training via Hugging Face.
 
 ---
 
-## 📂 Repo Layout
+## 1. Repo Inspection
 
-```
-
-/.
-├─ spaces/
-│  └─ train_silhouette/        ← existing HF Space folder
-│     ├─ app.py                ← Gradio UI to start training
-│     ├─ train_silhouette.py   ← wrapper calling training/train_silhouette.py
-│     └─ requirements.txt      ← accelerate, transformers, huggingface_hub, gradio, psutil
-├─ training/
-│  └─ train_silhouette.py      ← core training script
-├─ config/
-│  └─ train_config.yaml
-├─ .github/
-│  └─ workflows/
-│     └─ train.yml            ← CI workflow for auto-training
-└─ docs/
-└─ codex_handoff.md         ← you are editing this
-
-````
+- Traverse the root and subdirectories:
+  - Identify any files or folders not referenced by code, docs, or CI.
+  - Flag large binary assets (e.g., legacy models, datasets) that belong in separate storage.
+- Generate a short report (`cleanup_report.md`) listing:
+  - Unused scripts, configs, tests, or docs.
+  - Deprecated modules under `/modules/` or `/silhouette_core/`.
+  - Any `TODO` markers or commented-out code blocks that need attention.
 
 ---
 
-## 🔧 What Codex Must Do
+## 2. Cleanup
 
-1. **Populate the existing Space folder**  
-   - Under `spaces/train_silhouette/` commit:  
-     - `app.py` – a Gradio app that exposes a “Start Training” button and streams logs.  
-     - `train_silhouette.py` – imports or shells out to `training/train_silhouette.py` using `../config/train_config.yaml`.  
-     - `requirements.txt` with:
-       ```
-       accelerate
-       transformers
-       huggingface_hub
-       gradio
-       psutil
-       ```
-2. **Add the CI workflow**  
-   Create or overwrite `.github/workflows/train.yml`:
-   ```yaml
-   name: Auto-Train & Publish
+Based on `cleanup_report.md`:
 
-   on:
-     push:
-       branches: [ main, 'train/*' ]
+- **Remove**:
+  - Unreferenced scripts (e.g., old prototype trainers, deprecated utilities).
+  - Stale docs (e.g., draft handoffs you’ve already replaced).
+  - Test files covering removed/archived functionality.
+- **Archive**:
+  - Move any still-valuable but infrequently used assets into an `archive/` folder at repo root.
+  - Update `.gitignore` to exclude `archive/` from normal CI workflows.
+- **Prune**:
+  - Run `ruff --select F` to detect unused imports; auto-fix where safe.
+  - Run `pytest --disable-warnings -q` and ensure that only active tests remain; remove empty test stubs.
 
-   jobs:
-     train:
-       runs-on: ubuntu-latest
-       steps:
-         - uses: actions/checkout@v3
-         - uses: actions/setup-python@v4
-           with:
-             python-version: '3.10'
-         - run: |
-             python -m venv .venv
-             source .venv/bin/activate
-             pip install -r requirements.txt -r requirements-dev.txt
-             pip install accelerate huggingface_hub
-         - run: |
-             accelerate config default --yes
-         - run: |
-             accelerate launch \
-               --num_processes 1 \
-               --num_machines 1 \
-               --mixed_precision no \
-               --dynamo_backend no \
-               --cpu \
-               training/train_silhouette.py \
-                 --config config/train_config.yaml
-         - run: |
-             accelerate upload outputs/checkpoints/best \
-               --repo_id your-username/silhouette-core
-````
+---
 
-3. **Use your existing Hugging Face Space**
+## 3. Automated Training Module
 
-   * Ensure that the `spaces/train_silhouette` folder is already connected to your pre-configured Space on HF.
-   * No new Space creation is required—just commit these updates and push.
+Ensure the existing HF Space folder (`spaces/train_silhouette/`) and CI workflow (`.github/workflows/train.yml`):
 
-4. **Testing & Monitoring**
+- **Verify** `spaces/train_silhouette/` contains:
+  - `app.py` (Gradio launcher invoking `accelerate launch ...`)
+  - `train_silhouette.py` wrapper
+  - `requirements.txt`
+- **Update** `train_silhouette.py` wrapper to:
+  - Use explicit `--cpu`, `--num_processes`, `--num_machines`, `--mixed_precision no`, `--dynamo_backend no`
+  - Point to `../training/train_silhouette.py` and `../config/train_config.yaml`
+- **Validate** `.github/workflows/train.yml`:
+  - Runs on `push` to `main` and `train/*`
+  - Sets up venv, installs both `requirements.txt` & `requirements-dev.txt`
+  - Calls `accelerate launch ... training/train_silhouette.py --config config/train_config.yaml`
+  - Uploads best checkpoint via `accelerate upload ...`
 
-   * **Manual kick-off**: visit your existing Space’s URL, click **Start Training**, and watch logs.
-   * **CI automation**: every push to `main` or `train/*` runs training + publish.
-   * **Model versions**: check the Hub for new checkpoints and metrics.
+---
+
+## 4. Manual Training Module
+
+Under `docs/manual_training_guide.md`:
+
+1. **Confirm** there’s a dedicated section for manual training (local runs).
+2. **Add** explicit commands to:
+   - Create & activate `.venv`
+   - Install both `requirements.txt` & `requirements-dev.txt`
+   - Run `accelerate config` once for defaults
+   - Run `accelerate launch training/train_silhouette.py --config config/train_config.yaml`
+   - Lint (`ruff .`), test (`pytest`), and coverage steps.
+3. **Link** this guide in your README under a “Manual Training” heading.
+
+---
+
+## 5. Finalize & PR
+
+- Commit all changes to a new branch named:  
+`codex/repo-cleanup-and-training-setup`
+- Create a **cleanup_report.md** in the root summarizing removed/archived items.
+- Open a PR against `main` with:
+- Title: “Repo cleanup & training modules audit”
+- Description listing:  
+  - Files removed/archived  
+  - Updates to HF Space & CI  
+  - Manual guide enhancements
+
+Once merged, CI will validate the cleanup, run tests, and ensure training workflows are operational.
 
 ---
 
 ## ⚙️ Final Codex Prompt
 
 ```
-You are Codex. Your task:
 
-1. Overwrite `docs/codex_handoff.md` with the updated instructions above.
-2. Populate `spaces/train_silhouette/` (existing HF Space folder) with:
-   - `app.py`
-   - `train_silhouette.py`
-   - `requirements.txt`
-3. Add `.github/workflows/train.yml` exactly as specified.
-4. Push all changes to a new branch `codex/training-pipeline`.
-5. Open a PR so CI can validate and, upon merge, trigger the first automated run.
+You are Codex. Your tasks:
+
+1. Audit the entire repo and produce `cleanup_report.md` listing unreferenced or deprecated files.
+2. Remove/ archive items per the report.
+3. Update `spaces/train_silhouette/` and `.github/workflows/train.yml` for explicit accelerate flags.
+4. Verify/augment `docs/manual_training_guide.md` with manual training steps.
+5. Link the manual guide in `README.md`.
+6. Commit to branch `codex/repo-cleanup-and-training-setup` and open a PR.
+
 ```
-
-Once this is in place, your existing Space will drive both manual and CI-driven model training without creating anything new. Let me know if you need any tweaks!
