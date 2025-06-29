@@ -92,7 +92,7 @@ To run the Silhouette training pipeline locally:
 python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt -r requirements-dev.txt
-accelerate config --yes
+accelerate config default --yes
 accelerate launch training/train_silhouette.py --config config/train_config.yaml
 ruff .
 pytest -q
