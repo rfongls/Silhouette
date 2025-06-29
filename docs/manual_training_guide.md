@@ -89,12 +89,14 @@ Below are the fine-tuning workflows, data sources, model choices, and deployment
 To run the Silhouette training pipeline locally:
 
 ```bash
-python -m venv .venv
+python3 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt -r requirements-dev.txt
-accelerate config default
+accelerate config --yes
 accelerate launch training/train_silhouette.py --config config/train_config.yaml
 ruff .
-pytest
-pytest --cov=.
+pytest -q
+coverage html
 ```
+
+Automated runs are configured through the [spaces/train_silhouette](../spaces/train_silhouette/) directory and the [train.yml](../.github/workflows/train.yml) workflow.
