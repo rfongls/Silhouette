@@ -1,0 +1,6 @@
+{
+  "memory_format": "embedding_index",
+  "fields": ["timestamp", "prompt", "response", "tags"],
+  "engine": "faiss",
+  "fallback": "log_rehydration"
+}
