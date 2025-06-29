@@ -1,0 +1,33 @@
+name: Auto-Train & Publish
+
+on:
+  push:
+    branches: [ main, 'train/*' ]
+
+jobs:
+  train:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+      - run: |
+          python -m venv .venv
+          source .venv/bin/activate
+          pip install -r requirements.txt -r requirements-dev.txt
+          pip install accelerate huggingface_hub
+      - run: |
+          accelerate config default --yes
+      - run: |
+          accelerate launch \
+            --num_processes 1 \
+            --num_machines 1 \
+            --mixed_precision no \
+            --dynamo_backend no \
+            --cpu \
+            training/train_silhouette.py \
+              --config config/train_config.yaml
+      - run: |
+          accelerate upload outputs/checkpoints/best \
+            --repo_id your-username/silhouette-core
