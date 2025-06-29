@@ -672,7 +672,7 @@ By using the local Codex controller, you maintain full offline capability and av
 
 For step-by-step local training instructions, see [docs/manual_training_guide.md](docs/manual_training_guide.md).
 
-Automated runs are wired through the [spaces/train_silhouette](spaces/train_silhouette/) directory and the [train.yml](.github/workflows/train.yml) workflow.
+Automated runs are orchestrated via the [train.yml](.github/workflows/train.yml) workflow.
 
 ---
 
