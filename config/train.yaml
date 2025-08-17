@@ -1,0 +1,25 @@
+student_model: "TinyLlama/TinyLlama-1.1B-Chat-v1.0"
+
+# Used only when generating KD targets or within distiller
+teacher_model: "mistralai/Mixtral-8x7B-Instruct-v0.1"
+# Optional precomputed teacher outputs (JSONL of teacher generations/logits)
+# teacher_outputs: "training_data/teacher_outputs.jsonl"
+
+lora:
+  enabled: true
+  r: 8
+  alpha: 16
+  dropout: 0.05
+
+training:
+  epochs: 2
+  batch_size: 8
+  lr: 2e-4
+  max_len: 2048
+
+data:
+  adapter: jsonl
+  path: training_data/core.jsonl
+
+output_dir: "models/student-core"
+quantize: "int8"  # future step; export script to be added later
