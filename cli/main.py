@@ -9,7 +9,8 @@ from pathlib import Path
 from silhouette_core.offline_mode import is_offline
 from silhouette_core.dsl_parser import parse_dsl_file
 from silhouette_core.module_loader import discover_modules
-from silhouette_core.response_engine import get_response
+from silhouette_core.agent_loop import Agent
+agent = Agent()
 from agent_controller import (
     export_agent,
     fork_agent,
@@ -239,7 +240,7 @@ def launch_repl(alignment, modules, module_funcs):
                     result = module_funcs["Math"](user_input)
                     response = f"Silhouette: {result}"
                 else:
-                    response = get_response(user_input, alignment)
+                    response = agent.loop(user_input)
                 print(response)
                 log.write(f"You: {user_input}\n{response}\n")
 
