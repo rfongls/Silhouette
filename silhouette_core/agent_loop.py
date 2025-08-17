@@ -26,7 +26,8 @@ class Agent:
         # Explicit tool-use protocol: "use:<tool> <args>"
         if user_msg.lower().startswith("use:"):
             parts = user_msg.split(None, 1)
-            head = parts[0]; rest = parts[1] if len(parts) > 1 else ""
+            head = parts[0]
+            rest = parts[1] if len(parts) > 1 else ""
             tool_name = head.split(":", 1)[1].strip()
             result = self.tools.invoke(tool_name, rest.strip())
             return format_response(str(result), self.persona["tone"].get("style"))

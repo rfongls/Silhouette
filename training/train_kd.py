@@ -23,7 +23,8 @@ def main():
 
     teacher_outputs = None
     if cfg.get("teacher_outputs"):
-        teacher_outputs = [json.loads(l) for l in open(cfg["teacher_outputs"], "r", encoding="utf-8")]
+        with open(cfg["teacher_outputs"], "r", encoding="utf-8") as fh:
+            teacher_outputs = [json.loads(line) for line in fh if line.strip()]
 
     core_kd(
         student_model=cfg["student_model"],

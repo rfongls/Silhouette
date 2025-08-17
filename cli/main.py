@@ -10,7 +10,6 @@ from silhouette_core.offline_mode import is_offline
 from silhouette_core.dsl_parser import parse_dsl_file
 from silhouette_core.module_loader import discover_modules
 from silhouette_core.agent_loop import Agent
-agent = Agent()
 from agent_controller import (
     export_agent,
     fork_agent,
@@ -20,6 +19,9 @@ from agent_controller import (
     spawn_agent,
 )
 from persona_diff import diff_with_base
+
+# Instantiate agent after imports
+agent = Agent()
 
 # Global safe print to handle Unicode on all platforms
 _orig_print = builtins.print
