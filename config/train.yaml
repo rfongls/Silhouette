@@ -12,7 +12,7 @@ lora:
   dropout: 0.05
 
 training:
-  epochs: 2
+  epochs: 1
   batch_size: 8
   lr: 2e-4
   max_len: 2048
