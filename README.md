@@ -128,6 +128,80 @@ python -m cli.main
 | `:agent deploy <target>`  | Deploy a clone archive to `<target>` (local or SSH)      |
 | `:exit` / `:quit`         | Exit the REPL                                            |
 
+## Quickstart (Agent MVP)
+
+Silhouette Core runs fully **self-hosted**. No external billing or network calls are required.
+
+```bash
+# (Optional) for real local model output:
+pip install transformers accelerate torch --extra-index-url https://download.pytorch.org/whl/cpu
+
+# Run the CLI
+python -m cli.main
+```
+
+**Examples**
+
+* Normal prompt:
+
+  ```
+  > What is an agent?
+  ```
+* Tool use (explicit):
+
+  ```
+  > use:echo hello world
+  > use:calc 2+2
+  ```
+* Alignment/deny:
+
+  ```
+  > [prompt that violates persona deny_on]
+  → returns deny message
+  ```
+
+If `transformers` or the model is not installed, the agent replies with a deterministic
+**offline stub** (still aligned and formatted).
+
+## Roadmap (Post-Phase-1)
+
+- **0–2 Weeks:** Harden MVP — safe tools, eval runner, session logs, deny_on tests, pinned deps.
+- **Weeks 3–4:** Seed data (10–50 ex), SFT via existing trainer, student > stub on basics, eval artifacts.
+- **Weeks 5–6:** Teacher outputs, KD via existing distiller, quantization preview with CPU latency <3s.
+- **Weeks 7–8:** Introduce a Profile, extend `:selfcheck`, expand eval suite (formatting/refusals/multi-turn).
+
+See **PHASES.md** and **MILESTONES.md** for acceptance criteria and tasks.
+
+## Running Evaluations
+```bash
+python -m eval.eval --suite eval/suites/basics.yaml
+```
+The eval runner executes prompts through the **Agent** loop, not just the model. CI should fail if this suite fails.
+
+## Training (Reuse Existing Trainers)
+We reuse:
+- `silhouette_core/training_loop.py` for SFT
+- `silhouette_core/distiller.py` for KD
+
+Wrappers & adapters:
+```bash
+python -m training.train_sft --cfg config/train.yaml
+python -m training.train_kd  --cfg config/train.yaml
+```
+Data flows through adapters (`training/adapters/*`) and a simple dataloader into the existing loops.
+
+## How It Works (Phase 1)
+
+CLI → Agent.loop()
+→ Alignment (deny_on)
+→ If "use:<tool> ..." → ToolRegistry.invoke()
+→ Else → generate_text() → local HF model or offline stub
+→ format (tone) → stdout
+
+- **No external API billing**
+- **Explicit tool call protocol** for now; automatic tool selection comes later
+- **Domain-agnostic** by design
+
 *Full command reference is available in* [CLI Reference](docs/cli_reference.md).
 
 ---

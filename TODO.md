@@ -1,28 +1,29 @@
-# ✅ TODO – Project Phases and Goals
+# TODO (Current Focus)
+## MVP Hardening
+- [ ] Safe calculator tool (AST parser) + tests (malformed, length, div-by-zero).
+- [ ] `eval/eval.py` to run `eval/suites/basics.yaml`; exit non-zero on failure.
+- [ ] JSONL interaction logging per turn (hash, len, allow/deny, tool, latency).
+- [ ] Add 3–5 persona `deny_on` patterns + unit tests.
+- [ ] Pin `requirements*.txt`; add `make dev` / `make test`.
 
-## PHASE 1: Bootstrap Survival Core
-- [x] Name the project and define core philosophy
-- [x] Create CLI fallback shell
-- [x] Build alignment DSL structure
-- [ ] Integrate open-source LLMs (TinyLLaMA, Phi-2)
-- [ ] Package minimal runtime (llama.cpp / ONNX)
+## Data & Training
+- [ ] `training_data/core.jsonl` + `training_data/README.md`.
+- [ ] Run SFT and save to `models/student-core/`; wire student into Agent for eval.
+- [ ] Save `artifacts/eval_report.json`.
 
-## PHASE 2: Modular Intelligence
-- [ ] Define module spec (math, code, medical, etc.)
-- [ ] Implement dynamic module loading
-- [ ] Add caching and knowledge graph hooks
+## Distillation & Quantization
+- [ ] Produce `training_data/teacher_outputs.jsonl`.
+- [ ] Run KD and compare to SFT on basics suite.
+- [ ] Prototype export/quantization; record CPU latency in README.
 
-## PHASE 3: Self-Healing / Redundancy
-- [ ] Blueprint system for model rebuild and rehydration
-- [ ] Storage and verification of alignment capsule
-- [ ] Fault-tolerant memory engine
+## Profiles & Self-check
+- [ ] Create `profiles/core/policy.yaml`.
+- [ ] Extend `:selfcheck` to assert profile constraints.
+- [ ] Expand `eval/suites/*` (multi-turn, formatting, refusals).
 
-## PHASE 4: Interface & Adaptability
-- [ ] Build Web UI interface
-- [ ] Enable remote sync (only when allowed)
-- [ ] Plug-in framework for future evolution
+## Ops
+- [ ] CI workflow to run: ruff → tests → `eval/eval.py`.
+- [ ] Add counters (allow/deny/tool/latency) to logs or metrics stub.
+- [ ] Log redaction + simple PII regex guard.
+- [ ] Draft `models/student-core/MODEL_CARD.md`.
 
-## Long-Term Goals
-- [ ] Peer-to-peer federation of Silhouettes
-- [ ] Fully offline package via USB/disk
-- [ ] Preservation archive (blueprint + self-installer)
