@@ -17,5 +17,7 @@ def test_format_response_friendly():
 
 def test_load_persona_config():
     config = load_persona_config("docs/alignment_kernel/persona.dsl")
-    assert config["tone"]["style"] == "friendly"
-    assert "malicious" in config["limits"]["deny_on"]
+    assert config["tone"]["style"] == "neutral"
+    deny = config["limits"]["deny_on"]
+    assert "malicious" in deny
+    assert "disallowed" in deny
