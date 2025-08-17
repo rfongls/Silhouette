@@ -163,6 +163,33 @@ python -m cli.main
 If `transformers` or the model is not installed, the agent replies with a deterministic
 **offline stub** (still aligned and formatted).
 
+## Roadmap (Post-Phase-1)
+
+- **0–2 Weeks:** Harden MVP — safe tools, eval runner, session logs, deny_on tests, pinned deps.
+- **Weeks 3–4:** Seed data (10–50 ex), SFT via existing trainer, student > stub on basics, eval artifacts.
+- **Weeks 5–6:** Teacher outputs, KD via existing distiller, quantization preview with CPU latency <3s.
+- **Weeks 7–8:** Introduce a Profile, extend `:selfcheck`, expand eval suite (formatting/refusals/multi-turn).
+
+See **PHASES.md** and **MILESTONES.md** for acceptance criteria and tasks.
+
+## Running Evaluations
+```bash
+python -m eval.eval --suite eval/suites/basics.yaml
+```
+The eval runner executes prompts through the **Agent** loop, not just the model. CI should fail if this suite fails.
+
+## Training (Reuse Existing Trainers)
+We reuse:
+- `silhouette_core/training_loop.py` for SFT
+- `silhouette_core/distiller.py` for KD
+
+Wrappers & adapters:
+```bash
+python -m training.train_sft --cfg config/train.yaml
+python -m training.train_kd  --cfg config/train.yaml
+```
+Data flows through adapters (`training/adapters/*`) and a simple dataloader into the existing loops.
+
 ## How It Works (Phase 1)
 
 CLI → Agent.loop()
@@ -174,32 +201,6 @@ CLI → Agent.loop()
 - **No external API billing**
 - **Explicit tool call protocol** for now; automatic tool selection comes later
 - **Domain-agnostic** by design
-
-## Training Overview (Reuse Existing Trainers)
-
-We reuse the existing training backbone:
-- `silhouette_core/training_loop.py` (SFT-style)
-- `silhouette_core/distiller.py` (KD)
-
-We add **adapters/dataloader/wrappers** only:
-- Adapters yield dicts: `{"instruction","input","output","tools_used"}`
-- Dataloader tokenizes and feeds `input_ids/labels` to the existing loops
-
-**Run SFT**
-```bash
-python -m training.train_sft --cfg config/train.yaml
-```
-
-**Run KD**
-
-```bash
-python -m training.train_kd --cfg config/train.yaml
-```
-
-## Roadmap
-- **Phase 1 (this):** Agent loop + tools + offline/online local model (no billing)
-- **Phase 2:** Distillation pipeline (teacher→student), adapters, SFT/KD wrappers, quantization/export
-- **Phase 3:** Focused agents (profiles, tool bundles, eval suites), optional API service
 
 *Full command reference is available in* [CLI Reference](docs/cli_reference.md).
 
