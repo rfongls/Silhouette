@@ -128,6 +128,79 @@ python -m cli.main
 | `:agent deploy <target>`  | Deploy a clone archive to `<target>` (local or SSH)      |
 | `:exit` / `:quit`         | Exit the REPL                                            |
 
+## Quickstart (Agent MVP)
+
+Silhouette Core runs fully **self-hosted**. No external billing or network calls are required.
+
+```bash
+# (Optional) for real local model output:
+pip install transformers accelerate torch --extra-index-url https://download.pytorch.org/whl/cpu
+
+# Run the CLI
+python -m cli.main
+```
+
+**Examples**
+
+* Normal prompt:
+
+  ```
+  > What is an agent?
+  ```
+* Tool use (explicit):
+
+  ```
+  > use:echo hello world
+  > use:calc 2+2
+  ```
+* Alignment/deny:
+
+  ```
+  > [prompt that violates persona deny_on]
+  → returns deny message
+  ```
+
+If `transformers` or the model is not installed, the agent replies with a deterministic
+**offline stub** (still aligned and formatted).
+
+## How It Works (Phase 1)
+
+CLI → Agent.loop()
+→ Alignment (deny_on)
+→ If "use:<tool> ..." → ToolRegistry.invoke()
+→ Else → generate_text() → local HF model or offline stub
+→ format (tone) → stdout
+
+- **No external API billing**
+- **Explicit tool call protocol** for now; automatic tool selection comes later
+- **Domain-agnostic** by design
+
+## Training Overview (Reuse Existing Trainers)
+
+We reuse the existing training backbone:
+- `silhouette_core/training_loop.py` (SFT-style)
+- `silhouette_core/distiller.py` (KD)
+
+We add **adapters/dataloader/wrappers** only:
+- Adapters yield dicts: `{"instruction","input","output","tools_used"}`
+- Dataloader tokenizes and feeds `input_ids/labels` to the existing loops
+
+**Run SFT**
+```bash
+python -m training.train_sft --cfg config/train.yaml
+```
+
+**Run KD**
+
+```bash
+python -m training.train_kd --cfg config/train.yaml
+```
+
+## Roadmap
+- **Phase 1 (this):** Agent loop + tools + offline/online local model (no billing)
+- **Phase 2:** Distillation pipeline (teacher→student), adapters, SFT/KD wrappers, quantization/export
+- **Phase 3:** Focused agents (profiles, tool bundles, eval suites), optional API service
+
 *Full command reference is available in* [CLI Reference](docs/cli_reference.md).
 
 ---

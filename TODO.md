@@ -1,28 +1,12 @@
-# ✅ TODO – Project Phases and Goals
+# TODO (Phase 1 Scope)
+- [ ] Implement agent loop (alignment → tool → model/stub)
+- [ ] Tiny tool API + 2 demo tools
+- [ ] Minimal model generation (HF if present; else stub)
+- [ ] Wire CLI to agent
+- [ ] Add basics eval yaml
+- [ ] Update README/PHASES/MILESTONES with new sections
 
-## PHASE 1: Bootstrap Survival Core
-- [x] Name the project and define core philosophy
-- [x] Create CLI fallback shell
-- [x] Build alignment DSL structure
-- [ ] Integrate open-source LLMs (TinyLLaMA, Phi-2)
-- [ ] Package minimal runtime (llama.cpp / ONNX)
-
-## PHASE 2: Modular Intelligence
-- [ ] Define module spec (math, code, medical, etc.)
-- [ ] Implement dynamic module loading
-- [ ] Add caching and knowledge graph hooks
-
-## PHASE 3: Self-Healing / Redundancy
-- [ ] Blueprint system for model rebuild and rehydration
-- [ ] Storage and verification of alignment capsule
-- [ ] Fault-tolerant memory engine
-
-## PHASE 4: Interface & Adaptability
-- [ ] Build Web UI interface
-- [ ] Enable remote sync (only when allowed)
-- [ ] Plug-in framework for future evolution
-
-## Long-Term Goals
-- [ ] Peer-to-peer federation of Silhouettes
-- [ ] Fully offline package via USB/disk
-- [ ] Preservation archive (blueprint + self-installer)
+# Next (Phase 2 Prep)
+- [ ] JSONL adapter sample dataset at `training_data/core.jsonl`
+- [ ] Eval runner script for `eval/suites/*.yaml`
+- [ ] Decide first teacher model for KD and generation approach
