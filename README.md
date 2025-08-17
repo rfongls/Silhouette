@@ -178,6 +178,16 @@ python -m eval.eval --suite eval/suites/basics.yaml
 ```
 The eval runner executes prompts through the **Agent** loop, not just the model. CI should fail if this suite fails.
 
+### Use a trained student for eval
+```bash
+# Point the agent to your trained student
+STUDENT_MODEL=models/student-core python -m eval.eval --suite eval/suites/basics.yaml
+
+# Write a JSON report to artifacts/eval_report.json
+STUDENT_MODEL=models/student-core python scripts/eval_report.py
+```
+
+
 ## Training (Reuse Existing Trainers)
 We reuse:
 - `silhouette_core/training_loop.py` for SFT
