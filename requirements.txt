@@ -3,3 +3,6 @@ torch
 accelerate
 huggingface_hub
 psutil
+pyyaml>=6.0
+pytest>=8.0
+ruff>=0.4
