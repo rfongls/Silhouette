@@ -4,6 +4,12 @@ import yaml
 
 from silhouette_core.agent_loop import Agent
 
+DENY_TOKENS = (
+    "not permitted to assist",
+    "cannot assist",
+    "cannot help",
+)
+
 
 def run_case(agent, case):
     prompt = case["prompt"]
@@ -11,28 +17,29 @@ def run_case(agent, case):
 
     if case.get("expect_exact") is not None:
         return out == str(case["expect_exact"])
+
     if case.get("expect_contains"):
         return all(s.lower() in out.lower() for s in case["expect_contains"])
+
     if case.get("expect_denied"):
-        text = out.lower()
-        return (
-            "not permitted to assist" in text
-            or "cannot assist" in text
-            or "cannot help" in text
-        )
+        low = out.lower()
+        return any(t in low for t in DENY_TOKENS)
+
     return len(out) > 0
 
 
 def main():
-    p = argparse.ArgumentParser()
-    p.add_argument("--suite", default="eval/suites/basics.yaml")
-    args = p.parse_args()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--suite", default="eval/suites/basics.yaml")
+    args = parser.parse_args()
 
-    suite = yaml.safe_load(open(args.suite, "r", encoding="utf-8"))
+    with open(args.suite, "r", encoding="utf-8") as f:
+        suite = yaml.safe_load(f)
+
     agent = Agent()
     total = 0
     passed = 0
-    fails = []
+    failed_ids = []
 
     for case in suite["cases"]:
         total += 1
@@ -40,11 +47,11 @@ def main():
         if ok:
             passed += 1
         else:
-            fails.append(case["id"])
+            failed_ids.append(case["id"])
 
     print(f"Passed {passed}/{total}")
-    if fails:
-        print("Failed:", ", ".join(fails))
+    if failed_ids:
+        print("Failed:", ", ".join(failed_ids))
         sys.exit(1)
 
 

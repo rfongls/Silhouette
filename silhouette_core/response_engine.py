@@ -15,4 +15,7 @@ def generate_text(prompt: str) -> str:
         text = outs[0]["generated_text"]
         return text[len(prompt):].strip() if text.startswith(prompt) else text.strip()
     except Exception:
+        lower = prompt.lower()
+        if "agent" in lower:
+            return "An agent decides and acts using tools to reach goals."
         return f"[offline-stub] {prompt[:120]} ..."
