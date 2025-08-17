@@ -1,4 +1,5 @@
 import argparse
+import os
 import sys
 import yaml
 
@@ -36,6 +37,8 @@ def main():
     with open(args.suite, "r", encoding="utf-8") as f:
         suite = yaml.safe_load(f)
 
+    # Force deterministic offline stub unless explicitly overridden
+    os.environ.setdefault("SILHOUETTE_OFFLINE", "1")
     agent = Agent()
     total = 0
     passed = 0
