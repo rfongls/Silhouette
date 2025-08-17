@@ -5,6 +5,9 @@ Small, domain-agnostic seed set to exercise:
 - Tool-use prompts (`use:echo`, `use:calc`)
 - Alignment refusals (deny_on patterns)
 
+`teacher_outputs.jsonl` provides a line-aligned set of teacher responses for
+knowledge distillation experiments.
+
 ## Format (JSONL)
 Each line is a JSON object:
 ```json
@@ -13,7 +16,7 @@ Each line is a JSON object:
 
 * `instruction`: required (string)
 * `input`: required (string; may be empty)
-* `output`: required (string)
+* `output` or `teacher_output`: required (string)
 * `tools_used`: optional (array of tool names used to produce the output)
 
 ## Provenance
