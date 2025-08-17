@@ -23,3 +23,4 @@
 - [ ] Extend `:selfcheck` to validate profile invariants.
 - [ ] Expand eval suite by 10–20 cases; achieve ≥90% target.
 
+

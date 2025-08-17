@@ -26,4 +26,3 @@
 - [ ] Add counters (allow/deny/tool/latency) to logs or metrics stub.
 - [ ] Log redaction + simple PII regex guard.
 - [ ] Draft `models/student-core/MODEL_CARD.md`.
-
