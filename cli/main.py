@@ -2,7 +2,11 @@
 
 import argparse
 import builtins
+import hashlib
+import json
+import os
 import subprocess
+import time
 from datetime import datetime
 from pathlib import Path
 
@@ -243,6 +247,25 @@ def launch_repl(alignment, modules, module_funcs):
                     response = f"Silhouette: {result}"
                 else:
                     response = agent.loop(user_input)
+
+                # --- Per-turn JSONL logging (local artifacts only) ---
+                try:
+                    os.makedirs("artifacts", exist_ok=True)
+                    prompt_hash = hashlib.sha256(user_input.encode("utf-8")).hexdigest()[:12]
+                    event = {
+                        "ts": time.time(),
+                        "type": "turn",
+                        "prompt_hash": prompt_hash,
+                        "len_prompt": len(user_input),
+                        "len_answer": len(response),
+                        "preview": user_input[:120],
+                    }
+                    with open("artifacts/session.log.jsonl", "a", encoding="utf-8") as f:
+                        f.write(json.dumps(event, ensure_ascii=False) + "\n")
+                except Exception:
+                    # Logging must never break the CLI
+                    pass
+
                 print(response)
                 log.write(f"You: {user_input}\n{response}\n")
 
