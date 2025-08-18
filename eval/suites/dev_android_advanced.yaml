@@ -1,0 +1,54 @@
+name: dev_android_advanced
+cases:
+  - id: hilt_di_module
+    requires_model: true
+    prompt: "Create a Hilt module in Kotlin providing a Retrofit instance with OkHttp logging interceptor."
+    expect_regex:
+      - "```kotlin"
+      - "@Module"
+      - "@InstallIn\\(SingletonComponent::class\\)"
+      - "@Provides"
+      - "Retrofit\\.Builder"
+      - "OkHttpClient\\.Builder"
+      - "HttpLoggingInterceptor"
+  - id: room_dao_entity
+    requires_model: true
+    prompt: "Define a Room entity Todo(id:Int,title:String) and a DAO with insert and getAll."
+    expect_regex:
+      - "@Entity"
+      - "data\\s+class\\s+Todo"
+      - "@Dao"
+      - "@Insert"
+      - "@Query\\(\\s*\"SELECT\\s+\\*\\s+FROM"
+  - id: compose_basic_screen
+    requires_model: true
+    prompt: "Write a Jetpack Compose @Composable TodoListScreen(items: List<String>) rendering a LazyColumn with clickable rows."
+    expect_regex:
+      - "@Composable"
+      - "LazyColumn"
+      - "items\\("
+      - "onClick|clickable"
+  - id: coroutine_repository
+    requires_model: true
+    prompt: "Provide a repository function suspend fun fetchItems(): List<String> using withContext(Dispatchers.IO)."
+    expect_regex:
+      - "suspend\\s+fun\\s+fetchItems"
+      - "withContext\\(Dispatchers\\.IO"
+      - "return"
+  - id: manifest_permissions
+    requires_model: true
+    prompt: "AndroidManifest.xml snippet requesting INTERNET and using a LAUNCHER activity."
+    expect_regex:
+      - "```xml"
+      - "<uses-permission"
+      - "android\\.permission\\.INTERNET"
+      - "LAUNCHER"
+  - id: gradle_kts_versions
+    requires_model: true
+    prompt: "Show build.gradle.kts dependencies block adding retrofit2:retrofit and kotlinx-coroutines-core with placeholder versions."
+    expect_regex:
+      - "dependencies\\s*\\{"
+      - "implementation\\("
+      - "retrofit2:retrofit:"
+      - "kotlinx-coroutines-core:"
+

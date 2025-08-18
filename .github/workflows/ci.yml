@@ -16,7 +16,7 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
-        python-version: '3.10'
+        python-version: '3.11'
 
     - name: Install dev deps
       run: |
@@ -48,6 +48,42 @@ jobs:
         python -m silhouette_core.package_clone --profile profile.json --distillate distillate.json --version 1
         printf ":agent deploy tmp_deploy\n:exit\n" | python -m cli.main | grep -q "Deployed clone"
 
+    - name: Eval (agent-level)
+      run: python -m eval.eval --suite eval/suites/basics.yaml
+
+    - name: Eval (profile-core)
+      run: python -m eval.eval --suite eval/suites/profile_core.yaml
+
+    - name: Eval (dev-python)
+      run: python -m eval.eval --suite eval/suites/dev_python.yaml
+
+    - name: Eval (dev-python-advanced)
+      run: python -m eval.eval --suite eval/suites/dev_python_advanced.yaml
+
+    - name: Eval (dev-html)
+      run: python -m eval.eval --suite eval/suites/dev_html.yaml
+
+    - name: Eval (dev-html-advanced)
+      run: python -m eval.eval --suite eval/suites/dev_html_advanced.yaml
+
+    - name: Eval (dev-java)
+      run: python -m eval.eval --suite eval/suites/dev_java.yaml
+
+    - name: Eval (dev-java-advanced)
+      run: python -m eval.eval --suite eval/suites/dev_java_advanced.yaml
+
+    - name: Eval (dev-csharp)
+      run: python -m eval.eval --suite eval/suites/dev_csharp.yaml
+
+    - name: Eval (dev-csharp-advanced)
+      run: python -m eval.eval --suite eval/suites/dev_csharp_advanced.yaml
+
+    - name: Eval (dev-android)
+      run: python -m eval.eval --suite eval/suites/dev_android.yaml
+
+    - name: Eval (dev-android-advanced)
+      run: python -m eval.eval --suite eval/suites/dev_android_advanced.yaml
+
 
   codex-training:
     runs-on: ubuntu-latest
@@ -58,7 +94,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.10'
+          python-version: '3.11'
 
       - name: Run Codex controller
         run: python -m silhouette_core.codex_controller
