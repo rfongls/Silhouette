@@ -1,5 +1,5 @@
 # Common development and CI convenience targets
-.PHONY: dev test eval lint fmt quant-int8 latency selfcheck selfcheck-student runtime-fastapi runtime-ml scoreboard promote-skill traces security-scan
+.PHONY: dev test eval lint fmt quant-int8 latency selfcheck selfcheck-student runtime-fastapi runtime-ml runtime-web runtime-python scoreboard promote-skill traces security-scan
 
 dev:
 	python -m cli.main
@@ -11,7 +11,9 @@ eval:
 	python -m eval.eval --suite eval/suites/basics.yaml
 
 lint:
-	ruff check .
+	ruff check silhouette_core cli eval training scripts
+	black --check silhouette_core cli eval training scripts
+	npx eslint .
 
 fmt:
 	ruff check . --fix
@@ -32,7 +34,13 @@ runtime-fastapi:
 	ENABLE_RUNTIME_EVAL=1 python -m eval.build_runner --suite eval/suites/dev_python_fastapi_runtime.yaml
 
 runtime-ml:
-        ENABLE_RUNTIME_EVAL=1 python -m eval.build_runner --suite eval/suites/dev_python_ml_runtime.yaml
+	ENABLE_RUNTIME_EVAL=1 python -m eval.build_runner --suite eval/suites/dev_python_ml_runtime.yaml
+
+runtime-web:
+	ENABLE_RUNTIME_EVAL=1 python -m eval.build_runner --suite eval/suites/dev_web_runtime.yaml
+
+runtime-python:
+	ENABLE_RUNTIME_EVAL=1 python -m eval.build_runner --suite eval/suites/dev_python_runtime.yaml
 
 runtime-java-ext:
         ENABLE_RUNTIME_EVAL=1 python -m eval.build_runner --suite eval/suites/dev_java_runtime_ext.yaml

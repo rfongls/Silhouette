@@ -40,7 +40,7 @@ th,td{padding:6px 8px;border-bottom:1px solid #eee}
     parts.append(f"<div>Generated {time.strftime('%Y-%m-%d %H:%M:%S')}</div>")
     parts.append("<table>")
     parts.append(
-        "<tr><th>Phase</th><th>Selfcheck</th><th>Eval</th><th>Latency p50 (s)</th><th>Runtime (passed/total)</th><th>Security</th><th>Blocked Licenses</th><th>Snapshot</th></tr>"
+        "<tr><th>Phase</th><th>Selfcheck</th><th>Eval</th><th>Latency p50 (s)</th><th>Lint (py/js)</th><th>Runtime (passed/total)</th><th>Security</th><th>Blocked Licenses</th><th>Snapshot</th></tr>"
     )
 
     prev_summary = None
@@ -53,6 +53,7 @@ th,td{padding:6px 8px;border-bottom:1px solid #eee}
         rt_cell = "—"
         sec_cell = "—"
         blocked_cell = "—"
+        lint_cell = "—"
         trend_sc = ""
         trend_ev = ""
         trend_lat = ""
@@ -70,6 +71,10 @@ th,td{padding:6px 8px;border-bottom:1px solid #eee}
             lat = (s.get("latency") or {}).get("p50_sec")
             lat_p50 = f"{lat:.3f}" if isinstance(lat, (int, float)) else "—"
             rt = s.get("runtime") or {}
+            lint = s.get("lint") or {}
+            py = lint.get("python") or {}
+            js = lint.get("web") or {}
+            lint_cell = f"{py.get('issues',0)}/{js.get('issues',0)}"
             rt_cell = f"{rt.get('passed',0)}/{rt.get('total',0)}"
             if int(rt.get('reports_skipped',0)) > 0:
                 rt_cell += f" <span class='muted'>(skipped {rt.get('reports_skipped')})</span>"
@@ -110,6 +115,7 @@ th,td{padding:6px 8px;border-bottom:1px solid #eee}
             f"<td>{sc_badge} {trend_sc}</td>"
             f"<td>{ev_badge} {trend_ev}</td>"
             f"<td>{lat_p50} {trend_lat}</td>"
+            f"<td>{lint_cell}</td>"
             f"<td>{rt_cell} {trend_rt}</td>"
             f"<td>{sec_cell}</td><td>{html.escape(blocked_cell)}</td><td><a href='{rel}'>{html.escape(rel)}</a></td>"
             f"</tr>"
