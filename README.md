@@ -274,6 +274,13 @@ Makefile shorthand:
 make scoreboard-phase PHASE=5
 ```
 
+### History dashboard
+Aggregate all phase snapshots into a single index:
+```bash
+python scripts/scoreboard_history.py
+```
+This writes `artifacts/scoreboard/history.html` with links to each `phase-N.html`.
+
 ## Versioned Skills
 Skills live under `skills/<name>/vN/` and load as `name@vN`.
 Promote a skill to a new version:
