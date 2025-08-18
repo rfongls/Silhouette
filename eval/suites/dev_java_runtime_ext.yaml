@@ -1,5 +1,6 @@
 # Silhouette Core — Cross-Language Agent Capability (Java/Maven)
 # Evaluates the agent's ability to generate, compile, and test Java projects in Docker.
+
 name: dev_java_runtime_ext
 cases:
   - id: maven_junit_math

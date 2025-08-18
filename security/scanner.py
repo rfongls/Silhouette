@@ -6,7 +6,6 @@ import pathlib
 import re
 import sys
 from typing import Dict, List
-
 from .redaction import Redactor
 
 DEFAULT_OUT = pathlib.Path("artifacts/security_report.json")

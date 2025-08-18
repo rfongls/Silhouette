@@ -230,7 +230,6 @@ python -m eval.build_runner --suite eval/suites/dev_python_ml_runtime.yaml
 ### Cross-Language Containerized Runtime Evals (full compile)
 Silhouette Core validates agent-generated, multi-file projects across stacks inside official Docker images.
 This is an **agent capability**, not a platform pivot:
-
 - Java/Maven: `maven:3.9.5-eclipse-temurin-17` (cache: `$M2_CACHE:/root/.m2`)
 - .NET: `mcr.microsoft.com/dotnet/sdk:8.0` (cache: `$NUGET_PACKAGES:/root/.nuget/packages`)
 - Android/Gradle: `gradle:8.7-jdk17` (cache: `$GRADLE_CACHE:/gradle`)
@@ -247,7 +246,6 @@ python scripts/scoreboard_history.py
 ```
 
 ### Security & Compliance (v2)
-
 * SPDX license detection with whitelist/denylist (MIT, Apache-2.0, BSD).
 * Configurable thresholds (`--max_high`, `--max_medium`, `--max_low`).
 * CI fails if blocked licenses or secrets are detected.
