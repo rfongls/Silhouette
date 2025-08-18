@@ -100,7 +100,7 @@ jobs:
       run: |
         python scripts/synthesize_traces.py
         python scripts/validate_traces.py artifacts/traces/runtime_kd.jsonl
-
+        
     - name: Scoreboard
       run: python scripts/scoreboard.py
 

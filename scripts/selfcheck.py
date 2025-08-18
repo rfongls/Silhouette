@@ -144,8 +144,10 @@ def main():
     if not all_ok:
         if missing:
             print(f"[selfcheck] missing tools: {', '.join(missing)}")
+
         if missing_skills:
             print(f"[selfcheck] missing skills: {', '.join(missing_skills)}")
+
         for r in deny_fail_reasons:
             print(f"[selfcheck] deny check: {r}")
         sys.exit(1)
