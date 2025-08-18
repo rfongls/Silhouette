@@ -103,6 +103,7 @@ def main():
         skills_ok = len(missing_skills) == 0
     except Exception:
         skills_ok = False
+
     result = {
         "ts": time.time(),
         "policy": args.policy,

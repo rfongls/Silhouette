@@ -1,5 +1,5 @@
 # Common development and CI convenience targets
-.PHONY: dev test eval lint fmt quant-int8 latency selfcheck selfcheck-student
+.PHONY: dev test eval lint fmt quant-int8 latency selfcheck selfcheck-student runtime-fastapi runtime-ml scoreboard promote-skill
 
 dev:
 	python -m cli.main
@@ -32,5 +32,10 @@ runtime-fastapi:
 	ENABLE_RUNTIME_EVAL=1 python -m eval.build_runner --suite eval/suites/dev_python_fastapi_runtime.yaml
 
 runtime-ml:
-	ENABLE_RUNTIME_EVAL=1 python -m eval.build_runner --suite eval/suites/dev_python_ml_runtime.yaml
+        ENABLE_RUNTIME_EVAL=1 python -m eval.build_runner --suite eval/suites/dev_python_ml_runtime.yaml
 
+scoreboard:
+        python scripts/scoreboard.py
+
+promote-skill:
+        python scripts/promote_skill_version.py --name $(NAME) --from_version $(FROM) --to_version $(TO)

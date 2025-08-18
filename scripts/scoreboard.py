@@ -1,0 +1,146 @@
+#!/usr/bin/env python
+"""
+Aggregate artifacts and render a static HTML scoreboard:
+- artifacts/selfcheck.json
+- artifacts/eval_report.json
+- artifacts/latency.json
+- artifacts/build_eval_report.json (runtime evals; multiple files allowed)
+Writes to: artifacts/scoreboard/index.html
+Offline-friendly; tolerates missing files.
+"""
+import glob
+import html
+import json
+import pathlib
+import time
+
+ART_DIR = pathlib.Path("artifacts")
+OUT_DIR = ART_DIR / "scoreboard"
+OUT_PATH = OUT_DIR / "index.html"
+
+def _load_json(path):
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        return None
+
+def _row(k, v):
+    return f"<tr><td class='k'>{html.escape(str(k))}</td><td>{html.escape(str(v))}</td></tr>"
+
+def main():
+    OUT_DIR.mkdir(parents=True, exist_ok=True)
+    selfcheck = _load_json(ART_DIR / "selfcheck.json")
+    eval_rep = _load_json(ART_DIR / "eval_report.json")
+    latency = _load_json(ART_DIR / "latency.json")
+
+    runtime_reports = []
+    for p in glob.glob(str(ART_DIR / "*.build_eval_report.json")) + glob.glob(str(ART_DIR / "build_eval_report.json")):
+        runtime_reports.append(_load_json(pathlib.Path(p)))
+
+    parts = []
+    parts.append("<!doctype html><meta charset='utf-8'><title>Silhouette Scoreboard</title>")
+    parts.append(
+        """
+<style>
+body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Arial,sans-serif;margin:24px;color:#111}
+h1{margin:0 0 8px} .ts{color:#666;font-size:12px;margin-bottom:16px}
+.card{border:1px solid #e5e7eb;border-radius:12px;padding:16px;margin:12px 0;box-shadow:0 1px 3px #0001}
+h2{margin:0 0 12px;font-size:18px}
+table{border-collapse:collapse;width:100%} td,th{padding:6px 8px;border-bottom:1px solid #eee}
+.badge{display:inline-block;padding:2px 8px;border-radius:999px;font-size:12px;margin-left:6px}
+.ok{background:#e6f4ea;color:#137333} .fail{background:#fde8e8;color:#b91c1c} .skip{background:#eef2ff;color:#4338ca}
+.k{width:220px;color:#555}
+small{color:#666}
+</style>
+"""
+    )
+    parts.append("<h1>Silhouette Scoreboard</h1>")
+    parts.append(f"<div class='ts'>Generated {time.strftime('%Y-%m-%d %H:%M:%S')}</div>")
+
+    parts.append("<div class='card'><h2>Self-check</h2>")
+    if selfcheck:
+        ok = all([
+            selfcheck.get("tools", {}).get("ok"),
+            selfcheck.get("deny_rules", {}).get("ok"),
+            selfcheck.get("latency", {}).get("ok"),
+            selfcheck.get("skills", {}).get("ok", True),
+        ])
+        badge = "<span class='badge ok'>OK</span>" if ok else "<span class='badge fail'>FAIL</span>"
+        parts.append(f"<div>Overall: {badge}</div><br/>")
+        parts.append("<table>")
+        parts.append(_row("Tools OK", selfcheck.get("tools", {}).get("ok")))
+        parts.append(_row("Missing Tools", ", ".join(selfcheck.get("tools", {}).get("missing", []))))
+        parts.append(_row("Deny Rules OK", selfcheck.get("deny_rules", {}).get("ok")))
+        parts.append(_row("Latency p50 (ms)", selfcheck.get("latency", {}).get("p50_ms")))
+        parts.append(_row("Latency Budget (ms)", selfcheck.get("latency", {}).get("budget_ms")))
+        parts.append(_row("Skills OK", selfcheck.get("skills", {}).get("ok")))
+        parts.append(_row("Missing Skills", ", ".join(selfcheck.get("skills", {}).get("missing", []))))
+        parts.append("</table>")
+    else:
+        parts.append("<small>No selfcheck.json found.</small>")
+    parts.append("</div>")
+
+    parts.append("<div class='card'><h2>Agent Eval</h2>")
+    if eval_rep:
+        rc = eval_rep.get("returncode", 0)
+        badge = "<span class='badge ok'>OK</span>" if rc == 0 else "<span class='badge fail'>FAIL</span>"
+        parts.append(f"<div>Run: {badge}</div><br/>")
+        parts.append("<table>")
+        parts.append(_row("Suite", eval_rep.get("suite")))
+        parts.append(_row("Return code", rc))
+        parts.append(_row("Passed line", eval_rep.get("passed")))
+        parts.append(_row("Model", eval_rep.get("student_model", "")))
+        parts.append("</table>")
+    else:
+        parts.append("<small>No eval_report.json found.</small>")
+    parts.append("</div>")
+
+    parts.append("<div class='card'><h2>Latency</h2>")
+    if latency:
+        parts.append("<table>")
+        parts.append(_row("Model", latency.get("model")))
+        parts.append(_row("Prompt", latency.get("prompt")))
+        parts.append(_row("p50 (s)", latency.get("p50_sec")))
+        parts.append(_row("mean (s)", latency.get("mean_sec")))
+        parts.append("</table>")
+    else:
+        parts.append("<small>No latency.json found.</small>")
+    parts.append("</div>")
+
+    parts.append("<div class='card'><h2>Runtime Suites</h2>")
+    if runtime_reports:
+        for rep in runtime_reports:
+            if not rep:
+                continue
+            skipped = bool(rep.get("skipped"))
+            badge = (
+                "<span class='badge skip'>SKIP</span>"
+                if skipped
+                else (
+                    "<span class='badge ok'>OK</span>"
+                    if rep.get("failed_ids") in ([], None)
+                    else "<span class='badge fail'>FAIL</span>"
+                )
+            )
+            parts.append(
+                f"<h3 style='margin-top:8px'>{html.escape(rep.get('suite', '(unknown)'))} {badge}</h3>"
+            )
+            if skipped:
+                parts.append(
+                    f"<small>Reason: {html.escape(rep.get('reason', ''))}</small>"
+                )
+            else:
+                parts.append("<table>")
+                parts.append(_row("Passed", rep.get("passed")))
+                parts.append(_row("Total", rep.get("total")))
+                parts.append(_row("Failed IDs", ", ".join(rep.get("failed_ids", []))))
+                parts.append("</table>")
+    else:
+        parts.append("<small>No runtime build reports found.</small>")
+    parts.append("</div>")
+
+    OUT_PATH.write_text("\n".join(parts), encoding="utf-8")
+    print(f"Wrote scoreboard to {OUT_PATH}")
+
+if __name__ == "__main__":
+    main()

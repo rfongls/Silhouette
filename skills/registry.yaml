@@ -1,6 +1,6 @@
 skills:
   - name: http_get_json
-    module: skills.http_get_json.wrapper
+    version: v1
     entry: tool
     enabled: true
     description: "Fetch JSON from an HTTP endpoint with timeout and minimal error shaping."

@@ -5,7 +5,6 @@ import importlib
 import yaml
 import pathlib
 
-
 class ToolRegistry:
     """
     Tiny tool API to prove 'agent can act'.
@@ -36,15 +35,24 @@ class ToolRegistry:
         for skill in reg.get("skills", []):
             if not skill.get("enabled", True):
                 continue
-            mod_path = skill.get("module")
-            entry = skill.get("entry", "tool")
             name = skill.get("name")
+            entry = skill.get("entry", "tool")
+            version = skill.get("version")
+            mod_path = skill.get("module")
+            if not mod_path:
+                if version:
+                    mod_path = f"skills.{name}.{version}.wrapper"
+                else:
+                    mod_path = f"skills.{name}.wrapper"
+
             if not (mod_path and name):
                 continue
             try:
                 mod = importlib.import_module(mod_path)
                 fn = getattr(mod, entry)
-                self.register(name, fn)
+                public_name = f"{name}@{version}" if version else name
+                self.register(public_name, fn)
+
             except Exception:
                 continue
 

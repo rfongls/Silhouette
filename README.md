@@ -237,6 +237,20 @@ STUDENT_MODEL=models/student-core python -m eval.eval --suite eval/suites/basics
 STUDENT_MODEL=models/student-core python scripts/eval_report.py
 ```
 
+## Scoreboard (HTML)
+After running self-checks, evals, or runtime suites, build a static summary:
+```bash
+python scripts/scoreboard.py
+# open artifacts/scoreboard/index.html
+```
+
+## Versioned Skills
+Skills live under `skills/<name>/vN/` and load as `name@vN`.
+Promote a skill to a new version:
+```bash
+python scripts/promote_skill_version.py --name http_get_json --from_version v1 --to_version v2
+```
+
 ## Quantization & Latency
 
 You can export a **draft quantized artifact** and measure short-answer latency locally.

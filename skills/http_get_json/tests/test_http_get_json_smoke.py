@@ -1,6 +1,6 @@
 # Auto-generated smoke test
 import urllib.request
-from skills.http_get_json.wrapper import tool
+from skills.http_get_json.v1.wrapper import tool
 
 def test_http_get_json_smoke(monkeypatch):
     class DummyResponse:
