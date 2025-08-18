@@ -48,6 +48,9 @@ jobs:
         python -m silhouette_core.package_clone --profile profile.json --distillate distillate.json --version 1
         printf ":agent deploy tmp_deploy\n:exit\n" | python -m cli.main | grep -q "Deployed clone"
 
+    - name: Skills Selfcheck
+      run: python scripts/selfcheck.py --policy profiles/core/policy.yaml
+
     - name: Eval (agent-level)
       run: python -m eval.eval --suite eval/suites/basics.yaml
 
@@ -89,6 +92,10 @@ jobs:
 
     - name: Runtime Eval (Python ML: sklearn & torch)  # skips unless enabled
       run: python -m eval.build_runner --suite eval/suites/dev_python_ml_runtime.yaml --require_runtime_env
+
+
+    - name: Runtime Eval (Skill)  # skips unless enabled
+      run: python -m eval.build_runner --suite eval/suites/dev_skill_runtime.yaml --require_runtime_env
 
   codex-training:
     runs-on: ubuntu-latest

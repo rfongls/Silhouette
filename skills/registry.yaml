@@ -1,0 +1,8 @@
+skills:
+  - name: http_get_json
+    module: skills.http_get_json.wrapper
+    entry: tool
+    enabled: true
+    description: "Fetch JSON from an HTTP endpoint with timeout and minimal error shaping."
+
+  # RAG-to-Skill entries will be appended here by scripts/ingest_skill.py

@@ -1,0 +1,22 @@
+# Curriculum-style weighting for dataloaders/evals
+weights:
+  eval:
+    basics: 1
+    profile_core: 1
+    dev_python: 2
+    dev_python_advanced: 3
+    dev_html: 1
+    dev_html_advanced: 2
+    dev_java: 2
+    dev_java_advanced: 3
+    dev_csharp: 2
+    dev_csharp_advanced: 3
+    dev_android: 2
+    dev_android_advanced: 3
+    dev_python_fastapi_runtime: 4
+    dev_python_ml_runtime: 4
+    dev_skill_runtime: 4
+  data:
+    core_jsonl: 1
+    kd_teacher_jsonl: 2
+    runtime_skills_jsonl: 3

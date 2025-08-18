@@ -1,6 +1,10 @@
 from typing import Callable, Dict, Any
 import ast
 import operator as op
+import importlib
+import yaml
+import pathlib
+
 
 class ToolRegistry:
     """
@@ -23,6 +27,26 @@ class ToolRegistry:
             return self._tools[name](arg)
         except Exception as e:
             return f"[tool:{name}] error: {e}"
+
+    def load_skills_from_registry(self, path: str = "skills/registry.yaml") -> None:
+        p = pathlib.Path(path)
+        if not p.exists():
+            return
+        reg = yaml.safe_load(p.read_text(encoding="utf-8")) or {}
+        for skill in reg.get("skills", []):
+            if not skill.get("enabled", True):
+                continue
+            mod_path = skill.get("module")
+            entry = skill.get("entry", "tool")
+            name = skill.get("name")
+            if not (mod_path and name):
+                continue
+            try:
+                mod = importlib.import_module(mod_path)
+                fn = getattr(mod, entry)
+                self.register(name, fn)
+            except Exception:
+                continue
 
 
 # ---------- Safe calculator implementation ----------

@@ -216,6 +216,18 @@ ENABLE_RUNTIME_EVAL=1 STUDENT_MODEL=models/student-core-kd \
 python -m eval.build_runner --suite eval/suites/dev_python_ml_runtime.yaml
 ```
 
+### Skills (RAG-to-Skill) and Registry
+Skills are declared in `skills/registry.yaml`. The agent auto-loads registered skills at startup. Ingest new docs and synthesize a skill wrapper plus tests:
+```bash
+python scripts/ingest_skill.py --name textstat --docs docs_src/textstat.md --pattern "frequency|token|char" --desc "Simple text stats"
+pytest -q skills/textstat/tests
+```
+
+### Runtime skill eval
+```bash
+ENABLE_RUNTIME_EVAL=1 python -m eval.build_runner --suite eval/suites/dev_skill_runtime.yaml
+```
+
 ### Use a trained student for eval
 ```bash
 # Point the agent to your trained student
@@ -264,6 +276,7 @@ The core profile lives at `profiles/core/policy.yaml` and defines:
 - Tone
 - Deny rules reference
 - Latency budget
+- Required skills
 
 Run a local self-check:
 ```bash
@@ -271,7 +284,7 @@ python scripts/selfcheck.py --policy profiles/core/policy.yaml
 # Optional: point to a trained model for latency timing
 STUDENT_MODEL=models/student-core-kd python scripts/selfcheck.py --policy profiles/core/policy.yaml
 ```
-The script prints a summary and writes `artifacts/selfcheck.json`. It exits non-zero if tools are missing, deny checks fail, or latency exceeds budget.
+The script prints a summary and writes `artifacts/selfcheck.json`. It exits non-zero if tools are missing, deny checks fail, latency exceeds budget, or required skills are absent.
 
 ## Training (Reuse Existing Trainers)
 We reuse:
