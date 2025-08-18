@@ -1,0 +1,38 @@
+name: dev_html_advanced
+cases:
+  - id: accessible_form
+    requires_model: true
+    prompt: "Create an accessible HTML form with a labeled email input, aria-invalid on error, and a submit button. Fenced html only."
+    expect_regex:
+      - "```html"
+      - "<form"
+      - "<label"
+      - "for="
+      - "type=\\\"email\\\""
+      - "aria-invalid"
+  - id: responsive_layout
+    requires_model: true
+    prompt: "Produce a responsive page using CSS grid with two columns on >=768px and one column on smaller screens; include meta viewport."
+    expect_regex:
+      - "<meta\\s+name=\\\"viewport\\\""
+      - "display:\\s*grid"
+      - "grid-template-columns"
+      - "@media\\s*\\(min-width:\\s*768px\\)"
+  - id: semantic_sections
+    requires_model: true
+    prompt: "Use <header>, <nav>, <main>, <footer> with an <h1> and a list of links in nav."
+    expect_regex:
+      - "<header>"
+      - "<nav>"
+      - "<main>"
+      - "<footer>"
+      - "<h1>"
+      - "<ul>\\s*<li>"
+  - id: inline_svg_icon
+    requires_model: true
+    prompt: "Provide an inline SVG check icon with proper width/height and aria-hidden."
+    expect_regex:
+      - "<svg"
+      - "aria-hidden"
+      - "<path"
+
