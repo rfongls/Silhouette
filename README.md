@@ -175,8 +175,151 @@ See **PHASES.md** and **MILESTONES.md** for acceptance criteria and tasks.
 ## Running Evaluations
 ```bash
 python -m eval.eval --suite eval/suites/basics.yaml
+python -m eval.eval --suite eval/suites/profile_core.yaml
+python -m eval.eval --suite eval/suites/dev_python.yaml
+python -m eval.eval --suite eval/suites/dev_python_advanced.yaml
+python -m eval.eval --suite eval/suites/dev_html.yaml
+python -m eval.eval --suite eval/suites/dev_html_advanced.yaml
+python -m eval.eval --suite eval/suites/dev_java.yaml
+python -m eval.eval --suite eval/suites/dev_java_advanced.yaml
+python -m eval.eval --suite eval/suites/dev_csharp.yaml
+python -m eval.eval --suite eval/suites/dev_csharp_advanced.yaml
+python -m eval.eval --suite eval/suites/dev_android.yaml
+python -m eval.eval --suite eval/suites/dev_android_advanced.yaml
 ```
-The eval runner executes prompts through the **Agent** loop, not just the model. CI should fail if this suite fails.
+The eval runner executes prompts through the **Agent** loop, not just the model. The developer suites target practical engineering tasks across Android, Python, HTML/CSS, Java, and C#. They require a real model and **auto-skip** when the generator is offline (offline stub). CI should fail if the basics suite fails.
+
+### Runtime developer suites (compile/run)
+These suites require a real model and a Python runtime. They **auto-skip** unless enabled.
+
+**File fence convention**
+````md
+```file: app/main.py
+```python
+# code
+```
+
+```file: tests/test_app.py
+```python
+# code
+```
+````
+
+**Run locally**
+```bash
+# FastAPI + SQLModel + pytest suite
+ENABLE_RUNTIME_EVAL=1 STUDENT_MODEL=models/student-core-kd \
+python -m eval.build_runner --suite eval/suites/dev_python_fastapi_runtime.yaml
+
+# ML suite: sklearn + torch
+ENABLE_RUNTIME_EVAL=1 STUDENT_MODEL=models/student-core-kd \
+python -m eval.build_runner --suite eval/suites/dev_python_ml_runtime.yaml
+```
+
+### Skills (RAG-to-Skill) and Registry
+Skills are declared in `skills/registry.yaml`. The agent auto-loads registered skills at startup. Ingest new docs and synthesize a skill wrapper plus tests:
+```bash
+python scripts/ingest_skill.py --name textstat --docs docs_src/textstat.md --pattern "frequency|token|char" --desc "Simple text stats"
+pytest -q skills/textstat/tests
+```
+
+### Runtime skill eval
+```bash
+ENABLE_RUNTIME_EVAL=1 python -m eval.build_runner --suite eval/suites/dev_skill_runtime.yaml
+```
+
+### Use a trained student for eval
+```bash
+# Point the agent to your trained student
+STUDENT_MODEL=models/student-core python -m eval.eval --suite eval/suites/basics.yaml
+
+# Write a JSON report to artifacts/eval_report.json
+STUDENT_MODEL=models/student-core python scripts/eval_report.py
+```
+
+### Synthesizing training traces from runtime passes
+After running runtime suites (compile/run), convert passing cases into KD-ready JSONL:
+
+```bash
+ENABLE_RUNTIME_EVAL=1 STUDENT_MODEL=models/student-core-kd \
+python -m eval.build_runner --suite eval/suites/dev_python_fastapi_runtime.yaml
+
+python scripts/synthesize_traces.py
+python scripts/validate_traces.py artifacts/traces/runtime_kd.jsonl
+```
+
+The output file `artifacts/traces/runtime_kd.jsonl` can be mixed into SFT/KD training via `config/train.yaml`. Set `TRACE_LICENSE` to label usage (default: `internal-training-only`).
+
+### File-fence SFT adapter
+Traces include file payloads. The `FileFenceAdapter` teaches the model to emit file fences directly:
+```bash
+python scripts/synthesize_traces.py
+python -m training.train_sft --cfg config/train.yaml
+```
+
+## Scoreboard (HTML)
+After running self-checks, evals, or runtime suites, build a static summary:
+```bash
+python scripts/scoreboard.py
+# open artifacts/scoreboard/index.html
+```
+
+## Versioned Skills
+Skills live under `skills/<name>/vN/` and load as `name@vN`.
+Promote a skill to a new version:
+```bash
+python scripts/promote_skill_version.py --name http_get_json --from_version v1 --to_version v2
+```
+
+
+## Quantization & Latency
+
+You can export a **draft quantized artifact** and measure short-answer latency locally.
+
+### Export (offline-friendly)
+```bash
+# INT8 dynamic quantization (CPU). Falls back to a stub if libs are unavailable.
+python scripts/quantize.py --method int8 --src models/student-core-kd --out models/student-core-int8
+# GGUF placeholder (writes stub + next steps)
+python scripts/quantize.py --method gguf --src models/student-core-kd --out models/student-core-gguf
+```
+
+### Latency probe
+```bash
+# Default model or offline stub
+python scripts/latency_probe.py
+# KD student
+STUDENT_MODEL=models/student-core-kd python scripts/latency_probe.py
+# INT8 export
+STUDENT_MODEL=models/student-core-int8 python scripts/latency_probe.py
+```
+
+### Target (CPU)
+Short-answer latency target is **< 3s** for a single sentence response.
+
+| Model                  | Device | Method       | p50 (s) | mean (s) | Notes                    |
+|------------------------|--------|--------------|---------|----------|--------------------------|
+| student-core (baseline)| CPU    | fp32 / stub  | TBD     | TBD      | offline stub is instant  |
+| student-core-kd        | CPU    | fp32         | TBD     | TBD      | set `STUDENT_MODEL` path |
+| student-core-int8      | CPU    | int8-dynamic | TBD     | TBD      | via `scripts/quantize.py`|
+
+
+## Profile & Self-check
+
+The core profile lives at `profiles/core/policy.yaml` and defines:
+- Allowed tools
+- Tone
+- Deny rules reference
+- Latency budget
+- Required skills
+
+Run a local self-check:
+```bash
+python scripts/selfcheck.py --policy profiles/core/policy.yaml
+# Optional: point to a trained model for latency timing
+STUDENT_MODEL=models/student-core-kd python scripts/selfcheck.py --policy profiles/core/policy.yaml
+```
+The script prints a summary and writes `artifacts/selfcheck.json`. It exits non-zero if tools are missing, deny checks fail, latency exceeds budget, or required skills are absent.
 
 ## Training (Reuse Existing Trainers)
 We reuse:
