@@ -32,6 +32,7 @@
 ## Phase 7 — Cross-Language Runtime Expansion (PR-19 → PR-21)
 - Reframe as cross-language capability (not an app).
 - Add Web, Python, C++/CMake runtimes + linters.
+- PR-20: Web + Python runtime evals and linter integration
 - Goal: Full multi-language coverage.
 
 ## Phase 8 — Continuous Improvement Flywheel (PR-22 → PR-23)

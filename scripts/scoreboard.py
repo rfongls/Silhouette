@@ -38,6 +38,8 @@ def main():
     eval_rep = _load_json(ART_DIR / "eval_report.json")
     latency = _load_json(ART_DIR / "latency.json")
     security_rep = _load_json(ART_DIR / "security_report.json")
+    lint_py = _load_json(ART_DIR / "lint_python.json")
+    lint_js = _load_json(ART_DIR / "lint_js.json")
 
     runtime_reports = []
     for p in glob.glob(str(ART_DIR / "*.build_eval_report.json")) + glob.glob(
@@ -113,6 +115,24 @@ small{color:#666}
         parts.append("</table>")
     else:
         parts.append("<small>No latency.json found.</small>")
+    parts.append("</div>")
+
+    parts.append("<div class='card'><h2>Lint</h2>")
+    if lint_py or lint_js:
+        parts.append("<table>")
+        if lint_py:
+            py_badge = (
+                "<span class='badge ok'>OK</span>" if lint_py.get("ok") else "<span class='badge fail'>FAIL</span>"
+            )
+            parts.append(_row("Python", f"{lint_py.get('issues',0)} issues {py_badge}"))
+        if lint_js:
+            js_badge = (
+                "<span class='badge ok'>OK</span>" if lint_js.get("ok") else "<span class='badge fail'>FAIL</span>"
+            )
+            parts.append(_row("Web/JS", f"{lint_js.get('issues',0)} issues {js_badge}"))
+        parts.append("</table>")
+    else:
+        parts.append("<small>No lint reports found.</small>")
     parts.append("</div>")
 
     parts.append("<div class='card'><h2>Runtime Suites</h2>")
@@ -203,6 +223,8 @@ small{color:#666}
                 runtime_reports.append(_load(pathlib.Path(p)))
             except Exception:
                 pass
+        lint_py = _load(ART_DIR / "lint_python.json")
+        lint_js = _load(ART_DIR / "lint_js.json")
 
         rt_total = 0
         rt_passed = 0
@@ -263,6 +285,16 @@ small{color:#666}
                 "findings": sec_findings,
                 "whitelist": sorted(SPDX_WHITELIST),
                 "blocked": blocked,
+            },
+            "lint": {
+                "python": {
+                    "ok": bool((lint_py or {}).get("ok")),
+                    "issues": int((lint_py or {}).get("issues", 0)),
+                },
+                "web": {
+                    "ok": bool((lint_js or {}).get("ok")),
+                    "issues": int((lint_js or {}).get("issues", 0)),
+                },
             },
             "links": {
                 "snapshot_html": phase_out.name,
