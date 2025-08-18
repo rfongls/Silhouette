@@ -136,6 +136,7 @@ def main():
     tools_ok = result["tools"]["ok"]
     all_ok = tools_ok and deny_ok and latency_ok and skills_ok
 
+
     pathlib.Path(args.out).write_text(json.dumps(result, indent=2), encoding="utf-8")
 
     print(f"[selfcheck] tools: {'OK' if tools_ok else 'FAIL'}; "
@@ -144,8 +145,10 @@ def main():
     if not all_ok:
         if missing:
             print(f"[selfcheck] missing tools: {', '.join(missing)}")
+
         if missing_skills:
             print(f"[selfcheck] missing skills: {', '.join(missing_skills)}")
+
         for r in deny_fail_reasons:
             print(f"[selfcheck] deny check: {r}")
         sys.exit(1)

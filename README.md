@@ -251,7 +251,6 @@ Promote a skill to a new version:
 python scripts/promote_skill_version.py --name http_get_json --from_version v1 --to_version v2
 ```
 
-
 ## Quantization & Latency
 
 You can export a **draft quantized artifact** and measure short-answer latency locally.
