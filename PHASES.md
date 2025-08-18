@@ -1,48 +1,51 @@
 # Phases
 
-📊 [Scoreboard History](artifacts/scoreboard/history.html)
+## Phase 1 — Core Agent Hardening (PR-1 → PR-3)
+- Safe calc, eval runner, deny rules, logging.
+- Goal: Make the minimal agent safe and testable.
 
-## Phase 1 — Agent MVP Hardening
-PR-1 to PR-3
-- Replaced unsafe eval with safe math parser.
-- Added eval runner + deny tests.
-- Logging and requirements pinned.
-- [Scoreboard](artifacts/scoreboard/phase-1.html)
+## Phase 2 — Training Foundation (PR-4 → PR-5)
+- Seed dataset, SFT wrapper, dry-run training.
+- Goal: Establish initial training loop.
 
-## Phase 2 — Data Prep + SFT
-PR-4 to PR-5
-- Seed dataset creation.
-- Dry-run SFT wrapper.
-- Offline tokenizer fallback.
-- [Scoreboard](artifacts/scoreboard/phase-2.html)
+## Phase 3 — Distillation & Quantization (PR-6 → PR-9)
+- Teacher outputs, KD, quantization, latency probe.
+- Goal: Smaller student model runs offline, faster.
 
-## Phase 3 — KD + Quantization
-PR-6 to PR-9
-- Teacher outputs and KD wrapper.
-- Student eval reporting.
-- Quantization utility and latency probes.
-- [Scoreboard](artifacts/scoreboard/phase-3.html)
+## Phase 4 — Policy & Evals (PR-10 → PR-11.2)
+- Profiles + self-check.
+- Developer eval suites, runtime compile cases.
+- Goal: Build evaluation harness across stacks.
 
-## Phase 4 — Profiles + Dev Evals + Skills
-PR-10 to PR-14
-- Profiles and self-check.
-- Developer eval suites and runtime builds.
-- Dynamic skills, registry ingestion, versioning, and dataset synthesis.
-- [Scoreboard](artifacts/scoreboard/phase-4.html)
+## Phase 5 — Skills & Dataset Flywheel v1 (PR-12 → PR-14)
+- Skill registry, versioned skills, scoreboard.
+- Runtime traces → KD dataset synthesis.
+- Goal: Let the agent ingest skills and learn from runtime wins.
 
-## Phase 5 — Runtime Archival + File-Fence Training
-PR-15
-- Build runner archives prompts and zipped workdirs.
-- File-fence adapter enables multi-file SFT.
-- Documentation synced with milestones.
-- [Scoreboard](artifacts/scoreboard/phase-5.html)
+## Phase 6 — Compliance & Provenance (PR-15 → PR-18)
+- Build runner prompt archival + file-fence adapter.
+- Phase scoreboards + history + trends.
+- Security & compliance guardrails (redaction, PII, SPDX).
+- Watermarks + customer license template.
+- Goal: Ensure every artifact has provenance & compliance baked in.
 
-## Phase 6 — Cross-Language Containerized Runtime Evals & Compliance
-Agent proves multi-stack development (Java, .NET, Android; Python planned) via containerized build/test flows; compliance gates enforced.
+## Phase 7 — Cross-Language Runtime Expansion (PR-19 → PR-21)
+- Reframe as cross-language capability (not an app).
+- Add Web, Python, C++/CMake runtimes + linters.
+- Goal: Full multi-language coverage.
 
-PR-18
-- Docker-based runtime builds for Java/Maven, .NET/dotnet CLI, and Android/Gradle.
-- SPDX license compliance checks with configurable thresholds and watermarking of artifacts.
-- Customer license template for commercial rights.
-- [Scoreboard](artifacts/scoreboard/phase-6.html)
+## Phase 8 — Continuous Improvement Flywheel (PR-22 → PR-23)
+- Auto-promote runtime traces into curated buckets.
+- Regression gates + latency targets per lane.
+- Goal: Make CI a continuous learning + regression safety net.
+
+## Phase 9 — Packaging & Deployment (PR-24 → PR-25)
+- pip package + CLI UX.
+- Edge/on-device quantization targets.
+- Goal: Make Silhouette Core portable, installable, edge-ready.
+
+## Phase 10 — Release & Licensing (PR-26 → PR-27)
+- Release playbook, artifacts, scoreboard bundle.
+- Customer license issuance tooling, watermark embedding.
+- Goal: Deliver Silhouette Core as a governed, licensable product.
 
