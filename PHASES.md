@@ -36,3 +36,9 @@ PR-15
 - File-fence adapter enables multi-file SFT.
 - Documentation synced with milestones.
 - [Scoreboard](artifacts/scoreboard/phase-5.html)
+
+## Phase 6 — Containerized Runtime & Compliance
+PR-18
+- Docker-based runtime builds for Java/Maven, .NET/dotnet CLI, and Android/Gradle.
+- SPDX license compliance checks with configurable thresholds.
+- [Scoreboard](artifacts/scoreboard/phase-6.html)

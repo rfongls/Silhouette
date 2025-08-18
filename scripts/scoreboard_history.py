@@ -1,7 +1,11 @@
 #!/usr/bin/env python
 """Render a history dashboard from phase scoreboard snapshots."""
 
-import pathlib, re, time, json, html
+import pathlib
+import re
+import time
+import json
+import html
 
 ART_DIR = pathlib.Path("artifacts/scoreboard")
 OUT = ART_DIR / "history.html"
@@ -36,11 +40,10 @@ th,td{padding:6px 8px;border-bottom:1px solid #eee}
     parts.append(f"<div>Generated {time.strftime('%Y-%m-%d %H:%M:%S')}</div>")
     parts.append("<table>")
     parts.append(
-        "<tr><th>Phase</th><th>Selfcheck</th><th>Eval</th><th>Latency p50 (s)</th><th>Runtime (passed/total)</th><th>Security</th><th>Snapshot</th></tr>"
+        "<tr><th>Phase</th><th>Selfcheck</th><th>Eval</th><th>Latency p50 (s)</th><th>Runtime (passed/total)</th><th>Security</th><th>Blocked Licenses</th><th>Snapshot</th></tr>"
     )
 
     prev_summary = None
-
     for phase, p in snaps:
         rel = p.name
         summary_path = ART_DIR / f"phase-{phase}.summary.json"
@@ -49,11 +52,11 @@ th,td{padding:6px 8px;border-bottom:1px solid #eee}
         lat_p50 = "—"
         rt_cell = "—"
         sec_cell = "—"
+        blocked_cell = "—"
         trend_sc = ""
         trend_ev = ""
         trend_lat = ""
         trend_rt = ""
-
         if summary_path.exists():
             s = json.loads(summary_path.read_text(encoding="utf-8"))
             sc_ok = bool(((s.get("selfcheck") or {}).get("overall_ok")))
@@ -72,6 +75,9 @@ th,td{padding:6px 8px;border-bottom:1px solid #eee}
                 rt_cell += f" <span class='muted'>(skipped {rt.get('reports_skipped')})</span>"
             sec = (s.get("security") or {}).get("findings")
             sec_cell = "0" if sec in (0, None) else str(sec)
+            blocked_list = (s.get("security") or {}).get("blocked", []) or []
+            blocked_cell = ", ".join(blocked_list) if blocked_list else "—"
+
 
             if prev_summary:
                 prev_sc = bool(((prev_summary.get("selfcheck") or {}).get("overall_ok")))
@@ -106,7 +112,7 @@ th,td{padding:6px 8px;border-bottom:1px solid #eee}
             f"<td>{ev_badge} {trend_ev}</td>"
             f"<td>{lat_p50} {trend_lat}</td>"
             f"<td>{rt_cell} {trend_rt}</td>"
-            f"<td>{sec_cell}</td><td><a href='{rel}'>{html.escape(rel)}</a></td>"
+            f"<td>{sec_cell}</td><td>{html.escape(blocked_cell)}</td><td><a href='{rel}'>{html.escape(rel)}</a></td>"
             f"</tr>"
         )
 

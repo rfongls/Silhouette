@@ -14,6 +14,10 @@ import json
 import os
 import pathlib
 import time
+import sys
+
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent))
+from security.scanner import SPDX_WHITELIST
 
 ART_DIR = pathlib.Path("artifacts")
 OUT_DIR = ART_DIR / "scoreboard"
@@ -146,12 +150,21 @@ small{color:#666}
     parts.append("<div class='card'><h2>Security</h2>")
     if security_rep:
         total = len(security_rep.get("findings", []))
+        blocked = [
+            f.get("license")
+            for f in security_rep.get("findings", [])
+            if f.get("category") == "license" and f.get("severity") == "high"
+        ]
         badge = (
             "<span class='badge ok'>0</span>"
             if total == 0
             else f"<span class='badge fail'>{total}</span>"
         )
         parts.append(f"<div>Findings: {badge}</div>")
+        if blocked:
+            parts.append("<table>")
+            parts.append(_row("Blocked Licenses", ", ".join(blocked)))
+            parts.append("</table>")
     else:
         parts.append("<small>No security_report.json found.</small>")
     parts.append("</div>")
@@ -217,6 +230,11 @@ small{color:#666}
         lat_p50 = latency.get("p50_sec") if isinstance(latency, dict) else None
         lat_mean = latency.get("mean_sec") if isinstance(latency, dict) else None
         sec_findings = len((security_rep or {}).get("findings", []))
+        blocked = [
+            f.get("license")
+            for f in (security_rep or {}).get("findings", [])
+            if f.get("category") == "license" and f.get("severity") == "high"
+        ]
 
         summary = {
             "phase": phase_tag,
@@ -241,7 +259,11 @@ small{color:#666}
                 "total": rt_total,
                 "reports_skipped": rt_skipped,
             },
-            "security": {"findings": sec_findings},
+            "security": {
+                "findings": sec_findings,
+                "whitelist": sorted(SPDX_WHITELIST),
+                "blocked": blocked,
+            },
             "links": {
                 "snapshot_html": phase_out.name,
             },

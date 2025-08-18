@@ -1,0 +1,34 @@
+name: dev_java_runtime
+cases:
+  - id: maven_hello
+    requires_model: true
+    requires_runtime: true
+    runtime: docker
+    image: maven:3.9.5-eclipse-temurin-17
+    prompt: |
+      Create two files:
+      ```file: pom.xml
+      ```xml
+      <project>
+        <modelVersion>4.0.0</modelVersion>
+        <groupId>com.example</groupId>
+        <artifactId>hello</artifactId>
+        <version>1.0</version>
+      </project>
+      ```
+      ```file: src/main/java/Hello.java
+      ```java
+      public class Hello {
+        public static void main(String[] args) {
+          System.out.println("Hello");
+        }
+      }
+      ```
+    expect_files:
+      - pom.xml
+      - src/main/java/Hello.java
+    commands:
+      - mvn -q package
+      - java -cp target/classes Hello
+    expect_stdout_regex:
+      - "Hello"

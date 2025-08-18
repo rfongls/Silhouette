@@ -64,3 +64,7 @@
 - **Scope**: store prompts and zipped workdirs in runtime reports, add `FileFenceAdapter`, update docs.
 - **Acceptance**: `python -m eval.build_runner --suite eval/suites/dev_python_fastapi_runtime.yaml --require_runtime_env` (produces prompt + zip), training via file-fence adapter in `config/train.yaml`.
 
+## PR-18 Containerized runtime builds + compliance guardrails
+- **Scope**: Docker-based runtime evals for Java/Maven, .NET/dotnet CLI, and Android/Gradle; SPDX license checks with whitelist and tunable thresholds.
+- **Acceptance**: `ENABLE_RUNTIME_EVAL=1 python -m eval.build_runner --suite eval/suites/dev_java_runtime.yaml` and `python -m security.scanner --path . --max_high 0 --max_medium 10`.
+

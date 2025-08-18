@@ -4,6 +4,7 @@ import os
 import re
 import shutil
 import subprocess
+import shlex
 import sys
 import tempfile
 import time
@@ -91,13 +92,25 @@ def _zip_and_cleanup(wrk: pathlib.Path, suite_name: str, case_id: str, keep: boo
     return str(zip_base.with_suffix(".zip"))
 
 
-def _run_cmds(cmds: List[str], cwd: pathlib.Path, timeout_s: int = 180) -> Dict[str, Any]:
+def _run_cmds(
+    cmds: List[str],
+    cwd: pathlib.Path,
+    timeout_s: int = 180,
+    docker_image: str | None = None,
+) -> Dict[str, Any]:
     logs = []
     last_rc = 0
     for c in cmds:
         t0 = time.time()
+        if docker_image:
+            cmd = (
+                f"docker run --rm -v {cwd}:/workspace -w /workspace "
+                f"{docker_image} bash -lc {shlex.quote(c)}"
+            )
+        else:
+            cmd = c
         p = subprocess.run(
-            c,
+            cmd,
             cwd=str(cwd),
             shell=True,
             capture_output=True,
@@ -169,6 +182,7 @@ def main():
         expect_stdout = case.get("expect_stdout_regex", [])
         expect_files = case.get("expect_files", [])
         commands = case.get("commands", [])
+        docker_image = case.get("image") if case.get("runtime") == "docker" else None
         wrk = pathlib.Path(tempfile.mkdtemp(prefix="sildev_"))
         case_prompt = prompt
         try:
@@ -187,7 +201,7 @@ def main():
                 })
                 fails.append(case["id"])
                 continue
-            run = _run_cmds(commands, wrk)
+            run = _run_cmds(commands, wrk, docker_image=docker_image)
             ok = (run["rc"] == 0)
             std_all = "\n".join([s["stdout"] for s in run["steps"]])
             if expect_stdout:
