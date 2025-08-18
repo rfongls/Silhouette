@@ -3,7 +3,7 @@ import argparse
 import json
 import os
 import pathlib
-import re
+from security.redaction import DEFAULT_REDACTOR as _redactor
 import time
 
 ART = pathlib.Path("artifacts")
@@ -24,11 +24,7 @@ def _load_json(p: pathlib.Path):
         return None
 
 def _redact_text(s: str) -> str:
-    if not s:
-        return s
-    s = re.sub(r"(?i)api[_-]?key[:=]\s*[\w\-]+", "API_KEY:REDACTED", s)
-    s = re.sub(r"https?://[^\s\"']+", "URL:REDACTED", s)
-    return s
+    return _redactor.redact_text(s)
 
 def _read_file(path: pathlib.Path) -> str:
     try:
@@ -42,7 +38,8 @@ def _collect_files(workdir: str, step_logs):
     exts = {".py", ".kt", ".java", ".cs", ".html", ".htm", ".xml", ".kts", ".gradle", ".md", ".yml", ".yaml", ".txt"}
     for p in root.rglob("*"):
         if p.is_file() and p.suffix.lower() in exts and p.stat().st_size <= 200_000:
-            out.append({"path": str(p.relative_to(root)), "content": _read_file(p)})
+            content = _redact_text(_read_file(p))
+            out.append({"path": str(p.relative_to(root)), "content": content})
     return out
 
 def synthesize_one_report(rep, out_f):
