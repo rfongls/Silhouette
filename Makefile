@@ -1,5 +1,5 @@
 # Common development and CI convenience targets
-.PHONY: dev test eval lint fmt quant-int8 latency selfcheck selfcheck-student runtime-fastapi runtime-ml scoreboard promote-skill traces
+.PHONY: dev test eval lint fmt quant-int8 latency selfcheck selfcheck-student runtime-fastapi runtime-ml scoreboard promote-skill traces security-scan
 
 dev:
 	python -m cli.main
@@ -32,7 +32,16 @@ runtime-fastapi:
 	ENABLE_RUNTIME_EVAL=1 python -m eval.build_runner --suite eval/suites/dev_python_fastapi_runtime.yaml
 
 runtime-ml:
-	ENABLE_RUNTIME_EVAL=1 python -m eval.build_runner --suite eval/suites/dev_python_ml_runtime.yaml
+        ENABLE_RUNTIME_EVAL=1 python -m eval.build_runner --suite eval/suites/dev_python_ml_runtime.yaml
+
+runtime-java-ext:
+        ENABLE_RUNTIME_EVAL=1 python -m eval.build_runner --suite eval/suites/dev_java_runtime_ext.yaml
+
+runtime-dotnet-ext:
+        ENABLE_RUNTIME_EVAL=1 python -m eval.build_runner --suite eval/suites/dev_dotnet_runtime_ext.yaml
+
+runtime-android-ext:
+        ENABLE_RUNTIME_EVAL=1 python -m eval.build_runner --suite eval/suites/dev_android_runtime_ext.yaml
 
 scoreboard:
         python scripts/scoreboard.py
@@ -40,10 +49,16 @@ scoreboard:
 scoreboard-phase:
         PHASE=${PHASE} python scripts/scoreboard.py
 
+scoreboard-phase6:
+        PHASE=phase-6 python scripts/scoreboard.py && python scripts/scoreboard_history.py
+
 promote-skill:
 	python scripts/promote_skill_version.py --name $(NAME) --from_version $(FROM) --to_version $(TO)
 
 traces:
-	python scripts/synthesize_traces.py
-	python scripts/validate_traces.py artifacts/traces/runtime_kd.jsonl
+        python scripts/synthesize_traces.py
+        python scripts/validate_traces.py artifacts/traces/runtime_kd.jsonl
+
+security-scan:
+        python -m security.scanner
 

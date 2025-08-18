@@ -1,0 +1,45 @@
+# Silhouette Core — Cross-Language Agent Capability (Java/Maven)
+# Evaluates the agent's ability to generate, compile, and test Java projects in Docker.
+name: dev_java_runtime_ext
+cases:
+  - id: maven_junit_math
+    requires_model: true
+    requires_runtime: true
+    runtime: docker
+    image: maven:3.9.5-eclipse-temurin-17
+    docker_extra: "-v $M2_CACHE:/root/.m2"
+    prompt: |
+      Create a Java project with a simple MathUtil.add(int,int).
+      Provide:
+      ```file: pom.xml
+      ```xml
+      <project xmlns="http://maven.apache.org/POM/4.0.0" ...>
+        <modelVersion>4.0.0</modelVersion>
+        <groupId>com.example</groupId><artifactId>mathutil</artifactId><version>1.0</version>
+        <dependencies>
+          <dependency><groupId>org.junit.jupiter</groupId><artifactId>junit-jupiter</artifactId><version>5.10.2</version><scope>test</scope></dependency>
+        </dependencies>
+        <build><plugins>
+          <plugin><groupId>org.apache.maven.plugins</groupId><artifactId>maven-surefire-plugin</artifactId><version>3.2.5</version></plugin>
+        </plugins></build>
+      </project>
+      ```
+      ```file: src/main/java/com/example/MathUtil.java
+      ```java
+      package com.example;
+      public class MathUtil { public static int add(int a,int b){ return a+b; } }
+      ```
+      ```file: src/test/java/com/example/MathUtilTest.java
+      ```java
+      package com.example;
+      import static org.junit.jupiter.api.Assertions.*; import org.junit.jupiter.api.Test;
+      public class MathUtilTest { @Test void adds(){ assertEquals(7, MathUtil.add(3,4)); } }
+      ```
+    expect_files:
+      - pom.xml
+      - src/main/java/com/example/MathUtil.java
+      - src/test/java/com/example/MathUtilTest.java
+    commands:
+      - mvn -q -DskipITs -Dstyle.color=never test
+    expect_stdout_regex:
+      - "BUILD SUCCESS"

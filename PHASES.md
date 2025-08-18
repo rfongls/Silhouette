@@ -37,3 +37,11 @@ PR-15
 - Documentation synced with milestones.
 - [Scoreboard](artifacts/scoreboard/phase-5.html)
 
+## Phase 6 — Cross-Language Containerized Runtime Evals & Compliance
+Agent proves multi-stack development (Java, .NET, Android; Python planned) via containerized build/test flows; compliance gates enforced.
+PR-18
+- Docker-based runtime builds for Java/Maven, .NET/dotnet CLI, and Android/Gradle.
+- SPDX license compliance checks with configurable thresholds and watermarking of artifacts.
+- Customer license template for commercial rights.
+- [Scoreboard](artifacts/scoreboard/phase-6.html)
+

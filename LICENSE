@@ -1,0 +1,38 @@
+Silhouette Core — Proprietary License
+Copyright (c) Silhouette LLC. All rights reserved.
+
+1. Grant
+   Silhouette LLC (“Licensor”) grants you a limited, revocable, non-transferable,
+   non-sublicensable license to use this software solely for evaluation and internal
+   development purposes.
+
+2. Restrictions
+   You may NOT:
+   - copy, distribute, modify, or create derivative works of the software,
+   - use the software or any portion thereof to train, fine-tune, or otherwise
+     adapt machine learning models, unless you have a separate written agreement
+     with Licensor expressly permitting such use,
+   - remove or alter any proprietary notices or marks.
+
+3. No Redistribution
+   You may not publish, disclose, or make the software available to any third party
+   without prior written consent from Licensor.
+
+4. Ownership
+   The software is licensed, not sold. Licensor retains all right, title, and interest,
+   including all intellectual property rights.
+
+5. No Warranty
+   THE SOFTWARE IS PROVIDED “AS IS” WITHOUT WARRANTY OF ANY KIND.
+
+6. Limitation of Liability
+   TO THE MAXIMUM EXTENT PERMITTED BY LAW, LICENSOR SHALL NOT BE LIABLE FOR ANY
+   INDIRECT, INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES.
+
+7. Termination
+   This license terminates automatically if you breach any term. Upon termination,
+   you must cease all use and destroy all copies.
+
+8. Contact & Commercial Licensing
+   For commercial licensing (including permissions to train/fine-tune or deploy),
+   contact Silhouette LLC at <your contact>.

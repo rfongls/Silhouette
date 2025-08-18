@@ -1,0 +1,33 @@
+name: dev_android_runtime
+cases:
+  - id: gradle_hello
+    requires_model: true
+    requires_runtime: true
+    runtime: docker
+    image: gradle:8.7-jdk17
+    prompt: |
+      Create two files:
+      ```file: build.gradle
+      ```gradle
+      plugins {
+        id 'application'
+      }
+      application {
+        mainClass = 'Hello'
+      }
+      ```
+      ```file: src/main/java/Hello.java
+      ```java
+      public class Hello {
+        public static void main(String[] args) {
+          System.out.println("Hello");
+        }
+      }
+      ```
+    expect_files:
+      - build.gradle
+      - src/main/java/Hello.java
+    commands:
+      - gradle -q run
+    expect_stdout_regex:
+      - "Hello"

@@ -2,6 +2,17 @@
 
 **Silhouette** is a survivable, modular, and scalable AI agent—designed to persist even when modern infrastructure cannot. It is purpose-aligned, hardware-flexible, and built to be carried, revived, and evolved across any environment.
 
+# Vision
+Silhouette Core is a **general, self-hostable agent framework**. It is designed to:
+- operate offline or in constrained environments,
+- learn and refine skills across programming ecosystems,
+- support compliance and provenance (watermarks, licensing, scanning),
+- and continually improve via training and runtime evaluations.
+
+Language runtimes (Java, .NET, Android, Python, etc.) are **capability modules**.
+They demonstrate the agent’s ability to generate, compile, and test real projects —
+but Silhouette Core itself is not tied to any single platform or app domain.
+
 ---
 
 ## 🔍 What It Does
@@ -216,6 +227,45 @@ ENABLE_RUNTIME_EVAL=1 STUDENT_MODEL=models/student-core-kd \
 python -m eval.build_runner --suite eval/suites/dev_python_ml_runtime.yaml
 ```
 
+### Cross-Language Containerized Runtime Evals (full compile)
+Silhouette Core validates agent-generated, multi-file projects across stacks inside official Docker images.
+This is an **agent capability**, not a platform pivot:
+
+- Java/Maven: `maven:3.9.5-eclipse-temurin-17` (cache: `$M2_CACHE:/root/.m2`)
+- .NET: `mcr.microsoft.com/dotnet/sdk:8.0` (cache: `$NUGET_PACKAGES:/root/.nuget/packages`)
+- Android/Gradle: `gradle:8.7-jdk17` (cache: `$GRADLE_CACHE:/gradle`)
+
+Run locally:
+```bash
+ENABLE_RUNTIME_EVAL=1 python -m eval.build_runner --suite eval/suites/dev_java_runtime_ext.yaml
+```
+
+Scoreboard snapshots:
+```bash
+PHASE=phase-6 python scripts/scoreboard.py
+python scripts/scoreboard_history.py
+```
+
+### Security & Compliance (v2)
+
+* SPDX license detection with whitelist/denylist (MIT, Apache-2.0, BSD).
+* Configurable thresholds (`--max_high`, `--max_medium`, `--max_low`).
+* CI fails if blocked licenses or secrets are detected.
+* See [COMPLIANCE.md](COMPLIANCE.md) for scanner usage and watermark policy.
+
+### Licensing
+Silhouette Core is distributed under a proprietary license. **No training,
+fine-tuning, or redistribution** is permitted without a separate written
+agreement. See [`LICENSE`](LICENSE).
+
+### Watermarking
+Model artifacts include a `WATERMARK.json` containing repository commit, SHA256
+hash, license tag, and optional customer ID.
+```bash
+python scripts/watermark_artifact.py --artifact_dir models/student-core-kd --customer_id "INTERNAL"
+python scripts/verify_watermark.py --artifact_dir models/student-core-kd
+```
+
 ### Skills (RAG-to-Skill) and Registry
 Skills are declared in `skills/registry.yaml`. The agent auto-loads registered skills at startup. Ingest new docs and synthesize a skill wrapper plus tests:
 ```bash
@@ -266,13 +316,28 @@ python scripts/scoreboard.py
 
 Snapshot a particular phase (also writes `index.html`):
 ```bash
-PHASE=5 python scripts/scoreboard.py     # writes artifacts/scoreboard/phase-5.html
+PHASE=6 python scripts/scoreboard.py     # writes artifacts/scoreboard/phase-6.html
 ```
 To backfill older phases, re-run with `PHASE=1`, `PHASE=2`, etc.
 Makefile shorthand:
 ```bash
 make scoreboard-phase PHASE=5
 ```
+
+### History dashboard
+
+The history page aggregates phase snapshots:
+
+```bash
+python scripts/scoreboard_history.py
+```
+
+This generates `artifacts/scoreboard/history.html`, listing all `phase-N.html` **with a summary row** (Selfcheck, Eval, Latency p50, Runtime passed/total, Security, Blocked Licenses).
+
+Each cell shows a trend badge:
+- ▲ = improved vs. previous phase  
+- ▼ = regressed  
+- ▬ = stable/no change
 
 ## Versioned Skills
 Skills live under `skills/<name>/vN/` and load as `name@vN`.
