@@ -144,12 +144,95 @@ small{color:#666}
 
     html_text = "\n".join(parts)
     OUT_PATH.write_text(html_text, encoding="utf-8")
+    print(f"Wrote scoreboard to {OUT_PATH}")
+
+    # Optional: also write a phase-tagged copy if PHASE env var set
     phase = os.environ.get("PHASE")
     if phase:
-        snap_path = OUT_DIR / f"phase-{phase}.html"
-        snap_path.write_text(html_text, encoding="utf-8")
-        print(f"Wrote scoreboard snapshot to {snap_path}")
-    print(f"Wrote scoreboard to {OUT_PATH}")
+        phase_tag = phase if str(phase).startswith("phase-") else f"phase-{phase}"
+        phase_out = OUT_DIR / f"{phase_tag}.html"
+        phase_out.write_text(html_text, encoding="utf-8")
+        print(f"Wrote phase scoreboard snapshot to {phase_out}")
+
+        # Build a minimal JSON summary for history aggregation
+        def _safe_get(d, *keys, default=None):
+            cur = d or {}
+            for k in keys:
+                cur = (cur or {}).get(k, {})
+            return cur if cur else default
+
+        def _load(path):
+            try:
+                return json.loads(path.read_text(encoding="utf-8"))
+            except Exception:
+                return None
+        selfcheck = _load(ART_DIR / "selfcheck.json")
+        eval_rep = _load(ART_DIR / "eval_report.json")
+        latency = _load(ART_DIR / "latency.json")
+        runtime_reports = []
+        for p in glob.glob(str(ART_DIR / "*.build_eval_report.json")) + glob.glob(str(ART_DIR / "build_eval_report.json")):
+            try:
+                runtime_reports.append(_load(pathlib.Path(p)))
+            except Exception:
+                pass
+
+        rt_total = 0
+        rt_passed = 0
+        rt_skipped = 0
+        for rep in runtime_reports or []:
+            if not rep:
+                continue
+            if rep.get("skipped"):
+                rt_skipped += 1
+                continue
+            rt_total += int(rep.get("total") or 0)
+            rt_passed += int(rep.get("passed") or 0)
+
+        sc_tools_ok = bool(_safe_get(selfcheck, "tools", "ok", default=False))
+        sc_deny_ok = bool(_safe_get(selfcheck, "deny_rules", "ok", default=False))
+        sc_skills_ok = bool(_safe_get(selfcheck, "skills", "ok", default=True))
+        sc_latency_p50 = _safe_get(selfcheck, "latency", "p50_ms", default=None)
+        sc_latency_budget = _safe_get(selfcheck, "latency", "budget_ms", default=None)
+        sc_overall = sc_tools_ok and sc_deny_ok and sc_skills_ok and (
+            sc_latency_p50 is None or (sc_latency_budget is None or sc_latency_p50 <= sc_latency_budget)
+        )
+
+        ev_rc = int(eval_rep.get("returncode", 0)) if isinstance(eval_rep, dict) else 0
+        ev_ok = ev_rc == 0
+        lat_p50 = latency.get("p50_sec") if isinstance(latency, dict) else None
+        lat_mean = latency.get("mean_sec") if isinstance(latency, dict) else None
+
+        summary = {
+            "phase": phase_tag,
+            "selfcheck": {
+                "overall_ok": sc_overall,
+                "tools_ok": sc_tools_ok,
+                "deny_ok": sc_deny_ok,
+                "skills_ok": sc_skills_ok,
+                "latency_p50_ms": sc_latency_p50,
+                "latency_budget_ms": sc_latency_budget,
+            },
+            "eval": {
+                "ok": ev_ok,
+                "returncode": ev_rc,
+            },
+            "latency": {
+                "p50_sec": lat_p50,
+                "mean_sec": lat_mean,
+            },
+            "runtime": {
+                "passed": rt_passed,
+                "total": rt_total,
+                "reports_skipped": rt_skipped,
+            },
+            "links": {
+                "snapshot_html": phase_out.name,
+            },
+        }
+        (OUT_DIR / f"{phase_tag}.summary.json").write_text(
+            json.dumps(summary, indent=2), encoding="utf-8"
+        )
+        print(f"Wrote phase summary: {OUT_DIR / (phase_tag + '.summary.json')}")
 
 if __name__ == "__main__":
     main()
