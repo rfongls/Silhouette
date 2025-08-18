@@ -32,13 +32,25 @@ runtime-fastapi:
 	ENABLE_RUNTIME_EVAL=1 python -m eval.build_runner --suite eval/suites/dev_python_fastapi_runtime.yaml
 
 runtime-ml:
-	ENABLE_RUNTIME_EVAL=1 python -m eval.build_runner --suite eval/suites/dev_python_ml_runtime.yaml
+        ENABLE_RUNTIME_EVAL=1 python -m eval.build_runner --suite eval/suites/dev_python_ml_runtime.yaml
+
+runtime-java-ext:
+        ENABLE_RUNTIME_EVAL=1 python -m eval.build_runner --suite eval/suites/dev_java_runtime_ext.yaml
+
+runtime-dotnet-ext:
+        ENABLE_RUNTIME_EVAL=1 python -m eval.build_runner --suite eval/suites/dev_dotnet_runtime_ext.yaml
+
+runtime-android-ext:
+        ENABLE_RUNTIME_EVAL=1 python -m eval.build_runner --suite eval/suites/dev_android_runtime_ext.yaml
 
 scoreboard:
         python scripts/scoreboard.py
 
 scoreboard-phase:
         PHASE=${PHASE} python scripts/scoreboard.py
+
+scoreboard-phase6:
+        PHASE=phase-6 python scripts/scoreboard.py && python scripts/scoreboard_history.py
 
 promote-skill:
 	python scripts/promote_skill_version.py --name $(NAME) --from_version $(FROM) --to_version $(TO)

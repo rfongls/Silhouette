@@ -216,11 +216,22 @@ ENABLE_RUNTIME_EVAL=1 STUDENT_MODEL=models/student-core-kd \
 python -m eval.build_runner --suite eval/suites/dev_python_ml_runtime.yaml
 ```
 
-### Containerized runtime
-Runtime evals for Java, .NET, and Android now run inside official Docker images.
-Example:
+### Containerized runtime (full compile)
+We validate multi-file projects inside official Docker images with cache mounts:
+
+- Java/Maven: `maven:3.9.5-eclipse-temurin-17` (cache: `$M2_CACHE:/root/.m2`)
+- .NET: `mcr.microsoft.com/dotnet/sdk:8.0` (cache: `$NUGET_PACKAGES:/root/.nuget/packages`)
+- Android/Gradle: `gradle:8.7-jdk17` (cache: `$GRADLE_CACHE:/gradle`)
+
+Run locally:
 ```bash
-ENABLE_RUNTIME_EVAL=1 python -m eval.build_runner --suite eval/suites/dev_java_runtime.yaml
+ENABLE_RUNTIME_EVAL=1 python -m eval.build_runner --suite eval/suites/dev_java_runtime_ext.yaml
+```
+
+Scoreboard snapshots:
+```bash
+PHASE=phase-6 python scripts/scoreboard.py
+python scripts/scoreboard_history.py
 ```
 
 ### Security & Compliance (v2)

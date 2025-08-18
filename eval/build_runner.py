@@ -95,17 +95,19 @@ def _zip_and_cleanup(wrk: pathlib.Path, suite_name: str, case_id: str, keep: boo
 def _run_cmds(
     cmds: List[str],
     cwd: pathlib.Path,
-    timeout_s: int = 180,
+    timeout_s: int = 600,
     docker_image: str | None = None,
+    docker_extra: str | None = None,
 ) -> Dict[str, Any]:
     logs = []
     last_rc = 0
     for c in cmds:
         t0 = time.time()
         if docker_image:
+            extra = docker_extra or ""
             cmd = (
                 f"docker run --rm -v {cwd}:/workspace -w /workspace "
-                f"{docker_image} bash -lc {shlex.quote(c)}"
+                f"{extra} {docker_image} bash -lc {shlex.quote(c)}"
             )
         else:
             cmd = c
@@ -201,7 +203,7 @@ def main():
                 })
                 fails.append(case["id"])
                 continue
-            run = _run_cmds(commands, wrk, docker_image=docker_image)
+            run = _run_cmds(commands, wrk, docker_image=docker_image, docker_extra=docker_extra)
             ok = (run["rc"] == 0)
             std_all = "\n".join([s["stdout"] for s in run["steps"]])
             if expect_stdout:
