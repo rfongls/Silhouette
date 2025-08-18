@@ -19,6 +19,7 @@ silhouette_clone_v*.zip
 exports/
 reports/
 memory_*.jsonl
+artifacts/
 
 # Generated training data
 training_data/reasoner/stage1_full.jsonl
