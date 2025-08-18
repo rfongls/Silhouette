@@ -1,5 +1,4 @@
 # Common development and CI convenience targets
-
 .PHONY: dev test eval lint fmt
 
 dev:

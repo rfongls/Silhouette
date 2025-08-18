@@ -26,5 +26,4 @@ def generate_text(prompt: str) -> str:
         lower = prompt.lower()
         if "agent" in lower:
             return "An agent decides and acts using tools to reach goals."
-
         return f"[offline-stub] Agent received: {prompt[:120]} ..."
