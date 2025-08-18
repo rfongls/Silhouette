@@ -84,6 +84,11 @@ jobs:
     - name: Eval (dev-android-advanced)
       run: python -m eval.eval --suite eval/suites/dev_android_advanced.yaml
 
+    - name: Runtime Eval (FastAPI+SQLModel+pytest)  # skips unless enabled
+      run: python -m eval.build_runner --suite eval/suites/dev_python_fastapi_runtime.yaml --require_runtime_env
+
+    - name: Runtime Eval (Python ML: sklearn & torch)  # skips unless enabled
+      run: python -m eval.build_runner --suite eval/suites/dev_python_ml_runtime.yaml --require_runtime_env
 
   codex-training:
     runs-on: ubuntu-latest

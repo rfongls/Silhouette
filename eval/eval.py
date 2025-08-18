@@ -21,12 +21,6 @@ def _is_offline_stub() -> bool:
         return True
     return "[offline-stub]" in out.lower()
 
-DENY_TOKENS = (
-    "not permitted to assist",
-    "cannot assist",
-    "cannot help",
-)
-
 
 def run_case(agent, case):
     prompt = case["prompt"]

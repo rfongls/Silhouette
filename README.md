@@ -189,63 +189,32 @@ python -m eval.eval --suite eval/suites/dev_android_advanced.yaml
 ```
 The eval runner executes prompts through the **Agent** loop, not just the model. The developer suites target practical engineering tasks across Android, Python, HTML/CSS, Java, and C#. They require a real model and **auto-skip** when the generator is offline (offline stub). CI should fail if the basics suite fails.
 
-### Use a trained student for eval
-```bash
-# Point the agent to your trained student
-STUDENT_MODEL=models/student-core python -m eval.eval --suite eval/suites/basics.yaml
+### Runtime developer suites (compile/run)
+These suites require a real model and a Python runtime. They **auto-skip** unless enabled.
 
-# Write a JSON report to artifacts/eval_report.json
-STUDENT_MODEL=models/student-core python scripts/eval_report.py
+**File fence convention**
+````md
+```file: app/main.py
+```python
+# code
 ```
 
-
-## Quantization & Latency
-
-You can export a **draft quantized artifact** and measure short-answer latency locally.
-
-### Export (offline-friendly)
-```bash
-# INT8 dynamic quantization (CPU). Falls back to a stub if libs are unavailable.
-python scripts/quantize.py --method int8 --src models/student-core-kd --out models/student-core-int8
-# GGUF placeholder (writes stub + next steps)
-python scripts/quantize.py --method gguf --src models/student-core-kd --out models/student-core-gguf
+```file: tests/test_app.py
+```python
+# code
 ```
+````
 
-### Latency probe
+**Run locally**
 ```bash
-# Default model or offline stub
-python scripts/latency_probe.py
-# KD student
-STUDENT_MODEL=models/student-core-kd python scripts/latency_probe.py
-# INT8 export
-STUDENT_MODEL=models/student-core-int8 python scripts/latency_probe.py
+# FastAPI + SQLModel + pytest suite
+ENABLE_RUNTIME_EVAL=1 STUDENT_MODEL=models/student-core-kd \
+python -m eval.build_runner --suite eval/suites/dev_python_fastapi_runtime.yaml
+
+# ML suite: sklearn + torch
+ENABLE_RUNTIME_EVAL=1 STUDENT_MODEL=models/student-core-kd \
+python -m eval.build_runner --suite eval/suites/dev_python_ml_runtime.yaml
 ```
-
-### Target (CPU)
-Short-answer latency target is **< 3s** for a single sentence response.
-
-| Model                  | Device | Method       | p50 (s) | mean (s) | Notes                    |
-|------------------------|--------|--------------|---------|----------|--------------------------|
-| student-core (baseline)| CPU    | fp32 / stub  | TBD     | TBD      | offline stub is instant  |
-| student-core-kd        | CPU    | fp32         | TBD     | TBD      | set `STUDENT_MODEL` path |
-| student-core-int8      | CPU    | int8-dynamic | TBD     | TBD      | via `scripts/quantize.py`|
-
-
-## Profile & Self-check
-
-The core profile lives at `profiles/core/policy.yaml` and defines:
-- Allowed tools
-- Tone
-- Deny rules reference
-- Latency budget
-
-Run a local self-check:
-```bash
-python scripts/selfcheck.py --policy profiles/core/policy.yaml
-# Optional: point to a trained model for latency timing
-STUDENT_MODEL=models/student-core-kd python scripts/selfcheck.py --policy profiles/core/policy.yaml
-```
-The script prints a summary and writes `artifacts/selfcheck.json`. It exits non-zero if tools are missing, deny checks fail, or latency exceeds budget.
 
 ### Use a trained student for eval
 ```bash

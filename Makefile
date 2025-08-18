@@ -26,4 +26,11 @@ selfcheck:
 	python scripts/selfcheck.py --policy profiles/core/policy.yaml
 
 selfcheck-student:
-        STUDENT_MODEL=models/student-core-kd python scripts/selfcheck.py --policy profiles/core/policy.yaml
+	STUDENT_MODEL=models/student-core-kd python scripts/selfcheck.py --policy profiles/core/policy.yaml
+
+runtime-fastapi:
+	ENABLE_RUNTIME_EVAL=1 python -m eval.build_runner --suite eval/suites/dev_python_fastapi_runtime.yaml
+
+runtime-ml:
+	ENABLE_RUNTIME_EVAL=1 python -m eval.build_runner --suite eval/suites/dev_python_ml_runtime.yaml
+
