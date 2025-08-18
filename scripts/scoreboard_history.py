@@ -78,6 +78,7 @@ th,td{padding:6px 8px;border-bottom:1px solid #eee}
             blocked_list = (s.get("security") or {}).get("blocked", []) or []
             blocked_cell = ", ".join(blocked_list) if blocked_list else "—"
 
+
             if prev_summary:
                 prev_sc = bool(((prev_summary.get("selfcheck") or {}).get("overall_ok")))
                 trend_sc = "▲" if sc_ok and not prev_sc else ("▼" if prev_sc and not sc_ok else "▬")
@@ -122,4 +123,3 @@ th,td{padding:6px 8px;border-bottom:1px solid #eee}
 
 if __name__ == "__main__":
     main()
-
