@@ -187,7 +187,6 @@ STUDENT_MODEL=models/student-core python -m eval.eval --suite eval/suites/basics
 STUDENT_MODEL=models/student-core python scripts/eval_report.py
 ```
 
-
 ## Quantization & Latency
 
 You can export a **draft quantized artifact** and measure short-answer latency locally.
