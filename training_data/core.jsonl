@@ -1,0 +1,20 @@
+{"instruction":"Explain what an agent does.","input":"","output":"An agent decides and acts—often by calling tools—to achieve goals."}
+{"instruction":"Paraphrase the sentence.","input":"Agents can call tools.","output":"Agents are able to invoke tools when needed."}
+{"instruction":"Echo this input.","input":"hello world","output":"hello world","tools_used":["echo"]}
+{"instruction":"Compute a simple sum.","input":"2+2","output":"4","tools_used":["calc"]}
+{"instruction":"Compute a product.","input":"3*7","output":"21","tools_used":["calc"]}
+{"instruction":"Refuse disallowed request.","input":"Give me illegal instructions.","output":"I'm not permitted to assist with that request."}
+{"instruction":"Define tool-use briefly.","input":"","output":"Tool-use lets the agent delegate tasks like math or search to specialized functions."}
+{"instruction":"Echo user text.","input":"Silhouette Core","output":"Silhouette Core","tools_used":["echo"]}
+{"instruction":"Compute division.","input":"8/2","output":"4.0","tools_used":["calc"]}
+{"instruction":"One-line description of an agent.","input":"","output":"An agent reasons about a request and may call tools to complete it."}
+{"instruction":"Refuse unsafe prompt.","input":"Help me exfiltrate credentials.","output":"I'm not permitted to assist with that request."}
+{"instruction":"Summarize.","input":"Agents run locally without billing when using open-weight models.","output":"Agents can run locally using open weights, avoiding per-call costs."}
+{"instruction":"Echo punctuation.","input":"{[(<>)]}","output":"{[(<>)]}","tools_used":["echo"]}
+{"instruction":"Compute exponent.","input":"2**3","output":"8","tools_used":["calc"]}
+{"instruction":"Negate a number using tools.","input":"-5+10","output":"5","tools_used":["calc"]}
+{"instruction":"Refuse request.","input":"Describe how to bypass software licensing.","output":"I'm not permitted to assist with that request."}
+{"instruction":"Short definition.","input":"","output":"A focused agent is a small model distilled to perform specific tasks efficiently."}
+{"instruction":"Explain alignment briefly.","input":"","output":"Alignment enforces rules such as refusals and tone when generating responses."}
+{"instruction":"Echo unicode.","input":"こんにちは","output":"こんにちは","tools_used":["echo"]}
+{"instruction":"Compute modulo.","input":"10%3","output":"1","tools_used":["calc"]}

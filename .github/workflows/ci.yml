@@ -16,7 +16,7 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
-        python-version: '3.10'
+        python-version: '3.11'
 
     - name: Install dev deps
       run: |
@@ -48,6 +48,77 @@ jobs:
         python -m silhouette_core.package_clone --profile profile.json --distillate distillate.json --version 1
         printf ":agent deploy tmp_deploy\n:exit\n" | python -m cli.main | grep -q "Deployed clone"
 
+    - name: Skills Selfcheck
+      run: python scripts/selfcheck.py --policy profiles/core/policy.yaml
+
+    - name: Eval (agent-level)
+      run: python -m eval.eval --suite eval/suites/basics.yaml
+
+    - name: Eval (profile-core)
+      run: python -m eval.eval --suite eval/suites/profile_core.yaml
+
+    - name: Eval (dev-python)
+      run: python -m eval.eval --suite eval/suites/dev_python.yaml
+
+    - name: Eval (dev-python-advanced)
+      run: python -m eval.eval --suite eval/suites/dev_python_advanced.yaml
+
+    - name: Eval (dev-html)
+      run: python -m eval.eval --suite eval/suites/dev_html.yaml
+
+    - name: Eval (dev-html-advanced)
+      run: python -m eval.eval --suite eval/suites/dev_html_advanced.yaml
+
+    - name: Eval (dev-java)
+      run: python -m eval.eval --suite eval/suites/dev_java.yaml
+
+    - name: Eval (dev-java-advanced)
+      run: python -m eval.eval --suite eval/suites/dev_java_advanced.yaml
+
+    - name: Eval (dev-csharp)
+      run: python -m eval.eval --suite eval/suites/dev_csharp.yaml
+
+    - name: Eval (dev-csharp-advanced)
+      run: python -m eval.eval --suite eval/suites/dev_csharp_advanced.yaml
+
+    - name: Eval (dev-android)
+      run: python -m eval.eval --suite eval/suites/dev_android.yaml
+
+    - name: Eval (dev-android-advanced)
+      run: python -m eval.eval --suite eval/suites/dev_android_advanced.yaml
+
+    - name: Runtime Eval (FastAPI+SQLModel+pytest)  # skips unless enabled
+      run: python -m eval.build_runner --suite eval/suites/dev_python_fastapi_runtime.yaml --require_runtime_env
+
+    - name: Runtime Eval (Python ML: sklearn & torch)  # skips unless enabled
+      run: python -m eval.build_runner --suite eval/suites/dev_python_ml_runtime.yaml --require_runtime_env
+
+    - name: Runtime Eval (Skill)  # skips unless enabled
+      run: python -m eval.build_runner --suite eval/suites/dev_skill_runtime.yaml --require_runtime_env
+
+    - name: Synthesize KD Traces (from runtime)
+      run: |
+        python scripts/synthesize_traces.py
+        python scripts/validate_traces.py artifacts/traces/runtime_kd.jsonl
+
+    - name: Archive runtime zips
+      uses: actions/upload-artifact@v4
+      with:
+        name: runtime-workdirs
+        path: artifacts/runs/**
+
+    - name: Scoreboard
+      run: PHASE=5 python scripts/scoreboard.py
+
+    - name: Scoreboard History
+      run: python scripts/scoreboard_history.py
+
+    - name: Upload Scoreboard Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: silhouette-scoreboard
+        path: artifacts/scoreboard/**
+
 
   codex-training:
     runs-on: ubuntu-latest
@@ -58,7 +129,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.10'
+          python-version: '3.11'
 
       - name: Run Codex controller
         run: python -m silhouette_core.codex_controller
