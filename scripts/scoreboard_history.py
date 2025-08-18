@@ -40,6 +40,7 @@ th,td{padding:6px 8px;border-bottom:1px solid #eee}
     )
 
     prev_summary = None
+
     for phase, p in snaps:
         rel = p.name
         summary_path = ART_DIR / f"phase-{phase}.summary.json"
@@ -52,6 +53,7 @@ th,td{padding:6px 8px;border-bottom:1px solid #eee}
         trend_ev = ""
         trend_lat = ""
         trend_rt = ""
+
         if summary_path.exists():
             s = json.loads(summary_path.read_text(encoding="utf-8"))
             sc_ok = bool(((s.get("selfcheck") or {}).get("overall_ok")))
@@ -115,4 +117,3 @@ th,td{padding:6px 8px;border-bottom:1px solid #eee}
 
 if __name__ == "__main__":
     main()
-

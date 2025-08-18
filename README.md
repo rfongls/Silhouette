@@ -289,6 +289,7 @@ Each cell shows a trend badge:
 - ▼ = regressed  
 - ▬ = stable/no change
 
+
 ## Versioned Skills
 Skills live under `skills/<name>/vN/` and load as `name@vN`.
 Promote a skill to a new version:
