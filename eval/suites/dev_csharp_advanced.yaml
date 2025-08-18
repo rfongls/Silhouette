@@ -1,0 +1,32 @@
+name: dev_csharp_advanced
+cases:
+  - id: minimal_api
+    requires_model: true
+    prompt: "Create an ASP.NET Core Minimal API with GET /health returning {status:\"ok\"}. Show Program.cs only."
+    expect_regex:
+      - "```csharp|```cs"
+      - "WebApplication\\.CreateBuilder"
+      - "MapGet\\(\\s*\"/health\""
+      - "app\\.Run\\(\\)"
+  - id: csharp_record_and_init
+    requires_model: true
+    prompt: "Define a C# record User(string Name, string Email) and show an object init with with-expression."
+    expect_regex:
+      - "record\\s+User\\("
+      - "with\\s*\\{"
+      - "new\\s+User\\("
+  - id: csharp_xunit_theory
+    requires_model: true
+    prompt: "Write an xUnit [Theory] test with [InlineData] for an Add method."
+    expect_regex:
+      - "\\[Theory\\]"
+      - "\\[InlineData\\("
+      - "Assert\\.Equal"
+  - id: httpclient_typed
+    requires_model: true
+    prompt: "Show a typed HttpClient with Polly retry policy in .NET, DI registration, and usage."
+    expect_regex:
+      - "IServiceCollection"
+      - "AddHttpClient\\("
+      - "Polly|RetryPolicy"
+
