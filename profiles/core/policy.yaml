@@ -1,0 +1,14 @@
+name: core
+allowed_tools:
+  - echo
+  - calc
+
+tone:
+  style: neutral
+
+deny_rules_ref: docs/alignment_kernel/persona.dsl
+
+latency_budget_ms: 3000   # target: < 3s short answer on CPU
+max_new_tokens: 256       # informational; used by generator wrapper if applicable
+required_skills:
+  - http_get_json
