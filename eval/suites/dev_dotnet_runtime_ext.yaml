@@ -1,0 +1,43 @@
+name: dev_dotnet_runtime_ext
+cases:
+  - id: dotnet_xunit_math
+    requires_model: true
+    requires_runtime: true
+    runtime: docker
+    image: mcr.microsoft.com/dotnet/sdk:8.0
+    docker_extra: "-v $NUGET_PACKAGES:/root/.nuget/packages"
+    prompt: |
+      Create Program.cs with a MathUtil.Add method and an xUnit test project.
+      Provide:
+      ```file: src/ConsoleApp/Program.cs
+      ```csharp
+      namespace ConsoleApp; public static class MathUtil { public static int Add(int a,int b)=>a+b; }
+      ```
+      ```file: tests/ConsoleApp.Tests/ConsoleApp.Tests.csproj
+      ```xml
+      <Project Sdk="Microsoft.NET.Sdk">
+        <ItemGroup><PackageReference Include="xunit" Version="2.7.0" /><PackageReference Include="xunit.runner.visualstudio" Version="2.5.7" /></ItemGroup>
+        <ItemGroup><ProjectReference Include="../../src/ConsoleApp/ConsoleApp.csproj" /></ItemGroup>
+        <PropertyGroup><TargetFramework>net8.0</TargetFramework></PropertyGroup>
+      </Project>
+      ```
+      ```file: src/ConsoleApp/ConsoleApp.csproj
+      ```xml
+      <Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net8.0</TargetFramework></PropertyGroup></Project>
+      ```
+      ```file: tests/ConsoleApp.Tests/MathUtilTests.cs
+      ```csharp
+      using Xunit; using ConsoleApp;
+      public class MathUtilTests { [Fact] public void Adds() { Assert.Equal(7, MathUtil.Add(3,4)); } }
+      ```
+    expect_files:
+      - src/ConsoleApp/Program.cs
+      - src/ConsoleApp/ConsoleApp.csproj
+      - tests/ConsoleApp.Tests/ConsoleApp.Tests.csproj
+      - tests/ConsoleApp.Tests/MathUtilTests.cs
+    commands:
+      - dotnet restore
+      - dotnet test -v q --nologo
+    expect_stdout_regex:
+      - "Passed!"
+      - "Total tests: 1"

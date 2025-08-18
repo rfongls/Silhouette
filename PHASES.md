@@ -37,3 +37,10 @@ PR-15
 - Documentation synced with milestones.
 - [Scoreboard](artifacts/scoreboard/phase-5.html)
 
+## Phase 6 — Containerized Runtime & Compliance
+PR-18
+- Docker-based runtime builds for Java/Maven, .NET/dotnet CLI, and Android/Gradle.
+- SPDX license compliance checks with configurable thresholds and watermarking of artifacts.
+- Customer license template for commercial rights.
+- [Scoreboard](artifacts/scoreboard/phase-6.html)
+

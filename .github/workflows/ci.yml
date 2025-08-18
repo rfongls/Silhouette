@@ -5,13 +5,26 @@ on:
     branches: [main, 'train/*']
   pull_request:
 
+env:
+  M2_CACHE: ${{ runner.temp }}/.m2
+  GRADLE_CACHE: ${{ runner.temp }}/.gradle
+  NUGET_PACKAGES: ${{ runner.temp }}/.nuget/packages
+
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
+    services:
+      docker:
+        image: docker:24.0.5-dind
+        options: --privileged
 
     steps:
     - name: Checkout code
       uses: actions/checkout@v3
+
+    - name: Prep caches
+      run: |
+        mkdir -p "$M2_CACHE" "$GRADLE_CACHE" "$NUGET_PACKAGES"
 
     - name: Set up Python
       uses: actions/setup-python@v4
@@ -96,6 +109,18 @@ jobs:
     - name: Runtime Eval (Skill)  # skips unless enabled
       run: python -m eval.build_runner --suite eval/suites/dev_skill_runtime.yaml --require_runtime_env
 
+    - name: Runtime Eval (Java extended)
+      run: |
+        ENABLE_RUNTIME_EVAL=1 python -m eval.build_runner --suite eval/suites/dev_java_runtime_ext.yaml --require_runtime_env
+
+    - name: Runtime Eval (.NET extended)
+      run: |
+        ENABLE_RUNTIME_EVAL=1 python -m eval.build_runner --suite eval/suites/dev_dotnet_runtime_ext.yaml --require_runtime_env
+
+    - name: Runtime Eval (Android extended)
+      run: |
+        ENABLE_RUNTIME_EVAL=1 python -m eval.build_runner --suite eval/suites/dev_android_runtime_ext.yaml --require_runtime_env
+
     - name: Synthesize KD Traces (from runtime)
       run: |
         python scripts/synthesize_traces.py
@@ -107,8 +132,33 @@ jobs:
         name: runtime-workdirs
         path: artifacts/runs/**
 
-    - name: Scoreboard
-      run: PHASE=5 python scripts/scoreboard.py
+    - name: Security Scan (enhanced)
+      run: |
+        python -m security.scanner --path . \
+          --out artifacts/security_report.json \
+          --license_whitelist MIT,Apache-2.0,BSD-2-Clause,BSD-3-Clause \
+          --license_denylist GPL-3.0,AGPL-3.0,MPL-2.0 \
+          --max_high 0 --max_medium 10 --max_low 999
+
+    - name: Watermark artifacts
+      run: |
+        python scripts/watermark_artifact.py --artifact_dir models/student-core-kd --customer_id "INTERNAL" --notes "KD checkpoint"
+        python scripts/verify_watermark.py --artifact_dir models/student-core-kd
+
+    - name: Compliance Gate Demo (optional; expected fail)
+      if: env.DEMO_COMPLIANCE_FAIL == '1'
+      run: |
+        python -m security.scanner --path tests/fixtures \
+          --out artifacts/security_report_demo.json \
+          --license_whitelist MIT,Apache-2.0,BSD-2-Clause,BSD-3-Clause \
+          --license_denylist GPL-3.0,AGPL-3.0,MPL-2.0 \
+          --max_high 0 --max_medium 0 --max_low 999
+
+    - name: Scoreboard (phase-6 snapshot + history)
+      run: |
+        python scripts/scoreboard.py
+        PHASE=phase-6 python scripts/scoreboard.py
+        python scripts/scoreboard_history.py
 
     - name: Upload Scoreboard Artifact
       uses: actions/upload-artifact@v4
