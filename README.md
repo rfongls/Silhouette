@@ -224,10 +224,23 @@ ENABLE_RUNTIME_EVAL=1 python -m eval.build_runner --suite eval/suites/dev_java_r
 ```
 
 ### Security & Compliance (v2)
-
-* SPDX license detection with whitelist (MIT, Apache-2.0, BSD).
-* Configurable thresholds (`--max_high`, `--max_medium`).
+* SPDX license detection with whitelist/denylist (MIT, Apache-2.0, BSD).
+* Configurable thresholds (`--max_high`, `--max_medium`, `--max_low`).
 * CI fails if blocked licenses or secrets are detected.
+* See [COMPLIANCE.md](COMPLIANCE.md) for scanner usage and watermark policy.
+
+### Licensing
+Silhouette Core is distributed under a proprietary license. **No training,
+fine-tuning, or redistribution** is permitted without a separate written
+agreement. See [`LICENSE`](LICENSE).
+
+### Watermarking
+Model artifacts include a `WATERMARK.json` containing repository commit, SHA256
+hash, license tag, and optional customer ID.
+```bash
+python scripts/watermark_artifact.py --artifact_dir models/student-core-kd --customer_id "INTERNAL"
+python scripts/verify_watermark.py --artifact_dir models/student-core-kd
+```
 
 ### Skills (RAG-to-Skill) and Registry
 Skills are declared in `skills/registry.yaml`. The agent auto-loads registered skills at startup. Ingest new docs and synthesize a skill wrapper plus tests:

@@ -117,9 +117,27 @@ jobs:
         name: runtime-workdirs
         path: artifacts/runs/**
 
-    - name: Security Scan
+    - name: Security Scan (enhanced)
       run: |
-        python -m security.scanner --path . --out artifacts/security_report.json --max_high 0 --max_medium 10
+        python -m security.scanner --path . \
+          --out artifacts/security_report.json \
+          --license_whitelist MIT,Apache-2.0,BSD-2-Clause,BSD-3-Clause \
+          --license_denylist GPL-3.0,AGPL-3.0,MPL-2.0 \
+          --max_high 0 --max_medium 10 --max_low 999
+
+    - name: Watermark artifacts
+      run: |
+        python scripts/watermark_artifact.py --artifact_dir models/student-core-kd --customer_id "INTERNAL" --notes "KD checkpoint"
+        python scripts/verify_watermark.py --artifact_dir models/student-core-kd
+
+    - name: Compliance Gate Demo (optional; expected fail)
+      if: env.DEMO_COMPLIANCE_FAIL == '1'
+      run: |
+        python -m security.scanner --path tests/fixtures \
+          --out artifacts/security_report_demo.json \
+          --license_whitelist MIT,Apache-2.0,BSD-2-Clause,BSD-3-Clause \
+          --license_denylist GPL-3.0,AGPL-3.0,MPL-2.0 \
+          --max_high 0 --max_medium 0 --max_low 999
 
     - name: Scoreboard
       run: PHASE=6 python scripts/scoreboard.py

@@ -153,7 +153,7 @@ small{color:#666}
         blocked = [
             f.get("license")
             for f in security_rep.get("findings", [])
-            if f.get("category") == "license" and f.get("severity") == "high"
+            if f.get("category") == "license_blocked"
         ]
         badge = (
             "<span class='badge ok'>0</span>"
@@ -233,7 +233,7 @@ small{color:#666}
         blocked = [
             f.get("license")
             for f in (security_rep or {}).get("findings", [])
-            if f.get("category") == "license" and f.get("severity") == "high"
+            if f.get("category") == "license_blocked"
         ]
 
         summary = {
