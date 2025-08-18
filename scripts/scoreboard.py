@@ -33,6 +33,7 @@ def main():
     selfcheck = _load_json(ART_DIR / "selfcheck.json")
     eval_rep = _load_json(ART_DIR / "eval_report.json")
     latency = _load_json(ART_DIR / "latency.json")
+    security_rep = _load_json(ART_DIR / "security_report.json")
 
     runtime_reports = []
     for p in glob.glob(str(ART_DIR / "*.build_eval_report.json")) + glob.glob(
@@ -142,6 +143,19 @@ small{color:#666}
         parts.append("<small>No runtime build reports found.</small>")
     parts.append("</div>")
 
+    parts.append("<div class='card'><h2>Security</h2>")
+    if security_rep:
+        total = len(security_rep.get("findings", []))
+        badge = (
+            "<span class='badge ok'>0</span>"
+            if total == 0
+            else f"<span class='badge fail'>{total}</span>"
+        )
+        parts.append(f"<div>Findings: {badge}</div>")
+    else:
+        parts.append("<small>No security_report.json found.</small>")
+    parts.append("</div>")
+
     html_text = "\n".join(parts)
     OUT_PATH.write_text(html_text, encoding="utf-8")
     print(f"Wrote scoreboard to {OUT_PATH}")
@@ -169,6 +183,7 @@ small{color:#666}
         selfcheck = _load(ART_DIR / "selfcheck.json")
         eval_rep = _load(ART_DIR / "eval_report.json")
         latency = _load(ART_DIR / "latency.json")
+        security_rep = _load(ART_DIR / "security_report.json")
         runtime_reports = []
         for p in glob.glob(str(ART_DIR / "*.build_eval_report.json")) + glob.glob(str(ART_DIR / "build_eval_report.json")):
             try:
@@ -201,6 +216,7 @@ small{color:#666}
         ev_ok = ev_rc == 0
         lat_p50 = latency.get("p50_sec") if isinstance(latency, dict) else None
         lat_mean = latency.get("mean_sec") if isinstance(latency, dict) else None
+        sec_findings = len((security_rep or {}).get("findings", []))
 
         summary = {
             "phase": phase_tag,
@@ -225,6 +241,7 @@ small{color:#666}
                 "total": rt_total,
                 "reports_skipped": rt_skipped,
             },
+            "security": {"findings": sec_findings},
             "links": {
                 "snapshot_html": phase_out.name,
             },

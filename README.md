@@ -282,7 +282,13 @@ The history page aggregates phase snapshots:
 python scripts/scoreboard_history.py
 ```
 
-This generates `artifacts/scoreboard/history.html`, listing all `phase-N.html` **with a summary row** (Selfcheck, Eval, Latency p50, Runtime passed/total).
+This generates `artifacts/scoreboard/history.html`, listing all `phase-N.html` **with a summary row** (Selfcheck, Eval, Latency p50, Runtime passed/total, Security).
+
+Each cell shows a trend badge:
+- ▲ = improved vs. previous phase  
+- ▼ = regressed  
+- ▬ = stable/no change
+
 
 ## Versioned Skills
 Skills live under `skills/<name>/vN/` and load as `name@vN`.
