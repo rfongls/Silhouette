@@ -224,7 +224,6 @@ ENABLE_RUNTIME_EVAL=1 python -m eval.build_runner --suite eval/suites/dev_java_r
 ```
 
 ### Security & Compliance (v2)
-
 * SPDX license detection with whitelist/denylist (MIT, Apache-2.0, BSD).
 * Configurable thresholds (`--max_high`, `--max_medium`, `--max_low`).
 * CI fails if blocked licenses or secrets are detected.

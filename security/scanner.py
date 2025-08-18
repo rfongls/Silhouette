@@ -6,7 +6,6 @@ import pathlib
 import re
 import sys
 from typing import Dict, List
-
 from .redaction import Redactor
 
 DEFAULT_OUT = pathlib.Path("artifacts/security_report.json")
@@ -26,7 +25,7 @@ def _iter_files(root: pathlib.Path) -> List[pathlib.Path]:
         if p.is_file() and ".git" not in p.parts and p.stat().st_size <= 1_000_000:
             yield p
 
-
+            
 def scan_path(root: pathlib.Path) -> Dict[str, List[Dict[str, str]]]:
     """Scan ``root`` and return findings grouped with severity counts."""
 
@@ -52,7 +51,7 @@ def scan_path(root: pathlib.Path) -> Dict[str, List[Dict[str, str]]]:
                         "severity": "medium",
                     }
                 )
-
+                
         # License scanning
         m = SPDX_LICENSE_RE.search(text)
         if m:

@@ -142,6 +142,9 @@ jobs:
     - name: Scoreboard
       run: PHASE=6 python scripts/scoreboard.py
 
+    - name: Scoreboard History
+      run: python scripts/scoreboard_history.py
+      
     - name: Upload Scoreboard Artifact
       uses: actions/upload-artifact@v4
       with:
