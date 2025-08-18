@@ -68,3 +68,6 @@
 - **Scope**: Docker-based runtime evals for Java/Maven, .NET/dotnet CLI, and Android/Gradle; SPDX license checks with whitelist and tunable thresholds; watermarking of model artifacts; customer license template.
 - **Acceptance**: `ENABLE_RUNTIME_EVAL=1 python -m eval.build_runner --suite eval/suites/dev_java_runtime.yaml` and `python -m security.scanner --path . --license_whitelist MIT,Apache-2.0,BSD-2-Clause,BSD-3-Clause --license_denylist GPL-3.0,AGPL-3.0,MPL-2.0 --max_high 0 --max_medium 10 --max_low 999`.
 
+## PR-19 — Cross-Language Containerized Runtime Evals (Java/.NET/Android) + Cache + Extended Evals + Phase-6 Scoreboards
+- **Scope:** Agent-level capability to compile/test across stacks in Docker (Java/.NET/Android), with cache mounts and extended cases; phase-6 scoreboard snapshot.
+- **Acceptance:** Cross-language suites pass; caches effective; scoreboard updated; docs emphasize "general agent" (not platform-specific).

@@ -21,7 +21,7 @@ def main():
         snaps.append((phase, p))
 
     parts = []
-    parts.append("<!doctype html><meta charset='utf-8'><title>Silhouette Scoreboard History</title>")
+    parts.append("<!doctype html><meta charset='utf-8'><title>Silhouette Scoreboard History — Cross-Language Agent Capability</title>")
     parts.append(
         """
 <style>
@@ -36,7 +36,7 @@ th,td{padding:6px 8px;border-bottom:1px solid #eee}
 </style>
 """
     )
-    parts.append("<h1>Scoreboard History</h1>")
+    parts.append("<h1>Scoreboard History — Cross-Language Agent Capability</h1>")
     parts.append(f"<div>Generated {time.strftime('%Y-%m-%d %H:%M:%S')}</div>")
     parts.append("<table>")
     parts.append(

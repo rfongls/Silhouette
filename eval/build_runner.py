@@ -185,6 +185,7 @@ def main():
         expect_files = case.get("expect_files", [])
         commands = case.get("commands", [])
         docker_image = case.get("image") if case.get("runtime") == "docker" else None
+        docker_extra = case.get("docker_extra", "")
         wrk = pathlib.Path(tempfile.mkdtemp(prefix="sildev_"))
         case_prompt = prompt
         try:

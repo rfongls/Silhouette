@@ -2,6 +2,17 @@
 
 **Silhouette** is a survivable, modular, and scalable AI agent—designed to persist even when modern infrastructure cannot. It is purpose-aligned, hardware-flexible, and built to be carried, revived, and evolved across any environment.
 
+# Vision
+Silhouette Core is a **general, self-hostable agent framework**. It is designed to:
+- operate offline or in constrained environments,
+- learn and refine skills across programming ecosystems,
+- support compliance and provenance (watermarks, licensing, scanning),
+- and continually improve via training and runtime evaluations.
+
+Language runtimes (Java, .NET, Android, Python, etc.) are **capability modules**.
+They demonstrate the agent’s ability to generate, compile, and test real projects —
+but Silhouette Core itself is not tied to any single platform or app domain.
+
 ---
 
 ## 🔍 What It Does
@@ -216,9 +227,9 @@ ENABLE_RUNTIME_EVAL=1 STUDENT_MODEL=models/student-core-kd \
 python -m eval.build_runner --suite eval/suites/dev_python_ml_runtime.yaml
 ```
 
-### Containerized runtime (full compile)
-We validate multi-file projects inside official Docker images with cache mounts:
-
+### Cross-Language Containerized Runtime Evals (full compile)
+Silhouette Core validates agent-generated, multi-file projects across stacks inside official Docker images.
+This is an **agent capability**, not a platform pivot:
 - Java/Maven: `maven:3.9.5-eclipse-temurin-17` (cache: `$M2_CACHE:/root/.m2`)
 - .NET: `mcr.microsoft.com/dotnet/sdk:8.0` (cache: `$NUGET_PACKAGES:/root/.nuget/packages`)
 - Android/Gradle: `gradle:8.7-jdk17` (cache: `$GRADLE_CACHE:/gradle`)

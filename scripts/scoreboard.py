@@ -46,7 +46,7 @@ def main():
         runtime_reports.append(_load_json(pathlib.Path(p)))
 
     parts = []
-    parts.append("<!doctype html><meta charset='utf-8'><title>Silhouette Scoreboard</title>")
+    parts.append("<!doctype html><meta charset='utf-8'><title>Silhouette Scoreboard — Cross-Language Agent Capability</title>")
     parts.append(
         """
 <style>
@@ -62,7 +62,7 @@ small{color:#666}
 </style>
 """
     )
-    parts.append("<h1>Silhouette Scoreboard</h1>")
+    parts.append("<h1>Silhouette Scoreboard — Cross-Language Agent Capability</h1>")
     parts.append(f"<div class='ts'>Generated {time.strftime('%Y-%m-%d %H:%M:%S')}</div>")
 
     parts.append("<div class='card'><h2>Self-check</h2>")

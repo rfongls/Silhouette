@@ -1,3 +1,7 @@
+# Silhouette Core — Cross-Language Agent Capability (Android/Gradle)
+# Evaluates agent-generated project structure and Gradle execution in Docker.
+# (Real Android SDK builds can run on self-hosted runners.)
+
 name: dev_android_runtime_ext
 cases:
   - id: gradle_app_assemble

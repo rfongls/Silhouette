@@ -1,3 +1,6 @@
+# Silhouette Core — Cross-Language Agent Capability (.NET/C#)
+# Evaluates the agent's ability to generate, compile, and test .NET projects in Docker.
+
 name: dev_dotnet_runtime_ext
 cases:
   - id: dotnet_xunit_math
