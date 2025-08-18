@@ -63,6 +63,7 @@ The end state (Phase 10) is a **production-ready agent system** that can:
 - Web (HTML/JS): containerized with Jest tests
 - Python: FastAPI/pytest, ML tasks
 - Linters: ruff/black (Python), eslint (JS)
+- C++ (GCC + CMake + Catch2 tests; clang-tidy lint optional)
 
 ---
 

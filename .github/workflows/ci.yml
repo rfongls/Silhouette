@@ -74,6 +74,29 @@ ok=(js_rc==0 and issues==0)
 pathlib.Path("artifacts/lint_js.json").write_text(json.dumps({"ok": ok, "issues": issues}))
 PY
 
+    - name: Lint C++
+      run: |
+        apt-get update && apt-get install -y clang-tidy
+        mkdir -p artifacts
+        set +e
+        files="$(git ls-files '*.cpp')"
+        if [ -n "$files" ]; then
+          clang-tidy $files -- -std=c++17 > artifacts/clang-tidy.log
+          rc=$?
+        else
+          touch artifacts/clang-tidy.log
+          rc=0
+        fi
+        set -e
+        python - "$rc" <<'PY'
+import json, sys, pathlib
+rc=int(sys.argv[1])
+log=pathlib.Path("artifacts/clang-tidy.log").read_text().splitlines()
+issues=sum(1 for l in log if l.strip())
+ok=(rc==0 and issues==0)
+pathlib.Path("artifacts/lint_cpp.json").write_text(json.dumps({"ok": ok, "issues": issues}))
+PY
+
     - name: Run unit tests with coverage
       run: |
         coverage run -m pytest --maxfail=1 --disable-warnings -q
@@ -156,9 +179,12 @@ PY
       run: |
         ENABLE_RUNTIME_EVAL=1 python -m eval.build_runner --suite eval/suites/dev_dotnet_runtime_ext.yaml --require_runtime_env
 
-      - name: Cross-Lang Runtime Eval — Android (extended)
-      run: |
-        ENABLE_RUNTIME_EVAL=1 python -m eval.build_runner --suite eval/suites/dev_android_runtime_ext.yaml --require_runtime_env
+        - name: Cross-Lang Runtime Eval — Android (extended)
+        run: |
+          ENABLE_RUNTIME_EVAL=1 python -m eval.build_runner --suite eval/suites/dev_android_runtime_ext.yaml --require_runtime_env
+        - name: Cross-Lang Runtime Eval — C++ (extended)
+        run: |
+          ENABLE_RUNTIME_EVAL=1 python -m eval.build_runner --suite eval/suites/dev_cpp_runtime.yaml --require_runtime_env
 
     - name: Synthesize KD Traces (from runtime)
       run: |

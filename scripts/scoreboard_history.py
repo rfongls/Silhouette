@@ -40,7 +40,7 @@ th,td{padding:6px 8px;border-bottom:1px solid #eee}
     parts.append(f"<div>Generated {time.strftime('%Y-%m-%d %H:%M:%S')}</div>")
     parts.append("<table>")
     parts.append(
-        "<tr><th>Phase</th><th>Selfcheck</th><th>Eval</th><th>Latency p50 (s)</th><th>Lint (py/js)</th><th>Runtime (passed/total)</th><th>Security</th><th>Blocked Licenses</th><th>Snapshot</th></tr>"
+        "<tr><th>Phase</th><th>Selfcheck</th><th>Eval</th><th>Latency p50 (s)</th><th>Lint (py/js/cpp)</th><th>Runtime (passed/total)</th><th>Security</th><th>Blocked Licenses</th><th>Snapshot</th></tr>"
     )
 
     prev_summary = None
@@ -74,7 +74,8 @@ th,td{padding:6px 8px;border-bottom:1px solid #eee}
             lint = s.get("lint") or {}
             py = lint.get("python") or {}
             js = lint.get("web") or {}
-            lint_cell = f"{py.get('issues',0)}/{js.get('issues',0)}"
+            cpp = lint.get("cpp") or {}
+            lint_cell = f"{py.get('issues',0)}/{js.get('issues',0)}/{cpp.get('issues',0)}"
             rt_cell = f"{rt.get('passed',0)}/{rt.get('total',0)}"
             if int(rt.get('reports_skipped',0)) > 0:
                 rt_cell += f" <span class='muted'>(skipped {rt.get('reports_skipped')})</span>"
