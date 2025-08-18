@@ -15,6 +15,7 @@ lint:
         black --check silhouette_core cli eval training scripts
         npx eslint .
 
+
 fmt:
 	ruff check . --fix
 

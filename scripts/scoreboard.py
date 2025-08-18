@@ -131,6 +131,7 @@ small{color:#666}
                 "<span class='badge ok'>OK</span>" if lint_js.get("ok") else "<span class='badge fail'>FAIL</span>"
             )
             parts.append(_row("Web/JS", f"{lint_js.get('issues',0)} issues {js_badge}"))
+
         if lint_cpp:
             cpp_badge = (
                 "<span class='badge ok'>OK</span>" if lint_cpp.get("ok") else "<span class='badge fail'>FAIL</span>"
