@@ -1,26 +1,66 @@
 # Milestones
 
-## Phase 1 Hardening (0–2 weeks)
-- [ ] Replace demo `calc` with safe evaluator + unit tests.
-- [ ] Add `eval/eval.py`; gate CI on `eval/suites/basics.yaml`.
-- [ ] Write `artifacts/session.log.jsonl` & `artifacts/eval_report.json` on runs.
-- [ ] Add 3–5 `deny_on` patterns; tests for trigger & non-trigger.
-- [ ] Pin `requirements*.txt`; add `make dev` / `make test`.
+## PR-1 Safe math tool
+- **Scope**: replace demo `eval` with AST-based `safe_calc` and unit tests.
+- **Acceptance**: `pytest -q`, `python -m cli.main` → `use:calc 3*7` → `21`.
 
-## Phase 2 Seed SFT (weeks 3–4)
-- [ ] Create `training_data/core.jsonl` (10–50 samples) + data card.
-- [ ] Run SFT via `training.train_sft` → `models/student-core/`.
-- [ ] Agent uses student; eval passes & improves over stub.
-- [ ] Store `artifacts/eval_report.json`.
+## PR-2 Eval runner and CI gate
+- **Scope**: add `eval/eval.py`, baseline `basics.yaml`, and CI workflow.
+- **Acceptance**: `python -m eval.eval --suite eval/suites/basics.yaml` passes.
 
-## Phase 3 KD + Quant (weeks 5–6)
-- [ ] Generate `training_data/teacher_outputs.jsonl`.
-- [ ] Run KD via `training.train_kd`; compare vs SFT.
-- [ ] Export/quantize draft (INT8/GGUF); record CPU latency (<3s short answer).
+## PR-3 Session logging & deny tests
+- **Scope**: per-turn JSONL logs, expanded `deny_on` patterns, alignment tests, Makefile targets.
+- **Acceptance**: `python -m cli.main`, `pytest -q`, `ruff check .`.
 
-## Phase 4 Profile & Self-check (weeks 7–8)
-- [ ] Add `profiles/core/policy.yaml` (tools, tone, latency budget, deny).
-- [ ] Extend `:selfcheck` to validate profile invariants.
-- [ ] Expand eval suite by 10–20 cases; achieve ≥90% target.
+## PR-4 Seed dataset & data card
+- **Scope**: add `training_data/core.jsonl` and `README` with schema and license.
+- **Acceptance**: `python scripts/validate_jsonl.py training_data/core.jsonl`.
 
+## PR-5 SFT plumbing run
+- **Scope**: wire seed dataset into `training.train_sft` and produce `models/student-core/`.
+- **Acceptance**: `python -m training.train_sft --cfg config/train.yaml`.
+
+## PR-6 Agent uses student + eval report
+- **Scope**: generator prefers `STUDENT_MODEL`; add `scripts/eval_report.py`.
+- **Acceptance**: `STUDENT_MODEL=models/student-core python scripts/eval_report.py`.
+
+## PR-7 Teacher outputs for KD
+- **Scope**: add `training_data/teacher_outputs.jsonl` and generator helper.
+- **Acceptance**: `python scripts/validate_teacher_jsonl.py training_data/teacher_outputs.jsonl`.
+
+## PR-8 KD wrapper run
+- **Scope**: reuse distiller to train KD model at `models/student-core-kd/`.
+- **Acceptance**: `python -m training.train_kd --cfg config/train.yaml` and basics eval pass.
+
+## PR-9 Quantization draft & latency probe
+- **Scope**: `scripts/quantize.py` with INT8 stub, `scripts/latency_probe.py`.
+- **Acceptance**: `python scripts/quantize.py --method int8 --src models/student-core-kd --out models/student-core-int8` and `python scripts/latency_probe.py`.
+
+## PR-10 Profile + selfcheck
+- **Scope**: `profiles/core/policy.yaml` and `scripts/selfcheck.py` verifying tools, deny, latency.
+- **Acceptance**: `python scripts/selfcheck.py --policy profiles/core/policy.yaml`.
+
+## PR-11 Advanced dev eval suites
+- **Scope**: add regex-aware runner and language-specific suites (Android, Python, HTML/CSS, Java, C#).
+- **Acceptance**: `python -m eval.eval --suite eval/suites/dev_python_advanced.yaml` (skips when offline).
+
+## PR-11.2 Runtime dev evals
+- **Scope**: runtime build runner and FastAPI/ML runtime suites.
+- **Acceptance**: `python -m eval.build_runner --suite eval/suites/dev_python_fastapi_runtime.yaml --require_runtime_env` (skips offline).
+
+## PR-12 RAG-to-Skill pipeline
+- **Scope**: dynamic skill loading, skill registry, selfcheck skill verification, runtime skill suite.
+- **Acceptance**: `python scripts/selfcheck.py --policy profiles/core/policy.yaml` includes skills ok.
+
+## PR-13 Skill scoreboard + versioning
+- **Scope**: versioned skills, promotion tool, HTML scoreboard artifact.
+- **Acceptance**: `python scripts/scoreboard.py` and artifact upload in CI.
+
+## PR-14 Dataset synthesis from runtime passes
+- **Scope**: `scripts/synthesize_traces.py` + validator, make target, CI step.
+- **Acceptance**: `python scripts/synthesize_traces.py` then `python scripts/validate_traces.py artifacts/traces/runtime_kd.jsonl`.
+
+## PR-15 Build runner archival & file-fence adapter
+- **Scope**: store prompts and zipped workdirs in runtime reports, add `FileFenceAdapter`, update docs.
+- **Acceptance**: `python -m eval.build_runner --suite eval/suites/dev_python_fastapi_runtime.yaml --require_runtime_env` (produces prompt + zip), training via file-fence adapter in `config/train.yaml`.
 

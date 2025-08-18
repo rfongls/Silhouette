@@ -250,6 +250,12 @@ python scripts/validate_traces.py artifacts/traces/runtime_kd.jsonl
 
 The output file `artifacts/traces/runtime_kd.jsonl` can be mixed into SFT/KD training via `config/train.yaml`. Set `TRACE_LICENSE` to label usage (default: `internal-training-only`).
 
+### File-fence SFT adapter
+Traces include file payloads. The `FileFenceAdapter` teaches the model to emit file fences directly:
+```bash
+python scripts/synthesize_traces.py
+python -m training.train_sft --cfg config/train.yaml
+```
 ## Scoreboard (HTML)
 After running self-checks, evals, or runtime suites, build a static summary:
 ```bash

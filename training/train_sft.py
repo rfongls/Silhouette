@@ -3,6 +3,7 @@ import yaml
 from transformers import AutoTokenizer
 import torch
 from training.adapters.jsonl_adapter import JSONLAdapter
+from training.adapters.filefence_adapter import FileFenceAdapter
 from training.dataloaders import build_dataloader
 from silhouette_core.training_loop import train as core_train  # reuse your existing loop
 
@@ -25,9 +26,24 @@ def main():
 
         tok = DummyTokenizer()
 
-    adapter = JSONLAdapter(cfg["data"]["path"])
+    def _load_samples():
+        if "data_mixes" in cfg:
+            samples = []
+            adapters = {"jsonl": JSONLAdapter, "filefence": FileFenceAdapter}
+            for mix in cfg["data_mixes"]:
+                cls = adapters.get(mix["adapter"])
+                if not cls:
+                    continue
+                a = cls(mix["path"])
+                s = list(a.samples())
+                samples.extend(s * int(mix.get("weight", 1)))
+            return samples
+        adapter = JSONLAdapter(cfg["data"]["path"])
+        return list(adapter.samples())
+
     train_loader = build_dataloader(
-        adapter.samples(), tok,
+        _load_samples(),
+        tok,
         batch_size=cfg["training"]["batch_size"],
         max_len=cfg["training"]["max_len"]
     )

@@ -18,9 +18,13 @@ training:
   lr: 2e-4
   max_len: 2048
 
-data:
-  adapter: jsonl
-  path: training_data/core.jsonl
+data_mixes:
+  - adapter: jsonl
+    path: training_data/core.jsonl
+    weight: 1
+  - adapter: filefence
+    path: artifacts/traces/runtime_kd.jsonl
+    weight: 3
 
 output_dir: "models/student-core-kd"
 quantize: "int8"  # future step; export script to be added later

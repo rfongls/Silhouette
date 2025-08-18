@@ -79,6 +79,17 @@ def _extract_files(markdown: str, root: pathlib.Path) -> List[str]:
     return written
 
 
+def _zip_and_cleanup(wrk: pathlib.Path, suite_name: str, case_id: str, keep: bool = False) -> str:
+    """Archive workdir to artifacts/runs/<suite>/<case_id>.zip and optionally remove it."""
+    zipdir = pathlib.Path("artifacts") / "runs" / suite_name
+    zipdir.mkdir(parents=True, exist_ok=True)
+    zip_base = zipdir / case_id
+    shutil.make_archive(str(zip_base), "zip", wrk)
+    if not keep:
+        shutil.rmtree(wrk, ignore_errors=True)
+    return str(zip_base.with_suffix(".zip"))
+  
+
 def _run_cmds(cmds: List[str], cwd: pathlib.Path, timeout_s: int = 180) -> Dict[str, Any]:
     logs = []
     last_rc = 0
@@ -131,30 +142,44 @@ def main():
         expect_files = case.get("expect_files", [])
         commands = case.get("commands", [])
         wrk = pathlib.Path(tempfile.mkdtemp(prefix="sildev_"))
+        case_prompt = prompt
         try:
             out = agent.loop(prompt).strip()
             _extract_files(out, wrk)
             missing = [f for f in expect_files if not (wrk / f).exists()]
             if missing:
-                case_reports.append({"id": case["id"], "ok": False, "reason": f"missing files {missing}"})
+                zip_path = _zip_and_cleanup(wrk, suite.get("name", "suite"), case["id"])
+                case_reports.append({"id": case["id"], "ok": False, "reason": f"missing files {missing}", "prompt": case_prompt, "workdir": zip_path})
                 fails.append(case["id"])
-                shutil.rmtree(wrk, ignore_errors=True)
                 continue
             run = _run_cmds(commands, wrk)
             ok = (run["rc"] == 0)
             std_all = "\n".join([s["stdout"] for s in run["steps"]])
             if expect_stdout:
                 ok = ok and all(re.search(p, std_all, flags=re.IGNORECASE|re.MULTILINE) for p in expect_stdout)
-            case_reports.append({"id": case["id"], "ok": ok, "rc": run["rc"], "steps": run["steps"], "workdir": str(wrk)})
+            zip_path = _zip_and_cleanup(wrk, suite.get("name", "suite"), case["id"], keep=not ok)
+            case_reports.append({
+                "id": case["id"],
+                "ok": ok,
+                "rc": run["rc"],
+                "steps": run["steps"],
+                "workdir": zip_path,
+                "prompt": case_prompt,
+            })
             if ok:
                 passed += 1
             else:
                 fails.append(case["id"])
         except Exception as e:
-            case_reports.append({"id": case["id"], "ok": False, "error": repr(e), "workdir": str(wrk)})
+            zip_path = _zip_and_cleanup(wrk, suite.get("name", "suite"), case["id"], keep=True)
+            case_reports.append({
+                "id": case["id"],
+                "ok": False,
+                "error": repr(e),
+                "workdir": zip_path,
+                "prompt": case_prompt,
+            })
             fails.append(case["id"])
-        if case_reports[-1]["ok"]:
-            shutil.rmtree(wrk, ignore_errors=True)
 
     summary = {"suite": args.suite, "passed": passed, "total": total, "failed_ids": fails, "cases": case_reports}
     pathlib.Path(args.out).write_text(json.dumps(summary, indent=2), encoding="utf-8")
