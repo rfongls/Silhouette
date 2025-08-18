@@ -54,9 +54,16 @@ The end state (Phase 10) is a **production-ready agent system** that can:
 * **Linters**: Python (ruff, black), Web/JS (eslint) integrated into CI (PR-20+).  
 * **Offline-first mode**: deterministic stub generation when models are unavailable.  
 * **Training adapters**: SFT + KD wrappers (student models distilled from teacher traces).  
-* **Compliance**: SPDX license scan, redaction rules, configurable thresholds.  
-* **Provenance**: WATERMARK.json in every artifact with repo commit + SHA256.  
-* **Self-replication**: export profiles, distill knowledge, quantize models, package clones.  
+* **Compliance**: SPDX license scan, redaction rules, configurable thresholds.
+* **Provenance**: WATERMARK.json in every artifact with repo commit + SHA256.
+* **Self-replication**: export profiles, distill knowledge, quantize models, package clones.
+
+### Cross-Language Runtimes
+
+- Web (HTML/JS): containerized with Jest tests
+- Python: FastAPI/pytest, ML tasks
+- Linters: ruff/black (Python), eslint (JS)
+- C++ (GCC + CMake + Catch2 tests; clang-tidy lint optional)
 
 ---
 

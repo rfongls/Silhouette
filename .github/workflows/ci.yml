@@ -37,9 +37,65 @@ jobs:
         pip install -r requirements.txt -r requirements-dev.txt
         pip install accelerate huggingface_hub
 
-    - name: Lint
+    - name: Lint Python
       run: |
-        ruff check .
+        pip install ruff black
+        mkdir -p artifacts
+        set +e
+        ruff check silhouette_core cli eval training scripts > artifacts/ruff.log
+        ruff_rc=$?
+        black --check silhouette_core cli eval training scripts > artifacts/black.log
+        black_rc=$?
+        set -e
+        python - "$ruff_rc" "$black_rc" <<'PY'
+import json, sys, pathlib
+ruff_rc=int(sys.argv[1]); black_rc=int(sys.argv[2])
+ruff_log=pathlib.Path("artifacts/ruff.log").read_text().strip().splitlines()
+black_log=pathlib.Path("artifacts/black.log").read_text().strip().splitlines()
+issues=len([l for l in ruff_log if l]) + sum("would be reformatted" in l for l in black_log)
+py_ok=(ruff_rc==0 and black_rc==0)
+pathlib.Path("artifacts/lint_python.json").write_text(json.dumps({"ok": py_ok, "issues": issues}))
+PY
+    - name: Lint JS
+      run: |
+        npm install eslint@9
+        mkdir -p artifacts
+        set +e
+        npx eslint . -f json -o artifacts/eslint.json
+        js_rc=$?
+        set -e
+        python - "$js_rc" <<'PY'
+import json, sys, pathlib
+js_rc=int(sys.argv[1])
+data=pathlib.Path("artifacts/eslint.json").read_text() or "[]"
+rep=json.loads(data)
+issues=sum(f.get("errorCount",0)+f.get("warningCount",0) for f in rep)
+ok=(js_rc==0 and issues==0)
+pathlib.Path("artifacts/lint_js.json").write_text(json.dumps({"ok": ok, "issues": issues}))
+PY
+
+    - name: Lint C++
+      run: |
+        apt-get update && apt-get install -y clang-tidy
+        mkdir -p artifacts
+        set +e
+        files="$(git ls-files '*.cpp')"
+        if [ -n "$files" ]; then
+          clang-tidy $files -- -std=c++17 > artifacts/clang-tidy.log
+          rc=$?
+        else
+          touch artifacts/clang-tidy.log
+          rc=0
+        fi
+        set -e
+        python - "$rc" <<'PY'
+import json, sys, pathlib
+rc=int(sys.argv[1])
+log=pathlib.Path("artifacts/clang-tidy.log").read_text().splitlines()
+issues=sum(1 for l in log if l.strip())
+ok=(rc==0 and issues==0)
+pathlib.Path("artifacts/lint_cpp.json").write_text(json.dumps({"ok": ok, "issues": issues}))
+PY
 
     - name: Run unit tests with coverage
       run: |
@@ -100,6 +156,12 @@ jobs:
     - name: Eval (dev-android-advanced)
       run: python -m eval.eval --suite eval/suites/dev_android_advanced.yaml
 
+    - name: Runtime Eval (Web)  # skips unless enabled
+      run: python -m eval.build_runner --suite eval/suites/dev_web_runtime.yaml --require_runtime_env
+
+    - name: Runtime Eval (Python FastAPI)  # skips unless enabled
+      run: python -m eval.build_runner --suite eval/suites/dev_python_runtime.yaml --require_runtime_env
+
     - name: Runtime Eval (FastAPI+SQLModel+pytest)  # skips unless enabled
       run: python -m eval.build_runner --suite eval/suites/dev_python_fastapi_runtime.yaml --require_runtime_env
 
@@ -117,9 +179,12 @@ jobs:
       run: |
         ENABLE_RUNTIME_EVAL=1 python -m eval.build_runner --suite eval/suites/dev_dotnet_runtime_ext.yaml --require_runtime_env
 
-      - name: Cross-Lang Runtime Eval — Android (extended)
-      run: |
-        ENABLE_RUNTIME_EVAL=1 python -m eval.build_runner --suite eval/suites/dev_android_runtime_ext.yaml --require_runtime_env
+        - name: Cross-Lang Runtime Eval — Android (extended)
+        run: |
+          ENABLE_RUNTIME_EVAL=1 python -m eval.build_runner --suite eval/suites/dev_android_runtime_ext.yaml --require_runtime_env
+        - name: Cross-Lang Runtime Eval — C++ (extended)
+        run: |
+          ENABLE_RUNTIME_EVAL=1 python -m eval.build_runner --suite eval/suites/dev_cpp_runtime.yaml --require_runtime_env
 
     - name: Synthesize KD Traces (from runtime)
       run: |
