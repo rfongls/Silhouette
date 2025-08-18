@@ -275,11 +275,14 @@ make scoreboard-phase PHASE=5
 ```
 
 ### History dashboard
-Aggregate all phase snapshots into a single index:
+
+The history page aggregates phase snapshots:
+
 ```bash
 python scripts/scoreboard_history.py
 ```
-This writes `artifacts/scoreboard/history.html` with links to each `phase-N.html`.
+
+This generates `artifacts/scoreboard/history.html`, listing all `phase-N.html` **with a summary row** (Selfcheck, Eval, Latency p50, Runtime passed/total).
 
 ## Versioned Skills
 Skills live under `skills/<name>/vN/` and load as `name@vN`.
