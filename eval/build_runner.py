@@ -4,6 +4,7 @@ import os
 import re
 import shutil
 import subprocess
+import shlex
 import sys
 import tempfile
 import time
@@ -12,6 +13,7 @@ import yaml
 from typing import Dict, Any, List
 from silhouette_core.agent_loop import Agent
 from silhouette_core.response_engine import generate_text as _gen
+from security.redaction import DEFAULT_REDACTOR as _redactor
 
 OFFLINE_TAG = "[offline-stub]"
 
@@ -90,18 +92,57 @@ def _zip_and_cleanup(wrk: pathlib.Path, suite_name: str, case_id: str, keep: boo
     return str(zip_base.with_suffix(".zip"))
 
 
-def _run_cmds(cmds: List[str], cwd: pathlib.Path, timeout_s: int = 180) -> Dict[str, Any]:
+def _run_cmds(
+    cmds: List[str],
+    cwd: pathlib.Path,
+    timeout_s: int = 180,
+    docker_image: str | None = None,
+) -> Dict[str, Any]:
     logs = []
     last_rc = 0
     for c in cmds:
         t0 = time.time()
-        p = subprocess.run(c, cwd=str(cwd), shell=True, capture_output=True, text=True, timeout=timeout_s)
+        if docker_image:
+            cmd = (
+                f"docker run --rm -v {cwd}:/workspace -w /workspace "
+                f"{docker_image} bash -lc {shlex.quote(c)}"
+            )
+        else:
+            cmd = c
+        p = subprocess.run(
+            cmd,
+            cwd=str(cwd),
+            shell=True,
+            capture_output=True,
+            text=True,
+            timeout=timeout_s,
+        )
         dt = time.time() - t0
-        logs.append({"cmd": c, "rc": p.returncode, "dt": dt, "stdout": p.stdout, "stderr": p.stderr})
+        logs.append(
+            {
+                "cmd": _redactor.redact_text(c),
+                "rc": p.returncode,
+                "dt": dt,
+                "stdout": _redactor.redact_text(p.stdout),
+                "stderr": _redactor.redact_text(p.stderr),
+            }
+        )
         last_rc = p.returncode
         if p.returncode != 0:
             break
     return {"rc": last_rc, "steps": logs}
+
+
+def _redact_workdir(wrk: pathlib.Path) -> None:
+    """Redact text files within a workdir."""
+    exts = {".txt", ".md", ".json", ".yaml", ".yml", ".py", ".log"}
+    for p in wrk.rglob("*"):
+        if p.is_file() and p.suffix.lower() in exts and p.stat().st_size <= 200_000:
+            try:
+                txt = p.read_text(encoding="utf-8")
+            except Exception:
+                continue
+            p.write_text(_redactor.redact_text(txt), encoding="utf-8")
 
 
 def _matches_any(text: str, patterns: List[str]) -> bool:
@@ -141,6 +182,7 @@ def main():
         expect_stdout = case.get("expect_stdout_regex", [])
         expect_files = case.get("expect_files", [])
         commands = case.get("commands", [])
+        docker_image = case.get("image") if case.get("runtime") == "docker" else None
         wrk = pathlib.Path(tempfile.mkdtemp(prefix="sildev_"))
         case_prompt = prompt
         try:
@@ -148,15 +190,23 @@ def main():
             _extract_files(out, wrk)
             missing = [f for f in expect_files if not (wrk / f).exists()]
             if missing:
+                _redact_workdir(wrk)
                 zip_path = _zip_and_cleanup(wrk, suite.get("name", "suite"), case["id"])
-                case_reports.append({"id": case["id"], "ok": False, "reason": f"missing files {missing}", "prompt": case_prompt, "workdir": zip_path})
+                case_reports.append({
+                    "id": case["id"],
+                    "ok": False,
+                    "reason": f"missing files {missing}",
+                    "prompt": _redactor.redact_text(case_prompt),
+                    "workdir": zip_path,
+                })
                 fails.append(case["id"])
                 continue
-            run = _run_cmds(commands, wrk)
+            run = _run_cmds(commands, wrk, docker_image=docker_image)
             ok = (run["rc"] == 0)
             std_all = "\n".join([s["stdout"] for s in run["steps"]])
             if expect_stdout:
                 ok = ok and all(re.search(p, std_all, flags=re.IGNORECASE|re.MULTILINE) for p in expect_stdout)
+            _redact_workdir(wrk)
             zip_path = _zip_and_cleanup(wrk, suite.get("name", "suite"), case["id"], keep=not ok)
             case_reports.append({
                 "id": case["id"],
@@ -164,7 +214,7 @@ def main():
                 "rc": run["rc"],
                 "steps": run["steps"],
                 "workdir": zip_path,
-                "prompt": case_prompt,
+                "prompt": _redactor.redact_text(case_prompt),
             })
             if ok:
                 passed += 1
@@ -177,7 +227,7 @@ def main():
                 "ok": False,
                 "error": repr(e),
                 "workdir": zip_path,
-                "prompt": case_prompt,
+                "prompt": _redactor.redact_text(case_prompt),
             })
             fails.append(case["id"])
 

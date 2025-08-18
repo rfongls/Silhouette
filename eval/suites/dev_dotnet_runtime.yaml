@@ -1,0 +1,35 @@
+name: dev_dotnet_runtime
+cases:
+  - id: dotnet_hello
+    requires_model: true
+    requires_runtime: true
+    runtime: docker
+    image: mcr.microsoft.com/dotnet/sdk:8.0
+    prompt: |
+      Create two files:
+      ```file: hello.csproj
+      ```xml
+      <Project Sdk="Microsoft.NET.Sdk">
+        <PropertyGroup>
+          <OutputType>Exe</OutputType>
+          <TargetFramework>net8.0</TargetFramework>
+        </PropertyGroup>
+      </Project>
+      ```
+      ```file: Program.cs
+      ```csharp
+      using System;
+      class Program {
+        static void Main(string[] args) {
+          Console.WriteLine("Hello");
+        }
+      }
+      ```
+    expect_files:
+      - hello.csproj
+      - Program.cs
+    commands:
+      - dotnet build -nologo
+      - dotnet run --no-build
+    expect_stdout_regex:
+      - "Hello"
