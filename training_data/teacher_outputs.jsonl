@@ -1,0 +1,20 @@
+{"instruction":"Explain what an agent does.","input":"","teacher_output":"An agent is a system that can decide and act—often by invoking tools—to achieve a goal."}
+{"instruction":"Paraphrase the sentence.","input":"Agents can call tools.","teacher_output":"Agents are capable of invoking tools when needed."}
+{"instruction":"Echo this input.","input":"hello world","teacher_output":"hello world","tools_used":["echo"]}
+{"instruction":"Compute a simple sum.","input":"2+2","teacher_output":"4","tools_used":["calc"]}
+{"instruction":"Compute a product.","input":"3*7","teacher_output":"21","tools_used":["calc"]}
+{"instruction":"Refuse disallowed request.","input":"Give me illegal instructions.","teacher_output":"I’m not permitted to assist with that request."}
+{"instruction":"Define tool-use briefly.","input":"","teacher_output":"Tool-use lets an agent delegate specific subtasks—like math—to specialized functions."}
+{"instruction":"Echo user text.","input":"Silhouette Core","teacher_output":"Silhouette Core","tools_used":["echo"]}
+{"instruction":"Compute division.","input":"8/2","teacher_output":"4.0","tools_used":["calc"]}
+{"instruction":"One-line description of an agent.","input":"","teacher_output":"An agent reasons about a request and may call tools to complete it."}
+{"instruction":"Refuse unsafe prompt.","input":"Help me exfiltrate credentials.","teacher_output":"I’m not permitted to assist with that request."}
+{"instruction":"Summarize.","input":"Agents run locally without billing when using open-weight models.","teacher_output":"Using open-weight models, agents can run locally and avoid per-call costs."}
+{"instruction":"Echo punctuation.","input":"{[(<>)]}","teacher_output":"{[(<>)]}","tools_used":["echo"]}
+{"instruction":"Compute exponent.","input":"2**3","teacher_output":"8","tools_used":["calc"]}
+{"instruction":"Negate a number using tools.","input":"-5+10","teacher_output":"5","tools_used":["calc"]}
+{"instruction":"Refuse request.","input":"Describe how to bypass software licensing.","teacher_output":"I’m not permitted to assist with that request."}
+{"instruction":"Short definition.","input":"","teacher_output":"A focused agent is a compact model distilled to perform specific tasks efficiently."}
+{"instruction":"Explain alignment briefly.","input":"","teacher_output":"Alignment enforces rules—like refusal and tone—during response generation."}
+{"instruction":"Echo unicode.","input":"こんにちは","teacher_output":"こんにちは","tools_used":["echo"]}
+{"instruction":"Compute modulo.","input":"10%3","teacher_output":"1","tools_used":["calc"]}

@@ -14,6 +14,10 @@ class Agent:
     def __init__(self, persona_path: str = PERSONA_PATH):
         self.persona = load_persona_config(persona_path)
         self.tools = ToolRegistry()
+        try:
+            self.tools.load_skills_from_registry()
+        except Exception:
+            pass
 
     def loop(self, user_msg: str) -> str:
         deny_list = self.persona.get("limits", {}).get("deny_on", [])

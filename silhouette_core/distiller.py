@@ -1,5 +1,6 @@
 import argparse
 import json
+import os
 from pathlib import Path
 
 
@@ -59,6 +60,28 @@ def extract_embeddings(path: Path, limit: int = 10, bits: int = 8) -> list[list[
         vec = _vectorize(text)
         vectors.append(_quantize(vec, bits))
     return vectors
+
+
+def distill_kd(
+    *,
+    student_model: str,
+    train_loader,
+    teacher_model: str | None = None,
+    teacher_outputs: list[dict] | None = None,
+    output_dir: str,
+    lora_cfg: dict | None = None,
+    **_: dict,
+) -> None:
+    """Placeholder KD distillation routine.
+
+    Creates the output directory and writes a stub file so downstream steps
+    can detect that KD plumbing executed.
+    """
+    os.makedirs(output_dir, exist_ok=True)
+    n_teachers = len(teacher_outputs) if teacher_outputs is not None else 0
+    with open(os.path.join(output_dir, "distilled.txt"), "w", encoding="utf-8") as f:
+        f.write(f"stub KD run with {n_teachers} teacher examples\n")
+    print("[distiller] stub KD distillation called")
 
 
 def distill(
