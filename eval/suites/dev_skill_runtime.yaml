@@ -1,0 +1,18 @@
+name: dev_skill_runtime
+cases:
+  - id: http_get_json_smoke
+    requires_model: false
+    requires_runtime: true
+    prompt: |
+      Produce **two files** using the file fence convention:
+      1) file: app/main.py -> Program that imports skills.http_get_json.wrapper.tool and prints the length of the JSON keys from https://httpbin.org/json
+      2) file: tests/test_app.py -> pytest test that asserts program import works.
+      Use code fences with exact file paths.
+    expect_files:
+      - app/main.py
+      - tests/test_app.py
+    commands:
+      - python -m pip install -q pytest==8.* requests==2.*
+      - pytest -q
+    expect_stdout_regex:
+      - "1 passed"
