@@ -1,4 +1,5 @@
 import argparse
+import os
 import sys
 import yaml
 import re
@@ -19,6 +20,12 @@ def _is_offline_stub() -> bool:
     except Exception:
         return True
     return "[offline-stub]" in out.lower()
+
+DENY_TOKENS = (
+    "not permitted to assist",
+    "cannot assist",
+    "cannot help",
+)
 
 
 def run_case(agent, case):
