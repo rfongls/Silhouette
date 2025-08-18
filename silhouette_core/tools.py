@@ -44,6 +44,7 @@ class ToolRegistry:
                     mod_path = f"skills.{name}.{version}.wrapper"
                 else:
                     mod_path = f"skills.{name}.wrapper"
+
             if not (mod_path and name):
                 continue
             try:
@@ -51,6 +52,7 @@ class ToolRegistry:
                 fn = getattr(mod, entry)
                 public_name = f"{name}@{version}" if version else name
                 self.register(public_name, fn)
+
             except Exception:
                 continue
 
