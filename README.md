@@ -216,6 +216,19 @@ ENABLE_RUNTIME_EVAL=1 STUDENT_MODEL=models/student-core-kd \
 python -m eval.build_runner --suite eval/suites/dev_python_ml_runtime.yaml
 ```
 
+### Containerized runtime
+Runtime evals for Java, .NET, and Android now run inside official Docker images.
+Example:
+```bash
+ENABLE_RUNTIME_EVAL=1 python -m eval.build_runner --suite eval/suites/dev_java_runtime.yaml
+```
+
+### Security & Compliance (v2)
+
+* SPDX license detection with whitelist (MIT, Apache-2.0, BSD).
+* Configurable thresholds (`--max_high`, `--max_medium`).
+* CI fails if blocked licenses or secrets are detected.
+
 ### Skills (RAG-to-Skill) and Registry
 Skills are declared in `skills/registry.yaml`. The agent auto-loads registered skills at startup. Ingest new docs and synthesize a skill wrapper plus tests:
 ```bash
@@ -266,13 +279,28 @@ python scripts/scoreboard.py
 
 Snapshot a particular phase (also writes `index.html`):
 ```bash
-PHASE=5 python scripts/scoreboard.py     # writes artifacts/scoreboard/phase-5.html
+PHASE=6 python scripts/scoreboard.py     # writes artifacts/scoreboard/phase-6.html
 ```
 To backfill older phases, re-run with `PHASE=1`, `PHASE=2`, etc.
 Makefile shorthand:
 ```bash
 make scoreboard-phase PHASE=5
 ```
+
+### History dashboard
+
+The history page aggregates phase snapshots:
+
+```bash
+python scripts/scoreboard_history.py
+```
+
+This generates `artifacts/scoreboard/history.html`, listing all `phase-N.html` **with a summary row** (Selfcheck, Eval, Latency p50, Runtime passed/total, Security, Blocked Licenses).
+
+Each cell shows a trend badge:
+- ▲ = improved vs. previous phase  
+- ▼ = regressed  
+- ▬ = stable/no change
 
 ## Versioned Skills
 Skills live under `skills/<name>/vN/` and load as `name@vN`.

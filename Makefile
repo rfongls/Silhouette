@@ -1,5 +1,5 @@
 # Common development and CI convenience targets
-.PHONY: dev test eval lint fmt quant-int8 latency selfcheck selfcheck-student runtime-fastapi runtime-ml scoreboard promote-skill traces
+.PHONY: dev test eval lint fmt quant-int8 latency selfcheck selfcheck-student runtime-fastapi runtime-ml scoreboard promote-skill traces security-scan
 
 dev:
 	python -m cli.main
@@ -44,6 +44,9 @@ promote-skill:
 	python scripts/promote_skill_version.py --name $(NAME) --from_version $(FROM) --to_version $(TO)
 
 traces:
-	python scripts/synthesize_traces.py
-	python scripts/validate_traces.py artifacts/traces/runtime_kd.jsonl
+        python scripts/synthesize_traces.py
+        python scripts/validate_traces.py artifacts/traces/runtime_kd.jsonl
+
+security-scan:
+        python -m security.scanner
 
