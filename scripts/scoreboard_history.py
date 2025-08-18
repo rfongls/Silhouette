@@ -80,4 +80,3 @@ th,td{padding:6px 8px;border-bottom:1px solid #eee}
 
 if __name__ == "__main__":
     main()
-

@@ -46,4 +46,3 @@ promote-skill:
 traces:
 	python scripts/synthesize_traces.py
 	python scripts/validate_traces.py artifacts/traces/runtime_kd.jsonl
-
