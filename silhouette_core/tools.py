@@ -5,6 +5,7 @@ import importlib
 import yaml
 import pathlib
 
+
 class ToolRegistry:
     """
     Tiny tool API to prove 'agent can act'.
