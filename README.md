@@ -1,18 +1,3 @@
-Excellent — I can see the full project structure in the uploaded repo.
-
-Here’s the plan to **fix your README.md**:
-
-* Keep **all the detailed functionality** you already had (CLI usage, directory structure, training flow, eval suites).
-* Add back the **Vision / Purpose / End Goal** (based on all PRs through Phase 10).
-* Update the **Project Structure** and usage details to reflect what’s actually in the repo now (`eval/`, `training/`, `scripts/`, `skills/`, etc.).
-* Make sure **compliance, watermarking, licensing** from PR-17/18 are present.
-* Include the **roadmap phases** summary (so README matches `phases.md`).
-
----
-
-# Updated `README.md` (full, integrated)
-
-````markdown
 # 🌑 Silhouette Core
 
 **Silhouette Core** is a survivable, modular, and scalable AI agent framework.  
@@ -24,18 +9,18 @@ It is purpose-aligned, hardware-flexible, and built to be **carried, revived, an
 
 Silhouette Core is a **general, self-hostable agent system**. It is designed to:
 
-Language runtimes (Python, Java, .NET, Android, Web, C++) are **capability modules** the agent can exercise.
-Silhouette Core itself is **not an app** — it is the engine that demonstrates how agents can persist, replicate, and evolve safely.
-
 * Operate offline or in constrained environments.  
 * Learn and refine skills across multiple ecosystems (Python, Java, .NET, Android, Web, C++).  
 * Support compliance and provenance (license scanning, redaction, watermarking, licensing).  
 * Continuously improve itself through **training → evaluation → distillation → redeployment**.  
 * Distill large models into **small, survivable agents** that can run on the edge.  
 
+Language runtimes are **capability modules** the agent can exercise.  
+Silhouette Core itself is **not an app** — it is the engine that demonstrates how agents can persist, replicate, and evolve safely.
+
 ---
 
-## Purpose
+## 🎯 Purpose
 
 Silhouette Core is a **general, self-hostable agent framework**. Its purpose is to:
 
@@ -46,25 +31,17 @@ Silhouette Core is a **general, self-hostable agent framework**. Its purpose is 
 - Provide **skills** (tools, wrappers) the agent can ingest dynamically.  
 - Enforce **compliance and provenance**: redaction, license scanning, watermarks, customer licensing.  
 
-## End Goal
+---
+
+## 🛠 End Goal
 
 The end state (Phase 10) is a **production-ready agent system** that can:
 
-- **Generate, compile, and test** code across languages in isolated containers.  
+- **Generate, compile, and test** code across languages in isolated containers (Python, Web, Java, .NET, Android, C++).  
 - **Train itself** on successes via curated KD traces.  
-- **Run on edge devices** via quantized exports.  
-- **Provide governance** through licensing, watermarking, compliance gates.  
+- **Run on edge devices** via quantized exports (<3s latency on CPU).  
+- **Provide governance** through licensing, watermarking, and compliance gates.  
 - Be packaged, released, and licensed as a **trustworthy, cross-language development agent**.
-
-Silhouette Core is not “an Android app” — it is an **agent engine** that demonstrates how large models can be broken down into resilient, specialized modules that survive infrastructure collapse while still providing advanced capabilities.
-
-At **Phase 10**, Silhouette Core will deliver:
-
-* **Cross-language agent capabilities** (Python, Web, Java, .NET, Android, C++).  
-* **Self-training** via runtime traces, turning passing code generations into training data.  
-* **Edge-ready deployment** (quantized INT8/GGUF exports with <3s latency on CPU).  
-* **Governed artifacts** (every model watermarked, licensed, and verifiable).  
-* **Portable packaging** (pip + Docker) for survivable deployment in any environment.  
 
 ---
 
@@ -73,7 +50,8 @@ At **Phase 10**, Silhouette Core will deliver:
 * **Alignment-first agent loop**: persona DSL config (`persona.dsl`), deny rules, self-check.  
 * **Memory & context**: logs interactions, replays into structured memory JSONL.  
 * **Skills system**: dynamic tool registry (`skills/registry.yaml`), versioned (`name@vN`).  
-* **Runtime evals**: cross-language build/test inside Docker (Java, .NET, Android).  
+* **Runtime evals**: cross-language build/test inside Docker (Java, .NET, Android; Web & Python coming in Phase 7).  
+* **Linters**: Python (ruff, black), Web/JS (eslint) integrated into CI (PR-20+).  
 * **Offline-first mode**: deterministic stub generation when models are unavailable.  
 * **Training adapters**: SFT + KD wrappers (student models distilled from teacher traces).  
 * **Compliance**: SPDX license scan, redaction rules, configurable thresholds.  
@@ -114,6 +92,9 @@ Silhouette/
 ├── skills/                     # Dynamic tools/skills
 │   ├── registry.yaml           # Declares active skills
 │   └── http_get_json/v1/...    # Example skill (versioned)
+├── profiles/                   # Policy YAMLs for self-check
+├── security/                   # License scanner & redaction rules
+├── artifacts/                  # Scoreboards, eval logs, trace outputs
 ├── config/                     # Config for training, performance, drift
 ├── docs/                       # Guides & philosophy
 │   ├── HANDOFF_GUIDE.md
@@ -175,6 +156,13 @@ ENABLE_RUNTIME_EVAL=1 python -m eval.build_runner --suite eval/suites/dev_dotnet
 ENABLE_RUNTIME_EVAL=1 python -m eval.build_runner --suite eval/suites/dev_android_runtime_ext.yaml
 ```
 
+Web & Python runtime suites (coming in Phase 7 / PR-20):
+
+```bash
+ENABLE_RUNTIME_EVAL=1 python -m eval.build_runner --suite eval/suites/dev_web_runtime.yaml
+ENABLE_RUNTIME_EVAL=1 python -m eval.build_runner --suite eval/suites/dev_python_runtime.yaml
+```
+
 ---
 
 ## 🛡 Security & Compliance
@@ -220,15 +208,20 @@ Artifacts:
 
 ## 🛣 Roadmap (Phases)
 
-**Phase 1–3**: Core Agent + Training Foundation
-**Phase 4–5**: Policy, Evals, Skills, Dataset Flywheel v1
-**Phase 6**: Compliance & Provenance (security, watermarking, licensing)
-**Phase 7**: Cross-Language Expansion (Web, Python, C++)
-**Phase 8**: Continuous Improvement (auto-trace promotion, regression gates)
-**Phase 9**: Packaging & Edge Deployment (pip, GGUF, ONNX)
-**Phase 10**: Release & Licensing (release playbook, customer licensing, watermark issuance)
+| Phase | PRs     | Focus                                       |
+| ----- | ------- | ------------------------------------------- |
+| 1–3   | 1–3     | Core agent hardening                        |
+| 2     | 4–5     | Training foundation                         |
+| 3     | 6–9     | Distillation & quantization                 |
+| 4     | 10–11.2 | Profiles + Evals                            |
+| 5     | 12–14   | Skills & dataset flywheel v1                |
+| 6     | 15–18   | Compliance & provenance                     |
+| 7     | 19–21   | Cross-language expansion (Web, Python, C++) |
+| 8     | 22–23   | Continuous improvement                      |
+| 9     | 24–25   | Packaging & edge deployment                 |
+| 10    | 26–27   | Release & licensing                         |
 
-See [PHASES.md](PHASES.md) for details.
+See [PHASES.md](PHASES.md) for full details.
 
 ---
 
@@ -238,7 +231,4 @@ Silhouette Core is **proprietary**.
 No training, fine-tuning, or redistribution without a written agreement.
 See [`LICENSE`](LICENSE).
 
-```
-
-Would you like me to also **auto-generate a one-page “at-a-glance roadmap graphic”** (a markdown table or ASCII flow) for the README so new readers immediately see the 10 phases?
 ```
