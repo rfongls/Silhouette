@@ -35,7 +35,10 @@ runtime-ml:
 	ENABLE_RUNTIME_EVAL=1 python -m eval.build_runner --suite eval/suites/dev_python_ml_runtime.yaml
 
 scoreboard:
-	python scripts/scoreboard.py
+        python scripts/scoreboard.py
+
+scoreboard-phase:
+        PHASE=${PHASE} python scripts/scoreboard.py
 
 promote-skill:
 	python scripts/promote_skill_version.py --name $(NAME) --from_version $(FROM) --to_version $(TO)

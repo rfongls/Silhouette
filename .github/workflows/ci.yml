@@ -106,9 +106,9 @@ jobs:
       with:
         name: runtime-workdirs
         path: artifacts/runs/**
-        
+
     - name: Scoreboard
-      run: python scripts/scoreboard.py
+      run: PHASE=5 python scripts/scoreboard.py
 
     - name: Upload Scoreboard Artifact
       uses: actions/upload-artifact@v4

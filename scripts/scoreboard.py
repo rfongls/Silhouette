@@ -11,6 +11,7 @@ Offline-friendly; tolerates missing files.
 import glob
 import html
 import json
+import os
 import pathlib
 import time
 
@@ -34,7 +35,9 @@ def main():
     latency = _load_json(ART_DIR / "latency.json")
 
     runtime_reports = []
-    for p in glob.glob(str(ART_DIR / "*.build_eval_report.json")) + glob.glob(str(ART_DIR / "build_eval_report.json")):
+    for p in glob.glob(str(ART_DIR / "*.build_eval_report.json")) + glob.glob(
+        str(ART_DIR / "build_eval_report.json")
+    ):
         runtime_reports.append(_load_json(pathlib.Path(p)))
 
     parts = []
@@ -139,7 +142,13 @@ small{color:#666}
         parts.append("<small>No runtime build reports found.</small>")
     parts.append("</div>")
 
-    OUT_PATH.write_text("\n".join(parts), encoding="utf-8")
+    html_text = "\n".join(parts)
+    OUT_PATH.write_text(html_text, encoding="utf-8")
+    phase = os.environ.get("PHASE")
+    if phase:
+        snap_path = OUT_DIR / f"phase-{phase}.html"
+        snap_path.write_text(html_text, encoding="utf-8")
+        print(f"Wrote scoreboard snapshot to {snap_path}")
     print(f"Wrote scoreboard to {OUT_PATH}")
 
 if __name__ == "__main__":

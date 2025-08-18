@@ -256,11 +256,22 @@ Traces include file payloads. The `FileFenceAdapter` teaches the model to emit f
 python scripts/synthesize_traces.py
 python -m training.train_sft --cfg config/train.yaml
 ```
+
 ## Scoreboard (HTML)
 After running self-checks, evals, or runtime suites, build a static summary:
 ```bash
 python scripts/scoreboard.py
 # open artifacts/scoreboard/index.html
+```
+
+Snapshot a particular phase (also writes `index.html`):
+```bash
+PHASE=5 python scripts/scoreboard.py     # writes artifacts/scoreboard/phase-5.html
+```
+To backfill older phases, re-run with `PHASE=1`, `PHASE=2`, etc.
+Makefile shorthand:
+```bash
+make scoreboard-phase PHASE=5
 ```
 
 ## Versioned Skills
@@ -269,6 +280,7 @@ Promote a skill to a new version:
 ```bash
 python scripts/promote_skill_version.py --name http_get_json --from_version v1 --to_version v2
 ```
+
 
 ## Quantization & Latency
 
