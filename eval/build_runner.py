@@ -88,7 +88,7 @@ def _zip_and_cleanup(wrk: pathlib.Path, suite_name: str, case_id: str, keep: boo
     if not keep:
         shutil.rmtree(wrk, ignore_errors=True)
     return str(zip_base.with_suffix(".zip"))
-
+  
 
 def _run_cmds(cmds: List[str], cwd: pathlib.Path, timeout_s: int = 180) -> Dict[str, Any]:
     logs = []

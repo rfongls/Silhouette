@@ -106,7 +106,7 @@ jobs:
       with:
         name: runtime-workdirs
         path: artifacts/runs/**
-
+        
     - name: Scoreboard
       run: python scripts/scoreboard.py
 
