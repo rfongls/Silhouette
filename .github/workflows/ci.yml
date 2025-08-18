@@ -96,6 +96,11 @@ jobs:
     - name: Runtime Eval (Skill)  # skips unless enabled
       run: python -m eval.build_runner --suite eval/suites/dev_skill_runtime.yaml --require_runtime_env
 
+    - name: Synthesize KD Traces (from runtime)
+      run: |
+        python scripts/synthesize_traces.py
+        python scripts/validate_traces.py artifacts/traces/runtime_kd.jsonl
+        
     - name: Scoreboard
       run: python scripts/scoreboard.py
 

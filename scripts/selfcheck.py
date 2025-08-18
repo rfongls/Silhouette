@@ -136,7 +136,6 @@ def main():
     tools_ok = result["tools"]["ok"]
     all_ok = tools_ok and deny_ok and latency_ok and skills_ok
 
-
     pathlib.Path(args.out).write_text(json.dumps(result, indent=2), encoding="utf-8")
 
     print(f"[selfcheck] tools: {'OK' if tools_ok else 'FAIL'}; "

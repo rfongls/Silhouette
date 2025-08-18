@@ -237,6 +237,19 @@ STUDENT_MODEL=models/student-core python -m eval.eval --suite eval/suites/basics
 STUDENT_MODEL=models/student-core python scripts/eval_report.py
 ```
 
+### Synthesizing training traces from runtime passes
+After running runtime suites (compile/run), convert passing cases into KD-ready JSONL:
+
+```bash
+ENABLE_RUNTIME_EVAL=1 STUDENT_MODEL=models/student-core-kd \
+python -m eval.build_runner --suite eval/suites/dev_python_fastapi_runtime.yaml
+
+python scripts/synthesize_traces.py
+python scripts/validate_traces.py artifacts/traces/runtime_kd.jsonl
+```
+
+The output file `artifacts/traces/runtime_kd.jsonl` can be mixed into SFT/KD training via `config/train.yaml`. Set `TRACE_LICENSE` to label usage (default: `internal-training-only`).
+
 ## Scoreboard (HTML)
 After running self-checks, evals, or runtime suites, build a static summary:
 ```bash
