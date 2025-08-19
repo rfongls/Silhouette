@@ -37,12 +37,12 @@
 - Goal: Full multi-language coverage.
 
 ## Phase 8 — Continuous Improvement Flywheel (PR-22 → PR-23)
-- Auto-promote runtime traces into curated buckets.
-- Regression gates + latency targets per lane.
+- PR-22: Auto-promote runtime traces into curated lane buckets.
+- PR-23: Regression gates & latency targets per lane; CI fails on regressions; gates surfaced on scoreboard/history.
 - Goal: Make CI a continuous learning + regression safety net.
 
 ## Phase 9 — Packaging & Deployment (PR-24 → PR-25)
-- pip package + CLI UX.
+- PR-24: pip package, unified CLI, profiles, wheels include eval/profiles/security/templates, CI artifacts on release.
 - Edge/on-device quantization targets.
 - Goal: Make Silhouette Core portable, installable, edge-ready.
 

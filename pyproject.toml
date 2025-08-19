@@ -1,0 +1,62 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "silhouette-core"
+version = "0.24.0"
+description = "Silhouette Core — survivable, cross-language AI agent framework"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { file = "LICENSE" }
+authors = [{ name = "Silhouette LLC" }]
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "License :: Other/Proprietary License",
+  "Operating System :: OS Independent"
+]
+
+dependencies = [
+  "pyyaml>=6.0",
+  "click>=8.1",
+  "tqdm>=4.66",
+  "jinja2>=3.1",
+]
+
+[project.optional-dependencies]
+runtime = [
+  "fastapi>=0.111",
+  "uvicorn>=0.30",
+]
+ml = [
+  "transformers>=4.43",
+  "accelerate>=0.33",
+  "torch>=2.3; platform_machine!='arm64' or sys_platform!='darwin'",
+]
+dev = [
+  "pytest>=8.2",
+  "ruff>=0.5",
+  "black>=24.4",
+]
+eval = [
+  "pytest>=8.2",
+  "requests>=2.32",
+]
+all = ["silhouette-core[runtime,ml,dev,eval]"]
+
+[project.scripts]
+silhouette = "silhouette_core.cli:main"
+
+[tool.setuptools]
+include-package-data = true
+packages = ["silhouette_core", "cli", "eval", "scripts", "training", "security"]
+
+[tool.setuptools.package-data]
+silhouette_core = [
+  "../eval/suites/*.yaml",
+  "../profiles/**/*.yaml",
+  "../security/**/*",
+  "../docs/*.md",
+  "../CUSTOMER_LICENSE_TEMPLATE.md",
+  "../COMPLIANCE.md"
+]
