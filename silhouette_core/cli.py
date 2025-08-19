@@ -98,3 +98,4 @@ def latency_cmd():
     from scripts.latency_probe import main as lp
     sys.argv = ["latency_probe"]
     sys.exit(lp())
+
