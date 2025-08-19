@@ -2,105 +2,61 @@
 
 All notable changes to this project will be documented here.
 
-## vX.Y.Z — YYYY-MM-DD
-- Added …
-- Fixed …
-- Improved …
-Artifacts: wheel, sdist, scoreboard, compliance, watermark.
-
 ## [Unreleased]
+- PR-24: Packaging & CLI UX – pip package, unified `silhouette` CLI, distribution artifacts.
+- PR-25: Edge targets – INT8/ONNX/GGUF exports and edge latency probe.
+- PR-26: Release playbook & provenance artifacts – CI GitHub release workflow with scoreboard, gate summary, watermark.
+- PR-27: License ops – customer license issuance tooling & watermark embedding.
 
-### Added
-- Profile exporter (`profile_exporter.py`) and `:export-profile` CLI command  
-- Knowledge distiller (`distiller.py`) and `:distill` CLI command  
-- Clone packager (`package_clone.py`), edge launcher (`edge_launcher.py`), and provisioning tools  
-- Quantization helper (`quantize_models.py`) for embeddings/models  
-- Self-replication guide (`docs/self_replication.md`) and deploy guide updates  
-- `:agent deploy <target>` for remote/self-hosted clone deployment  
+## Phase 10 – Release & Licensing (PR-26 → PR-27)
+- Release playbook and artifact bundling.
+- Customer license issuance with watermark embedding.
 
-## [Phase 4] - Persona & Embedding Enhancements
+## Phase 9 – Packaging & Edge Deployment (PR-24 → PR-25)
+- pip package and unified CLI.
+- Edge quantization targets and latency probe JSON.
 
-### Added
-- `alignment_engine.py` parses tone and deny rules from DSL  
-- `response_engine.py` formats responses and blocks unethical prompts  
-- `embedding_engine.py` updated with TF-IDF + cosine similarity  
-- `interface_server.py` now supports `/search` endpoint  
-- CLI command `:search <query>` for vector-style recall  
-- `SYSTEM_OVERVIEW.md` created to describe system architecture and recovery  
-- `test_alignment.py` validates tone and deny behavior  
+## Phase 8 – Continuous Improvement Flywheel (PR-22 → PR-23)
+- Auto-promote runtime traces into curated buckets.
+- Regression gates with latency budgets surfaced on scoreboard.
 
-### Changed
-- CLI (`main.py`) prompts for file paths during `:restore`  
-- Response engine now formats based on persona config  
+## Phase 7 – Cross-Language Runtime Expansion (PR-19 → PR-21)
+- Cross-language runtime reframing.
+- Web + Python runtime evals and linters (PR-20).
+- C++/CMake runtime evals with optional clang-tidy (PR-21).
 
-## [Phase 5] - Offline-First & Recovery
+## Phase 6 – Compliance & Provenance (PR-15 → PR-18)
+- Build runner prompt archival and FileFence adapter.
+- Phase scoreboards, history, and trends.
+- Security & compliance guardrails (redaction, PII, SPDX).
+- Watermarks and customer license template.
 
-### Added
-- `offline_mode.py` detects offline mode and throttles commands  
-- `selfcheck_engine.py` verifies required files and memory integrity  
-- `replay_log_to_memory.py` rebuilds memory from session logs  
-- CLI commands `:replay` and `:selfcheck`  
-- Backup works without `cryptography` installed  
+## Phase 5 – Skills & Dataset Flywheel v1 (PR-12 → PR-14)
+- Skill registry with versioned `skill@vN`.
+- Scoreboard HTML artifact.
+- Dataset synthesis from runtime passes.
 
-### Changed
-- CLI log files opened with UTF-8 encoding  
-- Accept `:exit` and `:quit` aliases in the REPL  
-- Backup status messages use ASCII output  
+## Phase 4 – Profiles & Evals (PR-10 → PR-11.2)
+- Policy profiles and self-check.
+- Developer eval suites and runtime compile/run evals.
 
-## [Phase 6] - Scalable Execution
+## Phase 3 – Distillation & Quantization (PR-6 → PR-9)
+- KD wrapper training student model.
+- INT8 quantization stubs and latency probe.
 
-### Added
-- `performance_profiler.py` to capture CPU, memory and I/O metrics  
-- `config/performance.yml` defines edge, mid-tier and core profiles  
-- `module_executor.py` executes modules in parallel using a priority queue  
-- `distributed_executor.py` stub lays groundwork for multi-node execution  
-- `offline_mode.load_throttle` delays tasks when system load is high  
-- Tests for concurrent and distributed execution stubs  
+## Phase 2 – Training Foundation (PR-4 → PR-5)
+- Seed dataset and SFT wrapper.
+- Dry-run training loop.
 
-### Changed
-- Documentation updated with distributed execution protocol  
+## Phase 1 – Core Agent Hardening (PR-1 → PR-3)
+- Safe calculation tool with unit tests.
+- Eval runner, session logging, deny rules.
 
-## [Phase 7] – Multi-Agent Interface & Messaging
-
-### Added
-- `agent_controller.py` to manage agent processes (spawn, fork, merge, shutdown)  
-- `agent_messaging.py` for socket- or HTTP-based inter-agent communication  
-- `memory_merge.py` for diffing and merging agent memory stores  
-- CLI `:agent` commands in `cli/main.py`: `spawn`, `fork`, `merge`, `list`, `export`, `import`, `audit`  
-- `docs/agent_api.md` documenting the inter-agent message schema  
-- `docs/agent_scenarios.md` with example multi-agent workflows  
-- `tests/test_agent_controller.py` and `tests/test_agent_messaging.py` for agent functionality  
-
-### Changed
-- `cli/main.py` updated to integrate multi-agent commands  
-- `README.md` quickstart extended with multi-agent usage  
-
-## [Phase 8] – Self-Reflective Monitoring
-
-### Added
-- `drift_detector.py` to detect drift in tone, intent, and behavior  
-- `config/drift.yml` schema for drift metrics and thresholds  
-- `session_summarizer.py` to generate human-readable session summaries  
-- `persona_audit.py` to validate memory entries against `persona.dsl` deny rules  
-- Extended `selfcheck_engine.py` with `--full` flag to run drift detection, session summary, and persona audits  
-- CLI commands `:drift-report`, `:summary`, and `:persona-audit` in `cli/main.py`  
-- `docs/monitoring.md` overview of self-reflective monitoring workflow  
-- `docs/examples/drift_config.yml` example configuration for drift metrics  
-- `tests/test_drift_detector.py` for drift detection logic  
-- `tests/test_cli_integration.py` updated with monitoring command tests  
-
-### Changed
-- `cli/main.py` updated to support new monitoring commands  
-- `README.md` extended to include self-reflective monitoring usage  
-
-## [Phase 9] - Self-Replication & Knowledge Distillation
-
-###Added
-
-- Profile exporter (profile_exporter.py) and :export-profile CLI command
-- Knowledge distiller (distiller.py) and :distill CLI command
-- Clone packager (package_clone.py) and edge runtime launcher (edge_launcher.py)
-- Quantization helper (quantize_models.py) for embeddings/models
-- Self-replication CLI :agent deploy <target> in agent_controller.py
-- Documentation in docs/self_replication.md and docs/deploy-guide.md
-- Tests covering profile export, distillation, packaging, quantization, and deployment
+## Early History
+- CLI bootstrapping with dynamic modules and logs.
+- Intent engine, tone parser, and memory system with FastAPI endpoints.
+- Conversation graph engine with semantic recall.
+- Offline-first recovery tools and performance profiling.
+- Multi-agent interface and messaging with memory merge.
+- Monitoring tools for drift, summaries, persona audits.
+- Self-replication: profile export, distillation, packaging, quantization, deployment helpers.

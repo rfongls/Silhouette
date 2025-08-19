@@ -164,18 +164,30 @@ ENABLE_RUNTIME_EVAL=1 silhouette build-runner --suite eval/suites/dev_cpp_runtim
 
 Passing runtime evals are logged into lane-specific buckets:
 
+```bash
+silhouette eval --suite eval/suites/basics.yaml
 ```
-training_data/flywheel/<lane>/runtime.jsonl
+
+Developer stacks:
+
+```bash
+silhouette eval --suite eval/suites/dev_python.yaml
+silhouette eval --suite eval/suites/dev_java.yaml
+silhouette eval --suite eval/suites/dev_dotnet_runtime.yaml
 ```
 
 Curate and deduplicate:
 
 ```bash
-make traces-promote
+ENABLE_RUNTIME_EVAL=1 silhouette build-runner --suite eval/suites/dev_java_runtime_ext.yaml
+ENABLE_RUNTIME_EVAL=1 silhouette build-runner --suite eval/suites/dev_dotnet_runtime_ext.yaml
+ENABLE_RUNTIME_EVAL=1 silhouette build-runner --suite eval/suites/dev_android_runtime_ext.yaml
+ENABLE_RUNTIME_EVAL=1 silhouette build-runner --suite eval/suites/dev_web_runtime.yaml
+ENABLE_RUNTIME_EVAL=1 silhouette build-runner --suite eval/suites/dev_python_runtime.yaml
+ENABLE_RUNTIME_EVAL=1 silhouette build-runner --suite eval/suites/dev_python_fastapi_runtime.yaml
+ENABLE_RUNTIME_EVAL=1 silhouette build-runner --suite eval/suites/dev_python_ml_runtime.yaml
+ENABLE_RUNTIME_EVAL=1 silhouette build-runner --suite eval/suites/dev_skill_runtime.yaml
 ```
-
-Outputs `curated.jsonl` per lane, ready for SFT/KD training.
-
 ---
 
 ## ⚡ Edge Quantization & Latency
@@ -219,6 +231,14 @@ Reports to `artifacts/latency/latency.json`.
 
   Produces `artifacts/licenses/license_ORG-1234_<date>.md` and updates WATERMARK.json.
 * **WATERMARK.json**: includes provenance (commit, SHA256, license tag, customer ID).
+
+### Customer Licensing
+
+Issue a license and embed provenance:
+
+```bash
+silhouette license --customer-id ORG-1234
+```
 
 ### Customer Licensing
 
@@ -274,19 +294,10 @@ Artifacts:
 ## 🚀 Release & Licensing
 
 Silhouette Core uses a structured release pipeline:
-
-* Version bump in `pyproject.toml` + tag push.
-* CI builds and runs regression gates.
-* Artifacts attached to GitHub release:
-
-  * Wheel + sdist
-  * Scoreboards (index + history)
-  * Regression gate summary
-  * WATERMARK.json
-  * COMPLIANCE.md
-  * CUSTOMER\_LICENSE\_TEMPLATE.md
-
-See [RELEASE.md](RELEASE.md) for full checklist.
+- Version bump in `pyproject.toml` + tag push.
+- CI builds and runs regression gates.
+- Artifacts are attached to GitHub release (wheel, scoreboard, compliance, watermark).
+- See [RELEASE.md](RELEASE.md) for full checklist.
 
 ---
 
