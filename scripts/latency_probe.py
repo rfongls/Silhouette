@@ -28,25 +28,17 @@ def main():
         if sleep_s > 0:
             time.sleep(sleep_s)
 
-    result = {
-        "prompt": prompt,
-        "runs": runs,
-        "durations_sec": durs,
-        "p50_sec": statistics.median(durs),
-        "mean_sec": statistics.mean(durs),
-        "min_sec": min(durs),
-        "max_sec": max(durs),
-        "model": os.environ.get("STUDENT_MODEL")
-        or os.environ.get("SILHOUETTE_DEFAULT_MODEL")
-        or "default/offline",
-        "ts": time.time(),
-    }
-    pathlib.Path("artifacts/latency.json").write_text(
-        json.dumps(result, indent=2), encoding="utf-8"
-    )
-    print(
-        f"Latency p50={result['p50_sec']:.3f}s mean={result['mean_sec']:.3f}s (runs={runs}) using model='{result['model']}'"
-    )
+    p50 = statistics.median(durs)
+    mean = statistics.mean(durs)
+    summary = {"p50": p50, "mean": mean, "device": "cpu"}
+    if os.environ.get("SILHOUETTE_EDGE") == "1":
+        summary["edge_mode"] = True
+        print(f"[EDGE MODE] p50={p50:.2f}s mean={mean:.2f}s")
+    else:
+        print(f"p50={p50:.2f}s mean={mean:.2f}s")
+    out = pathlib.Path("artifacts/latency/latency.json")
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text(json.dumps(summary, indent=2), encoding="utf-8")
 
 
 if __name__ == "__main__":

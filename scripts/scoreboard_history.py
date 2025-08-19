@@ -126,6 +126,12 @@ th,td{padding:6px 8px;border-bottom:1px solid #eee}
     OUT.write_text("\n".join(parts), encoding="utf-8")
     print(f"Wrote history dashboard: {OUT}")
 
+    # Rotate baseline for regression gates
+    latest = ART_DIR / "latest.json"
+    prev = ART_DIR / "previous.json"
+    if latest.exists():
+        prev.write_text(latest.read_text())
+
 
 if __name__ == "__main__":
     main()
