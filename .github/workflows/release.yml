@@ -1,0 +1,39 @@
+name: Release
+on:
+  push:
+    tags: ["v*.*.*"]
+
+jobs:
+  build-release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11" }
+      - name: Install build deps
+        run: |
+          python -m pip install -U pip build
+          pip install -e .[all]
+      - name: Run gates
+        run: make gates
+      - name: Build artifacts
+        run: make build
+      - name: Run scoreboard
+        run: |
+          python scripts/scoreboard.py
+          python scripts/scoreboard_history.py
+      - name: Verify watermark
+        run: python scripts/verify_watermark.py --artifact_dir models/student-core-kd || true
+      - name: Upload release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/*.whl
+            dist/*.tar.gz
+            artifacts/scoreboard/index.html
+            artifacts/scoreboard/history.html
+            artifacts/scoreboard/latest.json
+            artifacts/gates/gate_summary.json
+            WATERMARK.json
+            COMPLIANCE.md
+            CUSTOMER_LICENSE_TEMPLATE.md

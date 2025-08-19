@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented here.
 
+## vX.Y.Z — YYYY-MM-DD
+- Added …
+- Fixed …
+- Improved …
+Artifacts: wheel, sdist, scoreboard, compliance, watermark.
+
 ## [Unreleased]
 
 ### Added
