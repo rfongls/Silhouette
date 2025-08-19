@@ -1,7 +1,26 @@
 # Common development and CI convenience targets
-.PHONY: dev test eval lint fmt quant-int8 latency selfcheck selfcheck-student runtime-fastapi runtime-ml runtime-web runtime-python runtime-cpp lint-cpp scoreboard promote-skill traces security-scan
+.PHONY: dev install build wheel sdist clean repl test eval lint fmt quant-int8 latency selfcheck selfcheck-student runtime-fastapi runtime-ml runtime-web runtime-python runtime-cpp runtime-java-ext runtime-dotnet-ext runtime-android-ext lint-cpp scoreboard scoreboard-phase scoreboard-phase6 promote-skill traces traces-promote security-scan gates
 
 dev:
+	python -m pip install -U pip
+	pip install -e .[all]
+
+install:
+	pip install .
+
+build:
+	python -m build
+
+wheel:
+	python -m build --wheel
+
+sdist:
+	python -m build --sdist
+
+clean:
+	rm -rf build/ dist/ *.egg-info
+
+repl:
 	python -m cli.main
 
 test:
@@ -14,7 +33,6 @@ lint:
 	ruff check silhouette_core cli eval training scripts
 	black --check silhouette_core cli eval training scripts
 	npx eslint .
-
 
 fmt:
 	ruff check . --fix
@@ -87,12 +105,3 @@ traces-promote:
 
 gates:
 	python scripts/regression_gate.py --report artifacts/scoreboard/latest.json --previous artifacts/scoreboard/previous.json
-
-traces-promote:
-        python scripts/promote_traces.py --lane python
-        python scripts/promote_traces.py --lane java
-        python scripts/promote_traces.py --lane dotnet
-        python scripts/promote_traces.py --lane android
-        python scripts/promote_traces.py --lane web
-        python scripts/promote_traces.py --lane cpp
-

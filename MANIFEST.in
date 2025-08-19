@@ -1,0 +1,5 @@
+include README.md LICENSE COMPLIANCE.md CUSTOMER_LICENSE_TEMPLATE.md
+recursive-include eval/suites *.yaml
+recursive-include profiles *.yaml
+recursive-include security *
+recursive-include docs *.md

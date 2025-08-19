@@ -118,6 +118,23 @@ Silhouette/
 └── README.md                   # This file
 ````
 
+### Install & CLI
+
+Dev install:
+```bash
+pip install -e .[all]
+```
+
+Run:
+```bash
+silhouette run --profile profiles/core/policy.yaml
+silhouette eval --suite eval/suites/basics.yaml
+silhouette build-runner --suite eval/suites/dev_java_runtime_ext.yaml
+silhouette train --mode sft --cfg config/train.yaml
+silhouette selfcheck --policy profiles/core/policy.yaml
+silhouette package --out dist/
+```
+
 ---
 
 ## ⚙️ Usage Guide
@@ -125,7 +142,7 @@ Silhouette/
 ### CLI Quickstart
 
 ```bash
-python -m cli.main
+silhouette run --profile profiles/core/policy.yaml
 ```
 
 **Key commands:**
