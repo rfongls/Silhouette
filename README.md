@@ -50,20 +50,17 @@ The end state (Phase 10) is a **production-ready agent system** that can:
 * **Alignment-first agent loop**: persona DSL config (`persona.dsl`), deny rules, self-check.  
 * **Memory & context**: logs interactions, replays into structured memory JSONL.  
 * **Skills system**: dynamic tool registry (`skills/registry.yaml`), versioned (`name@vN`).  
-* **Runtime evals**: cross-language build/test inside Docker (Java, .NET, Android; Web & Python coming in Phase 7).  
-* **Linters**: Python (ruff, black), Web/JS (eslint) integrated into CI (PR-20+).  
+* **Runtime evals**: cross-language build/test inside Docker (Java, .NET, Android, Web, Python, C++).  
+* **Linters**: Python (ruff, black), Web/JS (eslint), C++ (clang-tidy optional).  
 * **Offline-first mode**: deterministic stub generation when models are unavailable.  
 * **Training adapters**: SFT + KD wrappers (student models distilled from teacher traces).  
-* **Compliance**: SPDX license scan, redaction rules, configurable thresholds.
-* **Provenance**: WATERMARK.json in every artifact with repo commit + SHA256.
-* **Self-replication**: export profiles, distill knowledge, quantize models, package clones.
-
-### Cross-Language Runtimes
-
-- Web (HTML/JS): containerized with Jest tests
-- Python: FastAPI/pytest, ML tasks
-- Linters: ruff/black (Python), eslint (JS)
-- C++ (GCC + CMake + Catch2 tests; clang-tidy lint optional)
+* **Data Flywheel v2**: runtime traces auto-promoted to curated datasets by lane.  
+* **Compliance**: SPDX license scan, redaction rules, configurable thresholds.  
+* **Regression gates**: enforce pass-rate thresholds and latency budgets in CI.  
+* **Provenance**: WATERMARK.json in every artifact with repo commit + SHA256.  
+* **Self-replication**: export profiles, distill knowledge, quantize models, package clones.  
+* **Release governance**: structured release pipeline with attached compliance and provenance artifacts.  
+* **Customer licensing**: issue per-customer license files and embed IDs into WATERMARK.json.  
 
 ---
 
@@ -71,61 +68,55 @@ The end state (Phase 10) is a **production-ready agent system** that can:
 
 ```text
 Silhouette/
-├── cli/                        # CLI entrypoint & REPL commands
-│   └── main.py
-├── silhouette_core/            # Core agent + loop
+├── cli/                        # Legacy REPL
+├── silhouette_core/            # Core library + new CLI
+│   ├── cli.py                  # Unified `silhouette` CLI
 │   ├── agent_controller.py     # Spawn/fork/merge agents
-│   ├── agent_messaging.py      # Inter-agent messaging
 │   ├── offline_mode.py         # Safe-mode & throttling
-│   ├── drift_detector.py       # Tone/intent drift analysis
-│   ├── persona_audit.py        # Persona compliance checks
 │   ├── distiller.py            # Knowledge distillation
-│   ├── quantize_models.py      # Model quantization
+│   ├── quantize_models.py      # Quantization routines
 │   └── package_clone.py        # Build deployable clone archive
 ├── eval/                       # Eval runner & suites
-│   ├── eval.py                 # Eval harness
-│   ├── build_runner.py         # Runtime compile/run wrapper
-│   └── suites/                 # Eval suites (basics, dev stacks, runtime)
 ├── scripts/                    # Utilities
-│   ├── scoreboard.py           # HTML scoreboard generator
-│   ├── scoreboard_history.py   # History dashboard
-│   ├── watermark_artifact.py   # Write WATERMARK.json
-│   ├── verify_watermark.py     # Check WATERMARK.json
-│   └── synthesize_traces.py    # Convert runtime passes into KD traces
-├── training/                   # Training adapters
-│   ├── train_sft.py            # Supervised fine-tuning
-│   ├── train_kd.py             # Knowledge distillation
-│   └── adapters/               # File-fence, LoRA, etc.
-├── skills/                     # Dynamic tools/skills
-│   ├── registry.yaml           # Declares active skills
-│   └── http_get_json/v1/...    # Example skill (versioned)
-├── profiles/                   # Policy YAMLs for self-check
-├── security/                   # License scanner & redaction rules
-├── artifacts/                  # Scoreboards, eval logs, trace outputs
-├── config/                     # Config for training, performance, drift
+│   ├── scoreboard.py
+│   ├── scoreboard_history.py
+│   ├── regression_gate.py
+│   ├── synthesize_traces.py
+│   ├── promote_traces.py
+│   ├── quantize.py
+│   ├── latency_probe.py
+│   ├── watermark_artifact.py
+│   ├── verify_watermark.py
+│   └── issue_customer_license.py
+├── training/                   # SFT/KD adapters
+├── skills/                     # Skills registry + versioned skills
+├── profiles/                   # Policy YAMLs
+├── security/                   # License scanner + redaction
+├── artifacts/                  # Scoreboards, latency logs, traces
+├── config/                     # Gates, train, lanes
 ├── docs/                       # Guides & philosophy
-│   ├── HANDOFF_GUIDE.md
-│   ├── self_replication.md
-│   ├── contributing.md
-│   ├── philosophy.md
-│   └── roadmap.md
-├── tests/                      # Unit & integration tests
+├── RELEASE.md                  # Release playbook
+├── CHANGELOG.md                # Changelog
 ├── LICENSE                     # Proprietary license
-├── COMPLIANCE.md               # Compliance policy & scanner usage
-├── CUSTOMER_LICENSE_TEMPLATE.md# Contract template for customers
+├── COMPLIANCE.md               # Compliance policy
+├── CUSTOMER_LICENSE_TEMPLATE.md# Customer license template
 ├── PHASES.md                   # Phase-by-phase breakdown
 ├── MILESTONES.md               # PR-by-PR milestones
 └── README.md                   # This file
 ````
 
-### Install & CLI
+---
+
+## ⚙️ Install & CLI
 
 Dev install:
+
 ```bash
 pip install -e .[all]
 ```
 
 Run:
+
 ```bash
 silhouette run --profile profiles/core/policy.yaml
 silhouette eval --suite eval/suites/basics.yaml
@@ -137,43 +128,6 @@ silhouette quantize --method int8 --src models/student-core-kd --out models/stud
 SILHOUETTE_EDGE=1 STUDENT_MODEL=models/student-core-int8 silhouette latency
 silhouette license --customer-id ORG-1234
 ```
-
-### Edge Quantization & Latency
-
-You can export student models for edge devices:
-
-```bash
-silhouette quantize --method int8 --src models/student-core-kd --out models/student-core-int8
-silhouette quantize --method onnx-int8 --src models/student-core-kd --out models/student-core-onnx
-silhouette quantize --method gguf --src models/student-core-kd --out models/student-core-gguf
-```
-
-Probe latency in **edge mode**:
-
-```bash
-SILHOUETTE_EDGE=1 STUDENT_MODEL=models/student-core-int8 silhouette latency
-```
-
-Reports are written to `artifacts/latency/latency.json`.
-
----
-
-## ⚙️ Usage Guide
-
-### CLI Quickstart
-
-```bash
-silhouette run --profile profiles/core/policy.yaml
-```
-
-**Key commands:**
-
-* `:modules` → list skills
-* `:selfcheck` → run policy checks
-* `:export-profile` → export persona/memory/modules profile
-* `:distill` → run distillation
-* `:agent spawn/fork/merge` → manage agents
-* `:backup` / `:restore` → encrypted state mgmt
 
 ---
 
@@ -201,26 +155,47 @@ ENABLE_RUNTIME_EVAL=1 silhouette build-runner --suite eval/suites/dev_dotnet_run
 ENABLE_RUNTIME_EVAL=1 silhouette build-runner --suite eval/suites/dev_android_runtime_ext.yaml
 ENABLE_RUNTIME_EVAL=1 silhouette build-runner --suite eval/suites/dev_web_runtime.yaml
 ENABLE_RUNTIME_EVAL=1 silhouette build-runner --suite eval/suites/dev_python_runtime.yaml
+ENABLE_RUNTIME_EVAL=1 silhouette build-runner --suite eval/suites/dev_cpp_runtime.yaml
+```
+
+---
+
+## 🧠 Training & Data Flywheel
+
+Passing runtime evals are logged into lane-specific buckets:
+
+```bash
+silhouette eval --suite eval/suites/basics.yaml
+```
+
+Developer stacks:
+
+```bash
+silhouette eval --suite eval/suites/dev_python.yaml
+silhouette eval --suite eval/suites/dev_java.yaml
+silhouette eval --suite eval/suites/dev_dotnet_runtime.yaml
+```
+
+Curate and deduplicate:
+
+```bash
+ENABLE_RUNTIME_EVAL=1 silhouette build-runner --suite eval/suites/dev_java_runtime_ext.yaml
+ENABLE_RUNTIME_EVAL=1 silhouette build-runner --suite eval/suites/dev_dotnet_runtime_ext.yaml
+ENABLE_RUNTIME_EVAL=1 silhouette build-runner --suite eval/suites/dev_android_runtime_ext.yaml
+ENABLE_RUNTIME_EVAL=1 silhouette build-runner --suite eval/suites/dev_web_runtime.yaml
+ENABLE_RUNTIME_EVAL=1 silhouette build-runner --suite eval/suites/dev_python_runtime.yaml
 ENABLE_RUNTIME_EVAL=1 silhouette build-runner --suite eval/suites/dev_python_fastapi_runtime.yaml
 ENABLE_RUNTIME_EVAL=1 silhouette build-runner --suite eval/suites/dev_python_ml_runtime.yaml
 ENABLE_RUNTIME_EVAL=1 silhouette build-runner --suite eval/suites/dev_skill_runtime.yaml
 ```
 
----
+Probe latency in edge mode:
 
-## 🧠 Training
-
-### Data Flywheel v2 (auto-promote traces)
-
-Passing runtime evals are logged into lane-specific buckets:
-`training_data/flywheel/<lane>/runtime.jsonl`
-
-Curate and deduplicate traces:
 ```bash
-make traces-promote
+SILHOUETTE_EDGE=1 STUDENT_MODEL=models/student-core-int8 silhouette latency
 ```
 
-Outputs curated datasets per lane (`curated.jsonl`) ready for SFT/KD.
+Reports to `artifacts/latency/latency.json`.
 
 ---
 
@@ -228,21 +203,30 @@ Outputs curated datasets per lane (`curated.jsonl`) ready for SFT/KD.
 
 * **SPDX license scanning** with whitelist/denylist.
 * **Redaction rules** for logs and traces.
-* **Thresholds**: fail if blocked license (GPL, AGPL, MPL) or >N medium findings.
+* **Regression gates** enforce lane pass rates + latency budgets.
 * See [COMPLIANCE.md](COMPLIANCE.md).
 
 ---
 
 ## 🔐 Licensing & Watermarks
 
-* **Proprietary LICENSE**: no training/fine-tuning/redistribution without a contract.
-* **CUSTOMER\_LICENSE\_TEMPLATE.md**: contract template for client licenses.
-* **WATERMARK.json**: every model artifact includes provenance (commit, SHA256, license tag, optional customer ID).
+* **Proprietary LICENSE**: no training/fine-tuning/redistribution without contract.
+* **CUSTOMER\_LICENSE\_TEMPLATE.md**: rendered by `scripts/issue_customer_license.py`.
+* **Customer licensing**:
 
-Verify:
+  ```bash
+  silhouette license --customer-id ORG-1234
+  ```
+
+  Produces `artifacts/licenses/license_ORG-1234_<date>.md` and updates WATERMARK.json.
+* **WATERMARK.json**: includes provenance (commit, SHA256, license tag, customer ID).
+
+### Customer Licensing
+
+Issue a license and embed provenance:
 
 ```bash
-python scripts/verify_watermark.py --artifact_dir models/student-core-kd
+silhouette license --customer-id ORG-1234
 ```
 
 ### Customer Licensing
@@ -253,6 +237,13 @@ Issue a license and embed provenance:
 silhouette license --customer-id ORG-1234
 ```
 
+### Customer Licensing
+
+Issue a license and embed provenance:
+
+```bash
+silhouette license --customer-id ORG-1234
+```
 Outputs:
 
 * `artifacts/licenses/license_ORG-1234_<date>.md` (rendered contract)
@@ -260,29 +251,22 @@ Outputs:
 
 ---
 
-## 📊 Scoreboards
+## 📊 Scoreboards & Gates
 
-Run evals, then build HTML reports:
+Run and build:
 
 ```bash
 python scripts/scoreboard.py
-PHASE=phase-6 python scripts/scoreboard.py
 python scripts/scoreboard_history.py
+python scripts/regression_gate.py --report artifacts/scoreboard/latest.json --previous artifacts/scoreboard/previous.json
 ```
 
 Artifacts:
 
 * `artifacts/scoreboard/index.html` (latest)
-* `artifacts/scoreboard/phase-N.html` (per-phase snapshot)
+* `artifacts/scoreboard/phase-N.html` (snapshot)
 * `artifacts/scoreboard/history.html` (trend dashboard)
-
-### Regression gates
-CI enforces minimum pass rates per lane and latency budgets (p50). Details in `config/gates.yaml`.
-
-Manually run:
-```bash
-python scripts/regression_gate.py --report artifacts/scoreboard/latest.json --previous artifacts/scoreboard/previous.json
-```
+* `artifacts/gates/gate_summary.json` (regression gate status)
 
 ---
 
@@ -293,21 +277,17 @@ python scripts/regression_gate.py --report artifacts/scoreboard/latest.json --pr
 | 1–3   | 1–3     | Core agent hardening                        |
 | 2     | 4–5     | Training foundation                         |
 | 3     | 6–9     | Distillation & quantization                 |
-| 4     | 10–11.2 | Profiles + Evals                            |
+| 4     | 10–11.2 | Profiles + evals                            |
 | 5     | 12–14   | Skills & dataset flywheel v1                |
 | 6     | 15–18   | Compliance & provenance                     |
 | 7     | 19–21   | Cross-language expansion (Web, Python, C++) |
-| 8     | 22–23   | Continuous improvement                      |
+| 8     | 22–23   | Continuous improvement (traces, gates)      |
 | 9     | 24–25   | Packaging & edge deployment                 |
 | 10    | 26–27   | Release & licensing                         |
 
-See [PHASES.md](PHASES.md) for full details.
-
 ---
 
-## Release & Licensing
-
-### Release Process
+## 🚀 Release & Licensing
 
 Silhouette Core uses a structured release pipeline:
 - Version bump in `pyproject.toml` + tag push.
@@ -323,5 +303,3 @@ Silhouette Core uses a structured release pipeline:
 Silhouette Core is **proprietary**.
 No training, fine-tuning, or redistribution without a written agreement.
 See [`LICENSE`](LICENSE).
-
-```
