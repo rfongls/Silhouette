@@ -227,6 +227,14 @@ Artifacts:
 * `artifacts/scoreboard/phase-N.html` (per-phase snapshot)
 * `artifacts/scoreboard/history.html` (trend dashboard)
 
+### Regression gates
+CI enforces minimum pass rates per lane and latency budgets (p50). Details in `config/gates.yaml`.
+
+Manually run:
+```bash
+python scripts/regression_gate.py --report artifacts/scoreboard/latest.json --previous artifacts/scoreboard/previous.json
+```
+
 ---
 
 ## 🛣 Roadmap (Phases)
