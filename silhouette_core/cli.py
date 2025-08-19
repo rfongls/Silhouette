@@ -81,3 +81,21 @@ def package_cmd(out):
     pathlib.Path(out).mkdir(exist_ok=True, parents=True)
     subprocess.check_call([sys.executable, "-m", "build", "--wheel", "--sdist", "--outdir", out])
     _echo("Artifacts in " + out)
+
+@main.command("quantize")
+@click.option("--method", type=click.Choice(["int8","gguf","onnx-int8"]), required=True)
+@click.option("--src", required=True)
+@click.option("--out", required=True)
+def quantize_cmd(method, src, out):
+    """Quantize/export a student model for edge/CPU deployment."""
+    from scripts.quantize import main as q
+    sys.argv = ["quantize", "--method", method, "--src", src, "--out", out]
+    sys.exit(q())
+
+@main.command("latency")
+def latency_cmd():
+    """Run latency probe."""
+    from scripts.latency_probe import main as lp
+    sys.argv = ["latency_probe"]
+    sys.exit(lp())
+

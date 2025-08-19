@@ -75,3 +75,7 @@
 ## PR-24 Packaging & CLI UX
 - **Scope**: pip package, unified `silhouette` CLI, profiles, wheels include eval suites/profiles/security/templates, CI distribution artifacts.
 - **Acceptance**: `pip install -e .`, `silhouette --help`, `silhouette package --out dist/`.
+
+## PR-25 Edge Quantization & Latency
+- **Scope**: INT8, ONNX INT8, and GGUF export stubs; latency probe edge mode and JSON output.
+- **Acceptance**: `silhouette quantize --method int8 --src models/student-core-kd --out models/student-core-int8`, `SILHOUETTE_EDGE=1 STUDENT_MODEL=models/student-core-int8 silhouette latency`.

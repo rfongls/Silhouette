@@ -133,7 +133,27 @@ silhouette build-runner --suite eval/suites/dev_java_runtime_ext.yaml
 silhouette train --mode sft --cfg config/train.yaml
 silhouette selfcheck --policy profiles/core/policy.yaml
 silhouette package --out dist/
+silhouette quantize --method int8 --src models/student-core-kd --out models/student-core-int8
+SILHOUETTE_EDGE=1 STUDENT_MODEL=models/student-core-int8 silhouette latency
 ```
+
+### Edge Quantization & Latency
+
+You can export student models for edge devices:
+
+```bash
+silhouette quantize --method int8 --src models/student-core-kd --out models/student-core-int8
+silhouette quantize --method onnx-int8 --src models/student-core-kd --out models/student-core-onnx
+silhouette quantize --method gguf --src models/student-core-kd --out models/student-core-gguf
+```
+
+Probe latency in **edge mode**:
+
+```bash
+SILHOUETTE_EDGE=1 STUDENT_MODEL=models/student-core-int8 silhouette latency
+```
+
+Reports are written to `artifacts/latency/latency.json`.
 
 ---
 

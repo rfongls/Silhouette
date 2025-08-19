@@ -1,5 +1,5 @@
 # Common development and CI convenience targets
-.PHONY: dev install build wheel sdist clean repl test eval lint fmt quant-int8 latency selfcheck selfcheck-student runtime-fastapi runtime-ml runtime-web runtime-python runtime-cpp runtime-java-ext runtime-dotnet-ext runtime-android-ext lint-cpp scoreboard scoreboard-phase scoreboard-phase6 promote-skill traces traces-promote security-scan gates
+.PHONY: dev install build wheel sdist clean repl test eval lint fmt quant-int8 quant-onnx quant-gguf latency latency-edge selfcheck selfcheck-student runtime-fastapi runtime-ml runtime-web runtime-python runtime-cpp runtime-java-ext runtime-dotnet-ext runtime-android-ext lint-cpp scoreboard scoreboard-phase scoreboard-phase6 promote-skill traces traces-promote security-scan gates
 
 dev:
 	python -m pip install -U pip
@@ -38,10 +38,19 @@ fmt:
 	ruff check . --fix
 
 quant-int8:
-	python scripts/quantize.py --method int8 --src ${STUDENT_MODEL:-models/student-core-kd} --out models/student-core-int8
+	python scripts/quantize.py --method int8 --src models/student-core-kd --out models/student-core-int8
+
+quant-onnx:
+	python scripts/quantize.py --method onnx-int8 --src models/student-core-kd --out models/student-core-onnx
+
+quant-gguf:
+	python scripts/quantize.py --method gguf --src models/student-core-kd --out models/student-core-gguf
 
 latency:
 	python scripts/latency_probe.py
+
+latency-edge:
+	SILHOUETTE_EDGE=1 STUDENT_MODEL=models/student-core-int8 python scripts/latency_probe.py
 
 selfcheck:
 	python scripts/selfcheck.py --policy profiles/core/policy.yaml

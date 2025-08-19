@@ -43,7 +43,7 @@
 
 ## Phase 9 — Packaging & Deployment (PR-24 → PR-25)
 - PR-24: pip package, unified CLI, profiles, wheels include eval/profiles/security/templates, CI artifacts on release.
-- Edge/on-device quantization targets.
+- PR-25: Edge/on-device targets (GGUF, ONNX INT8); latency probe edge panel.
 - Goal: Make Silhouette Core portable, installable, edge-ready.
 
 ## Phase 10 — Release & Licensing (PR-26 → PR-27)
