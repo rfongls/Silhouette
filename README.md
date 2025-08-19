@@ -172,6 +172,22 @@ ENABLE_RUNTIME_EVAL=1 python -m eval.build_runner --suite eval/suites/dev_python
 
 ---
 
+## 🧠 Training
+
+### Data Flywheel v2 (auto-promote traces)
+
+Passing runtime evals are logged into lane-specific buckets:
+`training_data/flywheel/<lane>/runtime.jsonl`
+
+Curate and deduplicate traces:
+```bash
+make traces-promote
+```
+
+Outputs curated datasets per lane (`curated.jsonl`) ready for SFT/KD.
+
+---
+
 ## 🛡 Security & Compliance
 
 * **SPDX license scanning** with whitelist/denylist.

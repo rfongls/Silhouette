@@ -3,12 +3,11 @@ import argparse
 import json
 import os
 import pathlib
-from security.redaction import DEFAULT_REDACTOR as _redactor
 import time
+from security.redaction import DEFAULT_REDACTOR as _redactor
 
 ART = pathlib.Path("artifacts")
-TRACES = ART / "traces"
-DEFAULT_OUT = TRACES / "runtime_kd.jsonl"
+FLYWHEEL = pathlib.Path("training_data/flywheel")
 
 def _iter_runtime_reports():
     for p in ART.glob("*.build_eval_report.json"):
@@ -42,7 +41,13 @@ def _collect_files(workdir: str, step_logs):
             out.append({"path": str(p.relative_to(root)), "content": content})
     return out
 
-def synthesize_one_report(rep, out_f):
+def _append_trace(path: pathlib.Path, record: dict):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    with open(path, "a", encoding="utf-8") as f:
+        f.write(json.dumps(record, ensure_ascii=False) + "\n")
+
+
+def synthesize_one_report(rep):
     if not rep or rep.get("skipped"):
         return 0
     suite = rep.get("suite", "")
@@ -72,20 +77,18 @@ def synthesize_one_report(rep, out_f):
             "redactions": ["secrets", "urls"],
             "tags": ["runtime"] + suite.split("_"),
         }
-        out_f.write(json.dumps(record, ensure_ascii=False) + "\n")
+        lane = case.get("lane", "misc")
+        lane_out = FLYWHEEL / lane / "runtime.jsonl"
+        _append_trace(lane_out, record)
     return total
 
 def main():
-    ap = argparse.ArgumentParser()
-    ap.add_argument("--out", default=str(DEFAULT_OUT))
-    args = ap.parse_args()
-    os.makedirs(TRACES, exist_ok=True)
+    argparse.ArgumentParser().parse_args()
     n = 0
-    with open(args.out, "w", encoding="utf-8") as f:
-        for p in _iter_runtime_reports():
-            rep = _load_json(p)
-            n += synthesize_one_report(rep, f)
-    print(f"Wrote {n} traces -> {args.out}")
+    for p in _iter_runtime_reports():
+        rep = _load_json(p)
+        n += synthesize_one_report(rep)
+    print(f"Wrote {n} traces -> {FLYWHEEL}")
 
 if __name__ == "__main__":
     main()
