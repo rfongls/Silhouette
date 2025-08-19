@@ -19,6 +19,28 @@ import sys
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent))
 from security.scanner import SPDX_WHITELIST
 
+
+def aggregate_json(runtime_reports, latency):
+    """Build a minimal JSON summary for regression gates."""
+    lanes = {}
+    for rep in runtime_reports or []:
+        if not rep:
+            continue
+        lane = rep.get("lane") or rep.get("suite")
+        if not lane:
+            continue
+        lanes[lane] = {
+            "passed": int(rep.get("passed", 0)),
+            "total": int(rep.get("total", 0)),
+        }
+    lat = {}
+    if isinstance(latency, dict):
+        if latency.get("selfcheck_p50") is not None:
+            lat["selfcheck_p50"] = latency.get("selfcheck_p50")
+        if latency.get("short_answer_p50") is not None:
+            lat["short_answer_p50"] = latency.get("short_answer_p50")
+    return {"lanes": lanes, "latency": lat}
+
 ART_DIR = pathlib.Path("artifacts")
 OUT_DIR = ART_DIR / "scoreboard"
 OUT_PATH = OUT_DIR / "index.html"
@@ -199,6 +221,13 @@ small{color:#666}
     html_text = "\n".join(parts)
     OUT_PATH.write_text(html_text, encoding="utf-8")
     print(f"Wrote scoreboard to {OUT_PATH}")
+
+    # Emit JSON summary for regression gates
+    summary = aggregate_json(runtime_reports, latency)
+    (OUT_DIR / "latest.json").write_text(json.dumps(summary, indent=2))
+    prev_path = OUT_DIR / "previous.json"
+    if not prev_path.exists():
+        prev_path.write_text(json.dumps(summary, indent=2))
 
     # Optional: also write a phase-tagged copy if PHASE env var set
     phase = os.environ.get("PHASE")
