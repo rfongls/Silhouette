@@ -1,5 +1,5 @@
 # Common development and CI convenience targets
-.PHONY: dev install build wheel sdist clean repl test eval lint fmt quant-int8 quant-onnx quant-gguf latency latency-edge selfcheck selfcheck-student runtime-fastapi runtime-ml runtime-web runtime-python runtime-cpp runtime-java-ext runtime-dotnet-ext runtime-android-ext lint-cpp scoreboard scoreboard-phase scoreboard-phase6 promote-skill traces traces-promote security-scan gates
+.PHONY: dev install build wheel sdist clean repl test eval lint fmt quant-int8 quant-onnx quant-gguf latency latency-edge selfcheck selfcheck-student runtime-fastapi runtime-ml runtime-web runtime-python runtime-cpp runtime-java-ext runtime-dotnet-ext runtime-android-ext lint-cpp scoreboard scoreboard-phase scoreboard-phase6 promote-skill traces traces-promote security-scan gates research-index research-eval
 
 dev:
 	python -m pip install -U pip
@@ -105,15 +105,21 @@ security-scan:
 	python -m security.scanner
 
 traces-promote:
-	python scripts/promote_traces.py --lane python
-	python scripts/promote_traces.py --lane java
-	python scripts/promote_traces.py --lane dotnet
-	python scripts/promote_traces.py --lane android
-	python scripts/promote_traces.py --lane web
-	python scripts/promote_traces.py --lane cpp
+        python scripts/promote_traces.py --lane python
+        python scripts/promote_traces.py --lane java
+        python scripts/promote_traces.py --lane dotnet
+        python scripts/promote_traces.py --lane android
+        python scripts/promote_traces.py --lane web
+        python scripts/promote_traces.py --lane cpp
 
 gates:
-	python scripts/regression_gate.py --report artifacts/scoreboard/latest.json --previous artifacts/scoreboard/previous.json
+        python scripts/regression_gate.py --report artifacts/scoreboard/latest.json --previous artifacts/scoreboard/previous.json
+
+research-index:
+	python scripts/research_index_corpus.py docs/corpus
+
+research-eval:
+	silhouette eval --suite eval/suites/research_grounded.yaml
 
 license:
-	python scripts/issue_customer_license.py --customer-id TEST123
+        python scripts/issue_customer_license.py --customer-id TEST123

@@ -52,9 +52,10 @@ The end state (Phase 10) is a **production-ready agent system** that can:
 * **Skills system**: dynamic tool registry (`skills/registry.yaml`), versioned (`name@vN`).  
 * **Runtime evals**: cross-language build/test inside Docker (Java, .NET, Android, Web, Python, C++).  
 * **Linters**: Python (ruff, black), Web/JS (eslint), C++ (clang-tidy optional).  
-* **Offline-first mode**: deterministic stub generation when models are unavailable.  
-* **Training adapters**: SFT + KD wrappers (student models distilled from teacher traces).  
-* **Data Flywheel v2**: runtime traces auto-promoted to curated datasets by lane.  
+* **Offline-first mode**: deterministic stub generation when models are unavailable.
+* **Training adapters**: SFT + KD wrappers (student models distilled from teacher traces).
+* **Research Toolpack (offline)**: read PDF → index (SQLite FTS5) → search/retrieve → cite [n]. Requires citations for research prompts.
+* **Data Flywheel v2**: runtime traces auto-promoted to curated datasets by lane.
 * **Compliance**: SPDX license scan, redaction rules, configurable thresholds.  
 * **Regression gates**: enforce pass-rate thresholds and latency budgets in CI.  
 * **Provenance**: WATERMARK.json in every artifact with repo commit + SHA256.  

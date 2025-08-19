@@ -5,4 +5,30 @@ skills:
     enabled: true
     description: "Fetch JSON from an HTTP endpoint with timeout and minimal error shaping."
 
+  - name: research_read_pdf
+    version: v1
+    entry: tool
+    enabled: true
+    description: "Read a PDF and return segmented sections."
+  - name: research_index
+    version: v1
+    entry: tool
+    enabled: true
+    description: "Update the local research index with sections."
+  - name: research_search
+    version: v1
+    entry: tool
+    enabled: true
+    description: "Search the local research index."
+  - name: research_retrieve
+    version: v1
+    entry: tool
+    enabled: true
+    description: "Retrieve top-K passages with doc/section IDs."
+  - name: research_cite
+    version: v1
+    entry: tool
+    enabled: true
+    description: "Format [n] citations from passage IDs."
+
   # RAG-to-Skill entries will be appended here by scripts/ingest_skill.py
