@@ -188,17 +188,6 @@ ENABLE_RUNTIME_EVAL=1 silhouette build-runner --suite eval/suites/dev_python_fas
 ENABLE_RUNTIME_EVAL=1 silhouette build-runner --suite eval/suites/dev_python_ml_runtime.yaml
 ENABLE_RUNTIME_EVAL=1 silhouette build-runner --suite eval/suites/dev_skill_runtime.yaml
 ```
----
-
-## ⚡ Edge Quantization & Latency
-
-Export student models for edge devices:
-
-```bash
-silhouette quantize --method int8 --src models/student-core-kd --out models/student-core-int8
-silhouette quantize --method onnx-int8 --src models/student-core-kd --out models/student-core-onnx
-silhouette quantize --method gguf --src models/student-core-kd --out models/student-core-gguf
-```
 
 Probe latency in edge mode:
 
@@ -248,6 +237,13 @@ Issue a license and embed provenance:
 silhouette license --customer-id ORG-1234
 ```
 
+### Customer Licensing
+
+Issue a license and embed provenance:
+
+```bash
+silhouette license --customer-id ORG-1234
+```
 Outputs:
 
 * `artifacts/licenses/license_ORG-1234_<date>.md` (rendered contract)
@@ -298,6 +294,7 @@ Silhouette Core uses a structured release pipeline:
 - CI builds and runs regression gates.
 - Artifacts are attached to GitHub release (wheel, scoreboard, compliance, watermark).
 - See [RELEASE.md](RELEASE.md) for full checklist.
+- Final Phase 10 summary: [docs/Phase_10_Completion.md](docs/Phase_10_Completion.md).
 
 ---
 
