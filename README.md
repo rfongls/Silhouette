@@ -246,6 +246,19 @@ Verify:
 python scripts/verify_watermark.py --artifact_dir models/student-core-kd
 ```
 
+### Customer Licensing
+
+Issue a license and embed provenance:
+
+```bash
+silhouette license --customer-id ORG-1234
+```
+
+Outputs:
+
+* `artifacts/licenses/license_ORG-1234_<date>.md` (rendered contract)
+* Updates `WATERMARK.json` with customer_id + license_date
+
 ---
 
 ## 📊 Scoreboards

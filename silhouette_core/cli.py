@@ -98,3 +98,20 @@ def latency_cmd():
     from scripts.latency_probe import main as lp
     sys.argv = ["latency_probe"]
     sys.exit(lp())
+
+@main.command("license")
+@click.option("--customer-id", required=True)
+@click.option("--out", default="artifacts/licenses")
+def license_cmd(customer_id, out):
+    """Issue a customer license and embed ID into WATERMARK.json."""
+    import sys
+    from scripts.issue_customer_license import main as issue
+
+    sys.argv = [
+        "issue_customer_license",
+        "--customer-id",
+        customer_id,
+        "--out",
+        out,
+    ]
+    sys.exit(issue())

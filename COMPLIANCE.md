@@ -3,6 +3,14 @@
 This project includes basic scanning and redaction utilities to help catch common
 issues before artifacts are published.
 
+## Licensing
+
+- Silhouette Core is proprietary.
+- Training, redistribution, or fine-tuning without contract is prohibited.
+- Customer licenses are issued via `scripts/issue_customer_license.py`.
+- Each issued license embeds a `customer_id` into WATERMARK.json for provenance.
+- License artifacts are stored in `artifacts/licenses/`.
+
 ## Security Scanner
 Run the repository scanner to detect secrets, PII, and license violations:
 
