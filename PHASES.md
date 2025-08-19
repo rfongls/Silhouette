@@ -47,7 +47,7 @@
 - Goal: Make Silhouette Core portable, installable, edge-ready.
 
 ## Phase 10 — Release & Licensing (PR-26 → PR-27)
-- Release playbook, artifacts, scoreboard bundle.
-- Customer license issuance tooling, watermark embedding.
+- PR-26: Release playbook (RELEASE.md), CI GitHub release workflow, attach provenance artifacts.
+- PR-27: Customer license issuance tooling, watermark embedding.
 - Goal: Deliver Silhouette Core as a governed, licensable product.
 

@@ -293,6 +293,18 @@ See [PHASES.md](PHASES.md) for full details.
 
 ---
 
+## Release & Licensing
+
+### Release Process
+
+Silhouette Core uses a structured release pipeline:
+- Version bump in `pyproject.toml` + tag push.
+- CI builds and runs regression gates.
+- Artifacts are attached to GitHub release (wheel, scoreboard, compliance, watermark).
+- See [RELEASE.md](RELEASE.md) for full checklist.
+
+---
+
 ## 📜 License
 
 Silhouette Core is **proprietary**.
