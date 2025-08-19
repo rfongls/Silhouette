@@ -88,3 +88,11 @@ traces-promote:
 gates:
 	python scripts/regression_gate.py --report artifacts/scoreboard/latest.json --previous artifacts/scoreboard/previous.json
 
+traces-promote:
+        python scripts/promote_traces.py --lane python
+        python scripts/promote_traces.py --lane java
+        python scripts/promote_traces.py --lane dotnet
+        python scripts/promote_traces.py --lane android
+        python scripts/promote_traces.py --lane web
+        python scripts/promote_traces.py --lane cpp
+
