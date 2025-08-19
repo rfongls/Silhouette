@@ -156,6 +156,10 @@ PY
     - name: Eval (dev-android-advanced)
       run: python -m eval.eval --suite eval/suites/dev_android_advanced.yaml
 
+    - name: Eval — Research (citations)
+      run: |
+        silhouette eval --suite eval/suites/research_grounded.yaml || true
+
     - name: Runtime Eval (Web)  # skips unless enabled
       run: python -m eval.build_runner --suite eval/suites/dev_web_runtime.yaml --require_runtime_env
 
