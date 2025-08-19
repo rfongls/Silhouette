@@ -80,10 +80,10 @@ runtime-java-ext:
 	ENABLE_RUNTIME_EVAL=1 python -m eval.build_runner --suite eval/suites/dev_java_runtime_ext.yaml
 
 runtime-dotnet-ext:
-	ENABLE_RUNTIME_EVAL=1 python -m eval.build_runner --suite eval/suites/dev_dotnet_runtime_ext.yaml
+        ENABLE_RUNTIME_EVAL=1 python -m eval.build_runner --suite eval/suites/dev_dotnet_runtime_ext.yaml
 
 runtime-android-ext:
-	ENABLE_RUNTIME_EVAL=1 python -m eval.build_runner --suite eval/suites/dev_android_runtime_ext.yaml
+        ENABLE_RUNTIME_EVAL=1 python -m eval.build_runner --suite eval/suites/dev_android_runtime_ext.yaml
 
 scoreboard:
 	python scripts/scoreboard.py && python scripts/scoreboard_history.py
@@ -114,3 +114,6 @@ traces-promote:
 
 gates:
 	python scripts/regression_gate.py --report artifacts/scoreboard/latest.json --previous artifacts/scoreboard/previous.json
+
+license:
+	python scripts/issue_customer_license.py --customer-id TEST123

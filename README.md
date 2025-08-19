@@ -135,6 +135,7 @@ silhouette selfcheck --policy profiles/core/policy.yaml
 silhouette package --out dist/
 silhouette quantize --method int8 --src models/student-core-kd --out models/student-core-int8
 SILHOUETTE_EDGE=1 STUDENT_MODEL=models/student-core-int8 silhouette latency
+silhouette license --customer-id ORG-1234
 ```
 
 ### Edge Quantization & Latency
@@ -181,30 +182,28 @@ silhouette run --profile profiles/core/policy.yaml
 Basics:
 
 ```bash
-python -m eval.eval --suite eval/suites/basics.yaml
+silhouette eval --suite eval/suites/basics.yaml
 ```
 
 Developer stacks:
 
 ```bash
-python -m eval.eval --suite eval/suites/dev_python.yaml
-python -m eval.eval --suite eval/suites/dev_java.yaml
-python -m eval.eval --suite eval/suites/dev_dotnet_runtime.yaml
+silhouette eval --suite eval/suites/dev_python.yaml
+silhouette eval --suite eval/suites/dev_java.yaml
+silhouette eval --suite eval/suites/dev_dotnet_runtime.yaml
 ```
 
 Runtime (compile/run in Docker):
 
 ```bash
-ENABLE_RUNTIME_EVAL=1 python -m eval.build_runner --suite eval/suites/dev_java_runtime_ext.yaml
-ENABLE_RUNTIME_EVAL=1 python -m eval.build_runner --suite eval/suites/dev_dotnet_runtime_ext.yaml
-ENABLE_RUNTIME_EVAL=1 python -m eval.build_runner --suite eval/suites/dev_android_runtime_ext.yaml
-```
-
-Web & Python runtime suites (coming in Phase 7 / PR-20):
-
-```bash
-ENABLE_RUNTIME_EVAL=1 python -m eval.build_runner --suite eval/suites/dev_web_runtime.yaml
-ENABLE_RUNTIME_EVAL=1 python -m eval.build_runner --suite eval/suites/dev_python_runtime.yaml
+ENABLE_RUNTIME_EVAL=1 silhouette build-runner --suite eval/suites/dev_java_runtime_ext.yaml
+ENABLE_RUNTIME_EVAL=1 silhouette build-runner --suite eval/suites/dev_dotnet_runtime_ext.yaml
+ENABLE_RUNTIME_EVAL=1 silhouette build-runner --suite eval/suites/dev_android_runtime_ext.yaml
+ENABLE_RUNTIME_EVAL=1 silhouette build-runner --suite eval/suites/dev_web_runtime.yaml
+ENABLE_RUNTIME_EVAL=1 silhouette build-runner --suite eval/suites/dev_python_runtime.yaml
+ENABLE_RUNTIME_EVAL=1 silhouette build-runner --suite eval/suites/dev_python_fastapi_runtime.yaml
+ENABLE_RUNTIME_EVAL=1 silhouette build-runner --suite eval/suites/dev_python_ml_runtime.yaml
+ENABLE_RUNTIME_EVAL=1 silhouette build-runner --suite eval/suites/dev_skill_runtime.yaml
 ```
 
 ---
@@ -245,6 +244,19 @@ Verify:
 ```bash
 python scripts/verify_watermark.py --artifact_dir models/student-core-kd
 ```
+
+### Customer Licensing
+
+Issue a license and embed provenance:
+
+```bash
+silhouette license --customer-id ORG-1234
+```
+
+Outputs:
+
+* `artifacts/licenses/license_ORG-1234_<date>.md` (rendered contract)
+* Updates `WATERMARK.json` with customer_id + license_date
 
 ---
 
@@ -302,6 +314,7 @@ Silhouette Core uses a structured release pipeline:
 - CI builds and runs regression gates.
 - Artifacts are attached to GitHub release (wheel, scoreboard, compliance, watermark).
 - See [RELEASE.md](RELEASE.md) for full checklist.
+- Final Phase 10 summary: [docs/Phase_10_Completion.md](docs/Phase_10_Completion.md).
 
 ---
 

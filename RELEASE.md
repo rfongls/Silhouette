@@ -1,5 +1,7 @@
 # Release Playbook
 
+Milestone reference: [docs/Phase_10_Completion.md](docs/Phase_10_Completion.md)
+
 ## Pre-flight
 - Ensure `main` branch is green (CI + regression gates).
 - Run final selfcheck:

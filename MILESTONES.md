@@ -73,12 +73,21 @@
 - **Acceptance:** Cross-language suites pass; caches effective; scoreboard updated; docs emphasize "general agent" (not platform-specific).
 
 ## PR-24 Packaging & CLI UX
-- **Scope**: pip package, unified `silhouette` CLI, profiles, wheels include eval suites/profiles/security/templates, CI distribution artifacts.
+- **Summary**: pip package and unified `silhouette` CLI; wheels bundle eval suites, profiles, and security templates.
+- **Key files**: `pyproject.toml`, `silhouette_core/cli.py`, `Makefile`.
 - **Acceptance**: `pip install -e .`, `silhouette --help`, `silhouette package --out dist/`.
 
 ## PR-25 Edge Quantization & Latency
-- **Scope**: INT8, ONNX INT8, and GGUF export stubs; latency probe edge mode and JSON output.
+- **Summary**: INT8, ONNX INT8, and GGUF export stubs with edge latency probe.
+- **Key files**: `silhouette_core/cli.py`, `scripts/latency_probe.py`, `Makefile`.
+- **Acceptance**: `silhouette quantize --method int8 --src models/student-core-kd --out models/student-core-int8` and `SILHOUETTE_EDGE=1 STUDENT_MODEL=models/student-core-int8 silhouette latency`.
 
 ## PR-26 Release Playbook & Artifacts
-- **Scope**: RELEASE.md playbook, CI GitHub release workflow, provenance artifact attachments.
+- **Summary**: RELEASE.md playbook and CI GitHub release workflow attaching provenance artifacts.
+- **Key files**: `RELEASE.md`, `.github/workflows/release.yml`.
 - **Acceptance**: tagging `v0.0.1` triggers release workflow uploading wheel, sdist, scoreboard, gate summary, watermark, compliance docs, and license template.
+
+## PR-27 License Ops
+- **Summary**: customer license issuance tooling and watermark embedding.
+- **Key files**: `scripts/issue_customer_license.py`, `silhouette_core/cli.py`, `COMPLIANCE.md`.
+- **Acceptance**: `silhouette license --customer-id TEST123` writes license file and updates `WATERMARK.json`.

@@ -1,15 +1,38 @@
-# Self-Reflective Monitoring
+# Monitoring
 
-Silhouette can monitor its own behavior and memory for drift or persona violations.
-Use the commands below to generate various reports.
+Silhouette tracks evaluation results and regressions to keep the agent honest.
 
-## Commands
-- `:drift-report` – compare recent memory to historical baseline using `config/drift.yml`.
-- `:summary` – generate a short summary of the latest session log in `reports/`.
-- `:persona-audit` – check memory entries against persona rules.
-- `:selfcheck --full` – run all of the above and standard checks together.
-- `:export-profile` – generate a portable agent profile.
-- `python -m silhouette_core.distiller` – produce a compact knowledge distillate.
-- `python -m silhouette_core.package_clone` – build `silhouette_clone_vX.zip`.
-- `:agent deploy <target>` – deploy a clone archive to a host path or `ssh://` URL.
-- `python -m silhouette_core.quantize_models` – convert embeddings for edge runtime.
+## Scoreboard
+
+Generate HTML and JSON summaries of eval results:
+
+```bash
+python scripts/scoreboard.py
+python scripts/scoreboard_history.py
+```
+
+Artifacts:
+- `artifacts/scoreboard/index.html`
+- `artifacts/scoreboard/history.html`
+- `artifacts/scoreboard/latest.json`
+
+## Regression Gates
+
+Compare the latest scores with a previous snapshot. CI fails if pass rates or
+latency exceed configured budgets.
+
+```bash
+python scripts/regression_gate.py --report artifacts/scoreboard/latest.json --previous artifacts/scoreboard/previous.json
+```
+
+Summary is written to `artifacts/gates/gate_summary.json`.
+
+## Latency Probe
+
+Edge mode can measure on-device latency for a quantized model:
+
+```bash
+SILHOUETTE_EDGE=1 STUDENT_MODEL=models/student-core-int8 silhouette latency
+```
+
+The probe writes `artifacts/latency/latency.json`.
