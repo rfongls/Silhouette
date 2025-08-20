@@ -150,3 +150,4 @@ class HL7v2ToFHIRTranslator:
 
 def load_rules(path: str) -> List[MappingRule]:
     raw = yaml.safe_load(open(path))
+    return [MappingRule(**r) for r in raw['resources']]

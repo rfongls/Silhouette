@@ -5,6 +5,10 @@ from jsonschema import validate as js_validate
 from fhir.resources.bundle import Bundle
 from fhir.resources.observation import Observation
 from fhir.resources.patient import Patient
+from fhir.resources.condition import Condition
+from fhir.resources.medicationstatement import MedicationStatement
+from fhir.resources.encounter import Encounter
+from fhir.resources.diagnosticreport import DiagnosticReport
 import pathlib
 
 SCHEMA_DIR = pathlib.Path("schemas/fhir/uscore")
@@ -16,6 +20,10 @@ SCHEMA_INDEX = {
     "Bundle": _load("Bundle.schema.json"),
     "Patient": _load("Patient.schema.json"),
     "Observation": _load("Observation.schema.json"),
+    "Condition": _load("Condition.schema.json"),
+    "MedicationStatement": _load("MedicationStatement.schema.json"),
+    "Encounter": _load("Encounter.schema.json"),
+    "DiagnosticReport": _load("DiagnosticReport.schema.json"),
 }
 
 def validate_uscore_jsonschema(resource: Dict[str, Any]) -> None:
@@ -33,3 +41,11 @@ def validate_structural_with_pydantic(resource: Dict[str, Any]) -> None:
         Patient(**resource)
     elif rtype == "Observation":
         Observation(**resource)
+    elif rtype == "Condition":
+        Condition(**resource)
+    elif rtype == "MedicationStatement":
+        MedicationStatement(**resource)
+    elif rtype == "Encounter":
+        Encounter(**resource)
+    elif rtype == "DiagnosticReport":
+        DiagnosticReport(**resource)
