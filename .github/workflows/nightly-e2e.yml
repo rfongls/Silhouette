@@ -21,7 +21,7 @@ jobs:
           pip install pytest
 
       - name: E2E-focused tests
-        run: pytest -q -k "end_to_end or draft_and_sender or mllp" --maxfail=1
+        run: pytest -q -m hl7 --maxfail=1
 
       - name: Conformance & artifacts
         run: |

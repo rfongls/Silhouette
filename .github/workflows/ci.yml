@@ -1,31 +1,22 @@
-# .github/workflows/ci.yml
 name: Silhouette Core CI
 
 on:
   push:
-    branches:
-      - main
-      - staging
-      - 'train/**'
+    branches: [ main, staging, "train/**" ]
   pull_request:
-    branches:
-      - main
-      - staging
+    branches: [ main, staging ]
 
 jobs:
   build-test-docs:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
+      - uses: actions/checkout@v4
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.10'  # pydantic v1 compatibility for fhir.resources 7.x
-          cache: 'pip'
+          python-version: "3.10"
 
-      - name: Install Python dependencies
+      - name: Install Python deps
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
@@ -37,17 +28,12 @@ jobs:
       - name: Run tests
         run: pytest -q --maxfail=1 --durations=10
 
-      - name: Set up Node (for Mermaid export)
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
-      - name: Export Mermaid diagrams (best-effort)
+      - name: Export Mermaid diagrams
         run: |
           npm i -g @mermaid-js/mermaid-cli || true
           python scripts/export_mermaid.py docs/ || true
 
-      - name: Build Profile Conformance Report (best-effort)
+      - name: Build Profile Conformance Report
         run: python scripts/profile_conformance.py || true
 
       - name: Upload artifacts
