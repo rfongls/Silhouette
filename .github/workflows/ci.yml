@@ -103,6 +103,15 @@ PY
         coverage xml
         coverage report --fail-under=30
 
+    - name: Set up Node for Mermaid
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+    - name: Install mermaid-cli
+      run: npm i -g @mermaid-js/mermaid-cli
+    - name: Export Mermaid diagrams
+      run: python scripts/export_mermaid.py docs/
+
     - name: Smoke-test CLI
       run: |
         python -m cli.main --no-repl
@@ -155,6 +164,21 @@ PY
 
     - name: Eval (dev-android-advanced)
       run: python -m eval.eval --suite eval/suites/dev_android_advanced.yaml
+
+    - name: Eval — Research (citations)
+      run: |
+        silhouette eval --suite eval/suites/research_grounded.yaml || true
+
+    - name: Eval — Cyber (safety gates)
+      run: silhouette eval --suite eval/suites/cyber_safe_modes.yaml
+
+    - name: Eval — CDSE knowledge
+      run: silhouette eval --suite eval/suites/cyber_cdse.yaml
+
+    - name: Eval — Task Orchestrator (dry-run)
+      env:
+        SILHOUETTE_PEN_TEST_OK: '1'
+      run: silhouette eval --suite eval/suites/cyber_taskflows.yaml
 
     - name: Runtime Eval (Web)  # skips unless enabled
       run: python -m eval.build_runner --suite eval/suites/dev_web_runtime.yaml --require_runtime_env
