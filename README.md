@@ -306,6 +306,27 @@ Silhouette Core uses a structured release pipeline:
 
 ---
 
+### HL7 Draft & Send — Web UI (with presets)
+
+1. Start the MLLP server (or point to a partner endpoint).
+   ```bash
+   python -m interfaces.hl7.mllp_server
+   ```
+
+2. Start the web app:
+
+   ```bash
+   uvicorn server:app --reload --port 8080
+   ```
+
+3. Open [http://localhost:8080/ui/hl7](http://localhost:8080/ui/hl7)
+
+   * Pick a message type (VXU, RDE, ORM, OML, ORU:RAD, MDM, ADT, SIU, DFT)
+   * Click **Load Example for Selected Type** to prefill JSON
+   * Edit as needed → **Draft** or **Draft & Send** (sends via MLLP; shows ACK)
+
+Targets in `config/hosts.yaml` populate the host/port dropdown.
+
 ## 📜 License
 
 Silhouette Core is **proprietary**.
