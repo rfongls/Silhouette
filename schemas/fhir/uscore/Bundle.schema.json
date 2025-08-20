@@ -1,0 +1,14 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "USCore Bundle (minimal)",
+  "type": "object",
+  "required": ["resourceType", "type", "entry"],
+  "properties": {
+    "resourceType": { "const": "Bundle" },
+    "type": { "type": "string" },
+    "entry": {
+      "type": "array",
+      "items": { "type": "object", "required": ["resource"] }
+    }
+  }
+}

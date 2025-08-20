@@ -1,0 +1,4 @@
+{
+  "site": "https://in-scope.example",
+  "alerts": [{"risk": "Low", "name": "X-Content-Type-Options header missing"}]
+}
