@@ -109,6 +109,7 @@ PY
         node-version: '20'
     - name: Install mermaid-cli
       run: npm i -g @mermaid-js/mermaid-cli
+      
     - name: Export Mermaid diagrams
       run: python scripts/export_mermaid.py docs/
 
