@@ -349,7 +349,6 @@ Targets in `config/hosts.yaml` populate the host/port dropdown.
 
 If your model supports Tools API, it will return a tool call; otherwise it may emit a JSON fallback the script understands. On success you’ll see a short summary and an ACK (look for `MSA|AA|...`).
 
-
 ### Codex-Driven Tests
 
 - **On push/PR**: CI runs unit + E2E tests, builds the Profile Conformance report, and exports Mermaid diagrams.
