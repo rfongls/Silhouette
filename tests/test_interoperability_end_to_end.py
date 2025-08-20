@@ -24,6 +24,7 @@ def test_oru_to_fhir_e2e_real_hl7():
     assert any(e["resource"]["resourceType"] == "Observation" for e in bundle["entry"])
     assert any(e["resource"]["resourceType"] == "Patient" for e in bundle["entry"])
 
+
 def test_ccd_to_fhir_e2e():
     xml = open("tests/fixtures/cda/sample_ccd.xml").read()
     b = CDAToFHIRTranslator().translate(xml)
