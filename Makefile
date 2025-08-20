@@ -119,7 +119,7 @@ research-index:
 	python scripts/research_index_corpus.py docs/corpus
 
 research-eval:
-	silhouette eval --suite eval/suites/research_grounded.yaml
+        silhouette eval --suite eval/suites/research_grounded.yaml
 
 license:
         python scripts/issue_customer_license.py --customer-id TEST123
@@ -134,9 +134,20 @@ cyber-eval:
         silhouette eval --suite eval/suites/cyber_safe_modes.yaml
         silhouette eval --suite eval/suites/cyber_smoke.yaml || true
 cdse-index:
-	python scripts/cdse_build_index.py
+        python scripts/cdse_build_index.py
 
 cyber-task-web-dry:
-	SILHOUETTE_PEN_TEST_OK=1 silhouette run
-	# In REPL:
-	# > use:cyber_task_orchestrator {"task":"web_baseline","target":"https://in-scope.example","scope_file":"docs/cyber/scope_example.txt","dry_run":true}
+        SILHOUETTE_PEN_TEST_OK=1 silhouette run
+        # In REPL:
+        # > use:cyber_task_orchestrator {"task":"web_baseline","target":"https://in-scope.example","scope_file":"docs/cyber/scope_example.txt","dry_run":true}
+
+
+setup:
+	pip install -r requirements.txt
+	pip install pytest ruff
+
+docs:
+	python scripts/export_mermaid.py docs/
+
+schemas:
+	@echo "JSON Schemas located in schemas/fhir/uscore/"

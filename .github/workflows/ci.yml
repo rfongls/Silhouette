@@ -103,6 +103,15 @@ PY
         coverage xml
         coverage report --fail-under=30
 
+    - name: Set up Node for Mermaid
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+    - name: Install mermaid-cli
+      run: npm i -g @mermaid-js/mermaid-cli
+    - name: Export Mermaid diagrams
+      run: python scripts/export_mermaid.py docs/
+
     - name: Smoke-test CLI
       run: |
         python -m cli.main --no-repl
