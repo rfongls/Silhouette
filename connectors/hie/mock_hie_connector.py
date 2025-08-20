@@ -15,3 +15,4 @@ class MockHIEConnector:
             what=f"RLS query for patient_id={patient_id}",
         )
         emit_and_persist(evt)
+        return results

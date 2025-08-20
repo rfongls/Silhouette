@@ -112,7 +112,7 @@ PY
       
     - name: Export Mermaid diagrams
       run: python scripts/export_mermaid.py docs/
-      
+
     - name: Generate Profile Conformance Report
       run: python scripts/profile_conformance.py
 

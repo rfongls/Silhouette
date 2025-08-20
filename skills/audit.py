@@ -8,6 +8,7 @@ REPORTS_DIR = pathlib.Path("reports")
 REPORTS_DIR.mkdir(exist_ok=True, parents=True)
 AUDIT_FILE = REPORTS_DIR / "audit_events.ndjson"
 
+
 def fhir_audit_event(action: str, outcome: str, who: str, what: str) -> Dict[str, Any]:
     return {
         "resourceType": "AuditEvent",
