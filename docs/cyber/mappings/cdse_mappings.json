@@ -1,0 +1,7 @@
+{
+  "open port": ["System Management: Configuration Baselines"],
+  "ssl": ["System Management: Encryption & TLS"],
+  "critical vulnerability": ["Risk Management: Vulnerability Remediation"],
+  "terraform": ["Supply Chain: IaC Security"],
+  "kubernetes": ["System Management: Container/K8s Hardening"]
+}

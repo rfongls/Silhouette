@@ -1,0 +1,28 @@
+{
+  "resourceType": "Bundle",
+  "type": "collection",
+  "entry": [
+    {
+      "resource": {
+        "resourceType": "Patient",
+        "identifier": [{"value": "123456"}],
+        "name": [{"family": "DOE", "given": ["JOHN"]}],
+        "birthDate": "1980-01-01"
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Observation",
+        "code": {"coding":[{"system":"http://loinc.org","code":"718-7"}]},
+        "valueQuantity": {"value": 13.6, "unit": "g/dL"}
+      }
+    },
+    {
+      "resource": {
+        "resourceType": "Observation",
+        "code": {"coding":[{"system":"http://loinc.org","code":"4548-4"}]},
+        "valueQuantity": {"value": 41.2, "unit": "%"}
+      }
+    }
+  ]
+}

@@ -1,0 +1,8 @@
+name: cyber_cdse
+cases:
+  - id: checklist_sys_mgmt
+    prompt: "use:cyber_checklist_cdse system management"
+    expect_contains: ["[1]", "System Management"]
+  - id: reference_lookup
+    prompt: "use:cyber_reference_cdse baseline configuration"
+    expect_regex: ["\\[[1-9]\\]"]

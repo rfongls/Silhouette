@@ -6,3 +6,4 @@ psutil
 pyyaml>=6.0
 pytest>=8.0
 ruff>=0.4
+pypdf>=4.2
