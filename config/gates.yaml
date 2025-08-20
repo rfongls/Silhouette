@@ -7,6 +7,8 @@ lanes:
   dotnet:   { min_pass_rate: 0.75 }
   android:  { min_pass_rate: 0.60 }
   cpp:      { min_pass_rate: 0.70 }
+  research: { min_pass_rate: 0.70 }
+  cyber:    { min_pass_rate: 0.70 }
 
 # Latency p50 (seconds) budgets
 latency:

@@ -1,0 +1,5 @@
+name: cyber_smoke
+cases:
+  - id: cis_local
+    prompt: "use:cyber_cis_audit"
+    expect_contains: ["ssh_permit_root_login"]

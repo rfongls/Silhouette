@@ -1,0 +1,4 @@
+# Explicitly authorized hosts/CIDRs and URLs for scanning
+192.168.1.10
+192.168.1.0/24
+https://intranet.example
