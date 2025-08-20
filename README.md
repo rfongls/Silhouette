@@ -55,6 +55,7 @@ The end state (Phase 10) is a **production-ready agent system** that can:
 * **Offline-first mode**: deterministic stub generation when models are unavailable.
 * **Training adapters**: SFT + KD wrappers (student models distilled from teacher traces).
 * **Research Toolpack (offline)**: read PDF → index (SQLite FTS5) → search/retrieve → cite [n]. Requires citations for research prompts.
+
 * **Cybersecurity Toolpack**: authorized scans & audits — Nmap (host/top-1000), OWASP ZAP baseline, Trivy (image/fs), Checkov (IaC), CIS local checks, CVE lookup; scope-guarded & containerized.
 * **Data Flywheel v2**: runtime traces auto-promoted to curated datasets by lane.
 * **Compliance**: SPDX license scan, redaction rules, configurable thresholds.  
