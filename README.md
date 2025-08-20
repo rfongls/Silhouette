@@ -327,6 +327,14 @@ Silhouette Core uses a structured release pipeline:
 
 Targets in `config/hosts.yaml` populate the host/port dropdown.
 
+### Codex-Driven Tests
+
+- **On push/PR**: CI runs unit + E2E tests, builds the Profile Conformance report, and exports Mermaid diagrams.
+- **On demand**: Comment `/codex test` on any PR to re-run tests and artifact generation.
+- **Nightly (optional)**: A daily E2E subset runs on `main`. Enable/disable in `.github/workflows/nightly-e2e.yml`.
+
+Artifacts (audit logs, conformance report, SVG diagrams) are attached to each workflow run under “Artifacts”.
+
 ## 📜 License
 
 Silhouette Core is **proprietary**.
