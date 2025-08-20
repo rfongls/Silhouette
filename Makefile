@@ -123,3 +123,13 @@ research-eval:
 
 license:
         python scripts/issue_customer_license.py --customer-id TEST123
+
+cyber-scope:
+	@echo "192.168.1.10" > docs/cyber/scope_example.txt
+
+cyber-nmap:
+	SILHOUETTE_PEN_TEST_OK=1 silhouette run --profile profiles/core/policy.yaml
+
+cyber-eval:
+	silhouette eval --suite eval/suites/cyber_safe_modes.yaml
+	silhouette eval --suite eval/suites/cyber_smoke.yaml || true

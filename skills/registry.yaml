@@ -30,5 +30,35 @@ skills:
     entry: tool
     enabled: true
     description: "Format [n] citations from passage IDs."
+  - name: cyber_nmap_scan
+    version: v1
+    entry: tool
+    enabled: true
+    description: "Run an authorized Nmap scan (TCP/1000) on targets in scope file."
+  - name: cyber_zap_baseline
+    version: v1
+    entry: tool
+    enabled: true
+    description: "Run OWASP ZAP baseline scan against in-scope web target."
+  - name: cyber_trivy_scan
+    version: v1
+    entry: tool
+    enabled: true
+    description: "Scan a container image or directory for vulnerabilities (Trivy)."
+  - name: cyber_checkov_scan
+    version: v1
+    entry: tool
+    enabled: true
+    description: "Scan IaC (Terraform/CloudFormation/K8s) using Checkov."
+  - name: cyber_cis_audit
+    version: v1
+    entry: tool
+    enabled: true
+    description: "Run basic CIS-style local host checks (non-invasive)."
+  - name: cyber_vuln_lookup
+    version: v1
+    entry: tool
+    enabled: true
+    description: "Lookup CVE details from local NVD/OSV cache (offline)."
 
   # RAG-to-Skill entries will be appended here by scripts/ingest_skill.py

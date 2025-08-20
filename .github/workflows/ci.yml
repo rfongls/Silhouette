@@ -160,6 +160,9 @@ PY
       run: |
         silhouette eval --suite eval/suites/research_grounded.yaml || true
 
+    - name: Eval — Cyber (safety gates)
+      run: silhouette eval --suite eval/suites/cyber_safe_modes.yaml
+
     - name: Runtime Eval (Web)  # skips unless enabled
       run: python -m eval.build_runner --suite eval/suites/dev_web_runtime.yaml --require_runtime_env
 
