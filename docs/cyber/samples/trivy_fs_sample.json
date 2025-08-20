@@ -1,0 +1,4 @@
+{
+  "target": "./",
+  "vulnerabilities": [{"id": "CVE-2024-0001", "severity": "CRITICAL"}]
+}
