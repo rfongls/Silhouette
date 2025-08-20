@@ -117,6 +117,36 @@ Usage:
 > use:http_get_json https://api.example.com/data
 ```
 
+**Research Toolpack flow**
+
+```
+> use:research_read_pdf docs/corpus/report_2023.pdf
+> use:research_index <paste JSON>
+> use:research_retrieve {"query":"telehealth rural outcomes","k":3}
+> Summarize findings and include citations.
+```
+
+**Cybersecurity Toolpack**
+
+Create a scope file and enable scanning:
+
+```bash
+export SILHOUETTE_PEN_TEST_OK=1
+echo "192.168.1.10" > docs/cyber/scope_example.txt
+```
+
+Example REPL calls:
+
+```
+> use:cyber_nmap_scan {"target":"192.168.1.10","scope_file":"docs/cyber/scope_example.txt"}
+> use:cyber_zap_baseline {"url":"https://intranet.example","scope_file":"docs/cyber/scope_example.txt"}
+> use:cyber_trivy_scan {"dir":"docs/cyber"}
+> use:cyber_checkov_scan {"dir":"docs/cyber"}
+```
+
+See [COMPLIANCE.md](../COMPLIANCE.md) for authorization rules.
+
+
 ---
 
 ## 5. Evaluations
@@ -133,6 +163,22 @@ Cross-language runtimes (via Docker):
 ENABLE_RUNTIME_EVAL=1 silhouette build-runner --suite eval/suites/dev_python_runtime.yaml
 ENABLE_RUNTIME_EVAL=1 silhouette build-runner --suite eval/suites/dev_web_runtime.yaml
 ```
+
+Research eval (citations required):
+
+```bash
+silhouette eval --suite eval/suites/research_grounded.yaml
+```
+Cybersecurity evals:
+
+```bash
+silhouette eval --suite eval/suites/cyber_safe_modes.yaml
+silhouette eval --suite eval/suites/cyber_smoke.yaml
+```
+
+
+Gates include a `research` lane with a citation pass-rate threshold.
+Gates also include a `cyber` lane for scan safety checks.
 
 ---
 
