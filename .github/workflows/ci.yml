@@ -48,14 +48,14 @@ jobs:
         black_rc=$?
         set -e
         python - "$ruff_rc" "$black_rc" <<'PY'
-import json, sys, pathlib
-ruff_rc=int(sys.argv[1]); black_rc=int(sys.argv[2])
-ruff_log=pathlib.Path("artifacts/ruff.log").read_text().strip().splitlines()
-black_log=pathlib.Path("artifacts/black.log").read_text().strip().splitlines()
-issues=len([l for l in ruff_log if l]) + sum("would be reformatted" in l for l in black_log)
-py_ok=(ruff_rc==0 and black_rc==0)
-pathlib.Path("artifacts/lint_python.json").write_text(json.dumps({"ok": py_ok, "issues": issues}))
-PY
+        import json, sys, pathlib
+        ruff_rc=int(sys.argv[1]); black_rc=int(sys.argv[2])
+        ruff_log=pathlib.Path("artifacts/ruff.log").read_text().strip().splitlines()
+        black_log=pathlib.Path("artifacts/black.log").read_text().strip().splitlines()
+        issues=len([l for l in ruff_log if l]) + sum("would be reformatted" in l for l in black_log)
+        py_ok=(ruff_rc==0 and black_rc==0)
+        pathlib.Path("artifacts/lint_python.json").write_text(json.dumps({"ok": py_ok, "issues": issues}))
+        PY
     - name: Lint JS
       run: |
         npm install eslint@9
@@ -65,14 +65,14 @@ PY
         js_rc=$?
         set -e
         python - "$js_rc" <<'PY'
-import json, sys, pathlib
-js_rc=int(sys.argv[1])
-data=pathlib.Path("artifacts/eslint.json").read_text() or "[]"
-rep=json.loads(data)
-issues=sum(f.get("errorCount",0)+f.get("warningCount",0) for f in rep)
-ok=(js_rc==0 and issues==0)
-pathlib.Path("artifacts/lint_js.json").write_text(json.dumps({"ok": ok, "issues": issues}))
-PY
+        import json, sys, pathlib
+        js_rc=int(sys.argv[1])
+        data=pathlib.Path("artifacts/eslint.json").read_text() or "[]"
+        rep=json.loads(data)
+        issues=sum(f.get("errorCount",0)+f.get("warningCount",0) for f in rep)
+        ok=(js_rc==0 and issues==0)
+        pathlib.Path("artifacts/lint_js.json").write_text(json.dumps({"ok": ok, "issues": issues}))
+        PY
 
     - name: Lint C++
       run: |
@@ -89,13 +89,13 @@ PY
         fi
         set -e
         python - "$rc" <<'PY'
-import json, sys, pathlib
-rc=int(sys.argv[1])
-log=pathlib.Path("artifacts/clang-tidy.log").read_text().splitlines()
-issues=sum(1 for l in log if l.strip())
-ok=(rc==0 and issues==0)
-pathlib.Path("artifacts/lint_cpp.json").write_text(json.dumps({"ok": ok, "issues": issues}))
-PY
+        import json, sys, pathlib
+        rc=int(sys.argv[1])
+        log=pathlib.Path("artifacts/clang-tidy.log").read_text().splitlines()
+        issues=sum(1 for l in log if l.strip())
+        ok=(rc==0 and issues==0)
+        pathlib.Path("artifacts/lint_cpp.json").write_text(json.dumps({"ok": ok, "issues": issues}))
+        PY
 
     - name: Run unit tests with coverage
       run: |
@@ -205,20 +205,21 @@ PY
     - name: Runtime Eval (Skill)  # skips unless enabled
       run: python -m eval.build_runner --suite eval/suites/dev_skill_runtime.yaml --require_runtime_env
 
-      - name: Cross-Lang Runtime Eval — Java (extended)
+    - name: Cross-Lang Runtime Eval — Java (extended)
       run: |
         ENABLE_RUNTIME_EVAL=1 python -m eval.build_runner --suite eval/suites/dev_java_runtime_ext.yaml --require_runtime_env
 
-      - name: Cross-Lang Runtime Eval — .NET (extended)
+    - name: Cross-Lang Runtime Eval — .NET (extended)
       run: |
         ENABLE_RUNTIME_EVAL=1 python -m eval.build_runner --suite eval/suites/dev_dotnet_runtime_ext.yaml --require_runtime_env
 
-        - name: Cross-Lang Runtime Eval — Android (extended)
-        run: |
-          ENABLE_RUNTIME_EVAL=1 python -m eval.build_runner --suite eval/suites/dev_android_runtime_ext.yaml --require_runtime_env
-        - name: Cross-Lang Runtime Eval — C++ (extended)
-        run: |
-          ENABLE_RUNTIME_EVAL=1 python -m eval.build_runner --suite eval/suites/dev_cpp_runtime.yaml --require_runtime_env
+    - name: Cross-Lang Runtime Eval — Android (extended)
+      run: |
+        ENABLE_RUNTIME_EVAL=1 python -m eval.build_runner --suite eval/suites/dev_android_runtime_ext.yaml --require_runtime_env
+
+    - name: Cross-Lang Runtime Eval — C++ (extended)
+      run: |
+        ENABLE_RUNTIME_EVAL=1 python -m eval.build_runner --suite eval/suites/dev_cpp_runtime.yaml --require_runtime_env
 
     - name: Synthesize KD Traces (from runtime)
       run: |
@@ -253,7 +254,7 @@ PY
           --license_denylist GPL-3.0,AGPL-3.0,MPL-2.0 \
           --max_high 0 --max_medium 0 --max_low 999
 
-      - name: Scoreboard (Phase-6 snapshot + history)
+    - name: Scoreboard (Phase-6 snapshot + history)
       run: |
         python scripts/scoreboard.py
         PHASE=phase-6 python scripts/scoreboard.py
