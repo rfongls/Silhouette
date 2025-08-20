@@ -131,5 +131,12 @@ cyber-nmap:
 	SILHOUETTE_PEN_TEST_OK=1 silhouette run --profile profiles/core/policy.yaml
 
 cyber-eval:
-	silhouette eval --suite eval/suites/cyber_safe_modes.yaml
-	silhouette eval --suite eval/suites/cyber_smoke.yaml || true
+        silhouette eval --suite eval/suites/cyber_safe_modes.yaml
+        silhouette eval --suite eval/suites/cyber_smoke.yaml || true
+cdse-index:
+	python scripts/cdse_build_index.py
+
+cyber-task-web-dry:
+	SILHOUETTE_PEN_TEST_OK=1 silhouette run
+	# In REPL:
+	# > use:cyber_task_orchestrator {"task":"web_baseline","target":"https://in-scope.example","scope_file":"docs/cyber/scope_example.txt","dry_run":true}

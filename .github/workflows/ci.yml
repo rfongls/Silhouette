@@ -163,6 +163,14 @@ PY
     - name: Eval — Cyber (safety gates)
       run: silhouette eval --suite eval/suites/cyber_safe_modes.yaml
 
+    - name: Eval — CDSE knowledge
+      run: silhouette eval --suite eval/suites/cyber_cdse.yaml
+
+    - name: Eval — Task Orchestrator (dry-run)
+      env:
+        SILHOUETTE_PEN_TEST_OK: '1'
+      run: silhouette eval --suite eval/suites/cyber_taskflows.yaml
+
     - name: Runtime Eval (Web)  # skips unless enabled
       run: python -m eval.build_runner --suite eval/suites/dev_web_runtime.yaml --require_runtime_env
 

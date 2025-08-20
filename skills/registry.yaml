@@ -62,3 +62,28 @@ skills:
     description: "Lookup CVE details from local NVD/OSV cache (offline)."
 
   # RAG-to-Skill entries will be appended here by scripts/ingest_skill.py
+  - name: cyber_checklist_cdse
+    version: v1
+    entry: tool
+    enabled: true
+    description: "Return CDSE/NIST checklist items by domain."
+  - name: cyber_reference_cdse
+    version: v1
+    entry: tool
+    enabled: true
+    description: "Lookup CDSE/NIST reference sections and return citations."
+  - name: cyber_control_mapper
+    version: v1
+    entry: tool
+    enabled: true
+    description: "Map scan findings to CDSE/NIST control families."
+  - name: cyber_task_orchestrator
+    version: v1
+    entry: tool
+    enabled: true
+    description: "Perform orchestrated tasks (e.g., baseline web assessment) and write a cited report."
+  - name: cyber_report_writer
+    version: v1
+    entry: tool
+    enabled: true
+    description: "Compile Markdown report with findings, mapped controls, and references."

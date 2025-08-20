@@ -37,4 +37,4 @@ python scripts/verify_watermark.py --artifact_dir models/student-core-kd
 
 ## Authorized Scans & Scope
 - All network scanning requires `SILHOUETTE_PEN_TEST_OK=1` and an approved scope file.
-- Scan outputs are written to `artifacts/cyber/` with timestamps.
+- Scan outputs and assessment reports are written to `artifacts/cyber/` with timestamps.

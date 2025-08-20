@@ -147,6 +147,26 @@ Example REPL calls:
 See [COMPLIANCE.md](../COMPLIANCE.md) for authorization rules.
 
 
+## Cybersecurity Toolpack + CDSE/NIST
+
+After indexing the CDSE content:
+
+```bash
+make cdse-index
+```
+
+Then run an orchestrated dry-run assessment:
+
+```bash
+export SILHOUETTE_PEN_TEST_OK=1
+echo "192.168.1.10" > docs/cyber/scope_example.txt
+silhouette run
+> use:cyber_task_orchestrator {"task":"web_baseline","target":"https://in-scope.example","scope_file":"docs/cyber/scope_example.txt","dry_run":true}
+```
+
+The agent writes a Markdown report under `artifacts/cyber/reports/` with mapped controls and references.
+
+
 ---
 
 ## 5. Evaluations
