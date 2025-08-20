@@ -8,9 +8,9 @@
     .row { display: flex; gap: 16px; flex-wrap: wrap; }
     label { font-weight: 600; display:block; margin: 8px 0 4px; }
     select, input[type=text], input[type=number], textarea { width: 100%; padding:8px; box-sizing: border-box; }
-    textarea { height: 200px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    textarea { height: 240px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
     .col { flex: 1 1 320px; min-width: 320px; }
-    .btns { display: flex; gap: 12px; margin-top: 12px; }
+    .btns { display: flex; gap: 12px; margin-top: 12px; flex-wrap: wrap; }
     button { padding: 10px 16px; cursor: pointer; }
     pre { background:#f6f8fa; padding:12px; border-radius:8px; overflow:auto; }
     .error { background: #ffecec; color: #b00020; padding: 10px; border-radius: 6px; margin-top: 10px; }
@@ -57,8 +57,11 @@
       <div class="col" style="flex: 1 1 100%;">
         <label for="json_data">Message Data (JSON for template)</label>
         <textarea id="json_data" name="json_data" placeholder='{"patient_id":"123456","cvx_code":"208"}'>{{ json_data or '' }}</textarea>
+        <div class="btns">
+          <button id="load_example_btn">Load Example for Selected Type</button>
+        </div>
         <small>
-          Example for VXU: <code>{"patient_id":"123456","cvx_code":"208","given":"JOHN","family":"DOE"}</code>
+          Presets load from <code>/static/hl7_ui.js</code>. Edit values as needed before Draft/Send.
         </small>
       </div>
     </div>
@@ -81,5 +84,6 @@
     <h2>ACK</h2>
     <pre>{{ result.ack | e }}</pre>
   {% endif %}
+  <script src="/static/hl7_ui.js"></script>
 </body>
 </html>

@@ -306,6 +306,35 @@ Silhouette Core uses a structured release pipeline:
 
 ---
 
+### HL7 Draft & Send — Web UI (with presets)
+
+1. Start the MLLP server (or point to a partner endpoint).
+   ```bash
+   python -m interfaces.hl7.mllp_server
+   ```
+
+2. Start the web app:
+
+   ```bash
+   uvicorn server:app --reload --port 8080
+   ```
+
+3. Open [http://localhost:8080/ui/hl7](http://localhost:8080/ui/hl7)
+
+   * Pick a message type (VXU, RDE, ORM, OML, ORU:RAD, MDM, ADT, SIU, DFT)
+   * Click **Load Example for Selected Type** to prefill JSON
+   * Edit as needed → **Draft** or **Draft & Send** (sends via MLLP; shows ACK)
+
+Targets in `config/hosts.yaml` populate the host/port dropdown.
+
+### Codex-Driven Tests
+
+- **On push/PR**: CI runs unit + E2E tests, builds the Profile Conformance report, and exports Mermaid diagrams.
+- **On demand**: Comment `/codex test` on any PR to re-run tests and artifact generation.
+- **Nightly (optional)**: A daily E2E subset runs on `main`. Enable/disable in `.github/workflows/nightly-e2e.yml`.
+
+Artifacts (audit logs, conformance report, SVG diagrams) are attached to each workflow run under “Artifacts”.
+
 ## 📜 License
 
 Silhouette Core is **proprietary**.
