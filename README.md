@@ -58,12 +58,16 @@ The end state (Phase 10) is a **production-ready agent system** that can:
 * **Cybersecurity Toolpack**: authorized scans & audits — Nmap (host/top-1000), OWASP ZAP baseline, Trivy (image/fs), Checkov (IaC), CIS local checks, CVE lookup; scope-guarded & containerized.
 * **Cybersecurity Reference Pack**: CDSE/NIST checklists and references mapped to findings, plus task orchestration that produces cited assessment reports.
 * **Data Flywheel v2**: runtime traces auto-promoted to curated datasets by lane.
-* **Compliance**: SPDX license scan, redaction rules, configurable thresholds.  
-* **Regression gates**: enforce pass-rate thresholds and latency budgets in CI.  
-* **Provenance**: WATERMARK.json in every artifact with repo commit + SHA256.  
-* **Self-replication**: export profiles, distill knowledge, quantize models, package clones.  
-* **Release governance**: structured release pipeline with attached compliance and provenance artifacts.  
-* **Customer licensing**: issue per-customer license files and embed IDs into WATERMARK.json.  
+* **Compliance**: SPDX license scan, redaction rules, configurable thresholds.
+* **Regression gates**: enforce pass-rate thresholds and latency budgets in CI.
+* **Provenance**: WATERMARK.json in every artifact with repo commit + SHA256.
+* **Self-replication**: export profiles, distill knowledge, quantize models, package clones.
+* **Release governance**: structured release pipeline with attached compliance and provenance artifacts.
+* **Customer licensing**: issue per-customer license files and embed IDs into WATERMARK.json.
+
+### Interoperability at a glance
+
+Ready-made diagrams cover HL7 v2 ↔ FHIR mapping, TEFCA/QHIN flows, IHE XDS.b exchanges, Direct Secure Messaging, SMART on FHIR authorization, prior authorization (FHIR + X12), MDM entity resolution, and HIE record locator queries. See [docs/interoperability](docs/interoperability/).
 
 ---
 
