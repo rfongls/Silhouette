@@ -30,7 +30,6 @@ skills:
     entry: tool
     enabled: true
     description: "Format [n] citations from passage IDs."
-
   - name: cyber_nmap_scan
     version: v1
     entry: tool
