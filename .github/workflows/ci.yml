@@ -44,3 +44,4 @@ jobs:
             reports/
             docs/**/svg/*.svg
             logs/
+          if-no-files-found: warn
