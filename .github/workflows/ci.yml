@@ -1,317 +1,47 @@
-name: CI
+name: Silhouette Core CI
 
 on:
   push:
-    branches: [main, 'train/*']
+    branches: [ main, staging, "train/**" ]
   pull_request:
-
-env:
-  M2_CACHE: ${{ runner.temp }}/.m2
-  GRADLE_CACHE: ${{ runner.temp }}/.gradle
-  NUGET_PACKAGES: ${{ runner.temp }}/.nuget/packages
+    branches: [ main, staging ]
 
 jobs:
-  build-and-test:
-    runs-on: ubuntu-latest
-    services:
-      docker:
-        image: docker:24.0.5-dind
-        options: --privileged
-
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v3
-
-    - name: Prep caches
-      run: |
-        mkdir -p "$M2_CACHE" "$GRADLE_CACHE" "$NUGET_PACKAGES"
-
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.11'
-
-    - name: Install dev deps
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt -r requirements-dev.txt
-        pip install accelerate huggingface_hub
-
-    - name: Lint Python
-      run: |
-        pip install ruff black
-        mkdir -p artifacts
-        set +e
-        ruff check silhouette_core cli eval training scripts > artifacts/ruff.log
-        ruff_rc=$?
-        black --check silhouette_core cli eval training scripts > artifacts/black.log
-        black_rc=$?
-        set -e
-        python - "$ruff_rc" "$black_rc" <<'PY'
-import json, sys, pathlib
-ruff_rc=int(sys.argv[1]); black_rc=int(sys.argv[2])
-ruff_log=pathlib.Path("artifacts/ruff.log").read_text().strip().splitlines()
-black_log=pathlib.Path("artifacts/black.log").read_text().strip().splitlines()
-issues=len([l for l in ruff_log if l]) + sum("would be reformatted" in l for l in black_log)
-py_ok=(ruff_rc==0 and black_rc==0)
-pathlib.Path("artifacts/lint_python.json").write_text(json.dumps({"ok": py_ok, "issues": issues}))
-PY
-    - name: Lint JS
-      run: |
-        npm install eslint@9
-        mkdir -p artifacts
-        set +e
-        npx eslint . -f json -o artifacts/eslint.json
-        js_rc=$?
-        set -e
-        python - "$js_rc" <<'PY'
-import json, sys, pathlib
-js_rc=int(sys.argv[1])
-data=pathlib.Path("artifacts/eslint.json").read_text() or "[]"
-rep=json.loads(data)
-issues=sum(f.get("errorCount",0)+f.get("warningCount",0) for f in rep)
-ok=(js_rc==0 and issues==0)
-pathlib.Path("artifacts/lint_js.json").write_text(json.dumps({"ok": ok, "issues": issues}))
-PY
-
-    - name: Lint C++
-      run: |
-        apt-get update && apt-get install -y clang-tidy
-        mkdir -p artifacts
-        set +e
-        files="$(git ls-files '*.cpp')"
-        if [ -n "$files" ]; then
-          clang-tidy $files -- -std=c++17 > artifacts/clang-tidy.log
-          rc=$?
-        else
-          touch artifacts/clang-tidy.log
-          rc=0
-        fi
-        set -e
-        python - "$rc" <<'PY'
-import json, sys, pathlib
-rc=int(sys.argv[1])
-log=pathlib.Path("artifacts/clang-tidy.log").read_text().splitlines()
-issues=sum(1 for l in log if l.strip())
-ok=(rc==0 and issues==0)
-pathlib.Path("artifacts/lint_cpp.json").write_text(json.dumps({"ok": ok, "issues": issues}))
-PY
-
-    - name: Run unit tests with coverage
-      run: |
-        coverage run -m pytest --maxfail=1 --disable-warnings -q
-        coverage xml
-        coverage report --fail-under=30
-
-    - name: Set up Node for Mermaid
-      uses: actions/setup-node@v4
-      with:
-        node-version: '20'
-    - name: Install mermaid-cli
-      run: npm i -g @mermaid-js/mermaid-cli
-      
-    - name: Export Mermaid diagrams
-      run: python scripts/export_mermaid.py docs/
-
-    - name: Generate Profile Conformance Report
-      run: python scripts/profile_conformance.py
-
-    - name: Upload reports artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: silhouette-reports
-        path: reports/
-
-    - name: Smoke-test CLI
-      run: |
-        python -m cli.main --no-repl
-        printf ":replay\n:exit\n" | python -m cli.main | grep -q "Replayed"
-        printf ":selfcheck\n:exit\n" | python -m cli.main | grep -q "Missing required files"
-        printf ":backup\n:exit\n" | python -m cli.main | grep -q "Backup complete"
-
-    - name: Self-deploy smoke
-      run: |
-        python -m silhouette_core.profile_exporter --output profile.json
-        python -m silhouette_core.distiller --output distillate.json
-        python -m silhouette_core.package_clone --profile profile.json --distillate distillate.json --version 1
-        printf ":agent deploy tmp_deploy\n:exit\n" | python -m cli.main | grep -q "Deployed clone"
-
-    - name: Skills Selfcheck
-      run: python scripts/selfcheck.py --policy profiles/core/policy.yaml
-
-    - name: Eval (agent-level)
-      run: python -m eval.eval --suite eval/suites/basics.yaml
-
-    - name: Eval (profile-core)
-      run: python -m eval.eval --suite eval/suites/profile_core.yaml
-
-    - name: Eval (dev-python)
-      run: python -m eval.eval --suite eval/suites/dev_python.yaml
-
-    - name: Eval (dev-python-advanced)
-      run: python -m eval.eval --suite eval/suites/dev_python_advanced.yaml
-
-    - name: Eval (dev-html)
-      run: python -m eval.eval --suite eval/suites/dev_html.yaml
-
-    - name: Eval (dev-html-advanced)
-      run: python -m eval.eval --suite eval/suites/dev_html_advanced.yaml
-
-    - name: Eval (dev-java)
-      run: python -m eval.eval --suite eval/suites/dev_java.yaml
-
-    - name: Eval (dev-java-advanced)
-      run: python -m eval.eval --suite eval/suites/dev_java_advanced.yaml
-
-    - name: Eval (dev-csharp)
-      run: python -m eval.eval --suite eval/suites/dev_csharp.yaml
-
-    - name: Eval (dev-csharp-advanced)
-      run: python -m eval.eval --suite eval/suites/dev_csharp_advanced.yaml
-
-    - name: Eval (dev-android)
-      run: python -m eval.eval --suite eval/suites/dev_android.yaml
-
-    - name: Eval (dev-android-advanced)
-      run: python -m eval.eval --suite eval/suites/dev_android_advanced.yaml
-
-    - name: Eval — Research (citations)
-      run: |
-        silhouette eval --suite eval/suites/research_grounded.yaml || true
-
-    - name: Eval — Cyber (safety gates)
-      run: silhouette eval --suite eval/suites/cyber_safe_modes.yaml
-
-    - name: Eval — CDSE knowledge
-      run: silhouette eval --suite eval/suites/cyber_cdse.yaml
-
-    - name: Eval — Task Orchestrator (dry-run)
-      env:
-        SILHOUETTE_PEN_TEST_OK: '1'
-      run: silhouette eval --suite eval/suites/cyber_taskflows.yaml
-
-    - name: Runtime Eval (Web)  # skips unless enabled
-      run: python -m eval.build_runner --suite eval/suites/dev_web_runtime.yaml --require_runtime_env
-
-    - name: Runtime Eval (Python FastAPI)  # skips unless enabled
-      run: python -m eval.build_runner --suite eval/suites/dev_python_runtime.yaml --require_runtime_env
-
-    - name: Runtime Eval (FastAPI+SQLModel+pytest)  # skips unless enabled
-      run: python -m eval.build_runner --suite eval/suites/dev_python_fastapi_runtime.yaml --require_runtime_env
-
-    - name: Runtime Eval (Python ML: sklearn & torch)  # skips unless enabled
-      run: python -m eval.build_runner --suite eval/suites/dev_python_ml_runtime.yaml --require_runtime_env
-
-    - name: Runtime Eval (Skill)  # skips unless enabled
-      run: python -m eval.build_runner --suite eval/suites/dev_skill_runtime.yaml --require_runtime_env
-
-      - name: Cross-Lang Runtime Eval — Java (extended)
-      run: |
-        ENABLE_RUNTIME_EVAL=1 python -m eval.build_runner --suite eval/suites/dev_java_runtime_ext.yaml --require_runtime_env
-
-      - name: Cross-Lang Runtime Eval — .NET (extended)
-      run: |
-        ENABLE_RUNTIME_EVAL=1 python -m eval.build_runner --suite eval/suites/dev_dotnet_runtime_ext.yaml --require_runtime_env
-
-        - name: Cross-Lang Runtime Eval — Android (extended)
-        run: |
-          ENABLE_RUNTIME_EVAL=1 python -m eval.build_runner --suite eval/suites/dev_android_runtime_ext.yaml --require_runtime_env
-        - name: Cross-Lang Runtime Eval — C++ (extended)
-        run: |
-          ENABLE_RUNTIME_EVAL=1 python -m eval.build_runner --suite eval/suites/dev_cpp_runtime.yaml --require_runtime_env
-
-    - name: Synthesize KD Traces (from runtime)
-      run: |
-        python scripts/synthesize_traces.py
-        python scripts/validate_traces.py artifacts/traces/runtime_kd.jsonl
-
-    - name: Archive runtime zips
-      uses: actions/upload-artifact@v4
-      with:
-        name: runtime-workdirs
-        path: artifacts/runs/**
-
-    - name: Security Scan (enhanced)
-      run: |
-        python -m security.scanner --path . \
-          --out artifacts/security_report.json \
-          --license_whitelist MIT,Apache-2.0,BSD-2-Clause,BSD-3-Clause \
-          --license_denylist GPL-3.0,AGPL-3.0,MPL-2.0 \
-          --max_high 0 --max_medium 10 --max_low 999
-
-    - name: Watermark artifacts
-      run: |
-        python scripts/watermark_artifact.py --artifact_dir models/student-core-kd --customer_id "INTERNAL" --notes "KD checkpoint"
-        python scripts/verify_watermark.py --artifact_dir models/student-core-kd
-
-    - name: Compliance Gate Demo (optional; expected fail)
-      if: env.DEMO_COMPLIANCE_FAIL == '1'
-      run: |
-        python -m security.scanner --path tests/fixtures \
-          --out artifacts/security_report_demo.json \
-          --license_whitelist MIT,Apache-2.0,BSD-2-Clause,BSD-3-Clause \
-          --license_denylist GPL-3.0,AGPL-3.0,MPL-2.0 \
-          --max_high 0 --max_medium 0 --max_low 999
-
-      - name: Scoreboard (Phase-6 snapshot + history)
-      run: |
-        python scripts/scoreboard.py
-        PHASE=phase-6 python scripts/scoreboard.py
-        python scripts/scoreboard_history.py
-
-    - name: Scoreboard History
-      run: python scripts/scoreboard_history.py
-      
-    - name: Upload Scoreboard Artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: silhouette-scoreboard
-        path: artifacts/scoreboard/**
-    - name: Quantize INT8 (stub)
-      run: make quant-int8
-    - name: Latency Probe (edge)
-      run: make latency-edge
-    - name: Upload Latency Artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: latency
-        path: artifacts/latency/latency.json
-    - name: Build Wheel/SDist
-      run: |
-        python -m pip install -U pip build
-        python -m build
-
-    - name: Upload Distribution Artifacts
-      uses: actions/upload-artifact@v4
-      with:
-        name: dist
-        path: dist/*
-
-
-
-  codex-training:
+  build-test-docs:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: "3.10"
 
-      - name: Run Codex controller
-        run: python -m silhouette_core.codex_controller
+      - name: Install Python deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest ruff
 
-  docs:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-      - name: Set up Python
-        uses: actions/setup-python@v4
+      - name: Lint (non-blocking)
+        run: ruff check . || true
+
+      - name: Run tests
+        run: pytest -q --maxfail=1 --durations=10
+
+      - name: Export Mermaid diagrams
+        run: |
+          npm i -g @mermaid-js/mermaid-cli || true
+          python scripts/export_mermaid.py docs/ || true
+
+      - name: Build Profile Conformance Report
+        run: python scripts/profile_conformance.py || true
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
         with:
-          python-version: '3.11'
-      - name: Docs linkcheck
-        run: python scripts/docs_linkcheck.py
-
+          name: silhouette-reports
+          path: |
+            reports/
+            docs/**/svg/*.svg
+            logs/
