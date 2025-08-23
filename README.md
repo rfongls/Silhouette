@@ -306,6 +306,58 @@ Silhouette Core uses a structured release pipeline:
 
 ---
 
+### HL7 Draft & Send — Web UI (with presets)
+
+1. Start the MLLP server (or point to a partner endpoint).
+   ```bash
+   python -m interfaces.hl7.mllp_server
+   ```
+
+2. Start the web app:
+
+   ```bash
+   uvicorn server:app --reload --port 8080
+   ```
+
+3. Open [http://localhost:8080/ui/hl7](http://localhost:8080/ui/hl7)
+
+   * Pick a message type (VXU, RDE, ORM, OML, ORU:RAD, MDM, ADT, SIU, DFT)
+   * Click **Load Example for Selected Type** to prefill JSON
+   * Edit as needed → **Draft** or **Draft & Send** (sends via MLLP; shows ACK)
+
+Targets in `config/hosts.yaml` populate the host/port dropdown.
+
+### Agentic LLM Smoke (local vLLM/Ollama)
+
+1) Start the HL7 listener (MLLP) and your OpenAI-compatible server:
+   ```bash
+   python -m interfaces.hl7.mllp_server &
+   # vLLM example:
+   vllm serve meta-llama/Meta-Llama-3-8B-Instruct --download-dir ./model_vault --port 8000 &
+   # (Ollama OpenAI-compatible: set OPENAI_API_BASE=http://localhost:11434/v1 and choose your model)
+   ```
+
+2. Run the smoke:
+
+   ```bash
+   python scripts/agent_llm_smoke.py \
+     --base http://localhost:8000/v1 \
+     --model meta-llama/Meta-Llama-3-8B-Instruct \
+     --host 127.0.0.1 --port 2575 \
+     --message "Send a VXU for John Doe (CVX 208) to localhost:2575 and summarize the ACK."
+```
+
+If your model supports Tools API, it will return a tool call; otherwise it may emit a JSON fallback the script understands. On success you’ll see a short summary and an ACK (look for `MSA|AA|...`).
+
+
+### Codex-Driven Tests
+
+- **On push/PR**: CI runs unit + E2E tests, builds the Profile Conformance report, and exports Mermaid diagrams.
+- **On demand**: Comment `/codex test` on any PR to re-run tests and artifact generation.
+- **Nightly (optional)**: A daily E2E subset runs on `main`. Enable/disable in `.github/workflows/nightly-e2e.yml`.
+
+Artifacts (audit logs, conformance report, SVG diagrams) are attached to each workflow run under “Artifacts”.
+
 ## 📜 License
 
 Silhouette Core is **proprietary**.

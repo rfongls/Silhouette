@@ -151,3 +151,11 @@ docs:
 
 schemas:
 	@echo "JSON Schemas located in schemas/fhir/uscore/"
+
+.PHONY: test-hl7 e2e
+
+test-hl7:
+	pytest -q -m hl7 --maxfail=1
+
+e2e:
+	pytest -q -m "hl7 and slow" --maxfail=1

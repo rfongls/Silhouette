@@ -1,0 +1,3 @@
+routes:
+  VXU^V04:
+    pipeline: pipelines.hl7.vxu:handle
