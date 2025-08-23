@@ -1,6 +1,7 @@
 import json
 import os
 from difflib import SequenceMatcher
+
 try:
     from sklearn.feature_extraction.text import TfidfVectorizer
     from sklearn.metrics.pairwise import cosine_similarity
@@ -9,7 +10,7 @@ except ModuleNotFoundError:  # Fallback if sklearn not installed
     cosine_similarity = None
 
 def load_memory_texts(memory_path):
-    with open(memory_path, 'r') as f:
+    with open(memory_path) as f:
         entries = [json.loads(line) for line in f]
     texts = [entry.get("content", "") for entry in entries]
     return entries, texts

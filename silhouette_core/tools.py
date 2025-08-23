@@ -1,9 +1,12 @@
-from typing import Callable, Dict, Any
 import ast
-import operator as op
 import importlib
-import yaml
+import operator as op
 import pathlib
+from collections.abc import Callable
+from typing import Any
+
+import yaml
+
 
 class ToolRegistry:
     """
@@ -12,7 +15,7 @@ class ToolRegistry:
     calculator implemented via Python's AST module.
     """
     def __init__(self):
-        self._tools: Dict[str, Callable[[str], Any]] = {}
+        self._tools: dict[str, Callable[[str], Any]] = {}
         self.register("echo", lambda s: s)
         self.register("calc", safe_calc)
 
@@ -67,10 +70,10 @@ _ALLOWED_OPS = {
 
 def _eval_ast(node):
     if isinstance(node, ast.Constant):
-        if isinstance(node.value, (int, float)):
+        if isinstance(node.value, int | float):
             return node.value
         raise ValueError("only numeric constants allowed")
-    if hasattr(ast, "Num") and isinstance(node, getattr(ast, "Num")):
+    if hasattr(ast, "Num") and isinstance(node, ast.Num):
         return node.n
     if isinstance(node, ast.UnaryOp) and type(node.op) in _ALLOWED_OPS:
         return _ALLOWED_OPS[type(node.op)](_eval_ast(node.operand))

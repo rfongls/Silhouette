@@ -1,7 +1,7 @@
 def load_persona_config(path="docs/alignment_kernel/persona.dsl"):
     config = {"tone": {}, "limits": {"deny_on": []}}
     current = None
-    with open(path, "r") as f:
+    with open(path) as f:
         for line in f:
             line = line.strip()
             if not line or line.startswith("#"):
@@ -9,7 +9,7 @@ def load_persona_config(path="docs/alignment_kernel/persona.dsl"):
             if line.startswith("[") and line.endswith("]"):
                 current = line[1:-1]
             elif "=" in line and current:
-                key, val = [s.strip() for s in line.split("=", 1)]
+                key, val = (s.strip() for s in line.split("=", 1))
                 if current == "limits" and key == "deny_on":
                     config[current][key] = [v.strip() for v in val.split(",")]
                 else:

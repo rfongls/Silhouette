@@ -11,7 +11,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import List, Optional
 
 
 class RepoAdapter:
@@ -22,7 +21,7 @@ class RepoAdapter:
     must explicitly opt in to any write capability.
     """
 
-    def fetch(self, source: str, ref: Optional[str] = None, sparse: Optional[List[str]] = None) -> str:
+    def fetch(self, source: str, ref: str | None = None, sparse: list[str] | None = None) -> str:
         """Fetch ``source`` and return a local path.
 
         Parameters
@@ -36,7 +35,7 @@ class RepoAdapter:
         """
         raise NotImplementedError
 
-    def list_files(self, patterns: List[str]) -> List[str]:
+    def list_files(self, patterns: list[str]) -> list[str]:
         """Return repository files matching any of the given glob ``patterns``."""
         raise NotImplementedError
 
@@ -68,22 +67,20 @@ class LocalRepoAdapter(RepoAdapter):
     root: Path
     read_only: bool = True
 
-    def fetch(self, source: str, ref: Optional[str] = None, sparse: Optional[List[str]] = None) -> str:
+    def fetch(self, source: str, ref: str | None = None, sparse: list[str] | None = None) -> str:
         path = Path(source)
         self.root = path.resolve()
         # Sparse checkout is not implemented yet; callers may provide patterns
         # which are currently ignored.
         return str(self.root)
 
-    def list_files(self, patterns: List[str]) -> List[str]:
+    def list_files(self, patterns: list[str]) -> list[str]:
         def _match(rel: Path, pattern: str) -> bool:
-            if rel.match(pattern):
-                return True
-            if pattern.startswith("**/") and rel.match(pattern[3:]):
-                return True
-            return False
+            return rel.match(pattern) or (
+                pattern.startswith("**/") and rel.match(pattern[3:])
+            )
 
-        files: List[str] = []
+        files: list[str] = []
         for p in self.root.rglob('*'):
             if p.is_file():
                 rel = p.relative_to(self.root)

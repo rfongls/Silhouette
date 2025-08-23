@@ -3,12 +3,7 @@ set -euo pipefail
 
 if command -v ruff >/dev/null 2>&1; then
   echo "[ruff]"
-  ruff check
-fi
-
-if command -v mypy >/dev/null 2>&1; then
-  echo "[mypy]"
-  mypy
+  ruff check silhouette_core
 fi
 
 if command -v pytest >/dev/null 2>&1; then

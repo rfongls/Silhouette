@@ -1,5 +1,5 @@
-import subprocess
 import os
+import subprocess
 import sys
 
 try:
@@ -10,7 +10,7 @@ except Exception:  # pragma: no cover - PyYAML may not be installed
 def _fallback_load(config_path: str) -> dict:
     """Parse a tiny subset of YAML used by auto_dev.yaml."""
     config: dict[str, object] = {"generate": []}
-    with open(config_path, "r") as f:
+    with open(config_path) as f:
         lines = f.readlines()
 
     i = 0
@@ -52,7 +52,7 @@ def _fallback_load(config_path: str) -> dict:
 def load_next_task(config_path: str = "auto_dev.yaml") -> dict:
     """Load the next Codex task without requiring PyYAML."""
     if yaml:
-        with open(config_path, "r") as f:
+        with open(config_path) as f:
             return yaml.safe_load(f)
     return _fallback_load(config_path)
 
