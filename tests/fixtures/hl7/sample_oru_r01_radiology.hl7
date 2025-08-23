@@ -1,0 +1,4 @@
+MSH|^~\&|RIS|ACME|EHR|ACME|202402091030||ORU^R01|MSG|P|2.5.1
+PID|1||123456^^^ACME^MR||DOE^JOHN||19800101|M
+OBR|1|||24606-6^XR Chest 2 Views^LN
+OBX|1|TX|||No acute cardiopulmonary disease identified.
