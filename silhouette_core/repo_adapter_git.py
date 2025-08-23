@@ -1,8 +1,7 @@
 from __future__ import annotations
-
 import subprocess
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Iterable, List
 
 from .repo_adapter import RepoAdapter
 
@@ -16,7 +15,7 @@ class GitRepoAdapter(RepoAdapter):
         self.root: Path | None = None
 
     # fetch
-    def fetch(self, source: str, ref: str | None = None, sparse: List[str] | None = None) -> str:
+    def fetch(self, source: str, ref: str | None = None, sparse: list[str] | None = None) -> str:
         self.workdir.mkdir(parents=True, exist_ok=True)
         if not (self.workdir / ".git").exists():
             subprocess.check_call([
@@ -50,7 +49,7 @@ class GitRepoAdapter(RepoAdapter):
         return str(self.root)
 
     # list_files
-    def list_files(self, patterns: Iterable[str] | None = None) -> List[str]:
+    def list_files(self, patterns: Iterable[str] | None = None) -> list[str]:
         assert self.root is not None, "repository not fetched"
         result = subprocess.check_output(
             ["git", "-C", str(self.root), "ls-files"], text=True
@@ -60,7 +59,7 @@ class GitRepoAdapter(RepoAdapter):
             return sorted(files)
         includes = [p for p in patterns if not p.startswith("!")]
         excludes = [p[1:] for p in patterns if p.startswith("!")]
-        selected: List[str] = []
+        selected: list[str] = []
         for f in files:
             p = Path(f)
             if includes and not any(p.match(pat) for pat in includes):

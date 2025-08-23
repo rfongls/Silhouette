@@ -3,10 +3,10 @@ from __future__ import annotations
 import json
 import platform
 import subprocess
+from collections.abc import Iterator
 from contextlib import contextmanager
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, Iterator
 
 
 def _git_commit(repo_root: Path) -> str | None:
@@ -23,7 +23,7 @@ def _git_commit(repo_root: Path) -> str | None:
 @contextmanager
 def record_run(
     command: str,
-    args: Dict[str, object],
+    args: dict[str, object],
     repo_root: Path,
     policy_path: Path | None = None,
 ) -> Iterator[Path]:

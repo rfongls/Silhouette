@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import math
 import re
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Iterable, List, Dict
 
 # Regex patterns for common secrets
 SECRET_PATTERNS = [
@@ -22,8 +22,8 @@ def _entropy(s: str) -> float:
     return -sum(p * math.log2(p) for p in probs)
 
 
-def scan_text(text: str, path: str) -> List[Dict[str, object]]:
-    findings: List[Dict[str, object]] = []
+def scan_text(text: str, path: str) -> list[dict[str, object]]:
+    findings: list[dict[str, object]] = []
     for lineno, line in enumerate(text.splitlines(), 1):
         for pat in SECRET_PATTERNS:
             if pat.search(line) and not any(a.search(line) for a in ALLOWLIST_PATTERNS):
@@ -36,8 +36,8 @@ def scan_text(text: str, path: str) -> List[Dict[str, object]]:
     return findings
 
 
-def scan_paths(paths: Iterable[Path]) -> List[Dict[str, object]]:
-    results: List[Dict[str, object]] = []
+def scan_paths(paths: Iterable[Path]) -> list[dict[str, object]]:
+    results: list[dict[str, object]] = []
     for p in paths:
         if not p.is_file():
             continue

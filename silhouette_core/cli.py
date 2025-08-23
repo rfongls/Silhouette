@@ -42,6 +42,7 @@ def repo_map_cmd(source, json_out, compute_hashes):
         repo_root=adapter.root,
         policy_path=pathlib.Path("policy.yaml"),
     ):
+        # Build and save the repo map inside the context so both steps are recorded
         data = build_repo_map(adapter.root, files, compute_hashes=compute_hashes)
         save_repo_map(data, out_path)
     _echo(f"Wrote {out_path}")
@@ -140,6 +141,7 @@ def latency_cmd():
 def license_cmd(customer_id, out):
     """Issue a customer license and embed ID into WATERMARK.json."""
     import sys
+
     from scripts.issue_customer_license import main as issue
 
     sys.argv = [

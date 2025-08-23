@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import hashlib
 import json
+from collections.abc import Iterable
 from pathlib import Path
-from typing import Iterable, Dict, List
 
 LANG_MAP = {
     ".py": "py",
@@ -21,18 +21,18 @@ def _lang_for_path(path: Path) -> str | None:
     return LANG_MAP.get(path.suffix.lower())
 
 
-def build_repo_map(root: Path, files: Iterable[str], compute_hashes: bool = False) -> Dict:
+def build_repo_map(root: Path, files: Iterable[str], compute_hashes: bool = False) -> dict:
     root = root.resolve()
     detected = []
-    language_counts: Dict[str, int] = {}
-    file_entries: List[Dict[str, object]] = []
+    language_counts: dict[str, int] = {}
+    file_entries: list[dict[str, object]] = []
     code_file_count = 0
     for rel in files:
         p = root / rel
         if not p.is_file():
             continue
         size = p.stat().st_size
-        entry: Dict[str, object] = {"path": rel, "size": size}
+        entry: dict[str, object] = {"path": rel, "size": size}
         lang = _lang_for_path(p)
         if lang:
             detected.append(lang)
@@ -56,6 +56,6 @@ def build_repo_map(root: Path, files: Iterable[str], compute_hashes: bool = Fals
     return data
 
 
-def save_repo_map(data: Dict, outpath: Path) -> None:
+def save_repo_map(data: dict, outpath: Path) -> None:
     outpath.parent.mkdir(parents=True, exist_ok=True)
     outpath.write_text(json.dumps(data, indent=2))
