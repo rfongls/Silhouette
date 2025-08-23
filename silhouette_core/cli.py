@@ -1,4 +1,3 @@
-import json
 import os
 import pathlib
 import sys
@@ -7,6 +6,8 @@ import click
 
 from . import __version__
 from .repo_adapter import LocalRepoAdapter
+from .repo_map import build_repo_map, save_repo_map
+from .run_artifacts import record_run
 
 DEFAULT_PROFILE = "profiles/core/policy.yaml"
 
@@ -27,22 +28,23 @@ def repo_cmd():
 
 @repo_cmd.command("map")
 @click.argument("source")
-@click.option("--out", default="repo_map.json", show_default=True)
-def repo_map_cmd(source, out):
-    """Create a minimal repository map for ``source``."""
+@click.option("--json-out", default="artifacts/repo_map.json", show_default=True)
+@click.option("--compute-hashes", is_flag=True, help="Compute file hashes")
+def repo_map_cmd(source, json_out, compute_hashes):
+    """Create a repository map for ``source``."""
     adapter = LocalRepoAdapter(pathlib.Path(source))
     adapter.fetch(source)
     files = adapter.list_files(["**/*"])
-    languages = sorted({pathlib.Path(f).suffix.lstrip('.') for f in files if pathlib.Path(f).suffix})
-    data = {
-        "commit": None,
-        "languages": languages,
-        "files": files,
-        "symbols": [],
-        "tests": [],
-    }
-    pathlib.Path(out).write_text(json.dumps(data, indent=2))
-    _echo(f"Wrote {out}")
+    data = build_repo_map(adapter.root, files, compute_hashes=compute_hashes)
+    out_path = pathlib.Path(json_out)
+    with record_run(
+        "repo_map",
+        {"compute_hashes": compute_hashes, "json_out": str(out_path)},
+        repo_root=adapter.root,
+        policy_path=pathlib.Path("policy.yaml"),
+    ):
+        save_repo_map(data, out_path)
+    _echo(f"Wrote {out_path}")
 
 @main.command("run")
 @click.option("--profile", default=DEFAULT_PROFILE, show_default=True, help="Policy/profile YAML")
@@ -148,3 +150,7 @@ def license_cmd(customer_id, out):
         out,
     ]
     sys.exit(issue())
+
+
+if __name__ == "__main__":
+    main()
