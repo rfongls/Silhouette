@@ -1,0 +1,18 @@
+allowed_ops:
+  read: true
+  propose_patch: false
+  open_pr: false
+protected_paths:
+  - ".github/**"
+  - "scripts/**"
+  - "**/*.key"
+  - "**/*.pem"
+secret_scanner:
+  enabled: true
+  entropy_threshold: 3.5
+  allowlist_patterns:
+    - "DUMMY_.*"
+    - "EXAMPLE_.*"
+license_guard:
+  enabled: false
+  allowed_licenses: [MIT, Apache-2.0]

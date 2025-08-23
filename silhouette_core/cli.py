@@ -1,5 +1,13 @@
-import os, sys, json, pathlib, click
+import os
+import pathlib
+import sys
+
+import click
+
 from . import __version__
+from .repo_adapter import LocalRepoAdapter
+from .repo_map import build_repo_map, save_repo_map
+from .run_artifacts import record_run
 
 DEFAULT_PROFILE = "profiles/core/policy.yaml"
 
@@ -10,6 +18,34 @@ def _echo(s):
 @click.version_option(__version__, prog_name="silhouette")
 def main():
     """Silhouette Core — survivable, cross-language AI agent framework."""
+
+
+@main.group("repo")
+def repo_cmd():
+    """Repository utilities."""
+    pass
+
+
+@repo_cmd.command("map")
+@click.argument("source")
+@click.option("--json-out", default="artifacts/repo_map.json", show_default=True)
+@click.option("--compute-hashes", is_flag=True, help="Compute file hashes")
+def repo_map_cmd(source, json_out, compute_hashes):
+    """Create a repository map for ``source``."""
+    adapter = LocalRepoAdapter(pathlib.Path(source))
+    adapter.fetch(source)
+    files = adapter.list_files(["**/*"])
+    out_path = pathlib.Path(json_out)
+    with record_run(
+        "repo_map",
+        {"compute_hashes": compute_hashes, "json_out": str(out_path)},
+        repo_root=adapter.root,
+        policy_path=pathlib.Path("policy.yaml"),
+    ):
+        # Build and save the repo map inside the context so both steps are recorded
+        data = build_repo_map(adapter.root, files, compute_hashes=compute_hashes)
+        save_repo_map(data, out_path)
+    _echo(f"Wrote {out_path}")
 
 @main.command("run")
 @click.option("--profile", default=DEFAULT_PROFILE, show_default=True, help="Policy/profile YAML")
@@ -48,7 +84,7 @@ def build_runner_cmd(suite, require_runtime_env):
 def synth_traces_cmd(lane):
     """Convert runtime passes into KD traces."""
     from scripts.synthesize_traces import main as synth
-    sys.argv = ["synthesize_traces"] + sum([["--lane", l] for l in lane], [])
+    sys.argv = ["synthesize_traces"] + sum([["--lane", lane_name] for lane_name in lane], [])
     sys.exit(synth())
 
 @main.command("train")
@@ -105,6 +141,7 @@ def latency_cmd():
 def license_cmd(customer_id, out):
     """Issue a customer license and embed ID into WATERMARK.json."""
     import sys
+
     from scripts.issue_customer_license import main as issue
 
     sys.argv = [
@@ -115,3 +152,7 @@ def license_cmd(customer_id, out):
         out,
     ]
     sys.exit(issue())
+
+
+if __name__ == "__main__":
+    main()

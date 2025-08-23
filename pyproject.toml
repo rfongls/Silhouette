@@ -37,6 +37,9 @@ dev = [
   "pytest>=8.2",
   "ruff>=0.5",
   "black>=24.4",
+  "pydantic>=1.10.13",
+  "dataclasses-json>=0.6.0",
+  "typing-extensions>=4.7",
 ]
 eval = [
   "pytest>=8.2",
