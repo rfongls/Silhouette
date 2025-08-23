@@ -13,7 +13,7 @@ def load_config(path: Path) -> dict:
         if not line or line.startswith("#"):
             continue
         if ":" in line:
-            key, val = [x.strip() for x in line.split(":", 1)]
+            key, val = (x.strip() for x in line.split(":", 1))
             try:
                 cfg[key] = int(val)
             except ValueError:

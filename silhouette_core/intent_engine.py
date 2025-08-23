@@ -10,7 +10,7 @@ def load_examples():
     """Load intent examples from the reference file."""
     if not EXAMPLES_FILE.exists():
         return []
-    with open(EXAMPLES_FILE, "r") as f:
+    with open(EXAMPLES_FILE) as f:
         data = json.load(f)
     return data.get("examples", [])
 

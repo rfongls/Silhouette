@@ -12,6 +12,7 @@ import re
 import sys
 from pathlib import Path
 
+
 def parse_session_logs(log_dir: Path, output_file: Path):
     """
     Read each session_*.txt in log_dir, extract user inputs, and write to memory.jsonl.

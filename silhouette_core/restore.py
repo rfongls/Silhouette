@@ -1,7 +1,9 @@
-import zipfile
 import argparse
 import os
+import zipfile
+
 from cryptography.fernet import Fernet
+
 
 def decrypt_and_extract(zip_path, key_path, output_dir="restored"):
     with open(key_path, 'rb') as f:

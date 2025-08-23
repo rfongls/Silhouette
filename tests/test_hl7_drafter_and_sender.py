@@ -1,5 +1,9 @@
 import asyncio
+
+import pytest
+
 from skills.hl7_drafter import draft_message, send_message
+
 
 async def _echo_server(reader, writer):
     try:
@@ -11,6 +15,7 @@ async def _echo_server(reader, writer):
         writer.close()
         await writer.wait_closed()
 
+@pytest.mark.hl7
 def test_draft_and_send():
     async def run():
         server = await asyncio.start_server(_echo_server, "127.0.0.1", 2575)

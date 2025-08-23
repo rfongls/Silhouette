@@ -1,17 +1,18 @@
 import json
 import uuid
 
+
 def build_graph(memory_path="logs/memory.jsonl"):
-    with open(memory_path, "r") as f:
+    with open(memory_path) as f:
         entries = [json.loads(line) for line in f]
     graph = {}
-    for i, entry in enumerate(entries):
+    for _i, entry in enumerate(entries):
         node_id = entry.get("id", str(uuid.uuid4()))
         entry["id"] = node_id
         graph.setdefault(node_id, {"entry": entry, "links": []})
 
-    for i, e1 in enumerate(entries):
-        for j, e2 in enumerate(entries[i + 1 :], start=i + 1):
+    for _i, e1 in enumerate(entries):
+        for _j, e2 in enumerate(entries[_i + 1 :], start=_i + 1):
             if e1.get("intent") == e2.get("intent"):
                 id1 = e1["id"]
                 id2 = e2.setdefault("id", str(uuid.uuid4()))
