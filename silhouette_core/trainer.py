@@ -5,7 +5,7 @@ import json
 import os
 
 from datasets import load_dataset
-from peft import get_peft_model, LoraConfig
+from peft import LoraConfig, get_peft_model
 from transformers import (
     AutoModelForCausalLM,
     AutoTokenizer,
@@ -96,7 +96,8 @@ def main():
     args = parser.parse_args()
 
     # Load the config JSON
-    cfg = json.load(open(args.config, "r"))
+    with open(args.config) as f:
+        cfg = json.load(f)
 
     # Dispatch: here only codex is supported
     name = os.path.basename(args.config).lower()

@@ -2,6 +2,7 @@ import argparse
 import json
 import zipfile
 from pathlib import Path
+
 from .quantize_models import quantize_embeddings
 
 

@@ -10,7 +10,7 @@ def ingest_logs():
     """Ingest log files into a single memory file."""
     with open(MEMORY_FILE, "a") as mem:
         for log in LOG_DIR.glob("*.txt"):
-            with open(log, "r") as f:
+            with open(log) as f:
                 mem.write(f.read())
 
 
@@ -19,7 +19,7 @@ def query_memory(term: str) -> list[str]:
     if not MEMORY_FILE.exists():
         return []
     results = []
-    with open(MEMORY_FILE, "r") as mem:
+    with open(MEMORY_FILE) as mem:
         for line in mem:
             if term.lower() in line.lower():
                 results.append(line.strip())

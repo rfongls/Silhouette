@@ -1,7 +1,8 @@
+import argparse
 import os
 import zipfile
-import argparse
 from datetime import datetime
+
 try:
     from cryptography.fernet import Fernet
     HAVE_CRYPTO = True
@@ -44,10 +45,7 @@ def zip_with_encryption(zip_path, files, key):
 
 def generate_key(key_path):
     """Generate an encryption key if possible, otherwise random bytes."""
-    if HAVE_CRYPTO:
-        key = Fernet.generate_key()
-    else:
-        key = os.urandom(32)
+    key = Fernet.generate_key() if HAVE_CRYPTO else os.urandom(32)
     with open(key_path, "wb") as f:
         f.write(key)
     return key

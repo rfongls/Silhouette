@@ -1,6 +1,7 @@
 
 from pathlib import Path
 
+
 def parse_dsl_file(filepath):
     """
     Parses the alignment DSL file with sections and returns a nested dictionary.
@@ -12,7 +13,7 @@ def parse_dsl_file(filepath):
     data = {}
     current_section = None
 
-    with open(filepath, 'r') as f:
+    with open(filepath) as f:
         for line in f:
             line = line.strip()
             if not line or line.startswith("#"):
@@ -21,7 +22,7 @@ def parse_dsl_file(filepath):
                 current_section = line[1:-1].strip()
                 data[current_section] = {}
             elif "=" in line and current_section:
-                key, val = [x.strip() for x in line.split("=", 1)]
+                key, val = (x.strip() for x in line.split("=", 1))
                 data[current_section][key] = val.strip('"')
 
     return data

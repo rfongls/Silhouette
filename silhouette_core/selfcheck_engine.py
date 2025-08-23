@@ -10,8 +10,8 @@ import json
 import sys
 from pathlib import Path
 
-from .persona_audit import audit_memory
 from .drift_detector import main as drift_main
+from .persona_audit import audit_memory
 from .session_summarizer import main as summary_main
 
 REQUIRED_FILES = ["persona.dsl", "memory.jsonl"]

@@ -28,7 +28,7 @@ def discover_modules():
 
     for file in MODULES_DIR.glob("*.json"):
         try:
-            with open(file, 'r') as f:
+            with open(file) as f:
                 data = json.load(f)
                 module = Module(
                     name=data['name'],
