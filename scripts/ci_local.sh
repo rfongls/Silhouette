@@ -7,7 +7,6 @@ section "Environment"
 python --version || true
 node --version || true
 npm --version || true
-
 RC=0
 
 section "Python: Ruff (core + tests)"
