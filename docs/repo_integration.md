@@ -15,7 +15,7 @@ This document outlines the repository integration components for Silhouette Core
 ```bash
 silhouette repo map . --json-out artifacts/repo_map.json --compute-hashes
 bash scripts/ci_local.sh
-bash scripts/repro.sh artifacts/<timestamp>/silhouette_run.json
+bash scripts/repro.sh artifacts/<YYYYMMDD_HHMMSS>/silhouette_run.json
 ```
 
 ## Sparse Checkout

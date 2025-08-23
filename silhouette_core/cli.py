@@ -35,7 +35,6 @@ def repo_map_cmd(source, json_out, compute_hashes):
     adapter = LocalRepoAdapter(pathlib.Path(source))
     adapter.fetch(source)
     files = adapter.list_files(["**/*"])
-    data = build_repo_map(adapter.root, files, compute_hashes=compute_hashes)
     out_path = pathlib.Path(json_out)
     with record_run(
         "repo_map",
@@ -43,6 +42,7 @@ def repo_map_cmd(source, json_out, compute_hashes):
         repo_root=adapter.root,
         policy_path=pathlib.Path("policy.yaml"),
     ):
+        data = build_repo_map(adapter.root, files, compute_hashes=compute_hashes)
         save_repo_map(data, out_path)
     _echo(f"Wrote {out_path}")
 
