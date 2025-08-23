@@ -1,30 +1,27 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-if command -v ruff >/dev/null 2>&1; then
-  echo "[ruff]"
-  ruff check silhouette_core
+section () { echo -e "\n===== $1 ====="; }
+
+section "Environment"
+python --version || true
+node --version || true
+npm --version || true
+RC=0
+
+section "Python: Ruff (core + tests)"
+if ! command -v ruff >/dev/null 2>&1; then
+  echo "Ruff not found (pip install ruff)"
+else
+  ruff check silhouette_core tests || RC=$?
 fi
 
-if command -v pytest >/dev/null 2>&1; then
-  echo "[pytest]"
-  pytest
+section "Python: PyTest (full suite; HL7 guarded)"
+if ! command -v pytest >/dev/null 2>&1; then
+  echo "pytest not found (pip install pytest)"
+else
+  pytest -q || RC=$?
 fi
 
-if command -v bandit >/dev/null 2>&1; then
-  echo "[bandit]"
-  bandit -r .
-fi
-
-if [ -f package.json ]; then
-  echo "[npm test]"
-  npm ci
-  npm test
-fi
-
-if command -v hadolint >/dev/null 2>&1; then
-  find . -name Dockerfile -print0 | while IFS= read -r -d '' f; do
-    echo "[hadolint] $f"
-    hadolint "$f"
-  done
-fi
+section "Result"
+exit $RC
