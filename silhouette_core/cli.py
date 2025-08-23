@@ -1,5 +1,12 @@
-import os, sys, json, pathlib, click
+import json
+import os
+import pathlib
+import sys
+
+import click
+
 from . import __version__
+from .repo_adapter import LocalRepoAdapter
 
 DEFAULT_PROFILE = "profiles/core/policy.yaml"
 
@@ -10,6 +17,32 @@ def _echo(s):
 @click.version_option(__version__, prog_name="silhouette")
 def main():
     """Silhouette Core — survivable, cross-language AI agent framework."""
+
+
+@main.group("repo")
+def repo_cmd():
+    """Repository utilities."""
+    pass
+
+
+@repo_cmd.command("map")
+@click.argument("source")
+@click.option("--out", default="repo_map.json", show_default=True)
+def repo_map_cmd(source, out):
+    """Create a minimal repository map for ``source``."""
+    adapter = LocalRepoAdapter(pathlib.Path(source))
+    adapter.fetch(source)
+    files = adapter.list_files(["**/*"])
+    languages = sorted({pathlib.Path(f).suffix.lstrip('.') for f in files if pathlib.Path(f).suffix})
+    data = {
+        "commit": None,
+        "languages": languages,
+        "files": files,
+        "symbols": [],
+        "tests": [],
+    }
+    pathlib.Path(out).write_text(json.dumps(data, indent=2))
+    _echo(f"Wrote {out}")
 
 @main.command("run")
 @click.option("--profile", default=DEFAULT_PROFILE, show_default=True, help="Policy/profile YAML")
@@ -48,7 +81,7 @@ def build_runner_cmd(suite, require_runtime_env):
 def synth_traces_cmd(lane):
     """Convert runtime passes into KD traces."""
     from scripts.synthesize_traces import main as synth
-    sys.argv = ["synthesize_traces"] + sum([["--lane", l] for l in lane], [])
+    sys.argv = ["synthesize_traces"] + sum([["--lane", lane_name] for lane_name in lane], [])
     sys.exit(synth())
 
 @main.command("train")
