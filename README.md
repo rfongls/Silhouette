@@ -295,6 +295,23 @@ Artifacts:
 
 ---
 
+## 🐙 GitHub Issue Automation
+
+Seed the next development phase's GitHub issues from a local YAML file:
+
+```bash
+python scripts/create_github_issues.py --repo <owner>/<repo> --token $GITHUB_TOKEN --dry-run
+```
+
+Remove `--dry-run` to create the issues.
+
+## 📚 Additional Docs
+
+- [Repo integration guide](docs/repo_integration.md)
+- [HL7 testing guide](docs/hl7_testing.md)
+
+---
+
 ## 🚀 Release & Licensing
 
 Silhouette Core uses a structured release pipeline:
