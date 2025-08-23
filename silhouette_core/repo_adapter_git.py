@@ -1,5 +1,4 @@
 from __future__ import annotations
-
 import subprocess
 from collections.abc import Iterable
 from pathlib import Path
