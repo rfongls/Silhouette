@@ -45,8 +45,8 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: silhouette-reports
-          path: |
-            reports/
-            docs/**/svg/*.svg
-            logs/
+          path:
+            - reports/
+            - docs/**/svg/*.svg
+            - logs/
           if-no-files-found: warn
