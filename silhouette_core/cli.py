@@ -38,7 +38,7 @@ def repo_map_cmd(source, json_out, compute_hashes):
     out_path = pathlib.Path(json_out)
     with record_run(
         "repo_map",
-        {"compute_hashes": compute_hashes, "json_out": str(out_path)},
+        {"compute_hashes": compute_hashes, "out": str(out_path)},
         repo_root=adapter.root,
         policy_path=pathlib.Path("policy.yaml"),
     ):
