@@ -102,7 +102,7 @@ traces:
 	python scripts/validate_traces.py artifacts/traces/runtime_kd.jsonl
 
 security-scan:
-	python -m security.scanner
+	python -m silhouette_core.security.scanner
 
 traces-promote:
         python scripts/promote_traces.py --lane python

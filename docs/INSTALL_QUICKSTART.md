@@ -173,4 +173,77 @@ Your hints may be **protected** by policy. Try a non-protected path or adjust `p
 
 ---
 
-*This document is intended to be saved as `docs/INSTALL_QUICKSTART.md` (or your installer instruction MD) so new users can install and run Silhouette Core in minutes.*
+## 12) Runtime setup (optional)
+
+1. Install `llama.cpp`:
+
+```bash
+git clone https://github.com/ggerganov/llama.cpp
+cd llama.cpp && make
+```
+
+2. Download a GGUF model:
+
+```bash
+wget <model-url>
+```
+
+3. Run:
+
+```bash
+./main -m <model-name>.gguf -p "Hello"
+```
+
+---
+
+## 13) End-to-end quickstart
+
+1. **Clone & Install**
+   ```bash
+   git clone https://github.com/your-org/Silhouette.git
+   cd Silhouette
+   pip install -e .[all]
+   ```
+2. **Start the Agent REPL**
+   ```bash
+   silhouette run --profile profiles/core/policy.yaml
+   ```
+3. **Try a Skill**
+   ```
+   > use:calc 6*7
+   ```
+4. **Run Basic Evals**
+   ```bash
+   silhouette eval --suite eval/suites/basics.yaml
+   ```
+5. **Capture Runtime Traces**
+   ```bash
+   ENABLE_RUNTIME_EVAL=1 silhouette build-runner --suite eval/suites/dev_python_runtime.yaml
+   ```
+6. **Promote Traces**
+   ```bash
+   make traces-promote
+   ```
+7. **Train a Student (SFT)**
+   ```bash
+   silhouette train --mode sft --cfg config/train.yaml
+   ```
+8. **Distill with Teacher (KD)**
+   ```bash
+   silhouette train --mode kd --cfg config/train.yaml
+   ```
+9. **Quantize & Probe Latency**
+   ```bash
+   silhouette quantize --method int8 --src models/student-core-kd --out models/student-core-int8
+   SILHOUETTE_EDGE=1 STUDENT_MODEL=models/student-core-int8 silhouette latency
+   ```
+10. **Release & License**
+    ```bash
+    silhouette selfcheck
+    make gates
+    silhouette license --customer-id ORG-1234
+    ```
+
+
+*This document is intended to be saved as `docs/INSTALL_QUICKSTART.md` so new users can install and run Silhouette Core in minutes.*
+

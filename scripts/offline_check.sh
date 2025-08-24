@@ -30,7 +30,6 @@ if [[ ! "$ARTIFACTS" =~ ^artifacts/[0-9]{8}_[0-9]{6}$ ]]; then
   exit 1
 fi
 if [[ ! -d "$ARTIFACTS" || ! -w "$ARTIFACTS" ]]; then
-
   echo "Artifact directory $ARTIFACTS is not writable" >&2
   exit 1
 fi

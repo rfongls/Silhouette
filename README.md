@@ -312,6 +312,8 @@ Remove `--dry-run` to create the issues.
 - [HL7 testing guide](docs/hl7_testing.md)
 - [Offline parity workflow](docs/offline_parity.md)
 - [Release candidate checklist](docs/rc_checklist.md)
+- [Codex handoff](docs/codex_handoff.md)
+- [Docs index](docs/README.md)
 
 ---
 
@@ -322,7 +324,6 @@ Silhouette Core uses a structured release pipeline:
 - CI builds and runs regression gates.
 - Artifacts are attached to GitHub release (wheel, scoreboard, compliance, watermark).
 - See [RELEASE.md](RELEASE.md) for full checklist.
-- Final Phase 10 summary: [docs/Phase_10_Completion.md](docs/Phase_10_Completion.md).
 
 ---
 
