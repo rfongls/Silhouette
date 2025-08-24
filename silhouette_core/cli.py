@@ -11,6 +11,9 @@ from .analysis import hotpaths as analysis_hotpaths
 from .analysis import service as analysis_service
 from .analysis import suggest_tests as analysis_suggest_tests
 from .analysis import summarize_ci as analysis_summarize_ci
+from .impact.impact_set import compute_impact
+from .patch.pr_body import compose_pr_body
+from .patch.propose import propose_patch as propose_patch_fn
 from .repo_adapter import LocalRepoAdapter
 from .repo_map import build_repo_map, save_repo_map
 from .run_artifacts import record_run
@@ -248,6 +251,34 @@ def summarize_ci_cmd(json_out):
         click.echo(json.dumps(data))
     else:
         _echo(str(data))
+
+@main.group("propose")
+def propose_group():
+    """Proposals."""
+    pass
+
+
+@propose_group.command("patch")
+@click.option("--goal", required=True)
+@click.option("--hint", multiple=True, help="File hints")
+@click.option("--strategy", default="textual", show_default=True)
+def propose_patch_cmd(goal, hint, strategy):
+    hints = list(hint)
+    with record_run(
+        "propose_patch",
+        {"goal": goal, "hints": hints, "strategy": strategy},
+        policy_path=Path("policy.yaml"),
+    ) as run_dir:
+        result = propose_patch_fn(goal, hints=hints, strategy=strategy)
+        diff_path = run_dir / "proposed_patch.diff"
+        diff_path.write_text(result["diff"], encoding="utf-8")
+        impact = compute_impact(result["summary"]["files_changed"])
+        (run_dir / "impact_set.json").write_text(
+            json.dumps(impact), encoding="utf-8"
+        )
+        pr_body = compose_pr_body(goal, impact, result["summary"])
+        (run_dir / "proposed_pr_body.md").write_text(pr_body, encoding="utf-8")
+    _echo(f"Wrote {diff_path}")
 
 if __name__ == "__main__":
     main()
