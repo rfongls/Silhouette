@@ -1,11 +1,16 @@
 """Security utilities for Silhouette Core.
 
-Re-export the :mod:`scanner` helpers so callers can simply::
+Re-export scanner helpers and license lists so callers can simply::
 
     from silhouette_core.security import scan_path
 """
 
-from . import scanner
-from .scanner import scan_path, scan_paths, scan_text
+from .scanner import (
+    SPDX_DENYLIST,
+    SPDX_WHITELIST,
+    scan_path,
+    scan_paths,
+    scan_text,
+)
 
-__all__ = ["scan_path", "scan_paths", "scan_text", "scanner"]
+__all__ = ["scan_path", "scan_paths", "scan_text", "SPDX_WHITELIST", "SPDX_DENYLIST"]
