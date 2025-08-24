@@ -1,5 +1,4 @@
 from __future__ import annotations
-
 from pathlib import Path
 import subprocess
 import sys
@@ -29,7 +28,6 @@ def test_html_report_sections(tmp_path):
     assert "services/api" in text
     assert "@team-api" in text or "none" in text
     assert '<a href="repo_map.json"' in text
-
     assert "http://" not in text and "https://" not in text
     assert "<link" not in text
 
