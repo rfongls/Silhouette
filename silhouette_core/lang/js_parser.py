@@ -20,10 +20,8 @@ FUNC_DECL_RE = re.compile(r"function\s+(\w+)")
 
 def parse_js_ts(file_path: str, text: str) -> dict:
     """Parse a JS/TS file into imports/exports/symbols."""
-
     # Normalise newlines so that CRLF and CR do not affect line counting.
     text = text.replace("\r\n", "\n").replace("\r", "\n")
-
     symbols: list[dict] = []
     imports: list[dict] = []
     exports: list[dict] = []
@@ -32,7 +30,7 @@ def parse_js_ts(file_path: str, text: str) -> dict:
         line_start = text.rfind("\n", 0, m.start()) + 1
         line = text.count("\n", 0, m.start()) + 1
         column = m.start() - line_start + 1
-        symbols.append({"name": m.group(1), "kind": "function", "loc": {"line": line, "column": column}})
+        symbols.append({"name": m.group(1), "kind": "function", "loc": {"line": line, "column": column}}
 
     for m in IMPORT_RE.finditer(text):
         src = m.group(1) or m.group(2)
