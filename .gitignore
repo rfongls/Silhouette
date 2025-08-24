@@ -27,3 +27,15 @@ training_data/reasoner/stage1_full.jsonl
 modules/reasoner/distill_data.jsonl
 
 archive/
+
+# Additional artifacts and caches
+build/
+dist/
+*.egg-info/
+.mypy_cache/
+.cache/
+node_modules/
+.venv/
+.coverage
+coverage/
+.ipynb_checkpoints/
