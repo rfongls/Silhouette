@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# ruff: noqa: I001
 """
 Aggregate artifacts and render a static HTML scoreboard:
 - artifacts/selfcheck.json
@@ -8,17 +9,17 @@ Aggregate artifacts and render a static HTML scoreboard:
 Writes to: artifacts/scoreboard/index.html
 Offline-friendly; tolerates missing files.
 """
+import contextlib
 import glob
 import html
 import json
 import os
 import pathlib
-import time
 import sys
+import time
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent.parent))
-from security.scanner import SPDX_WHITELIST
-
+from silhouette_core.security.scanner import SPDX_WHITELIST  # noqa: E402
 
 def aggregate_json(runtime_reports, latency):
     """Build a minimal JSON summary for regression gates."""
@@ -255,10 +256,8 @@ small{color:#666}
         security_rep = _load(ART_DIR / "security_report.json")
         runtime_reports = []
         for p in glob.glob(str(ART_DIR / "*.build_eval_report.json")) + glob.glob(str(ART_DIR / "build_eval_report.json")):
-            try:
+            with contextlib.suppress(Exception):
                 runtime_reports.append(_load(pathlib.Path(p)))
-            except Exception:
-                pass
         lint_py = _load(ART_DIR / "lint_python.json")
         lint_js = _load(ART_DIR / "lint_js.json")
         lint_cpp = _load(ART_DIR / "lint_cpp.json")
