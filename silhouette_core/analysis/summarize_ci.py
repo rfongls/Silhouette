@@ -6,7 +6,8 @@ from pathlib import Path
 def summarize(root: Path) -> dict:
     ci_dir = root / ".github" / "workflows"
     gh_actions = any(ci_dir.glob("*.yml")) if ci_dir.is_dir() else False
-    dockerfiles = [p.name for p in root.glob("Dockerfile*")]
+    # ``Path.glob`` ordering can vary across platforms; sort for determinism
+    dockerfiles = sorted(p.name for p in root.glob("Dockerfile*"))
     workflow_text = ""
     for p in ci_dir.glob("*.yml") if ci_dir.is_dir() else []:
         workflow_text += p.read_text(encoding="utf-8") + "\n"

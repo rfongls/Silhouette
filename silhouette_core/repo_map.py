@@ -1,8 +1,8 @@
 from __future__ import annotations
 
+import fnmatch
 import hashlib
 import json
-import fnmatch
 from collections import defaultdict
 from collections.abc import Iterable
 from pathlib import Path
