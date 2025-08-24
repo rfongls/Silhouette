@@ -173,7 +173,6 @@ Your hints may be **protected** by policy. Try a non-protected path or adjust `p
 
 ---
 
-
 ## 12) Runtime setup (optional)
 
 1. Install `llama.cpp`:
