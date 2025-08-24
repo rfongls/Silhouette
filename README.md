@@ -307,8 +307,11 @@ Remove `--dry-run` to create the issues.
 
 ## 📚 Additional Docs
 
+- [Installer quickstart](docs/INSTALL_QUICKSTART.md)
 - [Repo integration guide](docs/repo_integration.md)
 - [HL7 testing guide](docs/hl7_testing.md)
+- [Offline parity workflow](docs/offline_parity.md)
+- [Release candidate checklist](docs/rc_checklist.md)
 
 ---
 
