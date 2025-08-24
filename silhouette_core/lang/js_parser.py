@@ -24,7 +24,12 @@ def parse_js_ts(file_path: str, text: str) -> dict:
     exports: list[dict] = []
 
     for m in FUNC_DECL_RE.finditer(text):
-        symbols.append({"name": m.group(1), "kind": "function", "loc": []})
+        # Approximate line numbers for the function declaration.  This keeps the
+        # parser offline and lightweight while still providing useful location
+        # metadata for tests and consumers of the repo map.
+        start_line = text.count("\n", 0, m.start()) + 1
+        end_line = start_line
+        symbols.append({"name": m.group(1), "kind": "function", "loc": [start_line, end_line]})
 
     for m in IMPORT_RE.finditer(text):
         src = m.group(1) or m.group(2)

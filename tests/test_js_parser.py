@@ -18,7 +18,8 @@ def test_parse_index_ts():
 
 def test_parse_util_ts():
     data = _parse('pkg/util.ts')
-    assert any(sym["name"] == "bar" for sym in data["symbols"])
+    sym = next(sym for sym in data["symbols"] if sym["name"] == "bar")
+    assert sym["loc"] == [1, 1]
     assert {"name": "bar", "kind": "function"} in data["exports"]
 
 
