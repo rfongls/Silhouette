@@ -15,7 +15,7 @@ issues before artifacts are published.
 Run the repository scanner to detect secrets, PII, and license violations:
 
 ```bash
-python -m security.scanner --path . \
+python -m silhouette_core.security.scanner --path . \
   --license_whitelist MIT,Apache-2.0,BSD-2-Clause,BSD-3-Clause \
   --license_denylist GPL-3.0,AGPL-3.0,MPL-2.0 \
   --max_high 0 --max_medium 10 --max_low 999

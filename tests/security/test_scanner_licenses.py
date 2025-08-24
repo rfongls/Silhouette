@@ -1,5 +1,5 @@
 import pathlib
-from security.scanner import scan_path
+from silhouette_core.security.scanner import scan_path
 
 def test_blocked_license_detected(tmp_path: pathlib.Path):
     p = tmp_path / "gpl.c"
