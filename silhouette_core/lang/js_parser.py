@@ -30,7 +30,13 @@ def parse_js_ts(file_path: str, text: str) -> dict:
         line_start = text.rfind("\n", 0, m.start()) + 1
         line = text.count("\n", 0, m.start()) + 1
         column = m.start() - line_start + 1
-        symbols.append({"name": m.group(1), "kind": "function", "loc": {"line": line, "column": column}}
+        symbols.append(
+            {
+                "name": m.group(1),
+                "kind": "function",
+                "loc": {"line": line, "column": column},
+            }
+        )
 
     for m in IMPORT_RE.finditer(text):
         src = m.group(1) or m.group(2)

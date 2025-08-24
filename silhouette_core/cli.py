@@ -1,10 +1,16 @@
+import json
 import os
 import pathlib
 import sys
+from pathlib import Path
 
 import click
 
 from . import __version__
+from .analysis import hotpaths as analysis_hotpaths
+from .analysis import service as analysis_service
+from .analysis import suggest_tests as analysis_suggest_tests
+from .analysis import summarize_ci as analysis_summarize_ci
 from .repo_adapter import LocalRepoAdapter
 from .repo_map import build_repo_map, save_repo_map
 from .run_artifacts import record_run
@@ -13,6 +19,17 @@ DEFAULT_PROFILE = "profiles/core/policy.yaml"
 
 def _echo(s):
     click.echo(s, err=False)
+
+
+def _load_graph(root: Path):
+    try:
+        from .graph.dep_graph import build_dep_graph
+        return build_dep_graph(root)
+    except Exception:
+        graph: dict[str, set[str]] = {}
+        for p in root.rglob("*.py"):
+            graph[p.relative_to(root).as_posix()] = set()
+        return graph
 
 @click.group(context_settings={"help_option_names": ["-h","--help"]})
 @click.version_option(__version__, prog_name="silhouette")
@@ -28,24 +45,37 @@ def repo_cmd():
 
 @repo_cmd.command("map")
 @click.argument("source")
-@click.option("--json-out", default="artifacts/repo_map.json", show_default=True)
+@click.option("--json-out", default="repo_map.json", show_default=True)
+@click.option("--html-out", default="repo_map.html", show_default=True)
+@click.option("--no-html", is_flag=True, help="Skip HTML rendering")
 @click.option("--compute-hashes", is_flag=True, help="Compute file hashes")
-def repo_map_cmd(source, json_out, compute_hashes):
+def repo_map_cmd(source, json_out, html_out, no_html, compute_hashes):
     """Create a repository map for ``source``."""
     adapter = LocalRepoAdapter(pathlib.Path(source))
     adapter.fetch(source)
     files = adapter.list_files(["**/*"])
-    out_path = pathlib.Path(json_out)
     with record_run(
         "repo_map",
-        {"compute_hashes": compute_hashes, "out": str(out_path)},
+        {
+            "compute_hashes": compute_hashes,
+            "json_out": Path(json_out).name,
+            "html_out": None if no_html else Path(html_out).name,
+        },
         repo_root=adapter.root,
         policy_path=pathlib.Path("policy.yaml"),
-    ):
-        # Build and save the repo map inside the context so both steps are recorded
+    ) as run_dir:
         data = build_repo_map(adapter.root, files, compute_hashes=compute_hashes)
-        save_repo_map(data, out_path)
-    _echo(f"Wrote {out_path}")
+        json_path = run_dir / Path(json_out).name
+        save_repo_map(data, json_path)
+        if not no_html:
+            from .report.html_report import render_repo_map_html
+
+            html_path = run_dir / Path(html_out).name
+            render_repo_map_html(data, html_path)
+    msg = f"Wrote {json_path}"
+    if not no_html:
+        msg += f" and {html_path}"
+    _echo(msg)
 
 @main.command("run")
 @click.option("--profile", default=DEFAULT_PROFILE, show_default=True, help="Policy/profile YAML")
@@ -153,6 +183,71 @@ def license_cmd(customer_id, out):
     ]
     sys.exit(issue())
 
+
+@main.group("analyze")
+def analyze_group():
+    """Static analyses."""
+    pass
+
+
+@analyze_group.command("hotpaths")
+@click.option("--json", "json_out", is_flag=True, help="Output JSON")
+def analyze_hotpaths_cmd(json_out):
+    root = Path(".")
+    graph = _load_graph(root)
+    data = analysis_hotpaths.analyze(graph)
+    if json_out:
+        click.echo(json.dumps(data))
+    else:
+        for n in data["nodes"]:
+            _echo(f"{n['path']}: {n['centrality']:.2f}")
+
+
+@analyze_group.command("service")
+@click.argument("path")
+@click.option("--json", "json_out", is_flag=True, help="Output JSON")
+def analyze_service_cmd(path, json_out):
+    root = Path(".")
+    graph = _load_graph(root)
+    data = analysis_service.analyze(path, graph, root)
+    if json_out:
+        click.echo(json.dumps(data))
+    else:
+        _echo(data["service"])
+
+
+@main.group("suggest")
+def suggest_group():
+    """Suggestions."""
+    pass
+
+
+@suggest_group.command("tests")
+@click.argument("path")
+@click.option("--json", "json_out", is_flag=True, help="Output JSON")
+def suggest_tests_cmd(path, json_out):
+    data = analysis_suggest_tests.suggest(path)
+    if json_out:
+        click.echo(json.dumps(data))
+    else:
+        _echo(str(data))
+
+
+@main.group("summarize")
+def summarize_group():
+    """Summaries."""
+    pass
+
+
+@summarize_group.command("ci")
+@click.option("--json", "json_out", is_flag=True, help="Output JSON")
+def summarize_ci_cmd(json_out):
+    root = Path(".")
+    data = analysis_summarize_ci.summarize(root)
+    if json_out:
+        click.echo(json.dumps(data))
+    else:
+        _echo(str(data))
 
 if __name__ == "__main__":
     main()
