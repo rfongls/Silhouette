@@ -48,3 +48,4 @@
 - [Prior Authorization (FHIR + X12 278/275)](interoperability/prior_auth_fhir_x12.md)
 - [SMART on FHIR Authorization](interoperability/smart_on_fhir_auth.md)
 - [TEFCA / QHIN Exchange Overview](interoperability/tefca_exchange_overview.md)
+
