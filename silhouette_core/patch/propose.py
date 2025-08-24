@@ -30,20 +30,24 @@ def _is_protected(path: str, patterns: list[str]) -> bool:
 
 def propose_patch(goal: str, hints: list[str] | None = None, strategy: str = "textual") -> dict:
     """Propose a patch without modifying files on disk."""
-    hints = hints or []
+    hints = sorted(hints or [])
     policy = _load_policy()
     protected = policy.get("protected_paths", [])
     diff_io = io.StringIO()
     files_changed: list[str] = []
     insertions = deletions = 0
     notes: list[str] = []
+    allowed_ops = policy.get("allowed_ops", {})
+    if not allowed_ops.get("propose_patch", True):
+        notes.append("policy disallows propose_patch; treating as dry-run")
 
     for hint in hints:
         if _is_protected(hint, protected):
             notes.append(f"skipped protected path: {hint}")
             continue
         try:
-            original = Path(hint).read_text(encoding="utf-8").splitlines(keepends=True)
+            original_text = Path(hint).read_text(encoding="utf-8").replace("\r\n", "\n")
+            original = original_text.splitlines(keepends=True)
         except FileNotFoundError:
             notes.append(f"missing file: {hint}")
             continue
@@ -55,5 +59,9 @@ def propose_patch(goal: str, hints: list[str] | None = None, strategy: str = "te
             diff_io.write("\n".join(diff_lines) + "\n")
             files_changed.append(hint)
             insertions += 1
-    summary = {"files_changed": sorted(files_changed), "insertions": insertions, "deletions": deletions}
+    summary = {
+        "files_changed": sorted(files_changed),
+        "insertions": insertions,
+        "deletions": deletions,
+    }
     return {"diff": diff_io.getvalue(), "summary": summary, "notes": notes}

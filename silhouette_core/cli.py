@@ -263,13 +263,16 @@ def propose_group():
 @click.option("--hint", multiple=True, help="File hints")
 @click.option("--strategy", default="textual", show_default=True)
 def propose_patch_cmd(goal, hint, strategy):
-    hints = list(hint)
+    hints = sorted(hint)
     with record_run(
         "propose_patch",
         {"goal": goal, "hints": hints, "strategy": strategy},
+        repo_root=Path("."),
         policy_path=Path("policy.yaml"),
     ) as run_dir:
         result = propose_patch_fn(goal, hints=hints, strategy=strategy)
+        if not result["summary"]["files_changed"]:
+            raise click.ClickException("No permissible targets after policy filtering")
         diff_path = run_dir / "proposed_patch.diff"
         diff_path.write_text(result["diff"], encoding="utf-8")
         impact = compute_impact(result["summary"]["files_changed"])
