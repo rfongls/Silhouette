@@ -29,7 +29,8 @@ if [[ ! "$ARTIFACTS" =~ ^artifacts/[0-9]{8}_[0-9]{6}$ ]]; then
   echo "Unexpected artifact directory $ARTIFACTS" >&2
   exit 1
 fi
-if [[ ! -w "$ARTIFACTS" ]]; then
+if [[ ! -d "$ARTIFACTS" || ! -w "$ARTIFACTS" ]]; then
+
   echo "Artifact directory $ARTIFACTS is not writable" >&2
   exit 1
 fi
