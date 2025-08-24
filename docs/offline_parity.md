@@ -1,6 +1,7 @@
 # Offline Parity
 
-This guide demonstrates how to run core Silhouette workflow without any network
+This guide demonstrates how to run a core Silhouette workflow without any network
+
 access. The flow mirrors the CI steps while relying solely on local assets.
 
 ## Prerequisites
@@ -19,8 +20,10 @@ bash scripts/offline_check.sh
 
 ## Expected Output
 - `ruff check` completes with no errors
-- `offline_check.sh` prints the path to artifacts under
-  `artifacts/<YYYYMMDD_HHMMSS>/` containing:
+- `offline_check.sh` runs repo map → hotpath analysis → test suggestions → CI summary.
+  It exits non-zero on failure, warns if network connectivity is detected, and prints
+  the artifact directory used.
+- Artifacts reside under `artifacts/<YYYYMMDD_HHMMSS>/`:
   - `repo_map.json`
   - `hotpaths.json`
   - `suggest_tests.txt`

@@ -6,7 +6,8 @@
 - JS/TS parsing + unified graph
 - Chunking + embeddings
 - Retrieval planner + CLI analyses
-- Propose-patch dry-run
+- Propose-patch dry-run (outputs diff, impact, and PR body artifacts; allowed as
+  dry-run but still filters protected paths)
 - HL7 guardrails
 - Offline check
 
@@ -17,6 +18,7 @@ See [parking_lot.md](parking_lot.md) for deferred follow-ons.
 ### Blockers
 - ✅ No SyntaxErrors, failing tests, or CLI crashes
 - ✅ Propose_patch documented as dry-run with protected-path filtering
+- ✅ Propose_patch emits diff, impact, and PR body artifacts
 
 ### Critical Quality
 - ✅ Deterministic outputs (HTML/JSON ordering, diff ordering, newline normalization)
@@ -29,5 +31,7 @@ See [parking_lot.md](parking_lot.md) for deferred follow-ons.
 ## RC Readiness
 - ✅ Scope locked
 - ✅ Backlog triaged
+- ✅ Determinism checks pass
+- ✅ Propose_patch artifacts captured
 - ✅ Offline workflow validated
 - ✅ Documentation finalized

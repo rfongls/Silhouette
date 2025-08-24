@@ -2,12 +2,19 @@
 set -euo pipefail
 
 # Run a minimal Silhouette workflow entirely offline and collect artifacts.
+# The script runs map → analyze → suggest → summarize, exits non-zero on any failure,
+# prints the artifact directory used, and warns if network access is detected.
 
 export SILHOUETTE_OFFLINE=1
 
 CMD="silhouette"
 if ! command -v silhouette >/dev/null 2>&1; then
   CMD="python -m silhouette_core.cli"
+fi
+
+# Warn if network seems reachable
+if curl -sSf https://example.com >/dev/null 2>&1; then
+  echo "Warning: network connection detected" >&2
 fi
 
 # 1. Repo map (captures run directory)
@@ -18,6 +25,16 @@ if [[ -z "$ARTIFACTS" ]]; then
   echo "Failed to determine artifact directory" >&2
   exit 1
 fi
+if [[ ! "$ARTIFACTS" =~ ^artifacts/[0-9]{8}_[0-9]{6}$ ]]; then
+  echo "Unexpected artifact directory $ARTIFACTS" >&2
+  exit 1
+fi
+if [[ ! -w "$ARTIFACTS" ]]; then
+  echo "Artifact directory $ARTIFACTS is not writable" >&2
+  exit 1
+fi
+
+echo "Using artifact directory $ARTIFACTS"
 
 # 2. Hot path analysis
 $CMD analyze hotpaths --json >"$ARTIFACTS/hotpaths.json"
