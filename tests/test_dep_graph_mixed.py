@@ -10,6 +10,7 @@ def test_dep_graph_mixed():
     assert ('pkg/index.ts', 'pkg/util.ts') in edges
     assert ('pkg/a.js', 'pkg/b.jsx') in edges
     assert ('pkg/py_main.py', 'pkg/py_helper.py') in edges
+    assert ('pkg/index.ts', 'pkg/types.ts') not in edges
     # Ensure all files represented
     assert set(graph.keys()) >= {
         'pkg/index.ts', 'pkg/util.ts', 'pkg/a.js', 'pkg/b.jsx',

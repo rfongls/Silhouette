@@ -1,2 +1,2 @@
 import React from 'react';
-export default function B() { return <div/>; }
+export default function () { return <div/>; }
