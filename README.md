@@ -309,6 +309,8 @@ Remove `--dry-run` to create the issues.
 
 - [Repo integration guide](docs/repo_integration.md)
 - [HL7 testing guide](docs/hl7_testing.md)
+- [Offline parity workflow](docs/offline_parity.md)
+- [Release candidate checklist](docs/rc_checklist.md)
 
 ---
 

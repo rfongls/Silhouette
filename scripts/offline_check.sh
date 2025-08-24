@@ -14,6 +14,10 @@ fi
 out=$($CMD repo map . --json-out repo_map.json 2>&1)
 echo "$out"
 ARTIFACTS=$(echo "$out" | grep -o 'artifacts/[0-9_]*' | head -n1)
+if [[ -z "$ARTIFACTS" ]]; then
+  echo "Failed to determine artifact directory" >&2
+  exit 1
+fi
 
 # 2. Hot path analysis
 $CMD analyze hotpaths --json >"$ARTIFACTS/hotpaths.json"
