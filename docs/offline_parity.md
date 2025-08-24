@@ -1,6 +1,7 @@
 # Offline Parity
 
 This guide demonstrates how to run a core Silhouette workflow without any network
+
 access. The flow mirrors the CI steps while relying solely on local assets.
 
 ## Prerequisites
