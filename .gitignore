@@ -20,6 +20,7 @@ exports/
 reports/
 memory_*.jsonl
 artifacts/
+.silhouette/
 
 # Generated training data
 training_data/reasoner/stage1_full.jsonl
