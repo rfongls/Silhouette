@@ -246,4 +246,3 @@ wget <model-url>
 
 
 *This document is intended to be saved as `docs/INSTALL_QUICKSTART.md` so new users can install and run Silhouette Core in minutes.*
-
