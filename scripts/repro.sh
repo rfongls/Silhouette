@@ -1,43 +1,38 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-if [ "$#" -ne 1 ]; then
-  echo "usage: $0 artifacts/<ts>/silhouette_run.json" >&2
-  exit 1
-fi
-json="$1"
-cmd=$(python - "$json" <<'PY'
-import json,sys
-with open(sys.argv[1]) as f:
-    data=json.load(f)
-print(data["command"])
-PY
-)
-if [ "$cmd" = "repo_map" ]; then
-  args=$(python - "$json" <<'PY'
-import json,sys
-with open(sys.argv[1]) as f:
-    data=json.load(f)
-parts=[]
-for k,v in data["args"].items():
-    flag='--'+k.replace('_','-')
-    if isinstance(v,bool):
-        if v:
-            parts.append(flag)
-    else:
-        parts.extend([flag,str(v)])
-print(' '.join(parts))
-PY
-)
-  repo_root=$(python - "$json" <<'PY'
-import json,sys
-with open(sys.argv[1]) as f:
-    data=json.load(f)
-print(data["repo_root"])
-PY
-)
-  python -m silhouette_core.cli repo map "$repo_root" $args
+# Re-run a recorded Silhouette command. By default, replays the latest run.
+
+ARG="${1:-latest}"
+if [[ "$ARG" == "latest" ]]; then
+  RUN_JSON="$(ls -1dt artifacts/*/silhouette_run.json 2>/dev/null | head -n1 || true)"
 else
-  echo "Unsupported command: $cmd" >&2
+  RUN_JSON="$ARG"
+  [[ -d "$ARG" ]] && RUN_JSON="$ARG/silhouette_run.json"
+fi
+
+if [[ -z "${RUN_JSON:-}" || ! -f "$RUN_JSON" ]]; then
+  echo "Run JSON not found. Provide file, artifacts/<ts> dir, or 'latest'." >&2
   exit 1
 fi
+
+python - "$RUN_JSON" <<'PY'
+import json, sys, subprocess, shlex
+
+p = sys.argv[1]
+meta = json.load(open(p, 'r', encoding='utf-8'))
+cmd = meta.get("command")
+args = meta.get("args") or {}
+root = meta.get("repo_root") or "."
+
+def run(cmdline: str) -> None:
+    print(">>", cmdline)
+    subprocess.run(cmdline, cwd=root, shell=True, check=True)
+
+if cmd == "repo_map":
+    out = args.get("out", "artifacts/replay_repo_map.json")
+    run(f"silhouette repo map . --json-out {shlex.quote(out)}")
+else:
+    print(f"Unknown command in run json: {cmd}")
+PY
+
