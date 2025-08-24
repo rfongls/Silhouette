@@ -1,10 +1,16 @@
+import json
 import os
 import pathlib
 import sys
+from pathlib import Path
 
 import click
 
 from . import __version__
+from .analysis import hotpaths as analysis_hotpaths
+from .analysis import service as analysis_service
+from .analysis import suggest_tests as analysis_suggest_tests
+from .analysis import summarize_ci as analysis_summarize_ci
 from .repo_adapter import LocalRepoAdapter
 from .repo_map import build_repo_map, save_repo_map
 from .run_artifacts import record_run
@@ -13,6 +19,17 @@ DEFAULT_PROFILE = "profiles/core/policy.yaml"
 
 def _echo(s):
     click.echo(s, err=False)
+
+
+def _load_graph(root: Path):
+    try:
+        from .graph.dep_graph import build_dep_graph
+        return build_dep_graph(root)
+    except Exception:
+        graph: dict[str, set[str]] = {}
+        for p in root.rglob("*.py"):
+            graph[p.relative_to(root).as_posix()] = set()
+        return graph
 
 @click.group(context_settings={"help_option_names": ["-h","--help"]})
 @click.version_option(__version__, prog_name="silhouette")
@@ -153,6 +170,71 @@ def license_cmd(customer_id, out):
     ]
     sys.exit(issue())
 
+
+@main.group("analyze")
+def analyze_group():
+    """Static analyses."""
+    pass
+
+
+@analyze_group.command("hotpaths")
+@click.option("--json", "json_out", is_flag=True, help="Output JSON")
+def analyze_hotpaths_cmd(json_out):
+    root = Path(".")
+    graph = _load_graph(root)
+    data = analysis_hotpaths.analyze(graph)
+    if json_out:
+        click.echo(json.dumps(data))
+    else:
+        for n in data["nodes"]:
+            _echo(f"{n['path']}: {n['centrality']:.2f}")
+
+
+@analyze_group.command("service")
+@click.argument("path")
+@click.option("--json", "json_out", is_flag=True, help="Output JSON")
+def analyze_service_cmd(path, json_out):
+    root = Path(".")
+    graph = _load_graph(root)
+    data = analysis_service.analyze(path, graph, root)
+    if json_out:
+        click.echo(json.dumps(data))
+    else:
+        _echo(data["service"])
+
+
+@main.group("suggest")
+def suggest_group():
+    """Suggestions."""
+    pass
+
+
+@suggest_group.command("tests")
+@click.argument("path")
+@click.option("--json", "json_out", is_flag=True, help="Output JSON")
+def suggest_tests_cmd(path, json_out):
+    data = analysis_suggest_tests.suggest(path)
+    if json_out:
+        click.echo(json.dumps(data))
+    else:
+        _echo(str(data))
+
+
+@main.group("summarize")
+def summarize_group():
+    """Summaries."""
+    pass
+
+
+@summarize_group.command("ci")
+@click.option("--json", "json_out", is_flag=True, help="Output JSON")
+def summarize_ci_cmd(json_out):
+    root = Path(".")
+    data = analysis_summarize_ci.summarize(root)
+    if json_out:
+        click.echo(json.dumps(data))
+    else:
+        _echo(str(data))
 
 if __name__ == "__main__":
     main()
