@@ -45,24 +45,37 @@ def repo_cmd():
 
 @repo_cmd.command("map")
 @click.argument("source")
-@click.option("--json-out", default="artifacts/repo_map.json", show_default=True)
+@click.option("--json-out", default="repo_map.json", show_default=True)
+@click.option("--html-out", default="repo_map.html", show_default=True)
+@click.option("--no-html", is_flag=True, help="Skip HTML rendering")
 @click.option("--compute-hashes", is_flag=True, help="Compute file hashes")
-def repo_map_cmd(source, json_out, compute_hashes):
+def repo_map_cmd(source, json_out, html_out, no_html, compute_hashes):
     """Create a repository map for ``source``."""
     adapter = LocalRepoAdapter(pathlib.Path(source))
     adapter.fetch(source)
     files = adapter.list_files(["**/*"])
-    out_path = pathlib.Path(json_out)
     with record_run(
         "repo_map",
-        {"compute_hashes": compute_hashes, "out": str(out_path)},
+        {
+            "compute_hashes": compute_hashes,
+            "json_out": Path(json_out).name,
+            "html_out": None if no_html else Path(html_out).name,
+        },
         repo_root=adapter.root,
         policy_path=pathlib.Path("policy.yaml"),
-    ):
-        # Build and save the repo map inside the context so both steps are recorded
+    ) as run_dir:
         data = build_repo_map(adapter.root, files, compute_hashes=compute_hashes)
-        save_repo_map(data, out_path)
-    _echo(f"Wrote {out_path}")
+        json_path = run_dir / Path(json_out).name
+        save_repo_map(data, json_path)
+        if not no_html:
+            from .report.html_report import render_repo_map_html
+
+            html_path = run_dir / Path(html_out).name
+            render_repo_map_html(data, html_path)
+    msg = f"Wrote {json_path}"
+    if not no_html:
+        msg += f" and {html_path}"
+    _echo(msg)
 
 @main.command("run")
 @click.option("--profile", default=DEFAULT_PROFILE, show_default=True, help="Policy/profile YAML")
