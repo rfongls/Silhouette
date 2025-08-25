@@ -55,7 +55,7 @@ def _read_codeowners(root: Path) -> list[tuple[str, list[str]]]:
                     continue
                 parts = s.split()
                 if len(parts) >= 2:
-                    pattern = os.path.normpath(parts[0])
+                    pattern = parts[0].lstrip("/")
                     owners = [p for p in parts[1:] if p.startswith("@")]
                     rules.append((pattern, owners))
             return rules
@@ -64,11 +64,10 @@ def _read_codeowners(root: Path) -> list[tuple[str, list[str]]]:
 
 def _owners_for(path_rel: str, rules: list[tuple[str, list[str]]]) -> list[str]:
     """Resolve owners for a repo-relative path using GitHub-like matching (last match wins)."""
-    p = os.path.normpath(path_rel).replace("\\", "/")
+    p = path_rel.replace("\\", "/")
     owners: list[str] = []
     for pattern, o in rules:
-        patt = os.path.normpath(pattern).replace("\\", "/")
-        if fnmatch.fnmatch(p, patt) or fnmatch.fnmatch(p + "/", patt):
+        if fnmatch.fnmatch(p, pattern) or fnmatch.fnmatch(p + "/", pattern):
             owners = o
     return owners
 

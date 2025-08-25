@@ -1,27 +1,15 @@
 from __future__ import annotations
 
-import fnmatch
 import os
 from pathlib import Path
+from ..repo_map import _owners_for as _repo_owners_for, _read_codeowners
 
 
 def _owners_for(service: Path, root: Path) -> list[str]:
-    owners: list[str] = []
-    codeowners = root / "CODEOWNERS"
-    if not codeowners.exists():
-        return owners
-    rel = service.as_posix().rstrip("/") + "/"
-    for line in codeowners.read_text(encoding="utf-8").splitlines():
-        line = line.strip()
-        if not line or line.startswith("#"):
-            continue
-        parts = line.split()
-        if len(parts) < 2:
-            continue
-        pattern, *rest = parts
-        if fnmatch.fnmatch(rel, pattern.rstrip("*") + "*"):
-            owners.extend(rest)
-    return owners
+    rules = _read_codeowners(root)
+    if not rules:
+        return []
+    return _repo_owners_for(service.as_posix().rstrip("/"), rules)
 
 
 def _has_test(path: str, root: Path) -> bool:
