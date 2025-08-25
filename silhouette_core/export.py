@@ -1,7 +1,7 @@
 import argparse
 import os
 import zipfile
-from datetime import datetime
+from datetime import UTC, datetime
 
 try:
     from cryptography.fernet import Fernet
@@ -57,7 +57,7 @@ def main():
     args = parser.parse_args()
 
     os.makedirs(EXPORT_DIR, exist_ok=True)
-    timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+    timestamp = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
     out_path = args.output or os.path.join(EXPORT_DIR, f"silhouette_backup_{timestamp}.zip")
     key_path = args.key or os.path.join(EXPORT_DIR, f"key_{timestamp}.key")
 

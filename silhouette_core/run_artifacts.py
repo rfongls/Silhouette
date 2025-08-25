@@ -5,7 +5,7 @@ import platform
 import subprocess
 from collections.abc import Iterator
 from contextlib import contextmanager
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 
 
@@ -27,14 +27,14 @@ def record_run(
     repo_root: Path,
     policy_path: Path | None = None,
 ) -> Iterator[Path]:
-    start = datetime.utcnow()
+    start = datetime.now(UTC)
     ts = start.strftime("%Y%m%d_%H%M%S")
     run_dir = Path("artifacts") / ts
     run_dir.mkdir(parents=True, exist_ok=True)
     try:
         yield run_dir
     finally:
-        finished = datetime.utcnow()
+        finished = datetime.now(UTC)
         data = {
             "command": command,
             "args": args,
@@ -45,7 +45,7 @@ def record_run(
                 "python": platform.python_version(),
                 "platform": platform.platform(),
             },
-            "started": start.isoformat() + "Z",
-            "finished": finished.isoformat() + "Z",
+            "started": start.isoformat().replace("+00:00", "Z"),
+            "finished": finished.isoformat().replace("+00:00", "Z"),
         }
         (run_dir / "silhouette_run.json").write_text(json.dumps(data, indent=2))

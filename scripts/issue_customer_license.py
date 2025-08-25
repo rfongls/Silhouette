@@ -3,7 +3,8 @@
 Render a customer license from CUSTOMER_LICENSE_TEMPLATE.md,
 embed identifiers, and update WATERMARK.json.
 """
-import argparse, pathlib, datetime, json
+import argparse, pathlib, json
+from datetime import UTC, datetime
 
 
 def main() -> int:
@@ -17,7 +18,7 @@ def main() -> int:
     args = ap.parse_args()
 
     template = pathlib.Path("CUSTOMER_LICENSE_TEMPLATE.md").read_text()
-    now = datetime.datetime.utcnow().strftime("%Y-%m-%d")
+    now = datetime.now(UTC).strftime("%Y-%m-%d")
 
     rendered = (
         template.replace("{{CUSTOMER_ID}}", args.customer_id).replace("{{DATE}}", now)
