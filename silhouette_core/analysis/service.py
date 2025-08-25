@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
+from ..repo_map import _owners_for as _repo_owners_for, _read_codeowners
 
 from ..repo_map import _owners_for as _repo_owners_for
 from ..repo_map import _read_codeowners
