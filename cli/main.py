@@ -7,7 +7,7 @@ import json
 import os
 import subprocess
 import time
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 
 from silhouette_core.offline_mode import is_offline
@@ -88,7 +88,7 @@ def launch_repl(alignment, modules, module_funcs):
     """Run REPL loop handling special commands and logging."""
     LOG_DIR.mkdir(exist_ok=True)
     log_file = LOG_DIR / (
-        f"silhouette_session_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}.txt"
+        f"silhouette_session_{datetime.now(UTC).strftime('%Y%m%d_%H%M%S')}.txt"
     )
 
     # Ensure unicode characters are preserved regardless of system locale

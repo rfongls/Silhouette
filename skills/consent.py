@@ -6,7 +6,7 @@ import pathlib
 
 def build_fhir_consent(patient_id: str, template_path: str) -> Dict[str, Any]:
     data = yaml.safe_load(pathlib.Path(template_path).read_text(encoding="utf-8"))
-    now = dt.datetime.utcnow().date().isoformat()
+    now = dt.datetime.now(dt.UTC).date().isoformat()
     return {
         "resourceType": "Consent",
         "id": str(uuid.uuid4()),

@@ -1,9 +1,12 @@
 from __future__ import annotations
-from fastapi import APIRouter, Request, Form
+
+import json
+from pathlib import Path
+
+import yaml
+from fastapi import APIRouter, Form, Request
 from fastapi.responses import HTMLResponse
 from starlette.templating import Jinja2Templates
-from pathlib import Path
-import json, yaml
 
 from skills.hl7_drafter import draft_message, send_message
 
@@ -21,12 +24,17 @@ MESSAGE_TYPES = [
     "VXU^V04","RDE^O11","ORM^O01","OML^O21","ORU^R01:RAD","MDM^T02","ADT^A01","SIU^S12","DFT^P03"
 ]
 
+def _render(request: Request, context: dict) -> HTMLResponse:
+    try:
+        return templates.TemplateResponse(request, "ui/hl7_send.html", context)
+    except Exception:
+        context["request"] = request
+        return templates.TemplateResponse("ui/hl7_send.html", context)
+
+
 @router.get("/ui/hl7", response_class=HTMLResponse)
 async def get_form(request: Request):
-    return templates.TemplateResponse(
-        "ui/hl7_send.html",
-        {"request": request, "targets": _load_targets(), "message_types": MESSAGE_TYPES}
-    )
+    return _render(request, {"targets": _load_targets(), "message_types": MESSAGE_TYPES})
 
 @router.post("/ui/hl7", response_class=HTMLResponse)
 async def post_form(
@@ -48,10 +56,9 @@ async def post_form(
     except Exception as e:
         error = str(e)
 
-    return templates.TemplateResponse(
-        "ui/hl7_send.html",
+    return _render(
+        request,
         {
-            "request": request,
             "targets": _load_targets(),
             "message_types": MESSAGE_TYPES,
             "selected_type": message_type,
@@ -60,5 +67,5 @@ async def post_form(
             "json_data": json_data,
             "result": result,
             "error": error,
-        }
+        },
     )

@@ -24,7 +24,7 @@ def fhir_audit_event(action: str, outcome: str, who: str, what: str) -> Dict[str
             }
         ],
         "action": action[:1].upper(),
-        "recorded": dt.datetime.utcnow().isoformat(),
+        "recorded": dt.datetime.now(dt.UTC).isoformat(),
         "outcome": 0 if outcome == "success" else 8,
         "agent": [{"who": {"display": who}}],
         "source": {"observer": {"display": "Silhouette Core"}},

@@ -1,7 +1,7 @@
 import argparse
 import json
 import zipfile
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 
 
@@ -66,7 +66,7 @@ def main(argv: list[str] | None = None) -> None:
     args = parser.parse_args(argv)
 
     if args.output is None:
-        ts = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+        ts = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
         args.output = Path(f"silhouette_profile_{ts}{'.zip' if args.zip else '.json'}")
 
     out_path = export_profile(args.output, as_zip=args.zip)

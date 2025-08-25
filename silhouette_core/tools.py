@@ -69,12 +69,10 @@ _ALLOWED_OPS = {
 
 
 def _eval_ast(node):
-    if isinstance(node, ast.Constant):
-        if isinstance(node.value, int | float):
-            return node.value
-        raise ValueError("only numeric constants allowed")
-    if hasattr(ast, "Num") and isinstance(node, ast.Num):
-        return node.n
+    if isinstance(node, ast.Constant) and isinstance(
+        getattr(node, "value", None), int | float | complex
+    ):
+        return node.value
     if isinstance(node, ast.UnaryOp) and type(node.op) in _ALLOWED_OPS:
         return _ALLOWED_OPS[type(node.op)](_eval_ast(node.operand))
     if isinstance(node, ast.BinOp) and type(node.op) in _ALLOWED_OPS:

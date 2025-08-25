@@ -1,13 +1,16 @@
 import pytest
+pytest.importorskip("jsonschema")
+pytest.importorskip("hl7apy")
+pytest.importorskip("fhir.resources")
 
-from translators.cda_to_fhir import CDAToFHIRTranslator
-from translators.hl7v2_to_fhir import HL7v2ToFHIRTranslator, load_rules
-from validators.fhir import validate_fhir_bundle
-from validators.fhir_profile import (
+from translators.cda_to_fhir import CDAToFHIRTranslator  # noqa: E402
+from translators.hl7v2_to_fhir import HL7v2ToFHIRTranslator, load_rules  # noqa: E402
+from validators.fhir import validate_fhir_bundle  # noqa: E402
+from validators.fhir_profile import (  # noqa: E402
     validate_structural_with_pydantic,
     validate_uscore_jsonschema,
 )
-from validators.hl7 import validate_hl7_structural
+from validators.hl7 import validate_hl7_structural  # noqa: E402
 
 
 @pytest.mark.hl7

@@ -4,6 +4,9 @@ import os
 from pathlib import Path
 from ..repo_map import _owners_for as _repo_owners_for, _read_codeowners
 
+from ..repo_map import _owners_for as _repo_owners_for
+from ..repo_map import _read_codeowners
+
 
 def _owners_for(service: Path, root: Path) -> list[str]:
     rules = _read_codeowners(root)
