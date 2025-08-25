@@ -128,7 +128,7 @@ class EmbeddingIndex:
 # --- Legacy test adapter (back-compat) ---
 try:
     _DEFAULT_INDEX  # type: ignore[name-defined]
-except NameError:
+except NameError:  # pragma: no cover - initialization guard
     _DEFAULT_INDEX = None  # type: ignore[assignment]
 
 
