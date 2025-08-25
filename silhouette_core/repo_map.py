@@ -43,19 +43,32 @@ def _centrality(graph: dict[str, set[str]]) -> dict[str, float]:
     return centrality
 
 
-def _parse_codeowners(root: Path) -> list[tuple[str, list[str]]]:
-    path = root / "CODEOWNERS"
-    entries: list[tuple[str, list[str]]] = []
-    if not path.is_file():
-        return entries
-    for line in path.read_text(encoding="utf-8").splitlines():
-        line = line.strip()
-        if not line or line.startswith("#"):
-            continue
-        parts = line.split()
-        if len(parts) >= 2:
-            entries.append((parts[0], parts[1:]))
-    return entries
+def _read_codeowners(root: Path) -> list[tuple[str, list[str]]]:
+    """Return list of (pattern, [owners]) rules from CODEOWNERS; first file found wins."""
+    for loc in (root / ".github" / "CODEOWNERS", root / "CODEOWNERS"):
+        if loc.is_file():
+            rules: list[tuple[str, list[str]]] = []
+            for line in loc.read_text(encoding="utf-8", errors="ignore").splitlines():
+                s = line.strip()
+                if not s or s.startswith("#"):
+                    continue
+                parts = s.split()
+                if len(parts) >= 2:
+                    pattern = parts[0].lstrip("/")
+                    owners = [p for p in parts[1:] if p.startswith("@")]
+                    rules.append((pattern, owners))
+            return rules
+    return []
+
+
+def _owners_for(path_rel: str, rules: list[tuple[str, list[str]]]) -> list[str]:
+    """Resolve owners for a repo-relative path using GitHub-like matching (last match wins)."""
+    p = path_rel.replace("\\", "/")
+    owners: list[str] = []
+    for pattern, o in rules:
+        if fnmatch.fnmatch(p, pattern) or fnmatch.fnmatch(p + "/", pattern):
+            owners = o
+    return owners
 
 
 def _service_candidates(root: Path, code_files: list[str]) -> list[str]:
@@ -77,17 +90,19 @@ def build_repo_map(root: Path, files: Iterable[str], compute_hashes: bool = Fals
     code_paths: list[str] = []
     code_file_count = 0
     for rel in files:
-        p = root / rel
+        rel_path = Path(rel)
+        p = root / rel_path
         if not p.is_file():
             continue
         size = p.stat().st_size
-        entry: dict[str, object] = {"path": rel, "size": size}
+        rel_norm = rel_path.as_posix()
+        entry: dict[str, object] = {"path": rel_norm, "size": size}
         lang = _lang_for_path(p)
         if lang:
             detected.append(lang)
             language_counts[lang] = language_counts.get(lang, 0) + 1
             code_file_count += 1
-            code_paths.append(rel)
+            code_paths.append(rel_norm)
         if compute_hashes and size <= 5 * 1024 * 1024:
             sha1 = hashlib.sha1(p.read_bytes()).hexdigest()
             entry["hash"] = f"sha1:{sha1}"
@@ -146,7 +161,7 @@ def build_repo_map(root: Path, files: Iterable[str], compute_hashes: bool = Fals
     }
 
     # Services
-    owners_patterns = _parse_codeowners(root)
+    rules = _read_codeowners(root)
     services: list[dict[str, object]] = []
     for svc in _service_candidates(root, non_test_code):
         svc_files = [p for p in non_test_code if p.startswith(f"{svc}/")]
@@ -165,32 +180,29 @@ def build_repo_map(root: Path, files: Iterable[str], compute_hashes: bool = Fals
                 for dst in dsts:
                     if dst in svc_set:
                         deps_in.add(src)
-        owners: set[str] = set()
-        for file in svc_files:
-            for pattern, who in owners_patterns:
-                if fnmatch.fnmatch(file, pattern):
-                    owners.update(who)
         no_tests = sorted(Path(f).name for f in svc_files if f not in tested)
         high_cent = sorted(
             Path(f).name
             for f in svc_files
             if centrality_map.get(f, 0) > 0.5
         )
-        services.append(
-            {
-                "name": Path(svc).name,
-                "path": svc,
-                "languages": languages,
-                "files": len(svc_files),
-                "deps_in": sorted(deps_in),
-                "deps_out": sorted(deps_out),
-                "owners": sorted(owners),
-                "risks": {
-                    "no_tests": no_tests,
-                    "high_centrality": high_cent,
-                },
-            }
-        )
+        service = {
+            "name": Path(svc).name,
+            "path": svc,
+            "languages": languages,
+            "files": len(svc_files),
+            "deps_in": sorted(deps_in),
+            "deps_out": sorted(deps_out),
+            "owners": [],
+            "risks": {
+                "no_tests": no_tests,
+                "high_centrality": high_cent,
+            },
+        }
+        service_path = service["path"].replace("\\", "/")
+        service["path"] = service_path
+        service["owners"] = _owners_for(service_path, rules) if rules else []
+        services.append(service)
     services.sort(key=lambda x: x["path"])
 
     data = {
