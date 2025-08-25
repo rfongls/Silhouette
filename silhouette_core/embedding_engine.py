@@ -126,15 +126,12 @@ class EmbeddingIndex:
         self.conn.commit()
 
 # --- Legacy test adapter (back-compat) ---
-try:
-    _DEFAULT_INDEX  # type: ignore[name-defined]
-except NameError:  # pragma: no cover - initialization guard
+if "_DEFAULT_INDEX" not in globals():
     _DEFAULT_INDEX = None  # type: ignore[assignment]
-
 
 def query_knowledge(*, text: str | None = None, prompt: str | None = None, top_k: int = 10):
     """
-    Backwards-compatible wrapper for older tests:
+    Backwards-compatible wrapper:
       - query_knowledge(prompt="...") or query_knowledge(text="...")
     Routes to EmbeddingIndex.query() on a default local index.
     """
@@ -145,4 +142,3 @@ def query_knowledge(*, text: str | None = None, prompt: str | None = None, top_k
     if _DEFAULT_INDEX is None:
         _DEFAULT_INDEX = EmbeddingIndex()
     return _DEFAULT_INDEX.query(query, top_k=top_k)
-
