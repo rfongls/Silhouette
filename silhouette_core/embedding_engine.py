@@ -124,3 +124,20 @@ class EmbeddingIndex:
             (mtime, sha1, commit_sha, file_id),
         )
         self.conn.commit()
+
+# --- Legacy test adapter (back-compat) ---
+# Allows query_knowledge(prompt="...") or query_knowledge(text="...")
+try:
+    _DEFAULT_INDEX  # type: ignore[name-defined]
+except NameError:
+    _DEFAULT_INDEX = None  # type: ignore[assignment]
+
+def query_knowledge(*, text: str | None = None, prompt: str | None = None, top_k: int = 10):
+    """Return top_k results from a default local EmbeddingIndex."""
+    q = prompt if prompt is not None else text
+    if q is None:
+        raise TypeError("query_knowledge() requires 'text' or 'prompt'")
+    global _DEFAULT_INDEX
+    if _DEFAULT_INDEX is None:
+        _DEFAULT_INDEX = EmbeddingIndex()
+    return _DEFAULT_INDEX.query(q, top_k=top_k)
