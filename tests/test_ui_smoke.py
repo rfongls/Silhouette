@@ -1,5 +1,9 @@
-from fastapi.testclient import TestClient
-from server import app
+import pytest
+pytest.importorskip("fastapi")
+pytest.importorskip("multipart")
+
+from fastapi.testclient import TestClient  # noqa: E402
+from server import app  # noqa: E402
 
 
 def test_ui_page_renders():

@@ -244,5 +244,59 @@ wget <model-url>
     silhouette license --customer-id ORG-1234
     ```
 
+## 14) HL7 QA Batch Parser
+
+Silhouette Core includes an optional **HL7 QA utility** for parsing `.hl7` files in bulk and reporting basic validation results.
+
+### What it does
+- Reads a single HL7 file or a directory of `.hl7` files (recursive).
+- Normalizes line endings to `\r`.
+- Parses with `hl7apy`.
+- Runs QA checks: MSH, PID, OBR, OBX presence.
+- Extracts key fields (MSH-3, MSH-4, PID-3).
+- Produces a CSV report.
+
+### File location
+```
+tools/hl7_qa.py
+```
+
+### Usage
+```bash
+# One file
+py tools/hl7_qa.py tests/fixtures/hl7/sample_set_x.hl7
+
+# A directory
+py tools/hl7_qa.py tests/fixtures/hl7
+```
+
+### Output
+
+* Console summary per file.
+* CSV report:
+
+  ```
+  tests/fixtures/hl7/hl7_qa_report.csv
+  ```
+
+### Exit codes
+
+* `0` → all files parsed OK.
+* `1` → at least one parse or read error.
+
+### CI
+
+`.github/workflows/hl7-qa.yml` runs this parser against `tests/fixtures/hl7` on each push and uploads the CSV report as an artifact.
+
+### Roadmap
+
+* Silhouette-specific QA rules (PID-3 assigning authority, MRG checks, OBX datatype validation).
+* CLI flags: `--strict`, `--report`, `--json`.
+* Integration as a Silhouette agent command:
+
+  ```
+  silhouette hl7 qa <input> --report out.csv
+  ```
+
 
 *This document is intended to be saved as `docs/INSTALL_QUICKSTART.md` so new users can install and run Silhouette Core in minutes.*

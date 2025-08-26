@@ -2,7 +2,8 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Dict, Any
 from jinja2 import Environment, FileSystemLoader
-import datetime, asyncio
+import asyncio
+from datetime import UTC, datetime
 
 env = Environment(loader=FileSystemLoader(str(Path("templates/hl7"))), autoescape=False)
 
@@ -14,7 +15,11 @@ def draft_message(message_type: str, data: Dict[str, Any]) -> str:
         tmpl = env.get_template(name)
     else:
         tmpl = env.get_template("generic.hl7.j2")
-    ctx = {"message_type": message_type, "ts": datetime.datetime.utcnow().strftime("%Y%m%d%H%M%S"), **data}
+    ctx = {
+        "message_type": message_type,
+        "ts": datetime.now(UTC).strftime("%Y%m%d%H%M%S"),
+        **data,
+    }
     return tmpl.render(**ctx).strip() + "\r"
 
 async def send_message(host: str, port: int, message: str) -> str:
