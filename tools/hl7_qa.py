@@ -83,4 +83,601 @@ def get_cwe_component(raw: str, comp_idx: int, sub_idx: Optional[int], comp_sep:
         return ""
     return subs[sub_idx - 1]
 
-# -------------
+# ---------------- strict timestamps (YYYYMMDD / YYYYMMDDHHMMSS) ----------------
+
+def ts_is_valid_strict(value: str) -> bool:
+    if not value:
+        return False
+    v = value.strip().replace("T", "")
+    if not v.isdigit():
+        return False
+    try:
+        if len(v) == 8:
+            datetime.strptime(v, "%Y%m%d"); return True
+        if len(v) == 14:
+            datetime.strptime(v, "%Y%m%d%H%M%S"); return True
+        return False
+    except ValueError:
+        return False
+
+def ts_normalize_strict(value: str) -> str:
+    if not value:
+        return ""
+    v = value.strip().replace("T", "")
+    if not v.isdigit():
+        return ""
+    try:
+        if len(v) == 8:
+            return datetime.strptime(v, "%Y%m%d").strftime("%Y-%m-%d")
+        if len(v) == 14:
+            return datetime.strptime(v, "%Y%m%d%H%M%S").strftime("%Y-%m-%dT%H:%M:%S")
+    except ValueError:
+        return ""
+    return ""
+
+def _check_ts_reps(raw: str, base_label: str, comp_sep: str, rep_sep: str, issues: List[str], norm_key: Optional[str], norms: Dict[str, str]):
+    if not raw:
+        return
+    reps = raw.split(rep_sep)
+    many = len(reps) > 1
+    for idx, r in enumerate(reps, start=1):
+        label = f"{base_label}[{idx}]" if many else base_label
+        if comp_sep in r:  # DR-style range: start^end
+            parts = r.split(comp_sep)
+            start = parts[0] if len(parts) >= 1 else ""
+            end   = parts[1] if len(parts) >= 2 else ""
+            if start and not ts_is_valid_strict(start):
+                issues.append(f"{label} start invalid TS: {start}")
+            if end and not ts_is_valid_strict(end):
+                issues.append(f"{label} end invalid TS: {end}")
+        else:
+            if not ts_is_valid_strict(r):
+                issues.append(f"{label} invalid TS: {r}")
+            else:
+                if norm_key and idx == 1:
+                    norms[norm_key] = ts_normalize_strict(r)
+
+def collect_ts_field_issues_and_norms(msg) -> Tuple[List[str], Dict[str, str]]:
+    issues: List[str] = []
+    norms: Dict[str, str] = {}
+    msh = first_segment(msg, "MSH")
+    fs, comp_sep, rep_sep, esc, sub = get_separators(msh)
+    def chk(seg, field_attr, label, norm_key: Optional[str] = None):
+        if not seg: return
+        raw = safe_get_er7(seg, field_attr, "")
+        _check_ts_reps(raw, label, comp_sep, rep_sep, issues, norm_key, norms)
+
+    pid = first_segment(msg, "PID")
+    chk(msh, "msh_7", "MSH-7 (Date/Time of Message)", norm_key="msh7_norm")
+    chk(pid, "pid_7", "PID-7 (Date/Time of Birth)",    norm_key="pid7_norm")
+
+    for seg in (s for s in msg.children if getattr(s, "name", "") == "OBR"):
+        chk(seg, "obr_6",  "OBR-6 (Requested Date/Time)")
+        chk(seg, "obr_7",  "OBR-7 (Observation Date/Time)")
+        chk(seg, "obr_14", "OBR-14 (Specimen Received Date/Time)")
+        chk(seg, "obr_22", "OBR-22 (Results Rpt/Status Chg Date/Time)")
+
+    for seg in (s for s in msg.children if getattr(s, "name", "") == "OBX"):
+        chk(seg, "obx_14", "OBX-14 (Date/Time of Observation)")
+
+    for seg in (s for s in msg.children if getattr(s, "name", "") == "RXA"):
+        chk(seg, "rxa_3", "RXA-3 (Start of Admin)")
+        chk(seg, "rxa_4", "RXA-4 (End of Admin)")
+
+    for seg in (s for s in msg.children if getattr(s, "name", "") == "TXA"):
+        chk(seg, "txa_6", "TXA-6 (Transcription Date/Time)")
+
+    return issues, norms
+
+# ---------------- message-type rules ----------------
+
+def qa_rules_by_type(msg, msh, pid) -> List[str]:
+    issues: List[str] = []
+    if not msh:
+        return ["MSH missing"]
+    if not pid:
+        issues.append("PID missing")
+
+    mt, _ = get_msg_type_and_event(msh)
+    mt = (mt or "").upper()
+
+    obr_n = count_segments(msg, "OBR")
+    obx_n = count_segments(msg, "OBX")
+    txa_n = count_segments(msg, "TXA")
+    rxe_n = count_segments(msg, "RXE")
+    rxa_n = count_segments(msg, "RXA")
+
+    if mt == "ORU":
+        if obr_n == 0: issues.append("OBR missing (required for ORU)")
+        if obx_n == 0: issues.append("OBX missing (required for ORU results)")
+    elif mt in {"ORM", "OML"}:
+        if obr_n == 0: issues.append("OBR missing (required for ORM/OML)")
+    elif mt == "MDM":
+        if txa_n == 0: issues.append("TXA missing (required for MDM)")
+    elif mt == "RDE":
+        if rxe_n == 0: issues.append("RXE missing (required for RDE)")
+    elif mt == "VXU":
+        if rxa_n == 0: issues.append("RXA missing (required for VXU)")
+    return issues
+
+# ---------------- allowed sets & policies ----------------
+
+DEFAULT_OBR24_ALLOWED: Set[str] = {
+    "CH","CO","HEM","MB","MIC","IMM","LAB","PATH",
+    "RAD","CT","MR","US","XR","NM"
+}
+DEFAULT_RESULT_STATUS: Set[str] = {"F","C","I","P","R","S","U","D","X","W"}  # used for OBR-25 & OBX-11 by default
+DEFAULT_OBX11_EMPTY_ALLOWS: Set[str] = {"X","I","W","U"}  # statuses where OBX-5 may be empty
+
+# ---------------- domain checks (results & MDM) ----------------
+
+NUM_RE = re.compile(r'^[+-]?\d+(?:\.\d+)?(?:[Ee][+-]?\d+)?$')
+
+def _is_numeric(v: str) -> bool:
+    return bool(NUM_RE.match(v.strip()))
+
+def _split_reps(raw: str, rep_sep: str) -> List[str]:
+    if not raw:
+        return []
+    return [x for x in (s.strip() for s in raw.split(rep_sep)) if x != ""]
+
+def _obx_ce_cwe_coded_ok(raw: str, comp: str, sub: str) -> bool:
+    id_  = get_cwe_component(raw, 1, None, comp, sub)
+    sys_ = get_cwe_component(raw, 3, None, comp, sub)
+    return bool(id_) and bool(sys_)
+
+def _pid3_shape_issues(pid3_raw: str, comp: str, rep: str, sub: str) -> Tuple[bool, List[str]]:
+    """
+    Returns (shape_ok, issues list) across all repetitions.
+    Rule per repetition: .1 present AND (.4 assigning authority OR .5 id type) present.
+    """
+    issues: List[str] = []
+    reps = pid3_raw.split(rep) if pid3_raw else []
+    if not reps:
+        return False, ["PID-3 empty"]
+    any_ok = False
+    for i, r in enumerate(reps, start=1):
+        comps = r.split(comp) if r else []
+        id_num = comps[0] if len(comps) >= 1 else ""
+        auth   = comps[3] if len(comps) >= 4 else ""  # HD
+        idtype = comps[4] if len(comps) >= 5 else ""
+        ok = bool(id_num) and (bool(auth) or bool(idtype))
+        if not ok:
+            missing = []
+            if not id_num: missing.append("3.1 id")
+            if not (auth or idtype): missing.append("3.4 authority or 3.5 id_type")
+            issues.append(f"PID-3[{i}] missing: {', '.join(missing)}")
+        any_ok = any_ok or ok
+    return any_ok, issues
+
+def collect_domain_issues(
+    msg,
+    profile: str,
+    allow_obr24: Optional[Set[str]],
+    allow_obx11: Optional[Set[str]],
+    allow_obr25: Optional[Set[str]],
+    obx11_empty_allows: Optional[Set[str]],
+) -> Tuple[List[str], Dict[str, Any], List[str]]:
+    """
+    Returns (issues, extras, obx_issues)
+    extras includes:
+      - obr24_values, obx11_values, obr25_values
+      - txa2_id, txa2_text, txa2_system, txa2_3_2
+      - pid3_shape_ok (Y/N), pid3_shape_issues_joined
+    obx_issues includes value/type/codedness problems (OBX-2/3/5/11)
+    """
+    issues: List[str] = []
+    obx_issues: List[str] = []
+    extras: Dict[str, Any] = {
+        "obr24_values": "", "obx11_values": "", "obr25_values": "",
+        "txa2_id": "", "txa2_text": "", "txa2_system": "", "txa2_3_2": "",
+        "pid3_shape_ok": "N", "pid3_shape_issues_joined": "",
+    }
+
+    msh = first_segment(msg, "MSH")
+    fs, comp, rep, esc, sub = get_separators(msh)
+    pid = first_segment(msg, "PID")
+
+    # PID-3 shape (applies to all profiles)
+    if pid:
+        pid3_raw = safe_get_er7(pid, "pid_3", "")
+        ok, pid3_issues = _pid3_shape_issues(pid3_raw, comp, rep, sub)
+        extras["pid3_shape_ok"] = "Y" if ok else "N"
+        extras["pid3_shape_issues_joined"] = "; ".join(pid3_issues) if pid3_issues else ""
+
+    # PROFILE RESOLUTION
+    mt, _ = get_msg_type_and_event(msh)
+    mt_up = (mt or "").upper()
+    effective = profile
+    if profile == "auto":
+        if mt_up == "MDM":
+            effective = "mdm"
+        elif mt_up in {"ORU", "ORM", "OML"}:
+            effective = "results"
+
+    # ---------------- RESULTS profile ----------------
+    if effective == "results":
+        # OBR-level checks
+        seen_obr24: Set[str] = set()
+        seen_obr25: Set[str] = set()
+        obr_list = [s for s in msg.children if getattr(s, "name", "") == "OBR"]
+        for idx, seg in enumerate(obr_list, start=1):
+            # OBR-24 allowed values
+            raw24 = safe_get_er7(seg, "obr_24", "")
+            for val in _split_reps(raw24, rep):
+                seen_obr24.add(val)
+                if allow_obr24 and val not in allow_obr24:
+                    issues.append(f"OBR[{idx}]-24 unexpected value: {val}")
+
+            # OBR-4 codedness (id & system)
+            raw4 = safe_get_er7(seg, "obr_4", "")
+            id_  = get_cwe_component(raw4, 1, None, comp, sub)
+            sys_ = get_cwe_component(raw4, 3, None, comp, sub)
+            if not id_: issues.append(f"OBR[{idx}]-4.1 (Universal Service ID) missing")
+            if not sys_: issues.append(f"OBR[{idx}]-4.3 (Coding System) missing")
+
+            # OBR-25 status allowed set
+            raw25 = safe_get_er7(seg, "obr_25", "")
+            if raw25:
+                for v in _split_reps(raw25, rep):
+                    seen_obr25.add(v)
+                    if allow_obr25 and v not in allow_obr25:
+                        issues.append(f"OBR[{idx}]-25 unexpected status: {v}")
+            else:
+                issues.append(f"OBR[{idx}]-25 (Result Status) missing")
+
+            # OBR-2 or OBR-3 must exist
+            has2 = bool(safe_get_er7(seg, "obr_2", ""))
+            has3 = bool(safe_get_er7(seg, "obr_3", ""))
+            if not (has2 or has3):
+                issues.append(f"OBR[{idx}] both OBR-2 (Placer) and OBR-3 (Filler) are missing (need at least one)")
+
+        extras["obr24_values"] = ",".join(sorted(seen_obr24)) if seen_obr24 else ""
+        extras["obr25_values"] = ",".join(sorted(seen_obr25)) if seen_obr25 else ""
+
+        # OBX-level checks
+        seen_obx11: Set[str] = set()
+        obx_list = [s for s in msg.children if getattr(s, "name", "") == "OBX"]
+        for j, seg in enumerate(obx_list, start=1):
+            vt = safe_get_er7(seg, "obx_2", "").upper()
+            obx3 = safe_get_er7(seg, "obx_3", "")
+            obx5 = safe_get_er7(seg, "obx_5", "")
+            obx11 = safe_get_er7(seg, "obx_11", "")
+
+            # OBX-11 status policy
+            obx11_vals = _split_reps(obx11, rep)
+            if not obx11_vals:
+                obx_issues.append(f"OBX[{j}]-11 (Result Status) missing")
+            else:
+                for v in obx11_vals:
+                    seen_obx11.add(v)
+                    if allow_obx11 and v not in allow_obx11:
+                        obx_issues.append(f"OBX[{j}]-11 unexpected status: {v}")
+
+            empty_allowed = any(v in (obx11_empty_allows or set()) for v in obx11_vals) if obx11_vals else False
+
+            # OBX-3 codedness (id & system)
+            if not _obx_ce_cwe_coded_ok(obx3, comp, sub):
+                obx_issues.append(f"OBX[{j}]-3 codedness missing (id/system)")
+
+            # OBX-5 required unless empty_allowed
+            if not obx5 and not empty_allowed:
+                obx_issues.append(f"OBX[{j}]-5 (Observation Value) missing")
+
+            # OBX-2 vs OBX-5 type conformance (best-effort)
+            if obx5:
+                vals = _split_reps(obx5, rep)
+                if vt in {"NM"}:
+                    for k, v in enumerate(vals, start=1):
+                        if not _is_numeric(v):
+                            obx_issues.append(f"OBX[{j}]-5[{k}] not numeric for NM")
+                elif vt in {"DT", "DTM", "TS"}:
+                    # validate as strict timestamp (YYYYMMDD or YYYYMMDDHHMMSS), handling ranges
+                    for k, v in enumerate(vals, start=1):
+                        if comp in v:
+                            parts = v.split(comp)
+                            s = parts[0] if len(parts) >= 1 else ""
+                            e = parts[1] if len(parts) >= 2 else ""
+                            if s and not ts_is_valid_strict(s):
+                                obx_issues.append(f"OBX[{j}]-5[{k}] start invalid TS: {s}")
+                            if e and not ts_is_valid_strict(e):
+                                obx_issues.append(f"OBX[{j}]-5[{k}] end invalid TS: {e}")
+                        else:
+                            if not ts_is_valid_strict(v):
+                                obx_issues.append(f"OBX[{j}]-5[{k}] invalid TS")
+                elif vt in {"CE", "CWE"}:
+                    for k, v in enumerate(vals, start=1):
+                        id_  = get_cwe_component(v, 1, None, comp, sub)
+                        sys_ = get_cwe_component(v, 3, None, comp, sub)
+                        if not id_ or not sys_:
+                            obx_issues.append(f"OBX[{j}]-5[{k}] CE/CWE codedness missing (id/system)")
+                elif vt == "SN":
+                    # basic SN: ^num1^... (we'll require component 2 numeric if present)
+                    for k, v in enumerate(vals, start=1):
+                        comps = v.split(comp)
+                        num1 = comps[1] if len(comps) >= 2 else ""
+                        if num1 and not _is_numeric(num1):
+                            obx_issues.append(f"OBX[{j}]-5[{k}] SN numeric part not numeric")
+
+        extras["obx11_values"] = ",".join(sorted(seen_obx11)) if seen_obx11 else ""
+
+    # ---------------- MDM profile ----------------
+    if effective == "mdm":
+        txa = first_segment(msg, "TXA")
+        if txa:
+            raw2 = safe_get_er7(txa, "txa_2", "")
+            extras["txa2_id"]     = get_cwe_component(raw2, 1, None, comp, sub)
+            extras["txa2_text"]   = get_cwe_component(raw2, 2, None, comp, sub)
+            extras["txa2_system"] = get_cwe_component(raw2, 3, None, comp, sub)
+            extras["txa2_3_2"]    = get_cwe_component(raw2, 3, 2,    comp, sub)
+            if not extras["txa2_id"]:
+                issues.append("TXA-2.1 (Document Type ID) missing")
+            if not extras["txa2_system"]:
+                issues.append("TXA-2.3 (Coding System) missing")
+
+    return issues, extras, obx_issues
+
+# ---------------- per-message QA ----------------
+
+def qa_one_message(
+    raw_msg: str,
+    fail_on_dtm: bool = False,
+    quiet_parse: bool = False,
+    profile: str = "auto",
+    allow_obr24: Optional[Set[str]] = None,
+    allow_obx11: Optional[Set[str]] = None,
+    allow_obr25: Optional[Set[str]] = None,
+    obx11_empty_allows: Optional[Set[str]] = None,
+) -> Dict[str, Any]:
+    res: Dict[str, Any] = {
+        "status": "ok", "error": "",
+        "issues": [], "dtm_issues": [], "domain_issues": [], "obx_issues": [],
+        "msg_type": "", "msg_event": "",
+        "msh_3": "", "msh_4": "", "msh_10": "",
+        "pid_3": "", "msh7_norm": "", "pid7_norm": "",
+        "obr_count": 0, "obx_count": 0, "seg_counts": {},
+        # domain extras:
+        "obr24_values": "", "obx11_values": "", "obr25_values": "",
+        "txa2_id": "", "txa2_text": "", "txa2_system": "", "txa2_3_2": "",
+        "pid3_shape_ok": "N", "pid3_shape_issues_joined": "",
+    }
+    if quiet_parse:
+        warnings.filterwarnings("ignore")
+
+    try:
+        msg = parse_message(raw_msg, find_groups=False)
+    except HL7apyException as e:
+        res["status"] = "parse_error"; res["error"] = str(e); return res
+    except Exception as e:
+        res["status"] = "parse_error"; res["error"] = f"unexpected parse error: {e}"; return res
+
+    msh = first_segment(msg, "MSH")
+    pid = first_segment(msg, "PID")
+
+    if msh:
+        res["msh_3"]  = safe_get_er7(msh, "msh_3", "<MSH-3 missing>")
+        res["msh_4"]  = safe_get_er7(msh, "msh_4", "<MSH-4 missing>")
+        res["msh_10"] = safe_get_er7(msh, "msh_10", "<MSH-10 missing>")
+        mt, me = get_msg_type_and_event(msh)
+        res["msg_type"], res["msg_event"] = mt, me
+    if pid:
+        res["pid_3"] = safe_get_er7(pid, "pid_3", "<PID-3 missing>")
+
+    res["seg_counts"] = segment_counts(msg)
+    res["obr_count"] = res["seg_counts"].get("OBR", 0)
+    res["obx_count"] = res["seg_counts"].get("OBX", 0)
+
+    # 1) baseline type rules
+    res["issues"] = qa_rules_by_type(msg, msh, pid)
+
+    # 2) timestamps (strict)
+    dtm_issues, norms = collect_ts_field_issues_and_norms(msg)
+    res["dtm_issues"] = dtm_issues
+    res["msh7_norm"] = norms.get("msh7_norm", "")
+    res["pid7_norm"] = norms.get("pid7_norm", "")
+    if fail_on_dtm and dtm_issues and res["status"] == "ok":
+        res["status"] = "value_error"
+
+    # 3) domain + OBX checks
+    dom_issues, extras, obx_issues = collect_domain_issues(
+        msg,
+        profile=profile,
+        allow_obr24=allow_obr24,
+        allow_obx11=allow_obx11,
+        allow_obr25=allow_obr25,
+        obx11_empty_allows=obx11_empty_allows,
+    )
+    res["domain_issues"] = dom_issues
+    res["obx_issues"] = obx_issues
+    for k, v in extras.items():
+        res[k] = v
+
+    # escalate to value_error if domain or obx issues present
+    if (dom_issues or obx_issues) and res["status"] == "ok":
+        res["status"] = "value_error"
+
+    return res
+
+# ---------------- per-file driver ----------------
+
+def qa_one_file(
+    path: Path,
+    fail_on_dtm: bool,
+    quiet_parse: bool,
+    profile: str,
+    allow_obr24: Optional[Set[str]],
+    allow_obx11: Optional[Set[str]],
+    allow_obr25: Optional[Set[str]],
+    obx11_empty_allows: Optional[Set[str]],
+) -> Tuple[List[Dict[str, Any]], Dict[str, int]]:
+    rows: List[Dict[str, Any]] = []
+    summary = {"total": 0, "ok": 0, "errors": 0}
+
+    try:
+        data = path.read_bytes()
+    except Exception as e:
+        rows.append({
+            "file": str(path), "message_index": "",
+            "status": "read_error", "error": f"read failed: {e}",
+        })
+        summary["total"] += 1; summary["errors"] += 1
+        return rows, summary
+
+    txt = normalize_hl7_text(data)
+    messages = split_messages(txt) or [txt]
+
+    for i, raw_msg in enumerate(messages, start=1):
+        res = qa_one_message(
+            raw_msg,
+            fail_on_dtm=fail_on_dtm,
+            quiet_parse=quiet_parse,
+            profile=profile,
+            allow_obr24=allow_obr24,
+            allow_obx11=allow_obx11,
+            allow_obr25=allow_obr25,
+            obx11_empty_allows=obx11_empty_allows,
+        )
+        res["file"] = str(path)
+        res["message_index"] = i
+        rows.append(res)
+        summary["total"] += 1
+        if res["status"] == "ok":
+            summary["ok"] += 1
+        else:
+            summary["errors"] += 1
+
+    return rows, summary
+
+# ---------------- CSV & CLI ----------------
+
+CSV_FIELDS = [
+    "file", "message_index",
+    "status", "error",
+    "msg_type", "msg_event",
+    "issues_joined", "dtm_issues_joined", "domain_issues_joined", "obx_issues_joined",
+    "msh_3", "msh_4", "msh_10", "pid_3",
+    "pid3_shape_ok", "pid3_shape_issues_joined",
+    "msh7_norm", "pid7_norm",
+    "obr_count", "obx_count",
+    "obr24_values", "obr25_values", "obx11_values",
+    "txa2_id", "txa2_text", "txa2_system", "txa2_3_2",
+    "seg_counts_str",
+]
+
+def write_csv(out_path: Path, rows: List[Dict[str, Any]]) -> Path:
+    for r in rows:
+        r["issues_joined"]        = "; ".join(r.get("issues", [])) if r.get("issues") else ""
+        r["dtm_issues_joined"]    = "; ".join(r.get("dtm_issues", [])) if r.get("dtm_issues") else ""
+        r["domain_issues_joined"] = "; ".join(r.get("domain_issues", [])) if r.get("domain_issues") else ""
+        r["obx_issues_joined"]    = "; ".join(r.get("obx_issues", [])) if r.get("obx_issues") else ""
+        r["seg_counts_str"]       = ", ".join(f"{k}:{v}" for k, v in (r.get("seg_counts") or {}).items())
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    with out_path.open("w", newline="", encoding="utf-8") as f:
+        w = csv.DictWriter(f, fieldnames=CSV_FIELDS)
+        w.writeheader()
+        for r in rows:
+            w.writerow({k: r.get(k, "") for k in CSV_FIELDS})
+    return out_path
+
+def collect_files(target: Path) -> List[Path]:
+    if target.is_file():
+        return [target]
+    return sorted([p for p in target.rglob("*.hl7") if p.is_file()])
+
+def _parse_csv_set(arg: Optional[str]) -> Optional[Set[str]]:
+    if not arg:
+        return None
+    return {a.strip() for a in arg.split(",") if a.strip()}
+
+def run_cli(argv: List[str]) -> int:
+    ap = argparse.ArgumentParser(description="HL7 batch parser + QA (per-message, strict TS, domain checks)")
+    ap.add_argument("path", help="HL7 file or directory")
+    ap.add_argument("--report", help="CSV output path (default: alongside input)")
+    ap.add_argument("--json", dest="as_json", action="store_true", help="Emit results as JSON to stdout")
+    ap.add_argument("--fail-on-dtm", action="store_true", help="Mark message as value_error if any strict timestamp is invalid")
+    ap.add_argument("--quiet-parse", action="store_true", help="Suppress parser warnings/noise")
+    ap.add_argument("--max-print", type=int, default=10, help="Max messages to print per file (console summary)")
+    ap.add_argument("--verbose", action="store_true", help="Print every message (overrides --max-print)")
+
+    ap.add_argument("--profile", choices=["auto","results","mdm"], default="auto",
+                    help="Apply domain rule pack (auto chooses based on MSH-9)")
+
+    ap.add_argument("--allow-obr24", default="", help="Comma list of allowed OBR-24 codes (Diagnostic Service Section ID)")
+    ap.add_argument("--allow-obx11", default="", help="Comma list of allowed OBX-11 statuses")
+    ap.add_argument("--allow-obr25", default="", help="Comma list of allowed OBR-25 statuses (defaults to same set as OBX-11)")
+    ap.add_argument("--obx11-empty-allows", default="", help="Comma list of OBX-11 statuses that allow OBX-5 to be empty (default X,I,W,U)")
+
+    args = ap.parse_args(argv[1:])
+
+    allow_obr24 = _parse_csv_set(args.allow_obr24) or DEFAULT_OBR24_ALLOWED
+    base_status = _parse_csv_set(args.allow_obx11) or DEFAULT_RESULT_STATUS
+    allow_obx11 = base_status
+    allow_obr25 = _parse_csv_set(args.allow_obr25) or base_status
+    empty_allows = _parse_csv_set(args.obx11_empty_allows) or DEFAULT_OBX11_EMPTY_ALLOWS
+
+    target = Path(args.path)
+    files = collect_files(target)
+    if not files:
+        print(f"No .hl7 files found under: {target}")
+        return 3
+
+    all_rows: List[Dict[str, Any]] = []
+    grand = {"files": 0, "messages": 0, "ok": 0, "errors": 0}
+
+    for f in files:
+      rows, summary = qa_one_file(
+          f,
+          fail_on_dtm=args.fail_on_dtm,
+          quiet_parse=args.quiet_parse,
+          profile=args.profile,
+          allow_obr24=allow_obr24,
+          allow_obx11=allow_obx11,
+          allow_obr25=allow_obr25,
+          obx11_empty_allows=empty_allows,
+      )
+      all_rows.extend(rows)
+      grand["files"] += 1
+      grand["messages"] += summary["total"]
+      grand["ok"] += summary["ok"]
+      grand["errors"] += summary["errors"]
+
+      print(f"[file] {f.name} → messages: {summary['total']}  ok: {summary['ok']}  errors: {summary['errors']}")
+      limit = len(rows) if args.verbose else min(args.max_print, len(rows))
+      for r in rows[:limit]:
+          print(f"  [{r['status']}] msg#{r['message_index']} type={r.get('msg_type','')}^{r.get('msg_event','')}".rstrip("^"))
+          if r.get("error"):
+              print(f"    error: {r['error']}")
+          if r.get("issues"):
+              print(f"    issues: {', '.join(r['issues'])}")
+          if r.get("dtm_issues"):
+              print(f"    dtm_issues: {', '.join(r['dtm_issues'])}")
+          if r.get("domain_issues"):
+              print(f"    domain_issues: {', '.join(r['domain_issues'])}")
+          if r.get("obx_issues"):
+              print(f"    obx_issues: {', '.join(r['obx_issues'])}")
+          print(f"    OBR-24: {r.get('obr24_values','')}   OBR-25: {r.get('obr25_values','')}   OBX-11: {r.get('obx11_values','')}")
+          if r.get("txa2_id") or r.get("txa2_system"):
+              print(f"    TXA-2: id={r.get('txa2_id','')} text={r.get('txa2_text','')} system={r.get('txa2_system','')} (2.3.2={r.get('txa2_3_2','')})")
+          print(f"    MSH-10: {r.get('msh_10','')}   PID-3: {r.get('pid_3','')}")
+          print(f"    counts: OBR={r.get('obr_count',0)} OBX={r.get('obx_count',0)}")
+
+    # CSV output
+    if args.report:
+        csv_path = Path(args.report)
+    else:
+        root_for_output = target if target.is_dir() else target.parent
+        csv_path = root_for_output / "hl7_qa_report.csv"
+    write_csv(csv_path, all_rows)
+
+    if args.as_json:
+        print(json.dumps(all_rows, ensure_ascii=False))
+
+    print(f"\n[total] files: {grand['files']}  messages: {grand['messages']}  ok: {grand['ok']}  errors: {grand['errors']}")
+    print(f"[report] {csv_path}")
+    return 0 if grand["errors"] == 0 else 1
+
+def main(argv: List[str]) -> int:
+    return run_cli(argv)
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv))
