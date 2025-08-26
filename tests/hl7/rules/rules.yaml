@@ -1,0 +1,35 @@
+# HL7 QA rules (site-tunable)
+# Profiles define which message types they apply to and which validations to run.
+
+profiles:
+  results:
+    types: [ORU, ORM, OML]         # which MSH-9 message types use this profile
+    timestamps:
+      strict: true                 # validate TS strictly (YYYYMMDD or YYYYMMDDHHMMSS)
+      fail_on_dtm: true            # mark message as value_error if any TS invalid
+    allowed:
+      obr24: [CH, MB, LAB, PATH, RAD, CT, MR, US, XR, NM]
+      result_status: [F, C, I, P, R, S, U, D, X, W]     # used for OBR-25 and OBX-11
+      obx11_empty_allows: [X, I, W, U]                  # when OBX-5 may be empty
+    policies:
+      require_pid3_shape: true            # PID-3: .1 present AND (.4 authority OR .5 idType)
+      require_obr2_or_obr3: true          # at least one of OBR-2 (placer) or OBR-3 (filler)
+      obr4_coded: true                    # OBR-4 has .1 id AND .3 system
+      obr25_allowed: true                 # OBR-25 must be in allowed result_status
+      obx11_allowed: true                 # OBX-11 must be in allowed result_status
+      obx3_coded: true                    # OBX-3 has .1 id AND .3 system
+      obx5_required_unless_status_in_empty_allows: true
+      obx2_vs_obx5_typecheck: true        # NM numeric, DT/DTM/TS TS-valid, CE/CWE coded, SN basic numeric
+
+  mdm:
+    types: [MDM]
+    timestamps:
+      strict: true
+      fail_on_dtm: false
+    allowed: {}
+    policies:
+      require_pid3_shape: true
+      txa2_coded: true                   # TXA-2 has .1 id and .3 system
+
+# Default profile to fall back to if type not matched by any profile.
+default_profile: results
