@@ -1,17 +1,86 @@
 #!/usr/bin/env python
+"""
+HL7 batch parser + QA (per-message, strict TS, domain checks) with rules.yaml auto-discovery
+
+Features
+- Splits batched HL7 files into individual messages (handles FHS/BHS and MLLP framing)
+- Reads separators from MSH-1/MSH-2; validates repetitions (~), components (^) and ranges (start^end)
+- Message-type–aware required-segment rules (ORU/ORM/OML/MDM/RDE/VXU)
+- Strict timestamps: only YYYYMMDD or YYYYMMDDHHMMSS (optional literal 'T')
+- Results profile checks: OBR-24 allowed set, OBR-4 codedness, OBR-25 status, OBR-2/3 presence,
+  OBX-3 codedness, OBX-11 status (allowed set), OBX-5 required policy, OBX-2 vs OBX-5 type checks
+- MDM profile checks: TXA-2 coded (2.1 id, 2.3 system, capture 2.3.2), TXA-6 timestamp
+- PID-3 (CX) shape checks: .1 id and at least one of .4 authority or .5 id type across repetitions
+- Configurable via rules.yaml with auto-discovery:
+    1) nearest rules.yaml/hl7_rules.yaml up the tree from input path
+    2) repo/tests/hl7/rules.yaml (preferred with fixtures)
+    3) repo/config/hl7_rules.yaml (org defaults)
+- CSV output: one row per message with trace, normalized dates, rule issues, and domain extras
+"""
+
 from __future__ import annotations
 from pathlib import Path
-from typing import List, Dict, Any, Tuple, Optional, Set
-import sys, csv, json, argparse, warnings, re
+from typing import List, Dict, Any, Tuple, Optional, Set, Iterable
+import sys, csv, json, argparse, warnings, re, copy, os
 from collections import Counter
 from datetime import datetime
 
+# Optional dependency: PyYAML (rules file). Falls back to built-in defaults if missing.
+try:
+    import yaml  # type: ignore
+except ModuleNotFoundError:
+    yaml = None  # we’ll proceed with DEFAULT_RULES
+
+# hl7apy is required
 try:
     from hl7apy.parser import parse_message
     from hl7apy.exceptions import HL7apyException
 except ModuleNotFoundError:
     print("hl7apy is not installed. Install with: py -m pip install hl7apy")
     sys.exit(1)
+
+# ---------------- Default sets and default rules (used if rules file is absent) ----------------
+
+DEFAULT_OBR24_ALLOWED: Set[str] = {
+    "CH","CO","HEM","MB","MIC","IMM","LAB","PATH",
+    "RAD","CT","MR","US","XR","NM"
+}
+DEFAULT_RESULT_STATUS: Set[str] = {"F","C","I","P","R","S","U","D","X","W"}
+DEFAULT_OBX11_EMPTY_ALLOWS: Set[str] = {"X","I","W","U"}
+
+DEFAULT_RULES: Dict[str, Any] = {
+    "profiles": {
+        "results": {
+            "types": ["ORU","ORM","OML"],
+            "timestamps": {"strict": True, "fail_on_dtm": True},
+            "allowed": {
+                "obr24": list(DEFAULT_OBR24_ALLOWED),
+                "result_status": list(DEFAULT_RESULT_STATUS),        # used for OBR-25 and OBX-11
+                "obx11_empty_allows": list(DEFAULT_OBX11_EMPTY_ALLOWS),
+            },
+            "policies": {
+                "require_pid3_shape": True,                         # PID-3: .1 and (.4 or .5)
+                "require_obr2_or_obr3": True,                       # at least one of OBR-2/OBR-3
+                "obr4_coded": True,                                 # OBR-4 has .1 id AND .3 system
+                "obr25_allowed": True,                              # OBR-25 must be in allowed result_status
+                "obx11_allowed": True,                              # OBX-11 must be in allowed result_status
+                "obx3_coded": True,                                 # OBX-3 has .1 id AND .3 system
+                "obx5_required_unless_status_in_empty_allows": True,
+                "obx2_vs_obx5_typecheck": True,                     # NM numeric, DT/DTM/TS TS-valid, CE/CWE coded, SN basic numeric
+            },
+        },
+        "mdm": {
+            "types": ["MDM"],
+            "timestamps": {"strict": True, "fail_on_dtm": False},
+            "allowed": {},
+            "policies": {
+                "require_pid3_shape": True,
+                "txa2_coded": True,                                 # TXA-2 has .1 id and .3 system
+            },
+        },
+    },
+    "default_profile": "results",
+}
 
 # ---------------- IO & normalization ----------------
 
@@ -169,7 +238,7 @@ def collect_ts_field_issues_and_norms(msg) -> Tuple[List[str], Dict[str, str]]:
 
     return issues, norms
 
-# ---------------- message-type rules ----------------
+# ---------------- baseline type rules ----------------
 
 def qa_rules_by_type(msg, msh, pid) -> List[str]:
     issues: List[str] = []
@@ -200,19 +269,9 @@ def qa_rules_by_type(msg, msh, pid) -> List[str]:
         if rxa_n == 0: issues.append("RXA missing (required for VXU)")
     return issues
 
-# ---------------- allowed sets & policies ----------------
-
-DEFAULT_OBR24_ALLOWED: Set[str] = {
-    "CH","CO","HEM","MB","MIC","IMM","LAB","PATH",
-    "RAD","CT","MR","US","XR","NM"
-}
-DEFAULT_RESULT_STATUS: Set[str] = {"F","C","I","P","R","S","U","D","X","W"}  # used for OBR-25 & OBX-11 by default
-DEFAULT_OBX11_EMPTY_ALLOWS: Set[str] = {"X","I","W","U"}  # statuses where OBX-5 may be empty
-
 # ---------------- domain checks (results & MDM) ----------------
 
 NUM_RE = re.compile(r'^[+-]?\d+(?:\.\d+)?(?:[Ee][+-]?\d+)?$')
-
 def _is_numeric(v: str) -> bool:
     return bool(NUM_RE.match(v.strip()))
 
@@ -227,10 +286,6 @@ def _obx_ce_cwe_coded_ok(raw: str, comp: str, sub: str) -> bool:
     return bool(id_) and bool(sys_)
 
 def _pid3_shape_issues(pid3_raw: str, comp: str, rep: str, sub: str) -> Tuple[bool, List[str]]:
-    """
-    Returns (shape_ok, issues list) across all repetitions.
-    Rule per repetition: .1 present AND (.4 assigning authority OR .5 id type) present.
-    """
     issues: List[str] = []
     reps = pid3_raw.split(rep) if pid3_raw else []
     if not reps:
@@ -252,19 +307,15 @@ def _pid3_shape_issues(pid3_raw: str, comp: str, rep: str, sub: str) -> Tuple[bo
 
 def collect_domain_issues(
     msg,
-    profile: str,
+    profile_name: str,
     allow_obr24: Optional[Set[str]],
     allow_obx11: Optional[Set[str]],
     allow_obr25: Optional[Set[str]],
     obx11_empty_allows: Optional[Set[str]],
+    policies: Dict[str, bool],
 ) -> Tuple[List[str], Dict[str, Any], List[str]]:
     """
     Returns (issues, extras, obx_issues)
-    extras includes:
-      - obr24_values, obx11_values, obr25_values
-      - txa2_id, txa2_text, txa2_system, txa2_3_2
-      - pid3_shape_ok (Y/N), pid3_shape_issues_joined
-    obx_issues includes value/type/codedness problems (OBX-2/3/5/11)
     """
     issues: List[str] = []
     obx_issues: List[str] = []
@@ -278,64 +329,55 @@ def collect_domain_issues(
     fs, comp, rep, esc, sub = get_separators(msh)
     pid = first_segment(msg, "PID")
 
-    # PID-3 shape (applies to all profiles)
-    if pid:
+    # PID-3 shape
+    if policies.get("require_pid3_shape", True) and pid:
         pid3_raw = safe_get_er7(pid, "pid_3", "")
         ok, pid3_issues = _pid3_shape_issues(pid3_raw, comp, rep, sub)
         extras["pid3_shape_ok"] = "Y" if ok else "N"
         extras["pid3_shape_issues_joined"] = "; ".join(pid3_issues) if pid3_issues else ""
 
-    # PROFILE RESOLUTION
-    mt, _ = get_msg_type_and_event(msh)
-    mt_up = (mt or "").upper()
-    effective = profile
-    if profile == "auto":
-        if mt_up == "MDM":
-            effective = "mdm"
-        elif mt_up in {"ORU", "ORM", "OML"}:
-            effective = "results"
-
-    # ---------------- RESULTS profile ----------------
-    if effective == "results":
-        # OBR-level checks
+    # RESULTS profile rules
+    if profile_name == "results":
+        # OBR-level
         seen_obr24: Set[str] = set()
         seen_obr25: Set[str] = set()
         obr_list = [s for s in msg.children if getattr(s, "name", "") == "OBR"]
         for idx, seg in enumerate(obr_list, start=1):
-            # OBR-24 allowed values
             raw24 = safe_get_er7(seg, "obr_24", "")
             for val in _split_reps(raw24, rep):
                 seen_obr24.add(val)
-                if allow_obr24 and val not in allow_obr24:
+                if policies.get("obr4_coded", True) and allow_obr24 and val not in allow_obr24:
                     issues.append(f"OBR[{idx}]-24 unexpected value: {val}")
 
-            # OBR-4 codedness (id & system)
-            raw4 = safe_get_er7(seg, "obr_4", "")
-            id_  = get_cwe_component(raw4, 1, None, comp, sub)
-            sys_ = get_cwe_component(raw4, 3, None, comp, sub)
-            if not id_: issues.append(f"OBR[{idx}]-4.1 (Universal Service ID) missing")
-            if not sys_: issues.append(f"OBR[{idx}]-4.3 (Coding System) missing")
+            # OBR-4 codedness
+            if policies.get("obr4_coded", True):
+                raw4 = safe_get_er7(seg, "obr_4", "")
+                id_  = get_cwe_component(raw4, 1, None, comp, sub)
+                sys_ = get_cwe_component(raw4, 3, None, comp, sub)
+                if not id_: issues.append(f"OBR[{idx}]-4.1 (Universal Service ID) missing")
+                if not sys_: issues.append(f"OBR[{idx}]-4.3 (Coding System) missing")
 
-            # OBR-25 status allowed set
+            # OBR-25 allowed
             raw25 = safe_get_er7(seg, "obr_25", "")
             if raw25:
                 for v in _split_reps(raw25, rep):
                     seen_obr25.add(v)
-                    if allow_obr25 and v not in allow_obr25:
+                    if policies.get("obr25_allowed", True) and allow_obr25 and v not in allow_obr25:
                         issues.append(f"OBR[{idx}]-25 unexpected status: {v}")
             else:
                 issues.append(f"OBR[{idx}]-25 (Result Status) missing")
 
-            # OBR-2 or OBR-3 must exist
-            has2 = bool(safe_get_er7(seg, "obr_2", ""))
-            has3 = bool(safe_get_er7(seg, "obr_3", ""))
-            if not (has2 or has3):
-                issues.append(f"OBR[{idx}] both OBR-2 (Placer) and OBR-3 (Filler) are missing (need at least one)")
+            # OBR-2/OBR-3 at least one
+            if policies.get("require_obr2_or_obr3", True):
+                has2 = bool(safe_get_er7(seg, "obr_2", ""))
+                has3 = bool(safe_get_er7(seg, "obr_3", ""))
+                if not (has2 or has3):
+                    issues.append(f"OBR[{idx}] both OBR-2 (Placer) and OBR-3 (Filler) are missing (need at least one)")
 
         extras["obr24_values"] = ",".join(sorted(seen_obr24)) if seen_obr24 else ""
         extras["obr25_values"] = ",".join(sorted(seen_obr25)) if seen_obr25 else ""
 
-        # OBX-level checks
+        # OBX-level
         seen_obx11: Set[str] = set()
         obx_list = [s for s in msg.children if getattr(s, "name", "") == "OBX"]
         for j, seg in enumerate(obx_list, start=1):
@@ -344,40 +386,40 @@ def collect_domain_issues(
             obx5 = safe_get_er7(seg, "obx_5", "")
             obx11 = safe_get_er7(seg, "obx_11", "")
 
-            # OBX-11 status policy
+            # OBX-11
             obx11_vals = _split_reps(obx11, rep)
             if not obx11_vals:
                 obx_issues.append(f"OBX[{j}]-11 (Result Status) missing")
             else:
                 for v in obx11_vals:
                     seen_obx11.add(v)
-                    if allow_obx11 and v not in allow_obx11:
+                    if policies.get("obx11_allowed", True) and allow_obx11 and v not in allow_obx11:
                         obx_issues.append(f"OBX[{j}]-11 unexpected status: {v}")
 
             empty_allowed = any(v in (obx11_empty_allows or set()) for v in obx11_vals) if obx11_vals else False
 
-            # OBX-3 codedness (id & system)
-            if not _obx_ce_cwe_coded_ok(obx3, comp, sub):
-                obx_issues.append(f"OBX[{j}]-3 codedness missing (id/system)")
+            # OBX-3 codedness
+            if policies.get("obx3_coded", True):
+                if not _obx_ce_cwe_coded_ok(obx3, comp, sub):
+                    obx_issues.append(f"OBX[{j}]-3 codedness missing (id/system)")
 
-            # OBX-5 required unless empty_allowed
-            if not obx5 and not empty_allowed:
-                obx_issues.append(f"OBX[{j}]-5 (Observation Value) missing")
+            # OBX-5 required policy
+            if policies.get("obx5_required_unless_status_in_empty_allows", True):
+                if not obx5 and not empty_allowed:
+                    obx_issues.append(f"OBX[{j}]-5 (Observation Value) missing")
 
-            # OBX-2 vs OBX-5 type conformance (best-effort)
-            if obx5:
+            # OBX-2 vs OBX-5
+            if policies.get("obx2_vs_obx5_typecheck", True) and obx5:
                 vals = _split_reps(obx5, rep)
                 if vt in {"NM"}:
                     for k, v in enumerate(vals, start=1):
                         if not _is_numeric(v):
                             obx_issues.append(f"OBX[{j}]-5[{k}] not numeric for NM")
                 elif vt in {"DT", "DTM", "TS"}:
-                    # validate as strict timestamp (YYYYMMDD or YYYYMMDDHHMMSS), handling ranges
                     for k, v in enumerate(vals, start=1):
+                        # allow DR style start^end
                         if comp in v:
-                            parts = v.split(comp)
-                            s = parts[0] if len(parts) >= 1 else ""
-                            e = parts[1] if len(parts) >= 2 else ""
+                            s, e = (v.split(comp) + ["",""])[:2]
                             if s and not ts_is_valid_strict(s):
                                 obx_issues.append(f"OBX[{j}]-5[{k}] start invalid TS: {s}")
                             if e and not ts_is_valid_strict(e):
@@ -385,14 +427,13 @@ def collect_domain_issues(
                         else:
                             if not ts_is_valid_strict(v):
                                 obx_issues.append(f"OBX[{j}]-5[{k}] invalid TS")
-                elif vt in {"CE", "CWE"}:
+                elif vt in {"CE","CWE"}:
                     for k, v in enumerate(vals, start=1):
                         id_  = get_cwe_component(v, 1, None, comp, sub)
                         sys_ = get_cwe_component(v, 3, None, comp, sub)
                         if not id_ or not sys_:
                             obx_issues.append(f"OBX[{j}]-5[{k}] CE/CWE codedness missing (id/system)")
                 elif vt == "SN":
-                    # basic SN: ^num1^... (we'll require component 2 numeric if present)
                     for k, v in enumerate(vals, start=1):
                         comps = v.split(comp)
                         num1 = comps[1] if len(comps) >= 2 else ""
@@ -401,8 +442,8 @@ def collect_domain_issues(
 
         extras["obx11_values"] = ",".join(sorted(seen_obx11)) if seen_obx11 else ""
 
-    # ---------------- MDM profile ----------------
-    if effective == "mdm":
+    # MDM profile
+    if profile_name == "mdm":
         txa = first_segment(msg, "TXA")
         if txa:
             raw2 = safe_get_er7(txa, "txa_2", "")
@@ -410,24 +451,117 @@ def collect_domain_issues(
             extras["txa2_text"]   = get_cwe_component(raw2, 2, None, comp, sub)
             extras["txa2_system"] = get_cwe_component(raw2, 3, None, comp, sub)
             extras["txa2_3_2"]    = get_cwe_component(raw2, 3, 2,    comp, sub)
-            if not extras["txa2_id"]:
-                issues.append("TXA-2.1 (Document Type ID) missing")
-            if not extras["txa2_system"]:
-                issues.append("TXA-2.3 (Coding System) missing")
+            if policies.get("txa2_coded", True):
+                if not extras["txa2_id"]:
+                    issues.append("TXA-2.1 (Document Type ID) missing")
+                if not extras["txa2_system"]:
+                    issues.append("TXA-2.3 (Coding System) missing")
 
     return issues, extras, obx_issues
+
+# ---------------- rules loading & profile resolution ----------------
+
+def _deep_merge(base: Dict[str, Any], over: Dict[str, Any]) -> Dict[str, Any]:
+    out = copy.deepcopy(base)
+    for k, v in (over or {}).items():
+        if k in out and isinstance(out[k], dict) and isinstance(v, dict):
+            out[k] = _deep_merge(out[k], v)
+        else:
+            out[k] = v
+    return out
+
+def find_repo_root(start: Path) -> Optional[Path]:
+    cur = start.resolve()
+    while True:
+        if (cur / ".git").exists():
+            return cur
+        if cur.parent == cur:
+            return None
+        cur = cur.parent
+
+def discover_rule_candidates(input_target: Path) -> List[Path]:
+    root = input_target if input_target.is_dir() else input_target.parent
+    repo = find_repo_root(root) or root
+
+    candidates: List[Path] = []
+    # nearest-first in the input tree
+    cur = root
+    while True:
+        for name in ("rules.yaml", "hl7_rules.yaml"):
+            p = cur / name
+            if p.exists():
+                candidates.append(p)
+        if cur.parent == cur:
+            break
+        cur = cur.parent
+
+    # repo-level conventional locations (tests override before config)
+    for p in [repo / "tests" / "hl7" / "rules.yaml",
+              repo / "tests" / "hl7" / "hl7_rules.yaml",
+              repo / "config" / "hl7_rules.yaml",
+              repo / "config" / "rules.yaml"]:
+        if p.exists():
+            candidates.append(p)
+
+    # de-dup while preserving order
+    seen = set()
+    uniq = []
+    for p in candidates:
+        if p not in seen:
+            seen.add(p)
+            uniq.append(p)
+    return uniq
+
+def load_rules_chain(paths: Iterable[Path]) -> Dict[str, Any]:
+    rules = copy.deepcopy(DEFAULT_RULES)
+    if yaml is None:
+        return rules
+    for p in paths:
+        try:
+            data = yaml.safe_load(p.read_text(encoding="utf-8"))
+            if isinstance(data, dict):
+                rules = _deep_merge(rules, data)
+        except Exception:
+            # ignore unreadable entries; keep going
+            pass
+    return rules
+
+def load_rules(path: Optional[Path]) -> Dict[str, Any]:
+    rules = copy.deepcopy(DEFAULT_RULES)
+    if not path:
+        return rules
+    if not path.exists() or not path.is_file():
+        return rules
+    if yaml is None:
+        return rules
+    try:
+        data = yaml.safe_load(path.read_text(encoding="utf-8"))
+        if isinstance(data, dict):
+            rules = _deep_merge(rules, data)
+    except Exception:
+        pass
+    return rules
+
+def resolve_profile_for_msg(msh, rules: Dict[str, Any], forced_profile: Optional[str]) -> str:
+    if forced_profile and forced_profile != "auto":
+        return forced_profile
+    mt, _ = get_msg_type_and_event(msh)
+    mt = (mt or "").upper()
+    profiles = rules.get("profiles", {})
+    for name, cfg in profiles.items():
+        types = [t.upper() for t in cfg.get("types", [])]
+        if mt in types:
+            return name
+    return rules.get("default_profile", "results")
 
 # ---------------- per-message QA ----------------
 
 def qa_one_message(
     raw_msg: str,
-    fail_on_dtm: bool = False,
+    rules: Dict[str, Any],
+    forced_profile: Optional[str] = None,
     quiet_parse: bool = False,
-    profile: str = "auto",
-    allow_obr24: Optional[Set[str]] = None,
-    allow_obx11: Optional[Set[str]] = None,
-    allow_obr25: Optional[Set[str]] = None,
-    obx11_empty_allows: Optional[Set[str]] = None,
+    cli_fail_on_dtm: Optional[bool] = None,
 ) -> Dict[str, Any]:
     res: Dict[str, Any] = {
         "status": "ok", "error": "",
@@ -470,22 +604,36 @@ def qa_one_message(
     # 1) baseline type rules
     res["issues"] = qa_rules_by_type(msg, msh, pid)
 
-    # 2) timestamps (strict)
-    dtm_issues, norms = collect_ts_field_issues_and_norms(msg)
-    res["dtm_issues"] = dtm_issues
-    res["msh7_norm"] = norms.get("msh7_norm", "")
-    res["pid7_norm"] = norms.get("pid7_norm", "")
-    if fail_on_dtm and dtm_issues and res["status"] == "ok":
-        res["status"] = "value_error"
+    # 2) resolve profile + settings from rules
+    prof_name = resolve_profile_for_msg(msh, rules, forced_profile)
+    prof_cfg = rules.get("profiles", {}).get(prof_name, {})
+    allowed = prof_cfg.get("allowed", {})
+    policies = prof_cfg.get("policies", {})
+    ts_cfg = prof_cfg.get("timestamps", {"strict": True, "fail_on_dtm": False})
 
-    # 3) domain + OBX checks
+    allow_obr24 = set(allowed.get("obr24", DEFAULT_OBR24_ALLOWED))
+    allow_status = set(allowed.get("result_status", DEFAULT_RESULT_STATUS))
+    empty_allows = set(allowed.get("obx11_empty_allows", DEFAULT_OBX11_EMPTY_ALLOWS))
+
+    # 3) timestamps (strict) — only run if enabled
+    if ts_cfg.get("strict", True):
+        dtm_issues, norms = collect_ts_field_issues_and_norms(msg)
+        res["dtm_issues"] = dtm_issues
+        res["msh7_norm"] = norms.get("msh7_norm", "")
+        res["pid7_norm"] = norms.get("pid7_norm", "")
+        fail_on_dtm = ts_cfg.get("fail_on_dtm", False) if cli_fail_on_dtm is None else cli_fail_on_dtm
+        if fail_on_dtm and dtm_issues and res["status"] == "ok":
+            res["status"] = "value_error")
+
+    # 4) domain + OBX checks per profile
     dom_issues, extras, obx_issues = collect_domain_issues(
         msg,
-        profile=profile,
+        profile_name=prof_name,
         allow_obr24=allow_obr24,
-        allow_obx11=allow_obx11,
-        allow_obr25=allow_obr25,
-        obx11_empty_allows=obx11_empty_allows,
+        allow_obx11=allow_status,
+        allow_obr25=allow_status,
+        obx11_empty_allows=empty_allows,
+        policies=policies,
     )
     res["domain_issues"] = dom_issues
     res["obx_issues"] = obx_issues
@@ -502,13 +650,10 @@ def qa_one_message(
 
 def qa_one_file(
     path: Path,
-    fail_on_dtm: bool,
+    rules: Dict[str, Any],
+    forced_profile: Optional[str],
     quiet_parse: bool,
-    profile: str,
-    allow_obr24: Optional[Set[str]],
-    allow_obx11: Optional[Set[str]],
-    allow_obr25: Optional[Set[str]],
-    obx11_empty_allows: Optional[Set[str]],
+    cli_fail_on_dtm: Optional[bool],
 ) -> Tuple[List[Dict[str, Any]], Dict[str, int]]:
     rows: List[Dict[str, Any]] = []
     summary = {"total": 0, "ok": 0, "errors": 0}
@@ -529,13 +674,10 @@ def qa_one_file(
     for i, raw_msg in enumerate(messages, start=1):
         res = qa_one_message(
             raw_msg,
-            fail_on_dtm=fail_on_dtm,
+            rules=rules,
+            forced_profile=forced_profile,
             quiet_parse=quiet_parse,
-            profile=profile,
-            allow_obr24=allow_obr24,
-            allow_obx11=allow_obx11,
-            allow_obr25=allow_obr25,
-            obx11_empty_allows=obx11_empty_allows,
+            cli_fail_on_dtm=cli_fail_on_dtm,
         )
         res["file"] = str(path)
         res["message_index"] = i
@@ -584,36 +726,20 @@ def collect_files(target: Path) -> List[Path]:
         return [target]
     return sorted([p for p in target.rglob("*.hl7") if p.is_file()])
 
-def _parse_csv_set(arg: Optional[str]) -> Optional[Set[str]]:
-    if not arg:
-        return None
-    return {a.strip() for a in arg.split(",") if a.strip()}
-
 def run_cli(argv: List[str]) -> int:
-    ap = argparse.ArgumentParser(description="HL7 batch parser + QA (per-message, strict TS, domain checks)")
+    ap = argparse.ArgumentParser(description="HL7 batch parser + QA (per-message, strict TS, domain checks, rules.yaml)")
     ap.add_argument("path", help="HL7 file or directory")
     ap.add_argument("--report", help="CSV output path (default: alongside input)")
     ap.add_argument("--json", dest="as_json", action="store_true", help="Emit results as JSON to stdout")
-    ap.add_argument("--fail-on-dtm", action="store_true", help="Mark message as value_error if any strict timestamp is invalid")
+    ap.add_argument("--fail-on-dtm", action="store_true", help="Override rules: mark message as value_error if any strict timestamp is invalid")
     ap.add_argument("--quiet-parse", action="store_true", help="Suppress parser warnings/noise")
     ap.add_argument("--max-print", type=int, default=10, help="Max messages to print per file (console summary)")
     ap.add_argument("--verbose", action="store_true", help="Print every message (overrides --max-print)")
-
-    ap.add_argument("--profile", choices=["auto","results","mdm"], default="auto",
-                    help="Apply domain rule pack (auto chooses based on MSH-9)")
-
-    ap.add_argument("--allow-obr24", default="", help="Comma list of allowed OBR-24 codes (Diagnostic Service Section ID)")
-    ap.add_argument("--allow-obx11", default="", help="Comma list of allowed OBX-11 statuses")
-    ap.add_argument("--allow-obr25", default="", help="Comma list of allowed OBR-25 statuses (defaults to same set as OBX-11)")
-    ap.add_argument("--obx11-empty-allows", default="", help="Comma list of OBX-11 statuses that allow OBX-5 to be empty (default X,I,W,U)")
+    ap.add_argument("--rules", default="auto",
+                    help="Path to rules.yaml, or 'auto' to search near input and under tests/hl7/ and config/.")
+    ap.add_argument("--dump-rules", action="store_true", help="Print effective merged rules to stdout and exit")
 
     args = ap.parse_args(argv[1:])
-
-    allow_obr24 = _parse_csv_set(args.allow_obr24) or DEFAULT_OBR24_ALLOWED
-    base_status = _parse_csv_set(args.allow_obx11) or DEFAULT_RESULT_STATUS
-    allow_obx11 = base_status
-    allow_obr25 = _parse_csv_set(args.allow_obr25) or base_status
-    empty_allows = _parse_csv_set(args.obx11_empty_allows) or DEFAULT_OBX11_EMPTY_ALLOWS
 
     target = Path(args.path)
     files = collect_files(target)
@@ -621,49 +747,65 @@ def run_cli(argv: List[str]) -> int:
         print(f"No .hl7 files found under: {target}")
         return 3
 
+    # load rules (auto or explicit)
+    if args.rules != "auto":
+        rules_path = Path(args.rules)
+        rules = load_rules(rules_path)
+        print(f"[rules] using: {rules_path}")
+    else:
+        candidates = discover_rule_candidates(target)
+        if candidates:
+            rules = load_rules_chain(candidates)
+            print(f"[rules] using: {', '.join(str(p) for p in candidates)}")
+        else:
+            rules = copy.deepcopy(DEFAULT_RULES)
+            print("[rules] no rules.yaml found; using built-in defaults")
+
+    if args.dump_rules:
+        print(json.dumps(rules, ensure_ascii=False, indent=2))
+        return 0
+
     all_rows: List[Dict[str, Any]] = []
     grand = {"files": 0, "messages": 0, "ok": 0, "errors": 0}
 
     for f in files:
-      rows, summary = qa_one_file(
-          f,
-          fail_on_dtm=args.fail_on_dtm,
-          quiet_parse=args.quiet_parse,
-          profile=args.profile,
-          allow_obr24=allow_obr24,
-          allow_obx11=allow_obx11,
-          allow_obr25=allow_obr25,
-          obx11_empty_allows=empty_allows,
-      )
-      all_rows.extend(rows)
-      grand["files"] += 1
-      grand["messages"] += summary["total"]
-      grand["ok"] += summary["ok"]
-      grand["errors"] += summary["errors"]
+        rows, summary = qa_one_file(
+            f,
+            rules=rules,
+            forced_profile=None,                     # use rules to resolve automatically
+            quiet_parse=args.quiet_parse,
+            cli_fail_on_dtm=True if args.fail_on_dtm else None,
+        )
+        all_rows.extend(rows)
+        grand["files"] += 1
+        grand["messages"] += summary["total"]
+        grand["ok"] += summary["ok"]
+        grand["errors"] += summary["errors"]
 
-      print(f"[file] {f.name} → messages: {summary['total']}  ok: {summary['ok']}  errors: {summary['errors']}")
-      limit = len(rows) if args.verbose else min(args.max_print, len(rows))
-      for r in rows[:limit]:
-          print(f"  [{r['status']}] msg#{r['message_index']} type={r.get('msg_type','')}^{r.get('msg_event','')}".rstrip("^"))
-          if r.get("error"):
-              print(f"    error: {r['error']}")
-          if r.get("issues"):
-              print(f"    issues: {', '.join(r['issues'])}")
-          if r.get("dtm_issues"):
-              print(f"    dtm_issues: {', '.join(r['dtm_issues'])}")
-          if r.get("domain_issues"):
-              print(f"    domain_issues: {', '.join(r['domain_issues'])}")
-          if r.get("obx_issues"):
-              print(f"    obx_issues: {', '.join(r['obx_issues'])}")
-          print(f"    OBR-24: {r.get('obr24_values','')}   OBR-25: {r.get('obr25_values','')}   OBX-11: {r.get('obx11_values','')}")
-          if r.get("txa2_id") or r.get("txa2_system"):
-              print(f"    TXA-2: id={r.get('txa2_id','')} text={r.get('txa2_text','')} system={r.get('txa2_system','')} (2.3.2={r.get('txa2_3_2','')})")
-          print(f"    MSH-10: {r.get('msh_10','')}   PID-3: {r.get('pid_3','')}")
-          print(f"    counts: OBR={r.get('obr_count',0)} OBX={r.get('obx_count',0)}")
+        print(f"[file] {f.name} → messages: {summary['total']}  ok: {summary['ok']}  errors: {summary['errors']}")
+        limit = len(rows) if args.verbose else min(args.max_print, len(rows))
+        for r in rows[:limit]:
+            print(f"  [{r['status']}] msg#{r['message_index']} type={r.get('msg_type','')}^{r.get('msg_event','')}".rstrip("^"))
+            if r.get("error"):
+                print(f"    error: {r['error']}")
+            if r.get("issues"):
+                print(f"    issues: {', '.join(r['issues'])}")
+            if r.get("dtm_issues"):
+                print(f"    dtm_issues: {', '.join(r['dtm_issues'])}")
+            if r.get("domain_issues"):
+                print(f"    domain_issues: {', '.join(r['domain_issues'])}")
+            if r.get("obx_issues"):
+                print(f"    obx_issues: {', '.join(r['obx_issues'])}")
+            print(f"    OBR-24: {r.get('obr24_values','')}   OBR-25: {r.get('obr25_values','')}   OBX-11: {r.get('obx11_values','')}")
+            if r.get("txa2_id") or r.get("txa2_system"):
+                print(f"    TXA-2: id={r.get('txa2_id','')} text={r.get('txa2_text','')} system={r.get('txa2_system','')} (2.3.2={r.get('txa2_3_2','')})")
+            print(f"    MSH-10: {r.get('msh_10','')}   PID-3: {r.get('pid_3','')}")
+            print(f"    counts: OBR={r.get('obr_count',0)} OBX={r.get('obx_count',0)}")
 
     # CSV output
     if args.report:
         csv_path = Path(args.report)
+        csv_path.parent.mkdir(parents=True, exist_ok=True)
     else:
         root_for_output = target if target.is_dir() else target.parent
         csv_path = root_for_output / "hl7_qa_report.csv"
