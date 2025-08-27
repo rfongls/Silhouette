@@ -346,8 +346,9 @@ def collect_domain_issues(
             raw24 = safe_get_er7(seg, "obr_24", "")
             for val in _split_reps(raw24, rep):
                 seen_obr24.add(val)
-                if policies.get("obr4_coded", True) and allow_obr24 and val not in allow_obr24:
-                    issues.append(f"OBR[{idx}]-24 unexpected value: {val}")
+             if allow_obr24 and val not in allow_obr24:
+                issues.append(f"OBR[{idx}]-24 unexpected value: {val}")
+
 
             # OBR-4 codedness
             if policies.get("obr4_coded", True):
@@ -622,8 +623,9 @@ def qa_one_message(
         res["msh7_norm"] = norms.get("msh7_norm", "")
         res["pid7_norm"] = norms.get("pid7_norm", "")
         fail_on_dtm = ts_cfg.get("fail_on_dtm", False) if cli_fail_on_dtm is None else cli_fail_on_dtm
-        if fail_on_dtm and dtm_issues and res["status"] == "ok":
-            res["status"] = "value_error")
+    if fail_on_dtm and dtm_issues and res["status"] == "ok":
+        res["status"] = "value_error"
+
 
     # 4) domain + OBX checks per profile
     dom_issues, extras, obx_issues = collect_domain_issues(
