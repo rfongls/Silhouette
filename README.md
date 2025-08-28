@@ -107,6 +107,6 @@ Silhouette/
 ├── LICENSE                     # Proprietary license
 ├── COMPLIANCE.md               # Compliance policy
 ├── CUSTOMER_LICENSE_TEMPLATE.md# Customer license template
-├── PHASES.md                   # Phase-by-phase breakdown
+├── docs/PHASES.md              # Phase-by-phase breakdown
 ├── MILESTONES.md               # PR-by-PR milestones
 └── README.md                   # This file
