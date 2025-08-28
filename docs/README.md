@@ -1,50 +1,30 @@
 # Documentation Index
 
 ## Getting Started
-- [Installer Quickstart](INSTALL_QUICKSTART.md)
-- [Repo Integration Guide](repo_integration.md)
-- [HL7 Testing Guide](hl7_testing.md)
-- [Offline Parity Workflow](offline_parity.md)
-- [Release Candidate Checklist](rc_checklist.md)
+- [INSTALL_QUICKSTART](./INSTALL_QUICKSTART.md)
+- **HL7 QA Validator** — run commands & options: [hl7_testing.md](./hl7_testing.md)
+- Unified CLI (silhouette): [CLI.md](./CLI.md)
 
-## Guides
-- [Codex Handoff](codex_handoff.md)
-- [Manual Training Guide](manual_training_guide.md)
-- [Parking Lot](parking_lot.md)
-- [User Guide](User_Guide.md)
-- [Contributing](contributing.md)
-- [Agent API](agent_api.md)
-- [Agent Scenarios](agent_scenarios.md)
-- [Persona Guide](persona-guide.md)
-- [Deploy Guide](deploy-guide.md)
-- [Monitoring](monitoring.md)
-- [Recovery](recovery.md)
-- [System Overview](system-overview.md)
-- [Test Scenarios](test-scenarios.md)
+## Core Capabilities
+- Agents controller (spawn/fork/merge): [Agents.md](./Agents.md)
+- Offline mode (safe-mode, throttling): [Offline_Mode.md](./Offline_Mode.md)
+- Knowledge Distillation: [Knowledge_Distillation.md](./Knowledge_Distillation.md)
+- Quantization: [Quantization.md](./Quantization.md)
+- Build deployable clone: [Package_Clone.md](./Package_Clone.md)
 
-## Reference
-- [Constraints](constraints.md)
-- [Interoperability](interoperability/)
-- [Core Model Info](core_model_info/)
-- [Alignment Kernel](alignment_kernel/)
-- [Cybersecurity](cyber/)
-- [Examples](examples/)
-- [Module API](module-api.md)
-- [Source README](source-readme.md)
-- [Skills Catalog](skills_catalog.md)
-- [Self Replication](self_replication.md)
-- [Philosophy](philosophy.md)
+## Skills, Profiles, Security
+- Skills registry & usage: [Skills.md](./Skills.md)
+- Policy profiles (YAML): [Profiles.md](./Profiles.md)
+- Security (license scanner, redaction, watermark): [Security.md](./Security.md)
 
-## Archive
-- [Archived Docs](archive/)
+## Evaluation, Training, Config & Artifacts
+- Evaluations & gates: [Eval.md](./Eval.md)
+- Training (SFT/KD adapters): [Training.md](./Training.md)
+- Config (gates, lanes, train): [Config.md](./Config.md)
+- Artifacts (scoreboards, logs, traces): [Artifacts.md](./Artifacts.md)
 
-## Additional docs
-- [Direct Secure Messaging (DSM) Flow](interoperability/direct_secure_messaging.md)
-- [HIE Record Locator Service (RLS) Query](interoperability/hie_rls_query_flow.md)
-- [HL7 v2.x → FHIR Mapping](interoperability/hl7v2_to_fhir_mapping.md)
-- [IHE XDS.b Document Exchange](interoperability/ihe_xdsb_document_exchange.md)
-- [MDM Entity Resolution (Patients/Providers/Orgs)](interoperability/mdm_entity_resolution.md)
-- [Interoperability Overview](interoperability/overview.md)
-- [Prior Authorization (FHIR + X12 278/275)](interoperability/prior_auth_fhir_x12.md)
-- [SMART on FHIR Authorization](interoperability/smart_on_fhir_auth.md)
-- [TEFCA / QHIN Exchange Overview](interoperability/tefca_exchange_overview.md)
+## Project Ops
+- Release playbook: ../RELEASE.md  
+- Changelog: ../CHANGELOG.md  
+- Compliance policy: ../COMPLIANCE.md  
+- Customer license template: ../CUSTOMER_LICENSE_TEMPLATE.md
