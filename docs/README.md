@@ -4,6 +4,8 @@
 - [INSTALL_QUICKSTART](./INSTALL_QUICKSTART.md)
 - **HL7 QA Validator** — run commands & options: [hl7_testing.md](./hl7_testing.md)
 - Unified CLI (silhouette): [CLI.md](./CLI.md)
+- API surface: [API.md](./API.md)
+- Interoperability quickstart: [interoperability/quickstart.md](./interoperability/quickstart.md)
 
 ## Core Capabilities
 - Agents controller (spawn/fork/merge): [Agents.md](./Agents.md)
@@ -16,6 +18,11 @@
 - Skills registry & usage: [Skills.md](./Skills.md)
 - Policy profiles (YAML): [Profiles.md](./Profiles.md)
 - Security (license scanner, redaction, watermark): [Security.md](./Security.md)
+
+## Reference
+- Phases overview: [PHASES.md](./PHASES.md)
+- Knowledge store hierarchy: [knowledge_store/hierarchy.md](./knowledge_store/hierarchy.md)
+- Alignment kernel handoff: [alignment_kernel/](./alignment_kernel/)
 
 ## Evaluation, Training, Config & Artifacts
 - Evaluations & gates: [Eval.md](./Eval.md)

@@ -34,12 +34,12 @@ We use labels to track the type of contribution:
 ## 🧭 Guidelines
 - Keep PRs focused: One feature or fix per PR
 - Maintain formatting and style consistency
-  - For philosophical or roadmap changes, reference `docs/philosophy.md` or `PHASES.md`
+  - For philosophical or roadmap changes, reference `docs/philosophy.md` or `docs/PHASES.md`
 
 ## 🙏 Code of Conduct
 This is a cooperative, purpose-driven space. Please keep interactions constructive and aligned with the mission: resilience, adaptability, and mutual empowerment.
 
 ## 🔗 Resources
 - [philosophy.md](./philosophy.md)
-  - [PHASES.md](../PHASES.md)
+  - [PHASES.md](./PHASES.md)
 - [MILESTONES.md](../MILESTONES.md)

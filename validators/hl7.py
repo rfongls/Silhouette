@@ -10,3 +10,11 @@ def validate_hl7_structural(hl7_text: str) -> None:
     from hl7apy.parser import parse_message
 
     parse_message(hl7_text, validation_level=2)
+
+
+class HL7Validator:
+    """Simple HL7 validator facade."""
+
+    def validate(self, payload: str, **opts: dict) -> dict:
+        validate_hl7_minimal(payload)
+        return {"valid": True}
