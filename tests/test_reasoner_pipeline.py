@@ -1,7 +1,7 @@
 import json
 
 from silhouette_core.merge_teacher_outputs import merge_teacher_outputs
-from evaluate_student import load_model, run_tests
+from silhouette_core.evaluate_student import load_model, run_tests
 
 
 def test_merge_teacher_outputs(tmp_path):

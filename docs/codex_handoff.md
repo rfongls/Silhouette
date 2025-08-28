@@ -115,12 +115,12 @@ git push origin feature/stage1-training-pipeline
 ### 2. Stage 1: Codex Dataset Expansion
 
 1. Seed file: `training_data/reasoner/stage1_sample.jsonl` (5 examples).
-2. Handoff prompt: see `training_data/reasoner/CODEX_HANDOFF_STAGE1.md`.
+2. Handoff prompt: see `docs/alignment_kernel/CODEX_HANDOFF_STAGE1.md`.
 3. Run locally with the OpenAI CLI:
 ```bash
 openai api completions.create \
   --model code-davinci-002 \
-  --prompt "$(cat training_data/reasoner/stage1_sample.jsonl)\n\n$(sed -n '1,100p' training_data/reasoner/CODEX_HANDOFF_STAGE1.md)" \
+  --prompt "$(cat training_data/reasoner/stage1_sample.jsonl)\n\n$(sed -n '1,100p' docs/alignment_kernel/CODEX_HANDOFF_STAGE1.md)" \
   --max_tokens 25000 --temperature 0.0 \
   > training_data/reasoner/stage1_full.jsonl
 ```
@@ -133,7 +133,7 @@ python scripts/validate_stage1.py --input training_data/reasoner/stage1_full.jso
 
 1. Input: `modules/reasoner/teacher_outputs.jsonl`
 2. Script: `silhouette_core/merge_teacher_outputs.py`
-3. Handoff: see `training_data/reasoner/CODEX_HANDOFF_MERGE.md`
+3. Handoff: see `docs/alignment_kernel/CODEX_HANDOFF_STAGE5.md`
 4. Run:
 ```bash
 python silhouette_core/merge_teacher_outputs.py \
@@ -145,7 +145,7 @@ python silhouette_core/merge_teacher_outputs.py \
 
 1. Test file: `training_data/reasoner/stage1_test.jsonl`
 2. Script: `silhouette_core/evaluate_student.py`
-3. Handoff: see `training_data/reasoner/CODEX_HANDOFF_EVAL.md`
+3. Handoff: see `docs/alignment_kernel/CODEX_HANDOFF_STAGE6.md`
 4. Run:
 ```bash
 python silhouette_core/evaluate_student.py \

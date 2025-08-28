@@ -1,5 +1,7 @@
 # Agent Controller (`silhouette_core/agent_controller.py`)
 
+> Legacy shim forwarding to [`agent_loop.py`](../silhouette_core/agent_loop.py).
+
 ## Capabilities
 - Spawn, fork, merge agents
 - Orchestrate tasks across agents
