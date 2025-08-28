@@ -22,5 +22,6 @@ py -X utf8 tools/hl7_qa.py "tests/fixtures/hl7/sample_set_x.hl7" `
   --rules "tests/hl7/rules/rules.yaml" `
   --engine fast `
   --start 1000 --limit 500 `
-  --max-errors-per-msg 10 --max-print 0 `
+  --max-errors-per-msg 10 `
+  --max-print 0 `
   --report "artifacts/hl7/sample_set_x_1k-1.5k.csv"

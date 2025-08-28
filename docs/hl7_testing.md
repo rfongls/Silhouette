@@ -3,10 +3,10 @@
 Validate HL7 v2 messages against site-tunable **profiles** in `tests/hl7/rules/rules.yaml`.
 
 **Engines**
-- **fast** – raw ER7 parsing (no object model): HL7Spy-like speed (default via `engine: fast` in profiles)
-- **hl7apy** – full object model: use when you need strict grammar/group checks
+- **fast** — raw ER7 parsing (no object model): HL7Spy-like speed (default via `engine: fast` in profiles)
+- **hl7apy** — full object model: use when you need strict grammar/group checks
 
-Artifacts: reports go to `artifacts/hl7/` (add `artifacts/` to `.gitignore`).
+Artifacts: reports go to `artifacts/hl7/` — add `artifacts/` to `.gitignore`.
 
 ## Prereqs
 - Python 3.10+
@@ -21,9 +21,11 @@ Artifacts: reports go to `artifacts/hl7/` (add `artifacts/` to `.gitignore`).
     python3 -m pip install -U pip
     python3 -m pip install -r requirements.txt
     ```
-- Make output folder:
+- Create output folder:
   - Windows: `mkdir artifacts\hl7 2>nul`
   - macOS/Linux: `mkdir -p artifacts/hl7`
+
+---
 
 ## Windows (cmd)
 
@@ -73,7 +75,6 @@ py -X utf8 tools/hl7_qa.py "tests/fixtures/hl7/sample_set_x.hl7" `
   --max-errors-per-msg 10 --max-print 0 `
   --report "artifacts/hl7/sample_set_x_hl7apy.csv"
 ```
-
 ## macOS/Linux (bash/zsh)
 
 **Fast**
@@ -98,6 +99,8 @@ python3 tools/hl7_qa.py tests/fixtures/hl7/sample_set_x.hl7 \
   --max-errors-per-msg 10 --max-print 0 \
   --report artifacts/hl7/sample_set_x_hl7apy.csv
 ```
+
+---
 
 ## Useful variants
 
@@ -133,8 +136,10 @@ py -X utf8 tools\hl7_qa.py "tests\fixtures\hl7\sample_set_x.hl7" ^
   --report "artifacts\hl7\sample_set_x.jsonl"
 ```
 
+---
+
 ## Notes
 
-* Profiles may specify `engine: fast|hl7apy`; CLI `--engine` overrides this per run.
+* Profiles may specify `engine: fast|hl7apy`; CLI `--engine` overrides per run.
 * Timestamp policy is controlled in `timestamps.mode` (`length_only` by default).
 * Add `artifacts/` to `.gitignore` to keep reports out of VCS.

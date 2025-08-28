@@ -1,4 +1,26 @@
-# Silhouette Core — Installer Instructions & Quickstart
+# Silhouette Core — Installer Quickstart
+
+## Prerequisites
+- **Python**: 3.10+
+- **Git**
+- **Build tools** if needed on your OS (e.g., Visual C++ Build Tools on Windows)
+
+## Install
+- **Windows**
+  ```bat
+  py -m pip install -U pip
+  py -m pip install -r requirements.txt
+  ```
+- **macOS/Linux**
+  ```bash
+  python3 -m pip install -U pip
+  python3 -m pip install -r requirements.txt
+  ```
+
+## Next steps
+
+* To validate HL7 files and generate reports, see **[docs/hl7_testing.md](./hl7_testing.md)** for complete run commands (fast + hl7apy).
+
 
 > **What is it?**
 > Silhouette Core is a local, offline-friendly code agent. It builds a **repo map** (JSON + HTML), understands **Python + JS/TS** with a unified dependency graph, splits code into **deterministic chunks** with a **local embeddings index**, runs **analyses** (hotpaths, service reports, test suggestions, CI summaries), can **propose a dry-run patch** (diff + impact set + PR body), and ships an **offline check** to prove it works without internet.
@@ -247,3 +269,4 @@ wget <model-url>
     silhouette license --customer-id ORG-1234
     ```
 *This document is intended to be saved as `docs/INSTALL_QUICKSTART.md` so new users can install and run Silhouette Core in minutes.*
+
