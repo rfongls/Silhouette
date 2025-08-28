@@ -51,8 +51,6 @@ py -X utf8 tools\hl7_qa.py "tests\fixtures\hl7\sample_set_x.hl7" ^
   --report "artifacts\hl7\sample_set_x_hl7apy.csv"
 ```
 
----
-
 ## Windows (PowerShell)
 
 **Fast**
@@ -77,9 +75,6 @@ py -X utf8 tools/hl7_qa.py "tests/fixtures/hl7/sample_set_x.hl7" `
   --max-errors-per-msg 10 --max-print 0 `
   --report "artifacts/hl7/sample_set_x_hl7apy.csv"
 ```
-
----
-
 ## macOS/Linux (bash/zsh)
 
 **Fast**
