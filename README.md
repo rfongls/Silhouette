@@ -370,6 +370,364 @@ Targets in `config/hosts.yaml` populate the host/port dropdown.
 
 If your model supports Tools API, it will return a tool call; otherwise it may emit a JSON fallback the script understands. On success you’ll see a short summary and an ACK (look for `MSA|AA|...`).
 
+## HL7 QA Validator — Usage & Commands
+
+Validate HL7 v2 messages against site-tunable **profiles** defined in `rules.yaml`.
+The validator supports two engines:
+
+* **fast** — raw ER7 parsing (no object tree): *HL7Spy-like speed* (default via `rules.yaml`).
+* **hl7apy** — full object model: use when you need strict grammar/group reasoning.
+
+You can set the engine per profile in `rules.yaml` or override at the CLI.
+
+### Table of Contents
+
+1. [Prerequisites](#prerequisites)
+2. [Folder Layout](#folder-layout)
+3. [Configure Rules](#configure-rules)
+
+   * [Profiles & Engines](#profiles--engines)
+   * [Timestamp Policy](#timestamp-policy)
+   * [Allowed Values & Policies](#allowed-values--policies)
+4. [Run the App](#run-the-app)
+
+   * [Windows (cmd)](#windows-cmd)
+   * [Windows (PowerShell)](#windows-powershell)
+   * [macOS/Linux (bash/zsh)](#macoslinux-bashzsh)
+   * [Useful Variants](#useful-variants)
+5. [CLI Options Reference](#cli-options-reference)
+6. [Artifacts & Version Control](#artifacts--version-control)
+7. [Troubleshooting & Performance](#troubleshooting--performance)
+8. [Ready-Made Scripts](#ready-made-scripts)
+
+### Prerequisites
+
+* **Python** ≥ 3.10
+* **Dependencies**
+
+  * Install with:
+
+    * **Windows (cmd/PowerShell)**
+
+      ```bat
+      py -m pip install -U pip
+      py -m pip install -r requirements.txt
+      ```
+    * **macOS/Linux**
+
+      ```bash
+      python3 -m pip install -U pip
+      python3 -m pip install -r requirements.txt
+      ```
+  * `hl7apy` is **optional** unless you use `--engine hl7apy` (or a profile sets `engine: hl7apy`).
+
+Create an output folder:
+
+* **Windows**
+
+  ```bat
+  mkdir artifacts\hl7 2>nul
+  ```
+* **macOS/Linux**
+
+  ```bash
+  mkdir -p artifacts/hl7
+  ```
+
+### Folder Layout
+
+```
+repo/
+  tools/
+    hl7_qa.py                 # the validator
+  tests/
+    fixtures/hl7/             # sample HL7 files (inputs)
+    hl7/rules/rules.yaml      # profile-based validation rules (site-tunable)
+  artifacts/
+    hl7/                      # CSV/JSONL reports (outputs; safe to .gitignore)
+```
+
+### Configure Rules
+
+#### Profiles & Engines
+
+`rules.yaml` selects a profile by the **root** of `MSH-9` (e.g., `ORU` from `ORU^R01`).
+Each profile may include:
+
+* `engine: fast | hl7apy` — choose the engine for that profile (optional; defaults to `fast`).
+* `types: [...]` — list of root message types matched by this profile.
+
+Example:
+
+```yaml
+profiles:
+  oru_results:
+    engine: fast
+    types: [ORU]
+  adt_messages:
+    engine: fast
+    types: [ADT]
+default_profile: oru_results
+```
+
+You can override at runtime via `--engine fast|hl7apy|auto` (see [CLI Options](#cli-options-reference)).
+
+#### Timestamp Policy
+
+Control how TS fields are validated:
+
+```yaml
+timestamps:
+  mode: length_only        # 'length_only' | 'calendar' | 'off'
+  strict: true             # if invalid, register as error (with fail_on_dtm)
+  fail_on_dtm: true        # treat invalid TS as value_error (else warning)
+  allowed_lengths: [8, 12, 14]   # YYYYMMDD, YYYYMMDDHHMM, YYYYMMDDHHMMSS
+  compliant_lengths: [8, 12, 14] # lengths considered “compliant”
+  fields:
+    - "MSH-7"  # message datetime
+    - "OBR-7"  # observation datetime
+    - "OBX-14" # observation datetime (result)
+```
+
+* `length_only` (default): accept **numeric** TS with allowed base lengths (fraction/timezone syntax allowed).
+* `calendar`: additionally verify calendar ranges (valid month/day/time).
+* `off`: skip TS checks.
+
+> Your current policy is `length_only` with allowed lengths 8/12/14.
+
+#### Allowed Values & Policies
+
+Profiles can include *allowed values* (e.g., `result_status`, `encounter_class`) and *policies*:
+
+```yaml
+allowed:
+  result_status: [F, C, I, P, R, S, U, D, X, W]
+  obx11_empty_allows: [X, I, W, U]
+  encounter_class: [E, I, O, P, R, B, C, N, U]   # ADT PV1-2
+
+policies:
+  require_pid3_shape: true
+  require_obr2_or_obr3: true
+  obr4_coded: true
+  obr25_allowed: true
+  obx11_allowed: true
+  obx3_coded: true
+  obx5_required_unless_status_in_empty_allows: true
+  obx2_vs_obx5_typecheck: true
+  require_pv1_2_encounter_class: true
+  required_fields:
+    - "PID-3.1"
+    - "PID-5.1"
+    - "PID-8"
+```
+
+> See your `rules.yaml` for full examples (ORU/ORM/OML/MDM/ADT/RDE/VXU/SIU).
+
+### Run the App
+
+> Replace the input with your HL7 file if needed: `tests\fixtures\hl7\sample_set_x.hl7`
+
+#### Windows (cmd)
+
+**Fast engine (recommended for throughput)**
+
+```bat
+py -X utf8 tools\hl7_qa.py "tests\fixtures\hl7\sample_set_x.hl7" --rules "tests\hl7\rules\rules.yaml" --engine fast --progress-every 200 --progress-time 10 --max-errors-per-msg 10 --max-print 0 --report "artifacts\hl7\sample_set_x_fast.csv"
+```
+
+**HL7apy engine (full object model)**
+
+```bat
+py -X utf8 tools\hl7_qa.py "tests\fixtures\hl7\sample_set_x.hl7" --rules "tests\hl7\rules\rules.yaml" --engine hl7apy --hl7apy-validation none --workers auto --chunk 200 --progress-every 200 --progress-time 10 --max-errors-per-msg 10 --max-print 0 --report "artifacts\hl7\sample_set_x_hl7apy.csv"
+```
+
+> **cmd multiline tip:** paste the entire block at once; **no spaces** after `^`.
+> If you see `More?`, cmd is waiting for the rest of the line.
+
+#### Windows (PowerShell)
+
+**Fast**
+
+```powershell
+py -X utf8 tools/hl7_qa.py "tests/fixtures/hl7/sample_set_x.hl7" `
+  --rules "tests/hl7/rules/rules.yaml" `
+  --engine fast `
+  --progress-every 200 --progress-time 10 `
+  --max-errors-per-msg 10 --max-print 0 `
+  --report "artifacts/hl7/sample_set_x_fast.csv"
+```
+
+**HL7apy**
+
+```powershell
+py -X utf8 tools/hl7_qa.py "tests/fixtures/hl7/sample_set_x.hl7" `
+  --rules "tests/hl7/rules/rules.yaml" `
+  --engine hl7apy --hl7apy-validation none `
+  --workers auto --chunk 200 `
+  --progress-every 200 --progress-time 10 `
+  --max-errors-per-msg 10 --max-print 0 `
+  --report "artifacts/hl7/sample_set_x_hl7apy.csv"
+```
+
+#### macOS/Linux (bash/zsh)
+
+**Fast**
+
+```bash
+python3 tools/hl7_qa.py tests/fixtures/hl7/sample_set_x.hl7 \
+  --rules tests/hl7/rules/rules.yaml \
+  --engine fast \
+  --progress-every 200 --progress-time 10 \
+  --max-errors-per-msg 10 --max-print 0 \
+  --report artifacts/hl7/sample_set_x_fast.csv
+```
+
+**HL7apy**
+
+```bash
+python3 tools/hl7_qa.py tests/fixtures/hl7/sample_set_x.hl7 \
+  --rules tests/hl7/rules/rules.yaml \
+  --engine hl7apy --hl7apy-validation none \
+  --workers auto --chunk 200 \
+  --progress-every 200 --progress-time 10 \
+  --max-errors-per-msg 10 --max-print 0 \
+  --report artifacts/hl7/sample_set_x_hl7apy.csv
+```
+
+### Useful Variants
+
+**Process a subset (fast iteration)**
+
+```bat
+py -X utf8 tools\hl7_qa.py "tests\fixtures\hl7\sample_set_x.hl7" --rules "tests\hl7\rules\rules.yaml" --engine fast --start 1000 --limit 500 --max-errors-per-msg 10 --max-print 0 --report "artifacts\hl7\sample_set_x_1k-1.5k.csv"
+```
+
+**Filter to specific message types (e.g., ORU_R01 & ADT_A01)**
+
+```bat
+py -X utf8 tools\hl7_qa.py "tests\fixtures\hl7\sample_set_x.hl7" --rules "tests\hl7\rules\rules.yaml" --engine fast --only ORU_R01,ADT_A01 --max-errors-per-msg 10 --max-print 0 --report "artifacts\hl7\oru_adt_check.csv"
+```
+
+**Write JSONL instead of CSV (one JSON object per line)**
+
+```bat
+py -X utf8 tools\hl7_qa.py "tests\fixtures\hl7\sample_set_x.hl7" --rules "tests\hl7\rules\rules.yaml" --engine fast --max-errors-per-msg 10 --max-print 0 --report "artifacts\hl7\sample_set_x.jsonl"
+```
+
+**Parallel (best with hl7apy engine)**
+
+```bat
+py -X utf8 tools\hl7_qa.py "tests\fixtures\hl7\sample_set_x.hl7" --rules "tests\hl7\rules\rules.yaml" --engine hl7apy --hl7apy-validation none --workers auto --chunk 250 --progress-every 200 --progress-time 10 --max-errors-per-msg 10 --max-print 0 --report "artifacts\hl7\sample_set_x_parallel.csv"
+```
+
+### CLI Options Reference
+
+* `--engine auto|fast|hl7apy`
+  `auto` uses `profile.engine` (or **fast** if unset). Override per run.
+* `--hl7apy-validation none|tolerant|strict`
+  Only used when `engine=hl7apy`. `none` recommended (YAML drives TS).
+* `--no-quiet-parse`
+  Show hl7apy logs/warnings (default is suppressed).
+* `--report <path>`
+  Output **.csv** or **.jsonl** by extension.
+* `--progress-every N` / `--progress-time S`
+  Print progress every N messages / at least every S seconds.
+* `--start N` / `--limit N`
+  Skip first N messages / process at most N.
+* `--only TYPE[,TYPE...]`
+  Include only certain `MSH-9` types (e.g., `ORU_R01,ADT_A01`).
+* `--max-errors-per-msg N`
+  Cap stored errors per message (default 50).
+* `--max-print N`
+  Cap console prints per message (default 3).
+* `--workers auto|N` / `--chunk N`
+  Parallelize across processes (most effective with `hl7apy`).
+
+### Artifacts & Version Control
+
+Reports are written under `artifacts/hl7/`. Keep outputs out of git:
+
+```
+# .gitignore
+artifacts/
+```
+
+You can move `artifacts/` under a different directory (e.g., `hl7/artifacts/`) — just adjust `--report` paths in your commands.
+
+### Troubleshooting & Performance
+
+* **Only 1 message processed:** your file was treated as one giant message. The splitter now matches message starts at `\A` or after `\r`/`\n` and accepts **any** field separator byte after `MSH`. If you still see 1 msg, check your source (zipped/wrapped).
+* **It feels “hung” on start:** for very large files, reading and scanning anchors happens before the first progress line. Use `--progress-time 10` to ensure periodic updates.
+* **hl7apy is slow on some messages:** that’s normal on big/odd structures. Use `--engine fast` for volume QA and switch to `hl7apy` only when you need structural validation.
+* **TS values rejected by hl7apy:** TS acceptance is driven by **your YAML** (`timestamps.mode`). We parse with hl7apy **without** TS enforcement and apply your policy instead.
+* **Windows caret (`^`) pitfalls:** paste the whole block at once; no spaces after `^`. If you see `More?`, cmd is mid-line.
+
+### Ready-Made Scripts
+
+#### `run_examples.bat` (Windows cmd)
+
+```bat
+@echo off
+setlocal
+if not exist artifacts\hl7 mkdir artifacts\hl7
+
+REM Fast engine (recommended)
+py -X utf8 tools\hl7_qa.py "tests\fixtures\hl7\sample_set_x.hl7" ^
+  --rules "tests\hl7\rules\rules.yaml" ^
+  --engine fast ^
+  --progress-every 200 --progress-time 10 ^
+  --max-errors-per-msg 10 --max-print 0 ^
+  --report "artifacts\hl7\sample_set_x_fast.csv"
+
+REM HL7apy engine (object model)
+py -X utf8 tools\hl7_qa.py "tests\fixtures\hl7\sample_set_x.hl7" ^
+  --rules "tests\hl7\rules\rules.yaml" ^
+  --engine hl7apy --hl7apy-validation none ^
+  --workers auto --chunk 200 ^
+  --progress-every 200 --progress-time 10 ^
+  --max-errors-per-msg 10 --max-print 0 ^
+  --report "artifacts\hl7\sample_set_x_hl7apy.csv"
+
+REM Subset run (quick iteration)
+py -X utf8 tools\hl7_qa.py "tests\fixtures\hl7\sample_set_x.hl7" ^
+  --rules "tests\hl7\rules\rules.yaml" ^
+  --engine fast ^
+  --start 1000 --limit 500 ^
+  --max-errors-per-msg 10 --max-print 0 ^
+  --report "artifacts\hl7\sample_set_x_1k-1.5k.csv"
+```
+
+#### `run_examples.ps1` (PowerShell)
+
+```powershell
+New-Item -ItemType Directory -Force -Path artifacts\hl7 | Out-Null
+
+# Fast engine
+py -X utf8 tools/hl7_qa.py "tests/fixtures/hl7/sample_set_x.hl7" `
+  --rules "tests/hl7/rules/rules.yaml" `
+  --engine fast `
+  --progress-every 200 --progress-time 10 `
+  --max-errors-per-msg 10 --max-print 0 `
+  --report "artifacts/hl7/sample_set_x_fast.csv"
+
+# HL7apy engine
+py -X utf8 tools/hl7_qa.py "tests/fixtures/hl7/sample_set_x.hl7" `
+  --rules "tests/hl7/rules/rules.yaml" `
+  --engine hl7apy --hl7apy-validation none `
+  --workers auto --chunk 200 `
+  --progress-every 200 --progress-time 10 `
+  --max-errors-per-msg 10 --max-print 0 `
+  --report "artifacts/hl7/sample_set_x_hl7apy.csv"
+
+# Subset run
+py -X utf8 tools/hl7_qa.py "tests/fixtures/hl7/sample_set_x.hl7" `
+  --rules "tests/hl7/rules/rules.yaml" `
+  --engine fast `
+  --start 1000 --limit 500 `
+  --max-errors-per-msg 10 --max-print 0 `
+  --report "artifacts/hl7/sample_set_x_1k-1.5k.csv"
+```
+
 ### Codex-Driven Tests
 
 - **On push/PR**: CI runs unit + E2E tests, builds the Profile Conformance report, and exports Mermaid diagrams.
