@@ -27,33 +27,25 @@ Artifacts: reports go to `artifacts/hl7/` — add `artifacts/` to `.gitignore`.
 
 ---
 
-## Windows (cmd)
+## Execution Runbook (Windows CMD & PowerShell)
 
-**Fast engine (recommended)**
-```bat
-py -X utf8 tools\hl7_qa.py "tests\fixtures\hl7\sample_set_x.hl7" ^
-  --rules "tests\hl7\rules\rules.yaml" ^
-  --engine fast ^
-  --progress-every 200 --progress-time 10 ^
-  --max-errors-per-msg 10 --max-print 0 ^
-  --report "artifacts\hl7\sample_set_x_fast.csv"
+This section documents how to run the HL7 validator using the FAST and HL7apy engines, including Windows CMD and PowerShell variants, parallel workers guidance, and parity checks.
+
+### Prereqs
+- Run from the repo root (where `tools/`, `tests/`, `artifacts/` live).
+- Windows: `py` launcher installed. If `py` isn’t found, replace `py` with `python`.
+- Reports are written to `artifacts/hl7/`.
+
+---
+
+### A) FAST engine (recommended for batch QA)
+
+**CMD (single line):**
+```cmd
+py -X utf8 tools\hl7_qa.py "tests\fixtures\hl7\sample_set_x.hl7" --rules "tests\hl7\rules\rules.yaml" --engine fast --progress-every 200 --progress-time 10 --max-errors-per-msg 10 --max-print 0 --report "artifacts\hl7\sample_set_x_fast.csv"
 ```
 
-**HL7apy engine (object model)**
-
-```bat
-py -X utf8 tools\hl7_qa.py "tests\fixtures\hl7\sample_set_x.hl7" ^
-  --rules "tests\hl7\rules\rules.yaml" ^
-  --engine hl7apy --hl7apy-validation none ^
-  --workers auto --chunk 200 ^
-  --progress-every 200 --progress-time 10 ^
-  --max-errors-per-msg 10 --max-print 0 ^
-  --report "artifacts\hl7\sample_set_x_hl7apy.csv"
-```
-
-## Windows (PowerShell)
-
-**Fast**
+**PowerShell (multiline):**
 
 ```powershell
 py -X utf8 tools/hl7_qa.py "tests/fixtures/hl7/sample_set_x.hl7" `
@@ -64,17 +56,102 @@ py -X utf8 tools/hl7_qa.py "tests/fixtures/hl7/sample_set_x.hl7" `
   --report "artifacts/hl7/sample_set_x_fast.csv"
 ```
 
-**HL7apy**
+> PowerShell tip: the backtick `` ` `` must be the **last character** on the line (no trailing spaces).
+
+---
+
+### B) HL7apy engine (structured parse; slower; use for deep debugging)
+
+**CMD (single line):**
+
+```cmd
+py -X utf8 tools\hl7_qa.py "tests\fixtures\hl7\sample_set_x.hl7" --rules "tests\hl7\rules\rules.yaml" --engine hl7apy --hl7apy-validation none --workers 1 --chunk 200 --progress-every 200 --progress-time 10 --max-errors-per-msg 10 --max-print 0 --report "artifacts\hl7\sample_set_x_hl7apy.csv"
+```
+
+**PowerShell (multiline):**
 
 ```powershell
 py -X utf8 tools/hl7_qa.py "tests/fixtures/hl7/sample_set_x.hl7" `
   --rules "tests/hl7/rules/rules.yaml" `
   --engine hl7apy --hl7apy-validation none `
-  --workers auto --chunk 200 `
+  --workers 1 --chunk 200 `
   --progress-every 200 --progress-time 10 `
   --max-errors-per-msg 10 --max-print 0 `
   --report "artifacts/hl7/sample_set_x_hl7apy.csv"
 ```
+
+---
+
+### C) Parallel execution: workers & chunk size (critical)
+
+* A **worker** is a separate Python **process**. Multiple workers parse different batches **in parallel**; results are merged at the end (true parallelism for CPU-bound tasks).
+* `--workers auto` chooses a sensible number based on your CPU; you can also pass an integer, e.g. `--workers 4`.
+* `--chunk N` sets how many messages a worker takes per task. Larger chunks reduce coordination overhead (usually faster).
+
+**Guidelines (Windows):**
+
+* **Small inputs (<~800 msgs):** `--workers 1` (avoid process-spawn overhead)
+* **Medium (~2k–10k msgs):** `--workers auto --chunk 500` (good default)
+* **Very large:** prefer WSL/Linux for best scaling; start with `--workers auto --chunk 1000`
+
+**Faster hl7apy preset (Windows, ~2.4k msgs):**
+
+```cmd
+py -X utf8 tools\hl7_qa.py "tests\fixtures\hl7\sample_set_x.hl7" --rules "tests\hl7\rules\rules.yaml" --engine hl7apy --hl7apy-validation none --workers auto --chunk 500 --progress-every 200 --progress-time 10 --max-errors-per-msg 10 --max-print 0 --report "artifacts\hl7\sample_set_x_hl7apy.csv"
+```
+
+```powershell
+py -X utf8 tools/hl7_qa.py "tests/fixtures/hl7/sample_set_x.hl7" `
+  --rules "tests/hl7/rules/rules.yaml" `
+  --engine hl7apy --hl7apy-validation none `
+  --workers auto --chunk 500 `
+  --progress-every 200 --progress-time 10 `
+  --max-errors-per-msg 10 --max-print 0 `
+  --report "artifacts/hl7/sample_set_x_hl7apy.csv"
+```
+
+---
+
+### D) Parity checks (FAST vs. HL7apy)
+
+**PowerShell — exact diff of CSV rows:**
+
+```powershell
+$fast = Import-Csv artifacts\hl7\sample_set_x_fast.csv
+$hl7  = Import-Csv artifacts\hl7\sample_set_x_hl7apy.csv
+$cols = 'msg_index','rule_id','field','severity','message'
+$fastS = $fast | Sort-Object msg_index, rule_id, field, severity, message
+$hl7S  = $hl7  | Sort-Object msg_index, rule_id, field, severity, message
+$diff = Compare-Object $fastS $hl7S -Property $cols
+if ($diff) { $diff | Format-Table -Auto } else { '✅ Reports are identical.' }
+```
+
+**Quick line-count sanity (PowerShell & CMD):**
+
+```powershell
+(Get-Content artifacts\hl7\sample_set_x_fast.csv).Count
+(Get-Content artifacts\hl7\sample_set_x_hl7apy.csv).Count
+```
+
+```cmd
+find /c /v "" "artifacts\hl7\sample_set_x_fast.csv"
+find /c /v "" "artifacts\hl7\sample_set_x_hl7apy.csv"
+```
+
+---
+
+### E) Recommended defaults & pitfalls
+
+* Default to **`--engine fast`** for production QA.
+* Use **`--engine hl7apy --hl7apy-validation none`** only when you need full structure; on Windows prefer `--workers 1` for small files.
+* Keep `--max-errors-per-msg` modest and `--max-print 0` for speed.
+* **Pitfalls:**
+  * Running PowerShell commands in **CMD**: backticks are treated as literal characters → “unrecognized arguments: \`”. In CMD, use the single-line versions.
+  * Trailing spaces after a PowerShell backtick break line continuation.
+  * If `py` isn’t found, use `python`.
+
+---
+
 ## macOS/Linux (bash/zsh)
 
 **Fast**
@@ -143,3 +220,4 @@ py -X utf8 tools\hl7_qa.py "tests\fixtures\hl7\sample_set_x.hl7" ^
 * Profiles may specify `engine: fast|hl7apy`; CLI `--engine` overrides per run.
 * Timestamp policy is controlled in `timestamps.mode` (`length_only` by default).
 * Add `artifacts/` to `.gitignore` to keep reports out of VCS.
+
