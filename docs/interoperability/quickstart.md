@@ -11,4 +11,4 @@ print(result)
 ```
 
 See [validators](../../validators/) for supported formats and
-`docs/interoperability/overview.md` for flow diagrams.
+[overview](./overview.md) for flow diagrams.
