@@ -21,6 +21,11 @@ Timestamp policy (rules.yaml → timestamps.mode):
   - length_only (default) — accept if base digits match allowed lengths (8/12/14)
   - calendar              — additionally check real calendar ranges
   - off                   — skip TS checks
+
+Report output defaults (when --report is omitted):
+  - If running inside tests/, write to tests/artifacts/hl7/<input_stem>_<engine>.csv
+  - Otherwise write to artifacts/hl7/<input_stem>_<engine>.csv at repo root
+  - Override with --report-dir or env HL7_QA_REPORT_DIR; explicit --report always wins
 """
 
 from __future__ import annotations
@@ -756,31 +761,100 @@ def _worker_validate_chunk(
 
 
 # =======================================================================
-# Reporting
+# Reporting (defaults + robust writers)
 # =======================================================================
 
-def open_csv_writer(path: str) -> Tuple[io.TextIOBase, csv.writer]:
-    fh = open(path, "w", newline="", encoding="utf-8", buffering=1024*1024)
+def _default_report_dir(cwd: Path) -> Path:
+    """
+    If running inside tests/, prefer tests/artifacts/hl7; otherwise repo-root artifacts/hl7.
+    """
+    try:
+        if cwd.name.lower() == "tests" or (cwd / "fixtures").exists():
+            return cwd / "artifacts" / "hl7"
+        repo_root = Path(__file__).resolve().parent.parent
+        return repo_root / "artifacts" / "hl7"
+    except Exception:
+        return cwd / "artifacts" / "hl7"
+
+
+def resolve_report_path(
+    report: Optional[str],
+    input_file: str,
+    engine_name: str,
+    report_dir: Optional[str] = None,
+) -> Path:
+    """
+    Decide where to write the CSV/JSONL report when --report isn't provided.
+
+    Precedence:
+      1) --report (exact file path)
+      2) --report-dir directory (file name auto = <input_stem>_<engine>.csv)
+      3) env HL7_QA_REPORT_DIR
+      4) auto default based on CWD (tests/ vs repo root)
+
+    If no extension is provided, defaults to .csv.
+    """
+    if report:
+        p = Path(report)
+        if p.suffix.lower() not in (".csv", ".jsonl", ""):
+            p = p.with_suffix(".csv")
+        return p
+
+    base_dir = Path(report_dir) if report_dir else None
+    if base_dir is None:
+        env_dir = os.getenv("HL7_QA_REPORT_DIR")
+        base_dir = Path(env_dir) if env_dir else None
+    if base_dir is None:
+        base_dir = _default_report_dir(Path.cwd())
+
+    base_dir.mkdir(parents=True, exist_ok=True)
+    stem = Path(input_file).stem or "report"
+    return base_dir / f"{stem}_{engine_name}.csv"
+
+
+def open_csv_writer(path: str | Path) -> Tuple[io.TextIOBase, csv.writer]:
+    p = Path(path)
+    p.parent.mkdir(parents=True, exist_ok=True)
+    fh = p.open("w", newline="", encoding="utf-8", buffering=1024 * 1024)
     w = csv.writer(fh)
-    w.writerow(["index","msg_ctrl_id","msg_type","version","errors","warnings"])
+    w.writerow(["index", "msg_ctrl_id", "msg_type", "version", "errors", "warnings"])
     return fh, w
 
-def open_jsonl_writer(path: str) -> io.TextIOBase:
-    return open(path, "w", encoding="utf-8", buffering=1024*1024)
+
+def open_jsonl_writer(path: str | Path) -> io.TextIOBase:
+    p = Path(path)
+    p.parent.mkdir(parents=True, exist_ok=True)
+    return p.open("w", encoding="utf-8", buffering=1024 * 1024)
+
 
 def write_csv_row(writer: csv.writer, idx: int, header: Dict[str, str], issues: IssueSet) -> None:
-    writer.writerow([idx, header.get("msg_ctrl_id",""), header.get("msg_type",""),
-                     header.get("version",""), "; ".join(issues.errors), "; ".join(issues.warnings)])
+    writer.writerow(
+        [
+            idx,
+            header.get("msg_ctrl_id", ""),
+            header.get("msg_type", ""),
+            header.get("version", ""),
+            "; ".join(issues.errors),
+            "; ".join(issues.warnings),
+        ]
+    )
+
 
 def write_jsonl_row(fh: io.TextIOBase, idx: int, header: Dict[str, str], issues: IssueSet) -> None:
-    fh.write(json.dumps({
-        "index": idx,
-        "msg_ctrl_id": header.get("msg_ctrl_id",""),
-        "msg_type": header.get("msg_type",""),
-        "version": header.get("version",""),
-        "errors": issues.errors,
-        "warnings": issues.warnings,
-    }, ensure_ascii=False) + "\n")
+    fh.write(
+        json.dumps(
+            {
+                "index": idx,
+                "msg_ctrl_id": header.get("msg_ctrl_id", ""),
+                "msg_type": header.get("msg_type", ""),
+                "version": header.get("version", ""),
+                "errors": issues.errors,
+                "warnings": issues.warnings,
+            },
+            ensure_ascii=False,
+        )
+        + "\n"
+    )
 
 
 # =======================================================================
@@ -791,7 +865,16 @@ def parse_args(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
     p = argparse.ArgumentParser(description="HL7 QA: rules-aware per-message validator (profiles)")
     p.add_argument("input", help="Path to HL7 file")
     p.add_argument("--rules", help="Path to YAML rules file", required=False)
-    p.add_argument("--report", help="Output (.csv or .jsonl). If omitted, only summary printed.", required=False)
+    p.add_argument(
+        "--report",
+        help="Output file (.csv or .jsonl). If omitted, a default path is chosen (see --report-dir / HL7_QA_REPORT_DIR).",
+        required=False,
+    )
+    p.add_argument(
+        "--report-dir",
+        help="Directory for report when --report is omitted (env HL7_QA_REPORT_DIR also supported).",
+        required=False,
+    )
     p.add_argument("--progress-every", type=int, default=0)
     p.add_argument("--progress-time", type=float, default=0.0)
     p.add_argument("--start", type=int, default=0)
@@ -874,21 +957,28 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
                     filtered.append(raw)
             work_msgs = filtered
 
-    # report
+    # report (now defaults when --report is omitted)
     writer_csv: Optional[csv.writer] = None
     fh_report: Optional[io.TextIOBase] = None
     write_row_fn = None
-    if args.report:
-        ext = Path(args.report).suffix.lower()
-        if ext == ".csv":
-            fh_report, writer_csv = open_csv_writer(args.report)
-            write_row_fn = lambda idx, header, issues: write_csv_row(writer_csv, idx, header, issues)
-        elif ext == ".jsonl":
-            fh_report = open_jsonl_writer(args.report)
-            write_row_fn = lambda idx, header, issues: write_jsonl_row(fh_report, idx, header, issues)
-        else:
-            print(f"[error] Unknown report extension '{ext}'. Use .csv or .jsonl", file=sys.stderr)
-            return 2
+
+    engine_label = engine_pref  # may be 'auto'
+    report_path = resolve_report_path(args.report, args.input, engine_label, args.report_dir)
+
+    ext = Path(report_path).suffix.lower()
+    if not ext:
+        report_path = report_path.with_suffix(".csv")
+        ext = ".csv"
+
+    if ext == ".csv":
+        fh_report, writer_csv = open_csv_writer(report_path)
+        write_row_fn = lambda idx, header, issues: write_csv_row(writer_csv, idx, header, issues)
+    elif ext == ".jsonl":
+        fh_report = open_jsonl_writer(report_path)
+        write_row_fn = lambda idx, header, issues: write_jsonl_row(fh_report, idx, header, issues)
+    else:
+        print(f"[error] Unknown report extension '{ext}'. Use .csv or .jsonl", file=sys.stderr)
+        return 2
 
     t0 = perf_counter()
     next_prog = int(args.progress_every) if args.progress_every else 0
@@ -970,6 +1060,10 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
 
     if fh_report:
         fh_report.close()
+        try:
+            print(f"[report] wrote: {Path(report_path).resolve()}")
+        except Exception:
+            print(f"[report] wrote: {report_path}")
 
     dt = perf_counter() - t0
     rate = (n_proc / dt) if dt else 0.0
