@@ -10,6 +10,7 @@
 
 ## Interoperability
 - Overview & flows: `docs/interoperability/overview.md`
+- Quickstart: `docs/interoperability/quickstart.md`
 - Validators: `validators/hl7.py`, `validators/fhir.py`, `validators/cda.py`
 
 ## Security
