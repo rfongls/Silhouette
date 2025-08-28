@@ -1,827 +1,986 @@
 #!/usr/bin/env python
+# -*- coding: utf-8 -*-
 """
-HL7 batch parser + QA (per-message, strict TS, domain checks) with rules.yaml auto-discovery
+HL7 QA: rules-aware, per-message validator (profiles + policies)
 
-Features
-- Splits batched HL7 files into individual messages (handles FHS/BHS and MLLP framing)
-- Reads separators from MSH-1/MSH-2; validates repetitions (~), components (^) and ranges (start^end)
-- Message-type–aware required-segment rules (ORU/ORM/OML/MDM/RDE/VXU)
-- Strict timestamps: only YYYYMMDD or YYYYMMDDHHMMSS (optional literal 'T')
-- Results profile checks: OBR-24 allowed set, OBR-4 codedness, OBR-25 status, OBR-2/3 presence,
-  OBX-3 codedness, OBX-11 status (allowed set), OBX-5 required policy, OBX-2 vs OBX-5 type checks
-- MDM profile checks: TXA-2 coded (2.1 id, 2.3 system, capture 2.3.2), TXA-6 timestamp
-- PID-3 (CX) shape checks: .1 id and at least one of .4 authority or .5 id type across repetitions
-- Configurable via rules.yaml with auto-discovery:
-    1) nearest rules.yaml/hl7_rules.yaml up the tree from input path
-    2) repo/tests/hl7/rules.yaml (preferred with fixtures)
-    3) repo/config/hl7_rules.yaml (org defaults)
-- CSV output: one row per message with trace, normalized dates, rule issues, and domain extras
+- Engines:
+    * fast   — raw ER7 parsing (no object tree) for HL7Spy-like speed (default via rules)
+    * hl7apy — full object parse when you need grammar/group reasoning
+  Choose per-profile in rules.yaml (profile.engine) or override with --engine.
+
+- Robust message splitting (handles BOMs/UTF-16/HLLP/MLLP; newline-agnostic; any FS after 'MSH')
+- Large I/O buffers
+- CSV or JSONL reporting
+- Progress, start/limit, message-type filtering
+- Optional parallel execution (process pool)
+- hl7apy controls:
+    * --hl7apy-validation {none|tolerant|strict}  (default: none)
+    * --no-quiet-parse to show hl7apy logs/warnings (default: suppressed)
+
+Timestamp policy (rules.yaml → timestamps.mode):
+  - length_only (default) — accept if base digits match allowed lengths (8/12/14)
+  - calendar              — additionally check real calendar ranges
+  - off                   — skip TS checks
 """
 
 from __future__ import annotations
-from pathlib import Path
-from typing import List, Dict, Any, Tuple, Optional, Set, Iterable
-import sys, csv, json, argparse, warnings, re, copy, os
-from collections import Counter
-from datetime import datetime
 
-# Optional dependency: PyYAML (rules file). Falls back to built-in defaults if missing.
+import argparse
+import csv
+import io
+import json
+import logging
+import os
+import re
+import sys
+import warnings
+from concurrent.futures import ProcessPoolExecutor, as_completed
+from contextlib import contextmanager, redirect_stderr, redirect_stdout
+from dataclasses import dataclass, field
+from datetime import datetime
+from multiprocessing import cpu_count
+from pathlib import Path
+from time import perf_counter
+from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
+
+# ---------- Optional: PyYAML for rules ----------
 try:
     import yaml  # type: ignore
-except ModuleNotFoundError:
-    yaml = None  # we’ll proceed with DEFAULT_RULES
+except ModuleNotFoundError:  # pragma: no cover
+    yaml = None
 
-# hl7apy is required
+# ---------- hl7apy (optional, only used if engine=hl7apy) ----------
 try:
-    from hl7apy.parser import parse_message
+    from hl7apy.core import Message, Segment
     from hl7apy.exceptions import HL7apyException
-except ModuleNotFoundError:
-    print("hl7apy is not installed. Install with: py -m pip install hl7apy")
-    sys.exit(1)
+    HL7APY_AVAILABLE = True
+except ModuleNotFoundError:  # pragma: no cover
+    HL7APY_AVAILABLE = False
 
-# ---------------- Default sets and default rules (used if rules file is absent) ----------------
 
-DEFAULT_OBR24_ALLOWED: Set[str] = {
-    "CH","CO","HEM","MB","MIC","IMM","LAB","PATH",
-    "RAD","CT","MR","US","XR","NM"
-}
-DEFAULT_RESULT_STATUS: Set[str] = {"F","C","I","P","R","S","U","D","X","W"}
-DEFAULT_OBX11_EMPTY_ALLOWS: Set[str] = {"X","I","W","U"}
+# =======================================================================
+# Robust message splitting + normalization + I/O utils
+# =======================================================================
 
-DEFAULT_RULES: Dict[str, Any] = {
-    "profiles": {
-        "results": {
-            "types": ["ORU","ORM","OML"],
-            "timestamps": {"strict": True, "fail_on_dtm": True},
-            "allowed": {
-                "obr24": list(DEFAULT_OBR24_ALLOWED),
-                "result_status": list(DEFAULT_RESULT_STATUS),        # used for OBR-25 and OBX-11
-                "obx11_empty_allows": list(DEFAULT_OBX11_EMPTY_ALLOWS),
-            },
-            "policies": {
-                "require_pid3_shape": True,                         # PID-3: .1 and (.4 or .5)
-                "require_obr2_or_obr3": True,                       # at least one of OBR-2/OBR-3
-                "obr4_coded": True,                                 # OBR-4 has .1 id AND .3 system
-                "obr25_allowed": True,                              # OBR-25 must be in allowed result_status
-                "obx11_allowed": True,                              # OBX-11 must be in allowed result_status
-                "obx3_coded": True,                                 # OBX-3 has .1 id AND .3 system
-                "obx5_required_unless_status_in_empty_allows": True,
-                "obx2_vs_obx5_typecheck": True,                     # NM numeric, DT/DTM/TS TS-valid, CE/CWE coded, SN basic numeric
-            },
-        },
-        "mdm": {
-            "types": ["MDM"],
-            "timestamps": {"strict": True, "fail_on_dtm": False},
-            "allowed": {},
-            "policies": {
-                "require_pid3_shape": True,
-                "txa2_coded": True,                                 # TXA-2 has .1 id and .3 system
-            },
-        },
-    },
-    "default_profile": "results",
-}
+UTF8_BOM = b"\xef\xbb\xbf"
+UTF16_LE_BOM = b"\xff\xfe"
+UTF16_BE_BOM = b"\xfe\xff"
 
-# ---------------- IO & normalization ----------------
+# Start of buffer (\A) OR immediately after \r or \n, then 'MSH' and any FS byte.
+MSH_START_RE = re.compile(br'(?:(?<=\r)|(?<=\n)|\A)MSH.', re.I)
 
-def normalize_hl7_text(data: bytes) -> str:
-    txt = data.decode("latin-1", errors="ignore")
-    txt = txt.replace("\x0b", "").replace("\x1c\r", "")  # strip MLLP if present
-    txt = txt.replace("\r\n", "\r").replace("\n", "\r").replace("\r\r", "\r")
-    return txt
+def _normalize_blob(blob: bytes) -> bytes:
+    """
+    Normalize incoming bytes before splitting/reading fields:
+    - Strip UTF-8 BOM
+    - If UTF-16 (LE/BE), decode then re-encode as UTF-8
+    - Normalize newlines to CR (\r) for HL7
+    - Strip HLLP/MLLP control chars and NULs
+    """
+    if blob.startswith(UTF8_BOM):
+        blob = blob[len(UTF8_BOM):]
+    if blob.startswith(UTF16_LE_BOM):
+        blob = blob.decode("utf-16-le", errors="ignore").encode("utf-8", errors="ignore")
+    elif blob.startswith(UTF16_BE_BOM):
+        blob = blob.decode("utf-16-be", errors="ignore").encode("utf-8", errors="ignore")
+    blob = blob.replace(b"\r\n", b"\r").replace(b"\n", b"\r")
+    for ch in (b"\x00", b"\x0b", b"\x1c", b"\x1d", b"\x1e"):
+        blob = blob.replace(ch, b"")
+    return blob
 
-def strip_batch_envelopes(txt: str) -> str:
-    return re.sub(r'^(?:FHS|BHS|BTS|FTS)\|.*\r?', "", txt, flags=re.MULTILINE)
-
-def split_messages(txt: str) -> List[str]:
-    if not txt:
+def fast_split_messages(blob: bytes) -> List[bytes]:
+    """
+    Robust split:
+      - Match message starts at buffer-begin or right after any newline
+      - Accept any field separator after 'MSH'
+    """
+    blob = _normalize_blob(blob)
+    starts = [m.start() for m in MSH_START_RE.finditer(blob)]
+    if not starts:
         return []
-    txt = strip_batch_envelopes(txt)
-    if not txt.endswith("\r"):
-        txt += "\r"
-    parts = re.split(r'(?=^MSH\|)', txt, flags=re.MULTILINE)
-    msgs = [p.strip() for p in parts if p.strip()]
-    return [m if m.endswith("\r") else (m + "\r") for m in msgs]
+    starts.append(len(blob))
+    return [blob[starts[i]:starts[i+1]] for i in range(len(starts)-1)]
 
-# ---------------- helpers & separators ----------------
+def read_file_bytes(path: str | Path) -> bytes:
+    with open(path, "rb", buffering=1024 * 1024) as fh:
+        return fh.read()
 
-def first_segment(msg, name: str):
-    for s in msg.children:
-        if getattr(s, "name", "") == name:
-            return s
+def ensure_text(b: bytes) -> str:
+    return b.decode("utf-8", errors="ignore")
+
+def _detect_fs_and_encs(first_line: str) -> Tuple[str, str, str, str]:
+    """
+    Detect field separator & encoding chars from the first segment line.
+    - MSH-1 = char at position 3 (0-based)
+    - MSH-2 = positions 4..7 (comp, rep, escape, sub)
+    """
+    fs = first_line[3:4] if len(first_line) >= 4 else "|"
+    encs = first_line[4:8] if len(first_line) >= 8 else "^~\\&"
+    comp = encs[0:1] if len(encs) >= 1 else "^"
+    rep  = encs[1:2] if len(encs) >= 2 else "~"
+    esc  = encs[2:3] if len(encs) >= 3 else "\\"
+    sub  = encs[3:4] if len(encs) >= 4 else "&"
+    return fs, comp, rep, sub
+
+def msh_fields_from_raw(raw: bytes) -> Dict[str, str]:
+    text = ensure_text(raw)
+    first_line = text.split("\r", 1)[0]
+    fs, comp, rep, sub = _detect_fs_and_encs(first_line)
+    parts = first_line.split(fs)
+    def get(i: int) -> str:
+        return parts[i] if len(parts) > i else ""
+    msg_type_raw = get(8)
+    msg_type_norm = msg_type_raw.replace("^", "_")
+    msg_root = msg_type_raw.split("^")[0] if msg_type_raw else ""
+    return {
+        "msg_type_raw": msg_type_raw,
+        "msg_type": msg_type_norm,
+        "msg_root": msg_root,
+        "msg_ctrl_id": get(9),
+        "version": get(11),
+    }
+
+
+# =======================================================================
+# hl7apy quiet + validation control
+# =======================================================================
+
+try:
+    from hl7apy.consts import VALIDATION_LEVEL as _VL  # STRICT / TOLERANT / NO_VALIDATION (or QUIET)
+except Exception:
+    _VL = None
+
+def _map_validation_level(name: str):
+    name = (name or "").lower()
+    if not _VL:
+        return None
+    if name in ("none", "off", "ignore", "disabled"):
+        return getattr(_VL, "NO_VALIDATION", None) or getattr(_VL, "QUIET", None) or getattr(_VL, "TOLERANT", None)
+    if name in ("tolerant", "relaxed"):
+        return getattr(_VL, "TOLERANT", None) or getattr(_VL, "QUIET", None)
+    if name == "strict":
+        return getattr(_VL, "STRICT", None)
     return None
 
-def segment_counts(msg) -> Dict[str, int]:
-    return dict(Counter(s.name for s in msg.children if hasattr(s, "name")))
-
-def safe_get_er7(component, attr: str, default: str = "") -> str:
-    try:
-        return getattr(component, attr).to_er7() if hasattr(component, attr) else default
-    except Exception:
-        return default
-
-def get_msg_type_and_event(msh) -> Tuple[str, str]:
-    raw = safe_get_er7(msh, "msh_9", "")
-    parts = raw.split("^") if raw else []
-    return (parts[0] if len(parts) >= 1 else "",
-            parts[1] if len(parts) >= 2 else "")
-
-def count_segments(msg, name: str) -> int:
-    return sum(1 for s in msg.children if getattr(s, "name", "") == name)
-
-def get_separators(msh) -> Tuple[str, str, str, str, str]:
-    fs = safe_get_er7(msh, "msh_1", "|")
-    enc = safe_get_er7(msh, "msh_2", "^~\\&")
-    comp = enc[0] if len(enc) > 0 else "^"
-    rep  = enc[1] if len(enc) > 1 else "~"
-    esc  = enc[2] if len(enc) > 2 else "\\"
-    sub  = enc[3] if len(enc) > 3 else "&"
-    return fs, comp, rep, esc, sub
-
-def get_cwe_component(raw: str, comp_idx: int, sub_idx: Optional[int], comp_sep: str, sub_sep: str) -> str:
-    if not raw or comp_idx <= 0:
-        return ""
-    comps = raw.split(comp_sep)
-    if comp_idx > len(comps):
-        return ""
-    comp = comps[comp_idx - 1]
-    if sub_idx is None:
-        return comp
-    subs = comp.split(sub_sep)
-    if sub_idx <= 0 or sub_idx > len(subs):
-        return ""
-    return subs[sub_idx - 1]
-
-# ---------------- strict timestamps (YYYYMMDD / YYYYMMDDHHMMSS) ----------------
-
-def ts_is_valid_strict(value: str) -> bool:
-    if not value:
-        return False
-    v = value.strip().replace("T", "")
-    if not v.isdigit():
-        return False
-    try:
-        if len(v) == 8:
-            datetime.strptime(v, "%Y%m%d"); return True
-        if len(v) == 14:
-            datetime.strptime(v, "%Y%m%d%H%M%S"); return True
-        return False
-    except ValueError:
-        return False
-
-def ts_normalize_strict(value: str) -> str:
-    if not value:
-        return ""
-    v = value.strip().replace("T", "")
-    if not v.isdigit():
-        return ""
-    try:
-        if len(v) == 8:
-            return datetime.strptime(v, "%Y%m%d").strftime("%Y-%m-%d")
-        if len(v) == 14:
-            return datetime.strptime(v, "%Y%m%d%H%M%S").strftime("%Y-%m-%dT%H:%M:%S")
-    except ValueError:
-        return ""
-    return ""
-
-def _check_ts_reps(raw: str, base_label: str, comp_sep: str, rep_sep: str, issues: List[str], norm_key: Optional[str], norms: Dict[str, str]):
-    if not raw:
-        return
-    reps = raw.split(rep_sep)
-    many = len(reps) > 1
-    for idx, r in enumerate(reps, start=1):
-        label = f"{base_label}[{idx}]" if many else base_label
-        if comp_sep in r:  # DR-style range: start^end
-            parts = r.split(comp_sep)
-            start = parts[0] if len(parts) >= 1 else ""
-            end   = parts[1] if len(parts) >= 2 else ""
-            if start and not ts_is_valid_strict(start):
-                issues.append(f"{label} start invalid TS: {start}")
-            if end and not ts_is_valid_strict(end):
-                issues.append(f"{label} end invalid TS: {end}")
+def configure_hl7apy_logging(quiet: bool = True) -> None:
+    names = ("hl7apy", "hl7apy.core", "hl7apy.parser", "hl7apy.base", "hl7apy.validators")
+    for n in names:
+        lg = logging.getLogger(n)
+        lg.handlers = []
+        lg.propagate = False
+        if quiet:
+            lg.addHandler(logging.NullHandler())
+            lg.setLevel(logging.CRITICAL)
         else:
-            if not ts_is_valid_strict(r):
-                issues.append(f"{label} invalid TS: {r}")
-            else:
-                if norm_key and idx == 1:
-                    norms[norm_key] = ts_normalize_strict(r)
-
-def collect_ts_field_issues_and_norms(msg) -> Tuple[List[str], Dict[str, str]]:
-    issues: List[str] = []
-    norms: Dict[str, str] = {}
-    msh = first_segment(msg, "MSH")
-    fs, comp_sep, rep_sep, esc, sub = get_separators(msh)
-    def chk(seg, field_attr, label, norm_key: Optional[str] = None):
-        if not seg: return
-        raw = safe_get_er7(seg, field_attr, "")
-        _check_ts_reps(raw, label, comp_sep, rep_sep, issues, norm_key, norms)
-
-    pid = first_segment(msg, "PID")
-    chk(msh, "msh_7", "MSH-7 (Date/Time of Message)", norm_key="msh7_norm")
-    chk(pid, "pid_7", "PID-7 (Date/Time of Birth)",    norm_key="pid7_norm")
-
-    for seg in (s for s in msg.children if getattr(s, "name", "") == "OBR"):
-        chk(seg, "obr_6",  "OBR-6 (Requested Date/Time)")
-        chk(seg, "obr_7",  "OBR-7 (Observation Date/Time)")
-        chk(seg, "obr_14", "OBR-14 (Specimen Received Date/Time)")
-        chk(seg, "obr_22", "OBR-22 (Results Rpt/Status Chg Date/Time)")
-
-    for seg in (s for s in msg.children if getattr(s, "name", "") == "OBX"):
-        chk(seg, "obx_14", "OBX-14 (Date/Time of Observation)")
-
-    for seg in (s for s in msg.children if getattr(s, "name", "") == "RXA"):
-        chk(seg, "rxa_3", "RXA-3 (Start of Admin)")
-        chk(seg, "rxa_4", "RXA-4 (End of Admin)")
-
-    for seg in (s for s in msg.children if getattr(s, "name", "") == "TXA"):
-        chk(seg, "txa_6", "TXA-6 (Transcription Date/Time)")
-
-    return issues, norms
-
-# ---------------- baseline type rules ----------------
-
-def qa_rules_by_type(msg, msh, pid) -> List[str]:
-    issues: List[str] = []
-    if not msh:
-        return ["MSH missing"]
-    if not pid:
-        issues.append("PID missing")
-
-    mt, _ = get_msg_type_and_event(msh)
-    mt = (mt or "").upper()
-
-    obr_n = count_segments(msg, "OBR")
-    obx_n = count_segments(msg, "OBX")
-    txa_n = count_segments(msg, "TXA")
-    rxe_n = count_segments(msg, "RXE")
-    rxa_n = count_segments(msg, "RXA")
-
-    if mt == "ORU":
-        if obr_n == 0: issues.append("OBR missing (required for ORU)")
-        if obx_n == 0: issues.append("OBX missing (required for ORU results)")
-    elif mt in {"ORM", "OML"}:
-        if obr_n == 0: issues.append("OBR missing (required for ORM/OML)")
-    elif mt == "MDM":
-        if txa_n == 0: issues.append("TXA missing (required for MDM)")
-    elif mt == "RDE":
-        if rxe_n == 0: issues.append("RXE missing (required for RDE)")
-    elif mt == "VXU":
-        if rxa_n == 0: issues.append("RXA missing (required for VXU)")
-    return issues
-
-# ---------------- domain checks (results & MDM) ----------------
-
-NUM_RE = re.compile(r'^[+-]?\d+(?:\.\d+)?(?:[Ee][+-]?\d+)?$')
-def _is_numeric(v: str) -> bool:
-    return bool(NUM_RE.match(v.strip()))
-
-def _split_reps(raw: str, rep_sep: str) -> List[str]:
-    if not raw:
-        return []
-    return [x for x in (s.strip() for s in raw.split(rep_sep)) if x != ""]
-
-def _obx_ce_cwe_coded_ok(raw: str, comp: str, sub: str) -> bool:
-    id_  = get_cwe_component(raw, 1, None, comp, sub)
-    sys_ = get_cwe_component(raw, 3, None, comp, sub)
-    return bool(id_) and bool(sys_)
-
-def _pid3_shape_issues(pid3_raw: str, comp: str, rep: str, sub: str) -> Tuple[bool, List[str]]:
-    issues: List[str] = []
-    reps = pid3_raw.split(rep) if pid3_raw else []
-    if not reps:
-        return False, ["PID-3 empty"]
-    any_ok = False
-    for i, r in enumerate(reps, start=1):
-        comps = r.split(comp) if r else []
-        id_num = comps[0] if len(comps) >= 1 else ""
-        auth   = comps[3] if len(comps) >= 4 else ""  # HD
-        idtype = comps[4] if len(comps) >= 5 else ""
-        ok = bool(id_num) and (bool(auth) or bool(idtype))
-        if not ok:
-            missing = []
-            if not id_num: missing.append("3.1 id")
-            if not (auth or idtype): missing.append("3.4 authority or 3.5 id_type")
-            issues.append(f"PID-3[{i}] missing: {', '.join(missing)}")
-        any_ok = any_ok or ok
-    return any_ok, issues
-
-def collect_domain_issues(
-    msg,
-    profile_name: str,
-    allow_obr24: Optional[Set[str]],
-    allow_obx11: Optional[Set[str]],
-    allow_obr25: Optional[Set[str]],
-    obx11_empty_allows: Optional[Set[str]],
-    policies: Dict[str, bool],
-) -> Tuple[List[str], Dict[str, Any], List[str]]:
-    """
-    Returns (issues, extras, obx_issues)
-    """
-    issues: List[str] = []
-    obx_issues: List[str] = []
-    extras: Dict[str, Any] = {
-        "obr24_values": "", "obx11_values": "", "obr25_values": "",
-        "txa2_id": "", "txa2_text": "", "txa2_system": "", "txa2_3_2": "",
-        "pid3_shape_ok": "N", "pid3_shape_issues_joined": "",
-    }
-
-    msh = first_segment(msg, "MSH")
-    fs, comp, rep, esc, sub = get_separators(msh)
-    pid = first_segment(msg, "PID")
-
-    # PID-3 shape
-    if policies.get("require_pid3_shape", True) and pid:
-        pid3_raw = safe_get_er7(pid, "pid_3", "")
-        ok, pid3_issues = _pid3_shape_issues(pid3_raw, comp, rep, sub)
-        extras["pid3_shape_ok"] = "Y" if ok else "N"
-        extras["pid3_shape_issues_joined"] = "; ".join(pid3_issues) if pid3_issues else ""
-
-    # RESULTS profile rules
-    if profile_name == "results":
-        # OBR-level
-        seen_obr24: Set[str] = set()
-        seen_obr25: Set[str] = set()
-        obr_list = [s for s in msg.children if getattr(s, "name", "") == "OBR"]
-        for idx, seg in enumerate(obr_list, start=1):
-            raw24 = safe_get_er7(seg, "obr_24", "")
-            for val in _split_reps(raw24, rep):
-                seen_obr24.add(val)
-             if allow_obr24 and val not in allow_obr24:
-                issues.append(f"OBR[{idx}]-24 unexpected value: {val}")
-
-
-            # OBR-4 codedness
-            if policies.get("obr4_coded", True):
-                raw4 = safe_get_er7(seg, "obr_4", "")
-                id_  = get_cwe_component(raw4, 1, None, comp, sub)
-                sys_ = get_cwe_component(raw4, 3, None, comp, sub)
-                if not id_: issues.append(f"OBR[{idx}]-4.1 (Universal Service ID) missing")
-                if not sys_: issues.append(f"OBR[{idx}]-4.3 (Coding System) missing")
-
-            # OBR-25 allowed
-            raw25 = safe_get_er7(seg, "obr_25", "")
-            if raw25:
-                for v in _split_reps(raw25, rep):
-                    seen_obr25.add(v)
-                    if policies.get("obr25_allowed", True) and allow_obr25 and v not in allow_obr25:
-                        issues.append(f"OBR[{idx}]-25 unexpected status: {v}")
-            else:
-                issues.append(f"OBR[{idx}]-25 (Result Status) missing")
-
-            # OBR-2/OBR-3 at least one
-            if policies.get("require_obr2_or_obr3", True):
-                has2 = bool(safe_get_er7(seg, "obr_2", ""))
-                has3 = bool(safe_get_er7(seg, "obr_3", ""))
-                if not (has2 or has3):
-                    issues.append(f"OBR[{idx}] both OBR-2 (Placer) and OBR-3 (Filler) are missing (need at least one)")
-
-        extras["obr24_values"] = ",".join(sorted(seen_obr24)) if seen_obr24 else ""
-        extras["obr25_values"] = ",".join(sorted(seen_obr25)) if seen_obr25 else ""
-
-        # OBX-level
-        seen_obx11: Set[str] = set()
-        obx_list = [s for s in msg.children if getattr(s, "name", "") == "OBX"]
-        for j, seg in enumerate(obx_list, start=1):
-            vt = safe_get_er7(seg, "obx_2", "").upper()
-            obx3 = safe_get_er7(seg, "obx_3", "")
-            obx5 = safe_get_er7(seg, "obx_5", "")
-            obx11 = safe_get_er7(seg, "obx_11", "")
-
-            # OBX-11
-            obx11_vals = _split_reps(obx11, rep)
-            if not obx11_vals:
-                obx_issues.append(f"OBX[{j}]-11 (Result Status) missing")
-            else:
-                for v in obx11_vals:
-                    seen_obx11.add(v)
-                    if policies.get("obx11_allowed", True) and allow_obx11 and v not in allow_obx11:
-                        obx_issues.append(f"OBX[{j}]-11 unexpected status: {v}")
-
-            empty_allowed = any(v in (obx11_empty_allows or set()) for v in obx11_vals) if obx11_vals else False
-
-            # OBX-3 codedness
-            if policies.get("obx3_coded", True):
-                if not _obx_ce_cwe_coded_ok(obx3, comp, sub):
-                    obx_issues.append(f"OBX[{j}]-3 codedness missing (id/system)")
-
-            # OBX-5 required policy
-            if policies.get("obx5_required_unless_status_in_empty_allows", True):
-                if not obx5 and not empty_allowed:
-                    obx_issues.append(f"OBX[{j}]-5 (Observation Value) missing")
-
-            # OBX-2 vs OBX-5
-            if policies.get("obx2_vs_obx5_typecheck", True) and obx5:
-                vals = _split_reps(obx5, rep)
-                if vt in {"NM"}:
-                    for k, v in enumerate(vals, start=1):
-                        if not _is_numeric(v):
-                            obx_issues.append(f"OBX[{j}]-5[{k}] not numeric for NM")
-                elif vt in {"DT", "DTM", "TS"}:
-                    for k, v in enumerate(vals, start=1):
-                        # allow DR style start^end
-                        if comp in v:
-                            s, e = (v.split(comp) + ["",""])[:2]
-                            if s and not ts_is_valid_strict(s):
-                                obx_issues.append(f"OBX[{j}]-5[{k}] start invalid TS: {s}")
-                            if e and not ts_is_valid_strict(e):
-                                obx_issues.append(f"OBX[{j}]-5[{k}] end invalid TS: {e}")
-                        else:
-                            if not ts_is_valid_strict(v):
-                                obx_issues.append(f"OBX[{j}]-5[{k}] invalid TS")
-                elif vt in {"CE","CWE"}:
-                    for k, v in enumerate(vals, start=1):
-                        id_  = get_cwe_component(v, 1, None, comp, sub)
-                        sys_ = get_cwe_component(v, 3, None, comp, sub)
-                        if not id_ or not sys_:
-                            obx_issues.append(f"OBX[{j}]-5[{k}] CE/CWE codedness missing (id/system)")
-                elif vt == "SN":
-                    for k, v in enumerate(vals, start=1):
-                        comps = v.split(comp)
-                        num1 = comps[1] if len(comps) >= 2 else ""
-                        if num1 and not _is_numeric(num1):
-                            obx_issues.append(f"OBX[{j}]-5[{k}] SN numeric part not numeric")
-
-        extras["obx11_values"] = ",".join(sorted(seen_obx11)) if seen_obx11 else ""
-
-    # MDM profile
-    if profile_name == "mdm":
-        txa = first_segment(msg, "TXA")
-        if txa:
-            raw2 = safe_get_er7(txa, "txa_2", "")
-            extras["txa2_id"]     = get_cwe_component(raw2, 1, None, comp, sub)
-            extras["txa2_text"]   = get_cwe_component(raw2, 2, None, comp, sub)
-            extras["txa2_system"] = get_cwe_component(raw2, 3, None, comp, sub)
-            extras["txa2_3_2"]    = get_cwe_component(raw2, 3, 2,    comp, sub)
-            if policies.get("txa2_coded", True):
-                if not extras["txa2_id"]:
-                    issues.append("TXA-2.1 (Document Type ID) missing")
-                if not extras["txa2_system"]:
-                    issues.append("TXA-2.3 (Coding System) missing")
-
-    return issues, extras, obx_issues
-
-# ---------------- rules loading & profile resolution ----------------
-
-def _deep_merge(base: Dict[str, Any], over: Dict[str, Any]) -> Dict[str, Any]:
-    out = copy.deepcopy(base)
-    for k, v in (over or {}).items():
-        if k in out and isinstance(out[k], dict) and isinstance(v, dict):
-            out[k] = _deep_merge(out[k], v)
-        else:
-            out[k] = v
-    return out
-
-def find_repo_root(start: Path) -> Optional[Path]:
-    cur = start.resolve()
-    while True:
-        if (cur / ".git").exists():
-            return cur
-        if cur.parent == cur:
-            return None
-        cur = cur.parent
-
-def discover_rule_candidates(input_target: Path) -> List[Path]:
-    root = input_target if input_target.is_dir() else input_target.parent
-    repo = find_repo_root(root) or root
-
-    candidates: List[Path] = []
-    # nearest-first in the input tree
-    cur = root
-    while True:
-        for name in ("rules.yaml", "hl7_rules.yaml"):
-            p = cur / name
-            if p.exists():
-                candidates.append(p)
-        if cur.parent == cur:
-            break
-        cur = cur.parent
-
-    # repo-level conventional locations (tests override before config)
-    for p in [repo / "tests" / "hl7" / "rules.yaml",
-              repo / "tests" / "hl7" / "hl7_rules.yaml",
-              repo / "config" / "hl7_rules.yaml",
-              repo / "config" / "rules.yaml"]:
-        if p.exists():
-            candidates.append(p)
-
-    # de-dup while preserving order
-    seen = set()
-    uniq = []
-    for p in candidates:
-        if p not in seen:
-            seen.add(p)
-            uniq.append(p)
-    return uniq
-
-def load_rules_chain(paths: Iterable[Path]) -> Dict[str, Any]:
-    rules = copy.deepcopy(DEFAULT_RULES)
-    if yaml is None:
-        return rules
-    for p in paths:
-        try:
-            data = yaml.safe_load(p.read_text(encoding="utf-8"))
-            if isinstance(data, dict):
-                rules = _deep_merge(rules, data)
-        except Exception:
-            # ignore unreadable entries; keep going
-            pass
-    return rules
-
-def load_rules(path: Optional[Path]) -> Dict[str, Any]:
-    rules = copy.deepcopy(DEFAULT_RULES)
-    if not path:
-        return rules
-    if not path.exists() or not path.is_file():
-        return rules
-    if yaml is None:
-        return rules
-    try:
-        data = yaml.safe_load(path.read_text(encoding="utf-8"))
-        if isinstance(data, dict):
-            rules = _deep_merge(rules, data)
-    except Exception:
-        pass
-    return rules
-
-def resolve_profile_for_msg(msh, rules: Dict[str, Any], forced_profile: Optional[str]) -> str:
-    if forced_profile and forced_profile != "auto":
-        return forced_profile
-    mt, _ = get_msg_type_and_event(msh)
-    mt = (mt or "").upper()
-    profiles = rules.get("profiles", {})
-    for name, cfg in profiles.items():
-        types = [t.upper() for t in cfg.get("types", [])]
-        if mt in types:
-            return name
-    return rules.get("default_profile", "results")
-
-# ---------------- per-message QA ----------------
-
-def qa_one_message(
-    raw_msg: str,
-    rules: Dict[str, Any],
-    forced_profile: Optional[str] = None,
-    quiet_parse: bool = False,
-    cli_fail_on_dtm: Optional[bool] = None,
-) -> Dict[str, Any]:
-    res: Dict[str, Any] = {
-        "status": "ok", "error": "",
-        "issues": [], "dtm_issues": [], "domain_issues": [], "obx_issues": [],
-        "msg_type": "", "msg_event": "",
-        "msh_3": "", "msh_4": "", "msh_10": "",
-        "pid_3": "", "msh7_norm": "", "pid7_norm": "",
-        "obr_count": 0, "obx_count": 0, "seg_counts": {},
-        # domain extras:
-        "obr24_values": "", "obx11_values": "", "obr25_values": "",
-        "txa2_id": "", "txa2_text": "", "txa2_system": "", "txa2_3_2": "",
-        "pid3_shape_ok": "N", "pid3_shape_issues_joined": "",
-    }
-    if quiet_parse:
-        warnings.filterwarnings("ignore")
-
-    try:
-        msg = parse_message(raw_msg, find_groups=False)
-    except HL7apyException as e:
-        res["status"] = "parse_error"; res["error"] = str(e); return res
-    except Exception as e:
-        res["status"] = "parse_error"; res["error"] = f"unexpected parse error: {e}"; return res
-
-    msh = first_segment(msg, "MSH")
-    pid = first_segment(msg, "PID")
-
-    if msh:
-        res["msh_3"]  = safe_get_er7(msh, "msh_3", "<MSH-3 missing>")
-        res["msh_4"]  = safe_get_er7(msh, "msh_4", "<MSH-4 missing>")
-        res["msh_10"] = safe_get_er7(msh, "msh_10", "<MSH-10 missing>")
-        mt, me = get_msg_type_and_event(msh)
-        res["msg_type"], res["msg_event"] = mt, me
-    if pid:
-        res["pid_3"] = safe_get_er7(pid, "pid_3", "<PID-3 missing>")
-
-    res["seg_counts"] = segment_counts(msg)
-    res["obr_count"] = res["seg_counts"].get("OBR", 0)
-    res["obx_count"] = res["seg_counts"].get("OBX", 0)
-
-    # 1) baseline type rules
-    res["issues"] = qa_rules_by_type(msg, msh, pid)
-
-    # 2) resolve profile + settings from rules
-    prof_name = resolve_profile_for_msg(msh, rules, forced_profile)
-    prof_cfg = rules.get("profiles", {}).get(prof_name, {})
-    allowed = prof_cfg.get("allowed", {})
-    policies = prof_cfg.get("policies", {})
-    ts_cfg = prof_cfg.get("timestamps", {"strict": True, "fail_on_dtm": False})
-
-    allow_obr24 = set(allowed.get("obr24", DEFAULT_OBR24_ALLOWED))
-    allow_status = set(allowed.get("result_status", DEFAULT_RESULT_STATUS))
-    empty_allows = set(allowed.get("obx11_empty_allows", DEFAULT_OBX11_EMPTY_ALLOWS))
-
-    # 3) timestamps (strict) — only run if enabled
-    if ts_cfg.get("strict", True):
-        dtm_issues, norms = collect_ts_field_issues_and_norms(msg)
-        res["dtm_issues"] = dtm_issues
-        res["msh7_norm"] = norms.get("msh7_norm", "")
-        res["pid7_norm"] = norms.get("pid7_norm", "")
-        fail_on_dtm = ts_cfg.get("fail_on_dtm", False) if cli_fail_on_dtm is None else cli_fail_on_dtm
-    if fail_on_dtm and dtm_issues and res["status"] == "ok":
-        res["status"] = "value_error"
-
-
-    # 4) domain + OBX checks per profile
-    dom_issues, extras, obx_issues = collect_domain_issues(
-        msg,
-        profile_name=prof_name,
-        allow_obr24=allow_obr24,
-        allow_obx11=allow_status,
-        allow_obr25=allow_status,
-        obx11_empty_allows=empty_allows,
-        policies=policies,
-    )
-    res["domain_issues"] = dom_issues
-    res["obx_issues"] = obx_issues
-    for k, v in extras.items():
-        res[k] = v
-
-    # escalate to value_error if domain or obx issues present
-    if (dom_issues or obx_issues) and res["status"] == "ok":
-        res["status"] = "value_error"
-
-    return res
-
-# ---------------- per-file driver ----------------
-
-def qa_one_file(
-    path: Path,
-    rules: Dict[str, Any],
-    forced_profile: Optional[str],
-    quiet_parse: bool,
-    cli_fail_on_dtm: Optional[bool],
-) -> Tuple[List[Dict[str, Any]], Dict[str, int]]:
-    rows: List[Dict[str, Any]] = []
-    summary = {"total": 0, "ok": 0, "errors": 0}
-
-    try:
-        data = path.read_bytes()
-    except Exception as e:
-        rows.append({
-            "file": str(path), "message_index": "",
-            "status": "read_error", "error": f"read failed: {e}",
-        })
-        summary["total"] += 1; summary["errors"] += 1
-        return rows, summary
-
-    txt = normalize_hl7_text(data)
-    messages = split_messages(txt) or [txt]
-
-    for i, raw_msg in enumerate(messages, start=1):
-        res = qa_one_message(
-            raw_msg,
-            rules=rules,
-            forced_profile=forced_profile,
-            quiet_parse=quiet_parse,
-            cli_fail_on_dtm=cli_fail_on_dtm,
-        )
-        res["file"] = str(path)
-        res["message_index"] = i
-        rows.append(res)
-        summary["total"] += 1
-        if res["status"] == "ok":
-            summary["ok"] += 1
-        else:
-            summary["errors"] += 1
-
-    return rows, summary
-
-# ---------------- CSV & CLI ----------------
-
-CSV_FIELDS = [
-    "file", "message_index",
-    "status", "error",
-    "msg_type", "msg_event",
-    "issues_joined", "dtm_issues_joined", "domain_issues_joined", "obx_issues_joined",
-    "msh_3", "msh_4", "msh_10", "pid_3",
-    "pid3_shape_ok", "pid3_shape_issues_joined",
-    "msh7_norm", "pid7_norm",
-    "obr_count", "obx_count",
-    "obr24_values", "obr25_values", "obx11_values",
-    "txa2_id", "txa2_text", "txa2_system", "txa2_3_2",
-    "seg_counts_str",
+            if not lg.handlers:
+                logging.basicConfig()
+            lg.setLevel(logging.WARNING)
+    warnings.filterwarnings("ignore", module="hl7apy")
+
+@contextmanager
+def suppress_hl7apy_output(enabled: bool = True):
+    """Redirect BOTH stdout and stderr so validators can't print."""
+    if not enabled:
+        yield; return
+    with open(os.devnull, "w") as devnull, redirect_stderr(devnull), redirect_stdout(devnull):
+        yield
+
+def parse_hl7(text: str, *, quiet: bool = True, validation: str = "none"):
+    """Parse while silencing any hl7apy prints and setting validation level."""
+    lvl = _map_validation_level(validation)
+    from hl7apy.parser import parse_message as _parse_message
+    with suppress_hl7apy_output(quiet):
+        if lvl is not None:
+            return _parse_message(text, find_groups=False, validation_level=lvl)
+        return _parse_message(text, find_groups=False)
+
+
+# =======================================================================
+# Rules model (profiles, policies, allowed values)
+# =======================================================================
+
+_TS_BASE_ALLOWED_DEFAULT = {4, 6, 8, 10, 12, 14}
+_TS_FRACTZ = re.compile(r'^(?:\.(\d{1,4}))?(Z|[+\-]\d{4})?$')
+
+DEFAULT_TS_FIELDS = [
+    "MSH-7","EVN-2","EVN-6","PID-7","PV1-44","PV2-8",
+    "OBR-6","OBR-7","OBR-8","OBR-14","OBR-22","OBX-14","TXA-6"
 ]
 
-def write_csv(out_path: Path, rows: List[Dict[str, Any]]) -> Path:
-    for r in rows:
-        r["issues_joined"]        = "; ".join(r.get("issues", [])) if r.get("issues") else ""
-        r["dtm_issues_joined"]    = "; ".join(r.get("dtm_issues", [])) if r.get("dtm_issues") else ""
-        r["domain_issues_joined"] = "; ".join(r.get("domain_issues", [])) if r.get("domain_issues") else ""
-        r["obx_issues_joined"]    = "; ".join(r.get("obx_issues", [])) if r.get("obx_issues") else ""
-        r["seg_counts_str"]       = ", ".join(f"{k}:{v}" for k, v in (r.get("seg_counts") or {}).items())
-    out_path.parent.mkdir(parents=True, exist_ok=True)
-    with out_path.open("w", newline="", encoding="utf-8") as f:
-        w = csv.DictWriter(f, fieldnames=CSV_FIELDS)
-        w.writeheader()
-        for r in rows:
-            w.writerow({k: r.get(k, "") for k in CSV_FIELDS})
-    return out_path
+@dataclass
+class TimestampRuleConfig:
+    strict: bool = True
+    fail_on_dtm: bool = True
+    allowed_lengths: set[int] = field(default_factory=lambda: set(_TS_BASE_ALLOWED_DEFAULT))
+    compliant_lengths: set[int] = field(default_factory=lambda: set(_TS_BASE_ALLOWED_DEFAULT))
+    fields: List[str] = field(default_factory=list)  # optional override
+    mode: str = "length_only"  # 'length_only' | 'calendar' | 'off'
 
-def collect_files(target: Path) -> List[Path]:
-    if target.is_file():
-        return [target]
-    return sorted([p for p in target.rglob("*.hl7") if p.is_file()])
-
-def run_cli(argv: List[str]) -> int:
-    ap = argparse.ArgumentParser(description="HL7 batch parser + QA (per-message, strict TS, domain checks, rules.yaml)")
-    ap.add_argument("path", help="HL7 file or directory")
-    ap.add_argument("--report", help="CSV output path (default: alongside input)")
-    ap.add_argument("--json", dest="as_json", action="store_true", help="Emit results as JSON to stdout")
-    ap.add_argument("--fail-on-dtm", action="store_true", help="Override rules: mark message as value_error if any strict timestamp is invalid")
-    ap.add_argument("--quiet-parse", action="store_true", help="Suppress parser warnings/noise")
-    ap.add_argument("--max-print", type=int, default=10, help="Max messages to print per file (console summary)")
-    ap.add_argument("--verbose", action="store_true", help="Print every message (overrides --max-print)")
-    ap.add_argument("--rules", default="auto",
-                    help="Path to rules.yaml, or 'auto' to search near input and under tests/hl7/ and config/.")
-    ap.add_argument("--dump-rules", action="store_true", help="Print effective merged rules to stdout and exit")
-
-    args = ap.parse_args(argv[1:])
-
-    target = Path(args.path)
-    files = collect_files(target)
-    if not files:
-        print(f"No .hl7 files found under: {target}")
-        return 3
-
-    # load rules (auto or explicit)
-    if args.rules != "auto":
-        rules_path = Path(args.rules)
-        rules = load_rules(rules_path)
-        print(f"[rules] using: {rules_path}")
-    else:
-        candidates = discover_rule_candidates(target)
-        if candidates:
-            rules = load_rules_chain(candidates)
-            print(f"[rules] using: {', '.join(str(p) for p in candidates)}")
-        else:
-            rules = copy.deepcopy(DEFAULT_RULES)
-            print("[rules] no rules.yaml found; using built-in defaults")
-
-    if args.dump_rules:
-        print(json.dumps(rules, ensure_ascii=False, indent=2))
-        return 0
-
-    all_rows: List[Dict[str, Any]] = []
-    grand = {"files": 0, "messages": 0, "ok": 0, "errors": 0}
-
-    for f in files:
-        rows, summary = qa_one_file(
-            f,
-            rules=rules,
-            forced_profile=None,                     # use rules to resolve automatically
-            quiet_parse=args.quiet_parse,
-            cli_fail_on_dtm=True if args.fail_on_dtm else None,
+    @staticmethod
+    def from_dict(d: Dict[str, Any]) -> "TimestampRuleConfig":
+        return TimestampRuleConfig(
+            strict=bool(d.get("strict", True)),
+            fail_on_dtm=bool(d.get("fail_on_dtm", True)),
+            allowed_lengths=set(int(x) for x in d.get("allowed_lengths", list(_TS_BASE_ALLOWED_DEFAULT))),
+            compliant_lengths=set(int(x) for x in d.get("compliant_lengths", list(_TS_BASE_ALLOWED_DEFAULT))),
+            fields=list(d.get("fields", [])),
+            mode=str(d.get("mode", "length_only")).lower(),
         )
-        all_rows.extend(rows)
-        grand["files"] += 1
-        grand["messages"] += summary["total"]
-        grand["ok"] += summary["ok"]
-        grand["errors"] += summary["errors"]
 
-        print(f"[file] {f.name} → messages: {summary['total']}  ok: {summary['ok']}  errors: {summary['errors']}")
-        limit = len(rows) if args.verbose else min(args.max_print, len(rows))
-        for r in rows[:limit]:
-            print(f"  [{r['status']}] msg#{r['message_index']} type={r.get('msg_type','')}^{r.get('msg_event','')}".rstrip("^"))
-            if r.get("error"):
-                print(f"    error: {r['error']}")
-            if r.get("issues"):
-                print(f"    issues: {', '.join(r['issues'])}")
-            if r.get("dtm_issues"):
-                print(f"    dtm_issues: {', '.join(r['dtm_issues'])}")
-            if r.get("domain_issues"):
-                print(f"    domain_issues: {', '.join(r['domain_issues'])}")
-            if r.get("obx_issues"):
-                print(f"    obx_issues: {', '.join(r['obx_issues'])}")
-            print(f"    OBR-24: {r.get('obr24_values','')}   OBR-25: {r.get('obr25_values','')}   OBX-11: {r.get('obx11_values','')}")
-            if r.get("txa2_id") or r.get("txa2_system"):
-                print(f"    TXA-2: id={r.get('txa2_id','')} text={r.get('txa2_text','')} system={r.get('txa2_system','')} (2.3.2={r.get('txa2_3_2','')})")
-            print(f"    MSH-10: {r.get('msh_10','')}   PID-3: {r.get('pid_3','')}")
-            print(f"    counts: OBR={r.get('obr_count',0)} OBX={r.get('obx_count',0)}")
+@dataclass
+class AllowedValuesConfig:
+    obr24: List[str] = field(default_factory=list)
+    result_status: List[str] = field(default_factory=list)
+    obx11_empty_allows: List[str] = field(default_factory=list)
+    encounter_class: List[str] = field(default_factory=list)   # ADT PV1-2 allowed values
 
-    # CSV output
-    if args.report:
-        csv_path = Path(args.report)
-        csv_path.parent.mkdir(parents=True, exist_ok=True)
+    @staticmethod
+    def from_dict(d: Dict[str, Any]) -> "AllowedValuesConfig":
+        return AllowedValuesConfig(
+            obr24=list(d.get("obr24", [])),
+            result_status=list(d.get("result_status", [])),
+            obx11_empty_allows=list(d.get("obx11_empty_allows", [])),
+            encounter_class=list(d.get("encounter_class", [])),
+        )
+
+@dataclass
+class PoliciesConfig:
+    require_pid3_shape: bool = False
+    require_obr2_or_obr3: bool = False
+    obr4_coded: bool = False
+    obr25_allowed: bool = False
+    obx11_allowed: bool = False
+    obx3_coded: bool = False
+    obx5_required_unless_status_in_empty_allows: bool = False
+    obx2_vs_obx5_typecheck: bool = False
+    txa2_coded: bool = False
+    require_pv1_2_encounter_class: bool = False
+    required_fields: List[str] = field(default_factory=list)
+
+    @staticmethod
+    def from_dict(d: Dict[str, Any]) -> "PoliciesConfig":
+        return PoliciesConfig(
+            require_pid3_shape=bool(d.get("require_pid3_shape", False)),
+            require_obr2_or_obr3=bool(d.get("require_obr2_or_obr3", False)),
+            obr4_coded=bool(d.get("obr4_coded", False)),
+            obr25_allowed=bool(d.get("obr25_allowed", False)),
+            obx11_allowed=bool(d.get("obx11_allowed", False)),
+            obx3_coded=bool(d.get("obx3_coded", False)),
+            obx5_required_unless_status_in_empty_allows=bool(d.get("obx5_required_unless_status_in_empty_allows", False)),
+            obx2_vs_obx5_typecheck=bool(d.get("obx2_vs_obx5_typecheck", False)),
+            txa2_coded=bool(d.get("txa2_coded", False)),
+            require_pv1_2_encounter_class=bool(d.get("require_pv1_2_encounter_class", False)),
+            required_fields=list(d.get("required_fields", [])),
+        )
+
+@dataclass
+class Profile:
+    name: str
+    types: List[str] = field(default_factory=list)  # root types e.g., ["ORU","ADT",...]
+    engine: Optional[str] = None                   # "fast" | "hl7apy" (optional; default fast)
+    timestamps: Optional[TimestampRuleConfig] = None
+    allowed: AllowedValuesConfig = field(default_factory=AllowedValuesConfig)
+    policies: PoliciesConfig = field(default_factory=PoliciesConfig)
+
+    @staticmethod
+    def from_dict(name: str, d: Dict[str, Any]) -> "Profile":
+        ts = d.get("timestamps")
+        return Profile(
+            name=name,
+            types=list(d.get("types", [])),
+            engine=d.get("engine"),
+            timestamps=TimestampRuleConfig.from_dict(ts) if ts else None,
+            allowed=AllowedValuesConfig.from_dict(d.get("allowed", {})),
+            policies=PoliciesConfig.from_dict(d.get("policies", {})),
+        )
+
+@dataclass
+class RuleSet:
+    profiles: Dict[str, Profile] = field(default_factory=dict)
+    default_profile: Optional[str] = None
+
+    @staticmethod
+    def load(path: Optional[str | Path]) -> "RuleSet":
+        if not path:
+            return RuleSet()
+        if yaml is None:
+            raise RuntimeError("PyYAML not installed; cannot load rules")
+        with open(path, "r", encoding="utf-8") as fh:
+            data = yaml.safe_load(fh) or {}
+        profiles = {}
+        for name, pd in (data.get("profiles") or {}).items():
+            profiles[name] = Profile.from_dict(name, pd or {})
+        default_profile = data.get("default_profile")
+        return RuleSet(profiles=profiles, default_profile=default_profile)
+
+    def select_profile_for_root(self, msg_root: str) -> Optional[Profile]:
+        for p in self.profiles.values():
+            if msg_root and msg_root in p.types:
+                return p
+        if self.default_profile and self.default_profile in self.profiles:
+            return self.profiles[self.default_profile]
+        return None
+
+    # serialization for parallel
+    def to_dict(self) -> Dict[str, Any]:
+        out = {"default_profile": self.default_profile, "profiles": {}}
+        for name, p in self.profiles.items():
+            out["profiles"][name] = {
+                "types": p.types,
+                "engine": p.engine,
+                "timestamps": None if not p.timestamps else {
+                    "strict": p.timestamps.strict,
+                    "fail_on_dtm": p.timestamps.fail_on_dtm,
+                    "allowed_lengths": sorted(p.timestamps.allowed_lengths),
+                    "compliant_lengths": sorted(p.timestamps.compliant_lengths),
+                    "fields": p.timestamps.fields,
+                    "mode": p.timestamps.mode,
+                },
+                "allowed": {
+                    "obr24": p.allowed.obr24,
+                    "result_status": p.allowed.result_status,
+                    "obx11_empty_allows": p.allowed.obx11_empty_allows,
+                    "encounter_class": p.allowed.encounter_class,
+                },
+                "policies": {
+                    "require_pid3_shape": p.policies.require_pid3_shape,
+                    "require_obr2_or_obr3": p.policies.require_obr2_or_obr3,
+                    "obr4_coded": p.policies.obr4_coded,
+                    "obr25_allowed": p.policies.obr25_allowed,
+                    "obx11_allowed": p.policies.obx11_allowed,
+                    "obx3_coded": p.policies.obx3_coded,
+                    "obx5_required_unless_status_in_empty_allows": p.policies.obx5_required_unless_status_in_empty_allows,
+                    "obx2_vs_obx5_typecheck": p.policies.obx2_vs_obx5_typecheck,
+                    "txa2_coded": p.policies.txa2_coded,
+                    "require_pv1_2_encounter_class": p.policies.require_pv1_2_encounter_class,
+                    "required_fields": p.policies.required_fields,
+                }
+            }
+        return out
+
+    @staticmethod
+    def from_dict(d: Dict[str, Any]) -> "RuleSet":
+        profiles = {}
+        for name, pd in (d.get("profiles") or {}).items():
+            profiles[name] = Profile.from_dict(name, pd or {})
+        return RuleSet(profiles=profiles, default_profile=d.get("default_profile"))
+
+
+# =======================================================================
+# Field extraction (raw and hl7apy) + fast ER7 index
+# =======================================================================
+
+_FIELD_SPEC_RE = re.compile(r'^([A-Z0-9]{3})-(\d+)(?:\.(\d+))?(?:\.(\d+))?$')
+
+def parse_field_spec(spec: str) -> Tuple[str, int, Optional[int], Optional[int]]:
+    m = _FIELD_SPEC_RE.match(spec.strip())
+    if not m:
+        raise ValueError(f"Invalid field spec: {spec}")
+    seg = m.group(1)
+    fld = int(m.group(2))
+    comp = int(m.group(3)) if m.group(3) else None
+    sub = int(m.group(4)) if m.group(4) else None
+    return seg, fld, comp, sub
+
+def values_from_parsed(msg: Message, spec: str) -> List[str]:
+    seg, fld, comp, sub = parse_field_spec(spec)
+    out: List[str] = []
+    try:
+        segs: List[Segment] = list(msg.segments(seg))  # type: ignore[attr-defined]
+        for s in segs:
+            try:
+                field_obj = s[fld]
+            except Exception:
+                continue
+            reps = field_obj if isinstance(field_obj, list) else [field_obj]
+            for rep in reps:
+                try:
+                    val = rep
+                    if comp is not None:
+                        val = rep[comp]
+                    if sub is not None:
+                        val = val[sub]
+                    v = getattr(val, "value", None)
+                    out.append(str(v if v is not None else val))
+                except Exception:
+                    try:
+                        out.append(str(rep.value))
+                    except Exception:
+                        pass
+    except Exception:
+        pass
+    return [v.strip() for v in out if str(v).strip()]
+
+def values_from_raw(raw: bytes, spec: str) -> List[str]:
+    text = ensure_text(raw)
+    lines = text.split("\r")
+    if not lines:
+        return []
+    fs, comp, rep, sub = _detect_fs_and_encs(lines[0])
+    seg, fld, comp_i, sub_i = parse_field_spec(spec)
+    out: List[str] = []
+    for ln in lines:
+        if not ln.startswith(seg + fs):
+            continue
+        fields = ln.split(fs)
+        if len(fields) <= fld:
+            continue
+        fval = fields[fld]
+        for f_rep in fval.split(rep):
+            if comp_i is None:
+                out.append(f_rep)
+            else:
+                comps = f_rep.split(comp)
+                if len(comps) >= comp_i:
+                    cval = comps[comp_i - 1]
+                    if sub_i is None:
+                        out.append(cval)
+                    else:
+                        subs = cval.split(sub)
+                        if len(subs) >= sub_i:
+                            out.append(subs[sub_i - 1])
+    return [v.strip() for v in out if v.strip()]
+
+def build_msg_index(raw: bytes) -> Tuple[Dict[str, List[List[str]]], str, str, str, str]:
+    """
+    Return (index, fs, comp, rep, sub)
+    index: { 'SEG': [ fields_list_per_segment_instance ] }
+    """
+    text = ensure_text(raw)
+    lines = text.split("\r")
+    if not lines or not lines[0].startswith("MSH"):
+        return {}, "|", "^", "~", "&"
+    fs, comp, rep, sub = _detect_fs_and_encs(lines[0])
+    idx: Dict[str, List[List[str]]] = {}
+    for ln in lines:
+        if len(ln) < 4 or ln[3:4] != fs:
+            continue
+        seg = ln[0:3]
+        if not seg or not seg.isalnum() or not seg[0].isupper():
+            continue
+        fields = ln.split(fs)
+        idx.setdefault(seg, []).append(fields)
+    return idx, fs, comp, rep, sub
+
+def values_from_index(idx: Dict[str, List[List[str]]],
+                      fs: str, comp: str, rep: str, sub: str,
+                      spec: str) -> List[str]:
+    seg, fld, comp_i, sub_i = parse_field_spec(spec)
+    out: List[str] = []
+    for fields in idx.get(seg, []):
+        if len(fields) <= fld:
+            continue
+        fval = fields[fld]
+        for f_rep in fval.split(rep):
+            if comp_i is None:
+                out.append(f_rep)
+            else:
+                comps = f_rep.split(comp)
+                if len(comps) >= comp_i:
+                    cval = comps[comp_i - 1]
+                    if sub_i is None:
+                        out.append(cval)
+                    else:
+                        subs = cval.split(sub)
+                        if len(subs) >= sub_i:
+                            out.append(subs[sub_i - 1])
+    return [v.strip() for v in out if v.strip()]
+
+def get_values(spec: str,
+               engine: str,
+               raw: bytes,
+               idx_pack: Optional[Tuple[Dict[str, List[List[str]]], str, str, str, str]] = None,
+               parsed: Optional["Message"] = None) -> List[str]:
+    """
+    Unified accessor so rule logic doesn't care which engine is in use.
+    'fast' uses the ER7 index; 'hl7apy' uses parsed tree with raw fallback.
+    """
+    if engine == "fast":
+        if idx_pack is None:
+            idx_pack = build_msg_index(raw)
+        idx, fs, comp, rep, sub = idx_pack
+        return values_from_index(idx, fs, comp, rep, sub, spec)
     else:
-        root_for_output = target if target.is_dir() else target.parent
-        csv_path = root_for_output / "hl7_qa_report.csv"
-    write_csv(csv_path, all_rows)
+        vals: List[str] = []
+        if parsed is not None:
+            vals = values_from_parsed(parsed, spec)
+        if not vals:
+            vals = values_from_raw(raw, spec)
+        return vals
 
-    if args.as_json:
-        print(json.dumps(all_rows, ensure_ascii=False))
 
-    print(f"\n[total] files: {grand['files']}  messages: {grand['messages']}  ok: {grand['ok']}  errors: {grand['errors']}")
-    print(f"[report] {csv_path}")
-    return 0 if grand["errors"] == 0 else 1
+# =======================================================================
+# Validation helpers (TS)
+# =======================================================================
 
-def main(argv: List[str]) -> int:
-    return run_cli(argv)
+NUMERIC_RE = re.compile(r'^[+-]?(\d+(\.\d+)?|\.\d+)$')
+
+def _slice_ts_base(ts: str) -> Tuple[str, str]:
+    m = re.match(r'^(\d{4,14})(.*)$', ts)
+    if not m:
+        return "", ""
+    return m.group(1), m.group(2)
+
+def ts_length_ok(ts: str, allowed: set[int]) -> Tuple[bool, str]:
+    base, rest = _slice_ts_base(ts)
+    if not base:
+        return False, "bad format"
+    if len(base) not in allowed:
+        return False, f"length {len(base)} not allowed"
+    if rest and not _TS_FRACTZ.match(rest):
+        return False, "invalid fraction/timezone"
+    return True, ""
+
+def ts_calendar_ok(ts: str) -> Tuple[bool, str]:
+    base, _rest = _slice_ts_base(ts)
+    if not base:
+        return False, "bad format"
+    try:
+        y = int(base[0:4])
+        if len(base) == 4:
+            return True, ""
+        m = int(base[4:6])
+        if not (1 <= m <= 12):
+            return False, f"month {m:02d} out of range"
+        if len(base) == 6:
+            return True, ""
+        d = int(base[6:8])
+        if len(base) == 8:
+            datetime(y, m, d); return True, ""
+        H = int(base[8:10])
+        if not (0 <= H <= 23):
+            return False, f"hour {H:02d} out of range"
+        if len(base) == 10:
+            datetime(y, m, d, H, 0, 0); return True, ""
+        M = int(base[10:12])
+        if not (0 <= M <= 59):
+            return False, f"minute {M:02d} out of range"
+        if len(base) == 12:
+            datetime(y, m, d, H, M, 0); return True, ""
+        S = int(base[12:14])
+        if not (0 <= S <= 59):
+            return False, f"second {S:02d} out of range"
+        datetime(y, m, d, H, M, S); return True, ""
+    except ValueError as e:
+        return False, f"invalid date/time: {e}"
+
+
+# =======================================================================
+# Issue container
+# =======================================================================
+
+@dataclass
+class IssueSet:
+    errors: List[str] = field(default_factory=list)
+    warnings: List[str] = field(default_factory=list)
+
+    def add_err(self, msg: str, cap: int):
+        if len(self.errors) < cap:
+            self.errors.append(msg)
+        elif len(self.errors) == cap:
+            self.errors.append(f"... truncated at {cap} errors")
+
+    def add_warn(self, msg: str):
+        self.warnings.append(msg)
+
+
+# =======================================================================
+# Message validation (per profile)
+# =======================================================================
+
+@dataclass
+class ValidationContext:
+    quiet_parse: bool
+    hl7apy_validation: str
+    engine_pref: str  # "auto" | "fast" | "hl7apy"
+
+def validate_message(
+    raw: bytes,
+    rules: RuleSet,
+    max_errors_per_msg: int,
+    ctx: ValidationContext,
+) -> Tuple[Dict[str, str], IssueSet]:
+    hdr = msh_fields_from_raw(raw)
+    issues = IssueSet()
+
+    profile = rules.select_profile_for_root(hdr.get("msg_root", ""))
+    if profile is None:
+        return {"msg_type": hdr["msg_type"], "msg_ctrl_id": hdr["msg_ctrl_id"], "version": hdr["version"]}, issues
+
+    # Determine engine for this message
+    engine_eff = ctx.engine_pref if ctx.engine_pref != "auto" else (profile.engine or "fast")
+
+    # Build fast index once; build hl7apy tree only if requested
+    idx_pack = build_msg_index(raw)
+    parsed: Optional[Message] = None
+    if engine_eff == "hl7apy":
+        if not HL7APY_AVAILABLE:
+            issues.add_err("hl7apy not installed; cannot use hl7apy engine", max_errors_per_msg)
+        else:
+            with suppress_hl7apy_output(ctx.quiet_parse):
+                try:
+                    parsed = parse_hl7(ensure_text(raw), quiet=ctx.quiet_parse, validation=ctx.hl7apy_validation)
+                except HL7apyException as e:
+                    issues.add_err(f"parse_error: {e}", max_errors_per_msg)
+
+    # ---------------- Timestamps (respect mode; use engine-agnostic access) ----------------
+    if profile.timestamps and profile.timestamps.mode != "off":
+        ts_cfg = profile.timestamps
+        ts_fields = ts_cfg.fields if ts_cfg.fields else list(DEFAULT_TS_FIELDS)
+        for spec in ts_fields:
+            for v in get_values(spec, engine_eff, raw, idx_pack, parsed):
+                if not v:
+                    continue
+                ok_len, why_len = ts_length_ok(v, ts_cfg.allowed_lengths)
+                if not ok_len:
+                    if ts_cfg.strict and ts_cfg.fail_on_dtm:
+                        issues.add_err(f"{spec} invalid TS '{v}': {why_len}", max_errors_per_msg)
+                    else:
+                        issues.add_warn(f"{spec} TS not valid: '{v}' ({why_len})")
+                    continue
+                if ts_cfg.mode == "calendar":
+                    ok_cal, why_cal = ts_calendar_ok(v)
+                    if not ok_cal:
+                        if ts_cfg.strict and ts_cfg.fail_on_dtm:
+                            issues.add_err(f"{spec} invalid TS '{v}': {why_cal}", max_errors_per_msg)
+                        else:
+                            issues.add_warn(f"{spec} TS not calendar-valid: '{v}' ({why_cal})")
+                m = re.match(r'^(\d{4,14})', v)
+                base_len = len(m.group(1)) if m else len(v)
+                if base_len not in ts_cfg.compliant_lengths:
+                    issues.add_warn(f"{spec} TS length {base_len} accepted but non-compliant")
+
+    # ---------------- Policies (all via get_values) ----------------
+    pol = profile.policies
+    allowed = profile.allowed
+
+    if pol.required_fields:
+        for spec in pol.required_fields:
+            if not any(get_values(spec, engine_eff, raw, idx_pack, parsed)):
+                issues.add_err(f"{spec} required but missing/empty", max_errors_per_msg)
+
+    if pol.require_pid3_shape:
+        ok_shape = (any(get_values("PID-3.1", engine_eff, raw, idx_pack, parsed)) and
+                    (any(get_values("PID-3.4", engine_eff, raw, idx_pack, parsed)) or
+                     any(get_values("PID-3.5", engine_eff, raw, idx_pack, parsed))))
+        if not ok_shape:
+            issues.add_err("PID-3 shape invalid: require .1 and (.4 or .5)", max_errors_per_msg)
+
+    if pol.require_obr2_or_obr3:
+        if not (any(get_values("OBR-2.1", engine_eff, raw, idx_pack, parsed)) or
+                any(get_values("OBR-3.1", engine_eff, raw, idx_pack, parsed))):
+            issues.add_err("OBR requires at least one of OBR-2 (placer) or OBR-3 (filler)", max_errors_per_msg)
+
+    if pol.obr4_coded:
+        if not (any(get_values("OBR-4.1", engine_eff, raw, idx_pack, parsed)) and
+                any(get_values("OBR-4.3", engine_eff, raw, idx_pack, parsed))):
+            issues.add_err("OBR-4 must be coded (requires .1 id and .3 system)", max_errors_per_msg)
+
+    if pol.obr25_allowed and allowed.result_status:
+        for v in get_values("OBR-25", engine_eff, raw, idx_pack, parsed):
+            if v and v not in allowed.result_status:
+                issues.add_err(f"OBR-25 result_status '{v}' not allowed", max_errors_per_msg)
+
+    if allowed.obr24:
+        for v in get_values("OBR-24", engine_eff, raw, idx_pack, parsed):
+            if v and v not in allowed.obr24:
+                issues.add_err(f"OBR-24 specimen_action_code '{v}' not in allowed list", max_errors_per_msg)
+
+    if pol.obx11_allowed and allowed.result_status:
+        for v in get_values("OBX-11", engine_eff, raw, idx_pack, parsed):
+            if v and v not in allowed.result_status:
+                issues.add_err(f"OBX-11 result_status '{v}' not allowed", max_errors_per_msg)
+
+    if pol.obx5_required_unless_status_in_empty_allows:
+        obx11 = get_values("OBX-11", engine_eff, raw, idx_pack, parsed)
+        obx5  = get_values("OBX-5.1", engine_eff, raw, idx_pack, parsed) or \
+                get_values("OBX-5",   engine_eff, raw, idx_pack, parsed)
+        if any(v and v not in allowed.obx11_empty_allows for v in obx11) and not any(obx5):
+            issues.add_err("OBX-5 required unless OBX-11 in empty-allows", max_errors_per_msg)
+
+    if pol.obx3_coded:
+        if not (any(get_values("OBX-3.1", engine_eff, raw, idx_pack, parsed)) and
+                any(get_values("OBX-3.3", engine_eff, raw, idx_pack, parsed))):
+            issues.add_err("OBX-3 must be coded (requires .1 id and .3 system)", max_errors_per_msg)
+
+    if pol.obx2_vs_obx5_typecheck:
+        for t in (v.strip().upper() for v in get_values("OBX-2", engine_eff, raw, idx_pack, parsed)):
+            if not t:
+                continue
+            obx5_val = next(iter(get_values("OBX-5", engine_eff, raw, idx_pack, parsed)), "")
+            if t == "NM":
+                if not obx5_val or not NUMERIC_RE.match(obx5_val):
+                    issues.add_err("OBX-2=NM requires OBX-5 numeric", max_errors_per_msg)
+            elif t in ("TS","DT","DTM"):
+                ok_len, why_len = ts_length_ok(obx5_val, profile.timestamps.allowed_lengths if profile.timestamps else _TS_BASE_ALLOWED_DEFAULT)
+                if not ok_len:
+                    issues.add_err(f"OBX-2={t} requires OBX-5 TS-valid: '{obx5_val}' ({why_len})", max_errors_per_msg)
+            elif t in ("CE","CWE"):
+                if not any(get_values("OBX-5.1", engine_eff, raw, idx_pack, parsed)):
+                    issues.add_err("OBX-2=CE/CWE requires OBX-5.1 coded id", max_errors_per_msg)
+
+    if pol.txa2_coded:
+        if not (any(get_values("TXA-2.1", engine_eff, raw, idx_pack, parsed)) and
+                any(get_values("TXA-2.3", engine_eff, raw, idx_pack, parsed))):
+            issues.add_err("TXA-2 must be coded (requires .1 id and .3 system)", max_errors_per_msg)
+
+    if pol.require_pv1_2_encounter_class:
+        pv1_2_vals = get_values("PV1-2", engine_eff, raw, idx_pack, parsed)
+        if not any(pv1_2_vals):
+            issues.add_err("PV1-2 (encounter/patient class) required but missing/empty", max_errors_per_msg)
+        elif allowed.encounter_class:
+            for v in pv1_2_vals:
+                if v and v not in allowed.encounter_class:
+                    issues.add_err(f"PV1-2 encounter class '{v}' not in allowed set", max_errors_per_msg)
+
+    return {"msg_type": hdr["msg_type"], "msg_ctrl_id": hdr["msg_ctrl_id"], "version": hdr["version"]}, issues
+
+
+# =======================================================================
+# Parallel worker
+# =======================================================================
+
+def _worker_validate_chunk(
+    chunk: List[bytes],
+    rules_dict: Dict[str, Any],
+    max_errors_per_msg: int,
+    ctx: ValidationContext,
+) -> List[Tuple[Dict[str, str], IssueSet]]:
+    configure_hl7apy_logging(quiet=ctx.quiet_parse)
+    rules = RuleSet.from_dict(rules_dict)
+    out: List[Tuple[Dict[str, str], IssueSet]] = []
+    for raw in chunk:
+        head, iss = validate_message(raw, rules, max_errors_per_msg=max_errors_per_msg, ctx=ctx)
+        out.append((head, iss))
+    return out
+
+
+# =======================================================================
+# Reporting
+# =======================================================================
+
+def open_csv_writer(path: str) -> Tuple[io.TextIOBase, csv.writer]:
+    fh = open(path, "w", newline="", encoding="utf-8", buffering=1024*1024)
+    w = csv.writer(fh)
+    w.writerow(["index","msg_ctrl_id","msg_type","version","errors","warnings"])
+    return fh, w
+
+def open_jsonl_writer(path: str) -> io.TextIOBase:
+    return open(path, "w", encoding="utf-8", buffering=1024*1024)
+
+def write_csv_row(writer: csv.writer, idx: int, header: Dict[str, str], issues: IssueSet) -> None:
+    writer.writerow([idx, header.get("msg_ctrl_id",""), header.get("msg_type",""),
+                     header.get("version",""), "; ".join(issues.errors), "; ".join(issues.warnings)])
+
+def write_jsonl_row(fh: io.TextIOBase, idx: int, header: Dict[str, str], issues: IssueSet) -> None:
+    fh.write(json.dumps({
+        "index": idx,
+        "msg_ctrl_id": header.get("msg_ctrl_id",""),
+        "msg_type": header.get("msg_type",""),
+        "version": header.get("version",""),
+        "errors": issues.errors,
+        "warnings": issues.warnings,
+    }, ensure_ascii=False) + "\n")
+
+
+# =======================================================================
+# CLI
+# =======================================================================
+
+def parse_args(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
+    p = argparse.ArgumentParser(description="HL7 QA: rules-aware per-message validator (profiles)")
+    p.add_argument("input", help="Path to HL7 file")
+    p.add_argument("--rules", help="Path to YAML rules file", required=False)
+    p.add_argument("--report", help="Output (.csv or .jsonl). If omitted, only summary printed.", required=False)
+    p.add_argument("--progress-every", type=int, default=0)
+    p.add_argument("--progress-time", type=float, default=0.0)
+    p.add_argument("--start", type=int, default=0)
+    p.add_argument("--limit", type=int, default=0)
+    p.add_argument("--only", help="Comma-separated list of message types to include (e.g., ORU_R01, ADT_A01)")
+    p.add_argument("--max-print", type=int, default=3)
+    p.add_argument("--max-errors-per-msg", type=int, default=50)
+    # Engine selection
+    p.add_argument("--engine", choices=["auto", "fast", "hl7apy"], default="auto",
+                   help="Engine: 'auto' (use profile.engine or fast), 'fast' (raw ER7), 'hl7apy' (object model).")
+    # Legacy parse/validation controls (kept for convenience)
+    g = p.add_mutually_exclusive_group()
+    g.add_argument("--light-parse", action="store_true", help="Alias for --engine fast")
+    g.add_argument("--full-parse", action="store_true", help="Alias for --engine hl7apy")
+    p.add_argument("--no-quiet-parse", action="store_true",
+                   help="Show hl7apy parser logs/warnings (default: suppressed)")
+    p.add_argument("--hl7apy-validation", choices=["none","tolerant","strict"], default="none",
+                   help="hl7apy validation level during parse (default: none)")
+    # Parallel
+    p.add_argument("--workers", default="0", help="'auto' or integer (0 = no parallel)")
+    p.add_argument("--chunk", type=int, default=200)
+    return p.parse_args(argv)
+
+
+# =======================================================================
+# Main
+# =======================================================================
+
+def main(argv: Optional[Sequence[str]] = None) -> int:
+    args = parse_args(argv)
+
+    # Determine engine preference from flags
+    engine_pref = args.engine  # "auto" by default
+    if args.light_parse:
+        engine_pref = "fast"
+    elif args.full_parse:
+        engine_pref = "hl7apy"
+
+    if engine_pref == "hl7apy" and not HL7APY_AVAILABLE:
+        print("[error] hl7apy engine requested but hl7apy is not installed.", file=sys.stderr)
+        return 2
+
+    quiet_parse = not args.no_quiet_parse
+    configure_hl7apy_logging(quiet=quiet_parse)
+    hl7apy_validation = args.hl7apy_validation
+    ctx = ValidationContext(quiet_parse=quiet_parse,
+                            hl7apy_validation=hl7apy_validation,
+                            engine_pref=engine_pref)
+
+    blob = read_file_bytes(args.input)
+    msgs = fast_split_messages(blob)
+    total = len(msgs)
+    if total == 0:
+        print("[error] No messages found (no 'MSH' anchors).", file=sys.stderr)
+        return 1
+
+    start = max(0, int(args.start))
+    end = total if args.limit <= 0 else min(total, start + int(args.limit))
+    if start >= total:
+        print(f"[error] --start={start} >= total messages ({total})", file=sys.stderr)
+        return 1
+    work_msgs = msgs[start:end]
+
+    # rules
+    if args.rules:
+        print(f"[rules] using: {Path(args.rules).resolve()}")
+        rules = RuleSet.load(args.rules)
+    else:
+        rules = RuleSet()
+
+    # filter by type (string match on normalized MSH-9 or raw)
+    only_set: Optional[set[str]] = None
+    if args.only:
+        only_set = {x.strip() for x in args.only.split(",") if x.strip()}
+        if only_set:
+            filtered = []
+            for raw in work_msgs:
+                hdr = msh_fields_from_raw(raw)
+                if hdr["msg_type"] in only_set or hdr["msg_type_raw"] in only_set:
+                    filtered.append(raw)
+            work_msgs = filtered
+
+    # report
+    writer_csv: Optional[csv.writer] = None
+    fh_report: Optional[io.TextIOBase] = None
+    write_row_fn = None
+    if args.report:
+        ext = Path(args.report).suffix.lower()
+        if ext == ".csv":
+            fh_report, writer_csv = open_csv_writer(args.report)
+            write_row_fn = lambda idx, header, issues: write_csv_row(writer_csv, idx, header, issues)
+        elif ext == ".jsonl":
+            fh_report = open_jsonl_writer(args.report)
+            write_row_fn = lambda idx, header, issues: write_jsonl_row(fh_report, idx, header, issues)
+        else:
+            print(f"[error] Unknown report extension '{ext}'. Use .csv or .jsonl", file=sys.stderr)
+            return 2
+
+    t0 = perf_counter()
+    next_prog = int(args.progress_every) if args.progress_every else 0
+    last_prog = t0
+    n_proc = n_rows = 0
+    tot_err = tot_warn = 0
+
+    def maybe_progress(i: int):
+        nonlocal last_prog
+        now = perf_counter()
+        by_count = (next_prog and (i % next_prog == 0))
+        by_time = (args.progress_time and (now - last_prog) >= float(args.progress_time))
+        if by_count or by_time:
+            dt = now - t0
+            rate = (i / dt) if dt else 0.0
+            print(f"    [progress] {i} msgs  elapsed={dt:.1f}s  rate={rate:.1f} msg/s")
+            last_prog = now
+
+    # parallel?
+    parallel = False
+    max_workers = 0
+    if isinstance(args.workers, str):
+        w = args.workers.strip().lower()
+        if w == "auto":
+            max_workers = max(1, cpu_count()-1)
+            parallel = True
+        else:
+            try:
+                max_workers = int(w)
+                parallel = max_workers > 0
+            except Exception:
+                parallel = False
+    else:
+        max_workers = int(args.workers)
+        parallel = max_workers > 0
+
+    if parallel:
+        chunks: List[List[bytes]] = []
+        ch = int(args.chunk) if int(args.chunk) > 0 else 200
+        for i in range(0, len(work_msgs), ch):
+            chunks.append(work_msgs[i:i+ch])
+        rules_dict = rules.to_dict()
+        collected: List[Tuple[Dict[str, str], IssueSet]] = []
+        with ProcessPoolExecutor(max_workers=max_workers) as ex:
+            futs = [ex.submit(_worker_validate_chunk, c, rules_dict, int(args.max_errors_per_msg), ctx)
+                    for c in chunks]
+            done = 0
+            for fut in as_completed(futs):
+                res = fut.result()
+                collected.extend(res)
+                done += len(res)
+                maybe_progress(done)
+        results_iter = collected
+    else:
+        def gen():
+            for i, raw in enumerate(work_msgs, 1):
+                head, iss = validate_message(raw, rules,
+                                             max_errors_per_msg=int(args.max_errors_per_msg),
+                                             ctx=ctx)
+                maybe_progress(i)
+                yield head, iss
+        results_iter = gen()
+
+    for idx, (header, issues) in enumerate(results_iter, start=1 + start):
+        n_proc += 1
+        tot_err += len(issues.errors)
+        tot_warn += len(issues.warnings)
+        if args.max_print and (issues.errors or issues.warnings):
+            printed = 0
+            for e in issues.errors[:args.max_print]:
+                print(f"[{idx}] ERR: {e}")
+                printed += 1
+            if printed < args.max_print:
+                for w in issues.warnings[:(args.max_print-printed)]:
+                    print(f"[{idx}] WRN: {w}")
+        if write_row_fn:
+            write_row_fn(idx, header, issues)
+            n_rows += 1
+
+    if fh_report:
+        fh_report.close()
+
+    dt = perf_counter() - t0
+    rate = (n_proc / dt) if dt else 0.0
+    print(f"[summary] msgs={n_proc} elapsed={dt:.1f}s rate={rate:.1f} msg/s "
+          f"errors={tot_err} warnings={tot_warn}")
+    return 0
+
 
 if __name__ == "__main__":
-    sys.exit(main(sys.argv))
+    try:
+        sys.exit(main())
+    except KeyboardInterrupt:
+        print("\n[abort] Interrupted by user", file=sys.stderr)
+        sys.exit(130)

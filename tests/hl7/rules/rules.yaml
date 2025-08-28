@@ -1,35 +1,262 @@
 # HL7 QA rules (site-tunable)
-# Profiles define which message types they apply to and which validations to run.
+# Profiles are selected by the *root* of MSH-9 (e.g., "ORU" from "ORU^R01").
 
 profiles:
-  results:
-    types: [ORU, ORM, OML]         # which MSH-9 message types use this profile
+
+  # -----------------------------------------------------
+  # Clinical Results (ORU)
+  # -----------------------------------------------------
+  oru_results:
+    engine: fast
+    types: [ORU]
     timestamps:
-      strict: true                 # validate TS strictly (YYYYMMDD or YYYYMMDDHHMMSS)
-      fail_on_dtm: true            # mark message as value_error if any TS invalid
+      mode: length_only              # numerals-only base, lengths 8/12/14
+      strict: true
+      fail_on_dtm: true
+      allowed_lengths: [8, 12, 14]
+      compliant_lengths: [8, 12, 14]
+      fields:
+        - "MSH-7"
+        - "PID-7"
+        - "PV1-44"
+        - "PV2-8"
+        - "OBR-6"
+        - "OBR-7"
+        - "OBR-8"
+        - "OBR-14"
+        - "OBR-22"
+        - "OBX-14"
     allowed:
       obr24: [CH, MB, LAB, PATH, RAD, CT, MR, US, XR, NM]
-      result_status: [F, C, I, P, R, S, U, D, X, W]     # used for OBR-25 and OBX-11
-      obx11_empty_allows: [X, I, W, U]                  # when OBX-5 may be empty
+      result_status: [F, C, I, P, R, S, U, D, X, W]
+      obx11_empty_allows: [X, I, W, U]
     policies:
-      require_pid3_shape: true            # PID-3: .1 present AND (.4 authority OR .5 idType)
-      require_obr2_or_obr3: true          # at least one of OBR-2 (placer) or OBR-3 (filler)
-      obr4_coded: true                    # OBR-4 has .1 id AND .3 system
-      obr25_allowed: true                 # OBR-25 must be in allowed result_status
-      obx11_allowed: true                 # OBX-11 must be in allowed result_status
-      obx3_coded: true                    # OBX-3 has .1 id AND .3 system
+      require_pid3_shape: true
+      require_obr2_or_obr3: true
+      obr4_coded: true
+      obr25_allowed: true
+      obx11_allowed: true
+      obx3_coded: true
       obx5_required_unless_status_in_empty_allows: true
-      obx2_vs_obx5_typecheck: true        # NM numeric, DT/DTM/TS TS-valid, CE/CWE coded, SN basic numeric
+      obx2_vs_obx5_typecheck: true
+      required_fields:
+        - "PID-3.1"    # patient identifier
+        - "PID-5.1"    # patient last name
+        - "PID-8"      # administrative sex
 
-  mdm:
+  # -----------------------------------------------------
+  # Orders / Placer (ORM)
+  # -----------------------------------------------------
+  orm_orders:
+    engine: fast
+    types: [ORM]
+    timestamps:
+      mode: length_only
+      strict: true
+      fail_on_dtm: true
+      allowed_lengths: [8, 12, 14]
+      compliant_lengths: [8, 12, 14]
+      fields:
+        - "MSH-7"
+        - "PID-7"
+        - "PV1-44"
+        - "PV2-8"
+        - "ORC-9"
+        - "ORC-15"
+        - "OBR-6"
+        - "OBR-7"
+        - "OBR-14"
+        - "OBR-22"
+    allowed:
+      obr24: [CH, MB, LAB, PATH, RAD, CT, MR, US, XR, NM]
+      result_status: [F, C, I, P, R, S, U, D, X, W]
+      obx11_empty_allows: [X, I, W, U]
+    policies:
+      require_pid3_shape: true
+      require_obr2_or_obr3: true
+      obr4_coded: true
+      required_fields:
+        - "PID-3.1"
+        - "PID-5.1"
+        - "PID-8"
+
+  # -----------------------------------------------------
+  # Lab Orders / Filler (OML)
+  # -----------------------------------------------------
+  oml_lab_orders:
+    engine: fast
+    types: [OML]
+    timestamps:
+      mode: length_only
+      strict: true
+      fail_on_dtm: true
+      allowed_lengths: [8, 12, 14]
+      compliant_lengths: [8, 12, 14]
+      fields:
+        - "MSH-7"
+        - "PID-7"
+        - "PV1-44"
+        - "PV2-8"
+        - "ORC-9"
+        - "ORC-15"
+        - "OBR-6"
+        - "OBR-7"
+        - "OBR-14"
+        - "OBR-22"
+    allowed:
+      obr24: [CH, MB, LAB, PATH, RAD, CT, MR, US, XR, NM]
+      result_status: [F, C, I, P, R, S, U, D, X, W]
+      obx11_empty_allows: [X, I, W, U]
+    policies:
+      require_pid3_shape: true
+      require_obr2_or_obr3: true
+      obr4_coded: true
+      required_fields:
+        - "PID-3.1"
+        - "PID-5.1"
+        - "PID-8"
+
+  # -----------------------------------------------------
+  # Medical Document Management (MDM)
+  # -----------------------------------------------------
+  mdm_documents:
+    engine: fast
     types: [MDM]
     timestamps:
+      mode: length_only
       strict: true
       fail_on_dtm: false
+      allowed_lengths: [8, 12, 14]
+      compliant_lengths: [8, 12, 14]
+      fields:
+        - "MSH-7"
+        - "PID-7"
+        - "TXA-6"
+        - "TXA-19"
     allowed: {}
     policies:
       require_pid3_shape: true
-      txa2_coded: true                   # TXA-2 has .1 id and .3 system
+      txa2_coded: true
+      required_fields:
+        - "PID-3.1"
+        - "PID-5.1"
+        - "PID-8"
 
-# Default profile to fall back to if type not matched by any profile.
-default_profile: results
+  # -----------------------------------------------------
+  # Admissions/Discharges/Transfers (ADT)
+  # -----------------------------------------------------
+  adt_messages:
+    engine: fast
+    types: [ADT]
+    timestamps:
+      mode: length_only
+      strict: true
+      fail_on_dtm: true
+      allowed_lengths: [8, 12, 14]
+      compliant_lengths: [8, 12, 14]
+      fields:
+        - "MSH-7"
+        - "EVN-2"
+        - "EVN-6"
+        - "PID-7"
+        - "PV1-44"
+        - "PV2-8"
+    allowed:
+      encounter_class: [E, I, O, P, R, B, C, N, U]
+    policies:
+      require_pid3_shape: true
+      require_pv1_2_encounter_class: true
+      required_fields:
+        - "PID-3.1"
+        - "PID-5.1"
+        - "PID-8"
+        - "PV1-2"   # must exist, also validated against allowed.encounter_class
+
+  # -----------------------------------------------------
+  # Pharmacy / Medication (RDE/RXE/RDS)
+  # -----------------------------------------------------
+  rde_pharmacy:
+    engine: fast
+    types: [RDE, RXE, RDS]
+    timestamps:
+      mode: length_only
+      strict: true
+      fail_on_dtm: true
+      allowed_lengths: [8, 12, 14]
+      compliant_lengths: [8, 12, 14]
+      fields:
+        - "MSH-7"
+        - "PID-7"
+        - "ORC-9"
+        - "ORC-15"
+        - "RXE-32"
+        - "RXE-33"
+    allowed: {}
+    policies:
+      require_pid3_shape: true
+      required_fields:
+        - "PID-3.1"
+        - "PID-5.1"
+        - "PID-8"
+        - "RXE-2"   # give code
+        - "RXE-3"   # give amount/unit
+
+  # -----------------------------------------------------
+  # Immunization Reporting (VXU)
+  # -----------------------------------------------------
+  vxu_immunizations:
+    engine: fast
+    types: [VXU]
+    timestamps:
+      mode: length_only
+      strict: true
+      fail_on_dtm: true
+      allowed_lengths: [8, 12, 14]
+      compliant_lengths: [8, 12, 14]
+      fields:
+        - "MSH-7"
+        - "PID-7"
+        - "ORC-9"
+        - "RXA-3"
+        - "RXA-4"
+        - "OBX-14"
+    allowed: {}
+    policies:
+      require_pid3_shape: true
+      required_fields:
+        - "PID-3.1"
+        - "PID-5.1"
+        - "PID-8"
+        - "RXA-5.1"  # vaccine code
+        - "RXA-9"    # admin notes/status
+        - "RXA-20"   # completion status
+
+  # -----------------------------------------------------
+  # Scheduling (SIU)
+  # -----------------------------------------------------
+  siu_schedule:
+    engine: fast
+    types: [SIU]
+    timestamps:
+      mode: length_only
+      strict: true
+      fail_on_dtm: true
+      allowed_lengths: [8, 12, 14]
+      compliant_lengths: [8, 12, 14]
+      fields:
+        - "MSH-7"
+        - "SCH-11"
+        - "SCH-12"
+        - "PID-7"
+    allowed: {}
+    policies:
+      require_pid3_shape: true
+      required_fields:
+        - "PID-3.1"
+        - "PID-5.1"
+        - "PID-8"
+        - "SCH-1"   # placer appointment ID
+        - "SCH-2"   # filler appointment ID
+
+# Fallback if no profile matches
+default_profile: oru_results
