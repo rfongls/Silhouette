@@ -187,6 +187,54 @@ def license_cmd(customer_id, out):
     sys.exit(issue())
 
 
+@main.group("fhir")
+def fhir_group():
+    """FHIR utilities."""
+    pass
+
+
+@fhir_group.command("translate")
+@click.option("--in", "input_path", required=True, help="HL7 v2 file, dir, or glob")
+@click.option("--rules", help="Validation profile YAML")
+@click.option("--map", "map_path", help="Mapping profile YAML")
+@click.option(
+    "--bundle",
+    type=click.Choice(["transaction", "collection"]),
+    default="transaction",
+    show_default=True,
+)
+@click.option("--out", default="out/", show_default=True, help="Output directory")
+@click.option("--server", default=None, help="FHIR server base URL")
+@click.option("--token", default=None, help="Auth token for FHIR server")
+@click.option("--validate", is_flag=True, help="Validate output resources")
+@click.option("--dry-run", is_flag=True, help="Run without posting to server")
+def fhir_translate_cmd(
+    input_path,
+    rules,
+    map_path,
+    bundle,
+    out,
+    server,
+    token,
+    validate,
+    dry_run,
+):
+    """Translate HL7 v2 messages to FHIR (stub)."""
+    from .pipelines import hl7_to_fhir
+
+    hl7_to_fhir.translate(
+        input_path=input_path,
+        rules=rules,
+        map_path=map_path,
+        bundle=bundle,
+        out=out,
+        server=server,
+        token=token,
+        validate=validate,
+        dry_run=dry_run,
+    )
+
+
 @main.group("analyze")
 def analyze_group():
     """Static analyses."""
