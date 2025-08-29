@@ -79,16 +79,16 @@ This plan drives a **US Core–compliant** HL7 v2 → FHIR pipeline using your e
 ---
 
 ## Phase 5 — Validation
-- [ ] Local JSON Schema checks.
+- [x] Local JSON Schema checks.
   - **Implement:** Lightweight shape validator; clear path to offending element.
   - **Test:** Introduce invalid field; expect failure.
   - **DoD:** Shape errors caught pre-HAPI.
-- [ ] HAPI FHIR validation via `validators/hapi_cli.py`.
+- [x] HAPI FHIR validation via `validators/hapi_cli.py`.
   - **Implement:** Wrapper to run validator JAR with `-ig hl7.fhir.us.core#<version>` using local `.fhir/packages/`.
   - **Env:** Require `JAVA_HOME`; soft-fail with guidance if missing.
   - **Test:** `silhouette fhir validate --in out/fhir/ndjson/*.ndjson --hapi`.
   - **DoD:** Non-zero exit on profile violations; concise errors with pointers.
-- [ ] CLI flag `silhouette fhir validate` to run validators on generated resources.
+- [x] CLI flag `silhouette fhir validate` to run validators on generated resources.
   - **DoD:** Invokes local and/or HAPI checks as requested.
 
 ---

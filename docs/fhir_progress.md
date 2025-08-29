@@ -8,7 +8,7 @@ Use this doc to track delivery against the Codex handoff phases. Update checkbox
 
 ## At‑a‑Glance Status
 
-* **Current Phase:** 5 — Validation
+* **Current Phase:** 6 — Terminology MVP
 * **MVP Definition of Done:**
   * ADT^A01 → `Patient`, `Encounter`, `Provenance` (US Core‑valid)
   * ORU^R01 → `Patient`, `Observation`, `DiagnosticReport` (+`Specimen` if present) (US Core‑valid)
@@ -95,10 +95,14 @@ Use this doc to track delivery against the Codex handoff phases. Update checkbox
 
 ### Phase 5 — Validation (JSONSchema + HAPI + $validate opt‑in)
 
-* [ ] Local JSONSchema shape validation wired
-* [ ] `validators/hapi_cli.py` to run HAPI Validator with pinned IGs
-* [ ] CLI: `silhouette fhir validate --in … --hapi`
-* [ ] Optional remote `$validate` before posting
+* [x] Local JSONSchema shape validation wired  \\
+  **Commit/PR:** `TBD` • **Date:** 2025-08-29
+* [x] `validators/hapi_cli.py` to run HAPI Validator with pinned IGs  \\
+  **Commit/PR:** `TBD` • **Date:** 2025-08-29
+* [x] CLI: `silhouette fhir validate --in … --hapi`  \\
+  **Commit/PR:** `TBD` • **Date:** 2025-08-29
+* [x] Optional remote `$validate` before posting  \\
+  **Commit/PR:** `TBD` • **Date:** 2025-08-29
 
 **Notes/Blockers:** *(fill in)*
 
