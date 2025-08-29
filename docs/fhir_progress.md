@@ -7,8 +7,7 @@ Use this doc to track delivery against the Codex handoff phases. Update checkbox
 ---
 
 ## At‑a‑Glance Status
-
-* **Current Phase:** 1 — Pin the IG & Package Management
+* **Current Phase:** 2 — Mapping Framework & Transforms
 * **MVP Definition of Done:**
   * ADT^A01 → `Patient`, `Encounter`, `Provenance` (US Core‑valid)
   * ORU^R01 → `Patient`, `Observation`, `DiagnosticReport` (+`Specimen` if present) (US Core‑valid)
@@ -50,8 +49,8 @@ Use this doc to track delivery against the Codex handoff phases. Update checkbox
 
 ### Phase 2 — Mapping Framework & Transforms
 
-* [ ] YAML mapping loader (profile, resourcePlan, rules, MustSupport policy)  \
-  **Branch:** *(fill in)*
+ * [x] YAML mapping loader (profile, resourcePlan, rules, MustSupport policy)  \
+  **Commit/PR:** `89a814c` • **Date:** 2025‑08‑29
 * [x] `translators/transforms.py` with unit tests:
   * `ts_to_date`, `ts_to_instant`
   * `pid3_to_identifiers`
@@ -60,7 +59,8 @@ Use this doc to track delivery against the Codex handoff phases. Update checkbox
   * `pv1_class_to_code`
   * UCUM helpers
   **Commit/PR:** `2451942` • **Date:** 2025-08-29
-* [ ] Ensure each resource sets `meta.profile` from mapping or defaults
+ * [x] Ensure each resource sets `meta.profile` from mapping or defaults  \
+  **Commit/PR:** `89a814c` • **Date:** 2025‑08‑29
 
 **Notes/Blockers:** *(fill in)*
 
@@ -78,7 +78,8 @@ Use this doc to track delivery against the Codex handoff phases. Update checkbox
 
 ### Phase 4 — Reference Maps (US Core)
 
-* [ ] `maps/adt_uscore.yaml` (Patient, Encounter, Provenance)
+* [x] `maps/adt_uscore.yaml` (Patient, Encounter, Provenance)  \
+  **Commit/PR:** `89a814c` • **Date:** 2025‑08‑29
 * [ ] `maps/oru_uscore.yaml` (Patient, Observation[lab], DiagnosticReport, Specimen, Provenance)
 * [ ] Snapshot tests (`tests/data/fhir/gold/*.json`)
 
@@ -140,7 +141,7 @@ Use this doc to track delivery against the Codex handoff phases. Update checkbox
 ## Commit/PR Mapping (Append as You Merge)
 
 * PR #TBD — "Scaffold HL7→FHIR pipeline & CLI"; **Phase(s):** 0,1 • **Merged:** TBD • **SHA:** `58eb1e0`
-* PR # — "Mapping YAML loader + transforms"; **Phase(s):** 2 • **Merged:** TBD • **SHA:** 
+* PR # — "Mapping YAML loader + ADT map"; **Phase(s):** 2,4 • **Merged:** TBD • **SHA:** `89a814c`
 * PR # — "ADT US Core mapping + tests"; **Phase(s):** 4,5 • **Merged:** TBD • **SHA:** 
 * PR # — "ORU US Core mapping + tests"; **Phase(s):** 4,5 • **Merged:** TBD • **SHA:** 
 * PR # — "Posting + observability"; **Phase(s):** 7 • **Merged:** TBD • **SHA:** 
