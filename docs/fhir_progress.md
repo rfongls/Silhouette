@@ -82,7 +82,7 @@ Use this doc to track delivery against the Codex handoff phases. Update checkbox
 
 ### Phase 4 — Reference Maps (US Core)
 
- * [x] `maps/adt_uscore.yaml` (Patient, Encounter, Provenance)  \
+* [x] `maps/adt_uscore.yaml` (Patient, Encounter, Provenance)  \
   **Commit/PR:** `89a814c` • **Date:** 2025‑08‑29
 * [ ] `maps/oru_uscore.yaml` (Patient, Observation[lab], DiagnosticReport, Specimen, Provenance)
 * [ ] Snapshot tests (`tests/data/fhir/gold/*.json`)

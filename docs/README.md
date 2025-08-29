@@ -8,7 +8,7 @@
 - Interoperability quickstart: [interoperability/quickstart.md](./interoperability/quickstart.md)
 
 ## Core Capabilities
-- Agents controller (spawn/fork/merge): [Agents.md](./Agents.md)
+- Agent loop and tool invocation: [Agents.md](./Agents.md)
 - Offline mode (safe-mode, throttling): [Offline_Mode.md](./Offline_Mode.md)
 - Knowledge Distillation: [Knowledge_Distillation.md](./Knowledge_Distillation.md)
 - Quantization: [Quantization.md](./Quantization.md)

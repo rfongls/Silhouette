@@ -132,7 +132,6 @@ def _run_qa(msg: Dict[str, List[List[str]]], rules_path: str | None) -> Dict[str
     # Real implementation would apply validation rules; keep stub for now
     return {"errors": 0, "warnings": 0}
 
-
 def translate(
     input_path: str,
     rules: str | None = None,
@@ -167,6 +166,7 @@ def translate(
     qa = _run_qa(msg, rules)
 
     resources: List[Dict[str, Any]] = []
+
     for plan in spec.resourcePlan:
         res: Dict[str, Any] = {"resourceType": plan.resource}
         profile = plan.profile or defaults.get(plan.resource)

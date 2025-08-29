@@ -33,7 +33,7 @@ def test_pid3_to_identifiers():
 
     ident2 = pid3_to_identifiers("45678^^^&1.2.3.4&ISO^MR")
     assert ident2["system"] == "urn:oid:1.2.3.4"
-
+    
     ident3 = pid3_to_identifiers(" 7890 ^^ ^ ACME ^ MR ")
     assert ident3["value"] == "7890"
     assert ident3["system"] == "urn:id:ACME"
