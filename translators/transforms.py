@@ -18,7 +18,7 @@ def ts_to_date(ts: str) -> str:
     supplied, the returned string preserves that level of precision.
     """
     if not ts:
-        raise ValueError("empty timestamp")
+        return ""
     ts = ts.strip()
     if len(ts) >= 8:
         return datetime.strptime(ts[:8], "%Y%m%d").date().isoformat()
@@ -26,7 +26,7 @@ def ts_to_date(ts: str) -> str:
         return datetime.strptime(ts[:6], "%Y%m").strftime("%Y-%m")
     if len(ts) >= 4:
         return ts[:4]
-    raise ValueError("timestamp must have at least a year component")
+    return ""
 
 
 # --- TS parsing (use dateTime when TZ unknown) ---
@@ -170,7 +170,13 @@ def obr_status_to_report_status(value: str) -> str:
     return OBR25_TO_DR_STATUS.get((value or "").strip().upper(), "unknown")
 
 
-def obx_value_to_valuex(obx2: str, obx5: Any, obx6: dict | str | None = None) -> Dict[str, Any]:
+def obx_value_to_valuex(
+    obx2: str,
+    obx5: Any,
+    obx6: dict | str | None = None,
+    obx3_code: str | None = None,
+    metrics: Optional[Dict[str, int]] = None,
+) -> Dict[str, Any]:
     """
     Decide Observation.value[x] from OBX-2/5(/6):
       NM/SN -> valueQuantity (UCUM from OBX-6 if present)
@@ -189,6 +195,15 @@ def obx_value_to_valuex(obx2: str, obx5: Any, obx6: dict | str | None = None) ->
             parts = obx6.split("^")
             uc = parts[0] if parts else None
             ut = parts[1] if len(parts) > 1 else None
+        # fallback to LOINC defaults if OBX-6 absent/empty
+        if not uc or not ut:
+            details = loinc_details(obx3_code or "")
+            if details:
+                uc = uc or details.get("default_ucum_code") or None
+                ut = ut or details.get("default_unit_text") or None
+            elif metrics is not None:
+                # count a miss only if OBX-6 absent and no LOINC defaults
+                metrics["tx-miss"] = metrics.get("tx-miss", 0) + 1
         val = float(obx5) if str(obx5).replace(".", "", 1).isdigit() else obx5
         return {"valueQuantity": ucum_quantity(val, ut or uc or "", uc or None)}
     if t in {"CWE", "CE"}:

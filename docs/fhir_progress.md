@@ -113,9 +113,9 @@ Use this doc to track delivery against the Codex handoff phases. Update checkbox
 ### Phase 6 — Terminology MVP
 
 * [x] `terminology/sex_map.csv`, `pv1_class.csv`, `loinc_map.csv`  \
-  **Commit/PR:** `TBD` • **Date:** 2025-08-29
+  **Commit/PR:** `be80b8c` • **Date:** 2025-08-29
 * [x] Lookup helpers + metrics emission on misses  \
-  **Commit/PR:** `TBD` • **Date:** 2025-08-29
+  **Commit/PR:** `be80b8c` • **Date:** 2025-08-29
 
 **Notes/Blockers:** *(fill in)*
 
@@ -123,10 +123,12 @@ Use this doc to track delivery against the Codex handoff phases. Update checkbox
 
 ### Phase 7 — Posting & Observability
 
-* [ ] Transaction POST/PUT logic with retries & backoff
-* [ ] Dead‑letter writes on failure (request + response)
-* [ ] Metrics CSV (`out/metrics.csv`)
-* [ ] Structured logs per message
+* [ ] HTTP posting with retries and dead‑letter on failure
+* [ ] Conditional upserts preserved on Patient/Encounter
+* [ ] Metrics CSV with txMisses, postedCount and deadLetter columns
+* [ ] Structured JSON logs per message
+* [ ] Dry-run mode skips posting but writes artifacts
+* [ ] CLI wiring for `--server`, `$validate` gating
 
 **Notes/Blockers:** *(fill in)*
 

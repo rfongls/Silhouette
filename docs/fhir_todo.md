@@ -108,13 +108,42 @@ This plan drives a **US Core–compliant** HL7 v2 → FHIR pipeline using your e
 
 ---
 
-## Phase 7 — Posting & Observability
-- [ ] Support posting **transaction Bundles** with conditional upserts and retries.
-  - **Implement:** If `--server`, POST bundle; retry on 429/5xx with backoff; write failures to `out/deadletter/` (request+response).
-  - **DoD:** Success/failure recorded; retries observed in logs.
-- [ ] Emit **metrics CSV** and structured logs; dead-letter failed requests.
-  - **Implement:** `out/metrics.csv` columns: `messageId,type,qaStatus,fhirCount,posted,latencyMs,txMisses`.
-  - **DoD:** One row per message; logs include messageId and outcome.
+## Phase 7 — Posting & Observability — *CURRENT*
+
+- [ ] **HTTP posting with retries**
+  - Implement `silhouette_core/posting.py`:
+    - `post_transaction(bundle: dict, server: str, token: str, timeout=20, max_retries=3)`
+    - Retry on 429/5xx with exponential backoff + jitter; log attempt count and final outcome.
+    - Write failures to `out/deadletter/` as `<messageId>_request.json` and `<messageId>_response.json`.
+  - Acceptance: simulated 429 → retried; 2xx → success recorded.
+
+- [ ] **Conditional upserts preserved**
+  - Keep `PUT Patient?identifier=...` and `PUT Encounter?identifier=...` when IDs exist; `POST` otherwise.
+  - Acceptance: sandbox shows idempotent Patient/Encounter upserts across multiple runs.
+
+- [ ] **Metrics CSV**
+  - Create `out/metrics.csv` with headers:
+    ```
+    messageId,type,qaStatus,fhirCount,posted,latencyMs,txMisses,postedCount,deadLetter
+    ```
+  - Append one row per message; `txMisses` is the per-message total from transforms.
+  - Acceptance: file grows deterministically; values match logs.
+
+- [ ] **Structured logs**
+  - Log one JSON line per message:
+    ```
+    {"ts":"<iso>", "messageId":"...", "phase":"post", "posted":true, "status":201, "txMisses":2, "resourceCounts":{"Patient":1,"Observation":3}}
+    ```
+  - Acceptance: logs parsable by jq; errors include server response summary.
+
+- [ ] **Dry-run safety**
+  - If `--dry-run`, skip posting but still produce artifacts + metrics.
+  - Acceptance: run with and without `--dry-run`; only the latter hits server.
+
+- [ ] **CLI wiring**
+  - `silhouette fhir translate ... --server <URL> --token $FHIR_TOKEN` posts bundles unless `--dry-run`.
+  - `--validate` triggers server-side `$validate` before POST; failures route to dead-letter.
+  - Acceptance: bad resources fail `$validate`, do not post, and are captured in dead-letter.
 
 ---
 

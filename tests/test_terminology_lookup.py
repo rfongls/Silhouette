@@ -26,3 +26,10 @@ def test_tx_miss_metrics():
     assert metrics["tx-miss"] == 2
     loinc_details("0000-0", metrics)
     assert metrics["tx-miss"] == 3
+
+
+def test_reset_cache():
+    terminology.lookup_gender("F")
+    terminology.reset_cache()
+    assert terminology.lookup_gender("F") == "female"
+

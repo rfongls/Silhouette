@@ -37,6 +37,13 @@ def _loinc_map() -> Dict[str, Dict[str, str]]:
     return result
 
 
+def reset_cache() -> None:
+    """Clear all terminology caches (useful for tests or hot reloads)."""
+    _sex_map.cache_clear()
+    _pv1_class_map.cache_clear()
+    _loinc_map.cache_clear()
+
+
 def lookup_gender(code: str) -> Optional[str]:
     """Return FHIR administrative gender for a v2 code, or None if unknown."""
     return _sex_map().get((code or "").strip().upper())

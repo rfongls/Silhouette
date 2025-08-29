@@ -21,6 +21,7 @@ def test_ts_to_date():
     assert ts_to_date("2025") == "2025"
     assert ts_to_date("202501") == "2025-01"
     assert ts_to_date("20250130") == "2025-01-30"
+    assert ts_to_date("") == ""
 
 
 def test_ts_to_datetime_with_offset():
@@ -90,6 +91,12 @@ def test_oru_stub_transforms():
     assert obr_status_to_report_status("P") == "preliminary"
     vq = obx_value_to_valuex("NM", "42", "mg^milligram^http://unitsofmeasure.org")
     assert "valueQuantity" in vq and vq["valueQuantity"]["code"] == "mg"
+    metrics: dict[str, int] = {}
+    vq2 = obx_value_to_valuex("NM", "13.2", None, "789-8", metrics)
+    assert vq2["valueQuantity"]["code"] == "g/dL"
+    assert metrics == {}
+    vq3 = obx_value_to_valuex("NM", "1", None, "0000-0", metrics)
+    assert metrics["tx-miss"] == 1
     spm = spm_cwe_to_codeableconcept("1^Spec^http://snomed.info/sct")
     assert spm["coding"][0]["code"] == "1"
     assert to_oid_uri("1.2.3") == "urn:oid:1.2.3"
