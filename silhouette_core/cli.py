@@ -235,6 +235,38 @@ def fhir_translate_cmd(
     )
 
 
+@fhir_group.command("validate")
+@click.option("--in", "input_glob", required=True, help="NDJSON file(s) to validate")
+@click.option("--hapi", is_flag=True, help="Also run HAPI FHIR validator")
+def fhir_validate_cmd(input_glob, hapi):
+    """Validate NDJSON FHIR resources."""
+    import glob
+    import json
+    from validators.fhir_profile import (
+        validate_structural_with_pydantic,
+        validate_uscore_jsonschema,
+    )
+
+    paths = sorted(glob.glob(input_glob))
+    if not paths:
+        raise click.ClickException("No input files found")
+
+    for p in paths:
+        with open(p, "r", encoding="utf-8") as fh:
+            for line in fh:
+                line = line.strip()
+                if not line:
+                    continue
+                res = json.loads(line)
+                validate_uscore_jsonschema(res)
+                validate_structural_with_pydantic(res)
+
+    if hapi:
+        from validators import hapi_cli
+
+        hapi_cli.run(paths)
+
+
 @main.group("analyze")
 def analyze_group():
     """Static analyses."""

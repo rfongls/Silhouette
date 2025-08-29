@@ -1,0 +1,113 @@
+{
+  "resourceType": "Bundle",
+  "type": "transaction",
+  "entry": [
+    {
+      "fullUrl": "urn:uuid:6cc31897-e795-50b4-bfb7-ebd08a0d1d02",
+      "resource": {
+        "resourceType": "Patient",
+        "meta": {
+          "profile": [
+            "http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient"
+          ]
+        },
+        "identifier": [
+          {
+            "value": "123456",
+            "type": {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+                  "code": "MR"
+                }
+              ]
+            },
+            "system": "urn:id:HOSP"
+          }
+        ],
+        "name": [
+          {
+            "family": "DOE",
+            "given": [
+              "JOHN"
+            ]
+          }
+        ],
+        "birthDate": "1980-01-01",
+        "gender": "male",
+        "id": "6cc31897-e795-50b4-bfb7-ebd08a0d1d02"
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Patient?identifier=urn:id:HOSP|123456"
+      }
+    },
+    {
+      "fullUrl": "urn:uuid:a2f52088-92f6-5846-ab4a-af71012ff2bf",
+      "resource": {
+        "resourceType": "Encounter",
+        "meta": {
+          "profile": [
+            "http://hl7.org/fhir/us/core/StructureDefinition/us-core-encounter"
+          ]
+        },
+        "class": {
+          "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+          "code": "IMP"
+        },
+        "id": "a2f52088-92f6-5846-ab4a-af71012ff2bf"
+      },
+      "request": {
+        "method": "POST",
+        "url": "Encounter"
+      }
+    },
+    {
+      "fullUrl": "urn:uuid:3dcb48c7-34a3-5bdb-b1cb-44e34857beaf",
+      "resource": {
+        "resourceType": "Provenance",
+        "recorded": "IGNORE",
+        "agent": [
+          {
+            "type": {
+              "text": "Silhouette HL7\u2192FHIR"
+            }
+          }
+        ],
+        "target": [
+          {
+            "reference": "urn:uuid:6cc31897-e795-50b4-bfb7-ebd08a0d1d02"
+          },
+          {
+            "reference": "urn:uuid:a2f52088-92f6-5846-ab4a-af71012ff2bf"
+          }
+        ],
+        "entity": [
+          {
+            "role": "source",
+            "what": {
+              "identifier": {
+                "system": "urn:silhouette:message",
+                "value": "ae676e61-a5b4-552c-9663-a95e50f968fc"
+              }
+            }
+          },
+          {
+            "role": "derivation",
+            "what": {
+              "identifier": {
+                "system": "urn:silhouette:qa",
+                "value": "{\"errors\": 0, \"warnings\": 0}"
+              }
+            }
+          }
+        ],
+        "id": "3dcb48c7-34a3-5bdb-b1cb-44e34857beaf"
+      },
+      "request": {
+        "method": "POST",
+        "url": "Provenance"
+      }
+    }
+  ]
+}

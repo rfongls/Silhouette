@@ -8,10 +8,21 @@ from pathlib import Path
 from typing import Any, Dict, List
 from uuid import UUID, uuid4, uuid5, NAMESPACE_URL
 
+import requests
 import yaml
 
 from translators import transforms
 from translators.mapping_loader import load as load_map, MapSpec
+
+
+def _remote_validate(server: str, token: str | None, resource: Dict[str, Any]) -> None:
+    """POST resource to FHIR server's $validate endpoint."""
+    headers = {"Content-Type": "application/fhir+json"}
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
+    url = server.rstrip("/") + "/$validate"
+    resp = requests.post(url, json=resource, headers=headers)
+    resp.raise_for_status()
 
 
 def _parse_hl7(text: str) -> Dict[str, List[List[str]]]:
@@ -182,6 +193,17 @@ def translate(
                     v = fn(v)
                 _assign(res, rule.fhir_path, v)
         resources.append(res)
+
+    if validate:
+        from validators.fhir_profile import (
+            validate_structural_with_pydantic,
+            validate_uscore_jsonschema,
+        )
+        for res in resources:
+            validate_uscore_jsonschema(res)
+            validate_structural_with_pydantic(res)
+            if server:
+                _remote_validate(server, token, res)
 
     msg_uuid = UUID(_message_id(msg))
 
