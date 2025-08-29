@@ -23,13 +23,13 @@ Use this doc to track delivery against the Codex handoff phases. Update checkbox
 ### Phase 0 — Preflight & Scaffolding
 
 * [x] Create directories: `config/`, `maps/`, `terminology/`, `validators/`, `scripts/`, `out/{qa,fhir/{ndjson,bundles},deadletter}`  \
-  **Commit/PR:** `47de9831` • **Date:** 2025‑08‑29
+  **Commit/PR:** `58eb1e0` • **Date:** 2025‑08‑29
 * [x] Add skeleton `silhouette_core/pipelines/hl7_to_fhir.py`  \
-  **Commit/PR:** `47de9831` • **Date:** 2025‑08‑29
+  **Commit/PR:** `58eb1e0` • **Date:** 2025‑08‑29
 * [x] Wire `silhouette fhir translate` subcommand (help + flags)  \
-  **Commit/PR:** `47de9831` • **Date:** 2025‑08‑29
+  **Commit/PR:** `58eb1e0` • **Date:** 2025‑08‑29
 * [x] Add HL7 test fixtures (`tests/data/hl7/adt_a01.hl7`, `oru_r01.hl7`)  \
-  **Commit/PR:** `47de9831` • **Date:** 2025‑08‑29
+  **Commit/PR:** `58eb1e0` • **Date:** 2025‑08‑29
 
 **Notes/Blockers:** *(none yet)*
 
@@ -38,7 +38,7 @@ Use this doc to track delivery against the Codex handoff phases. Update checkbox
 ### Phase 1 — Pin the IG & Package Management
 
 * [x] Create `config/fhir_target.yaml` (package_id, version, fhir_version, default_profiles, terminology)  \
-  **Commit/PR:** `47de9831` • **Date:** 2025‑08‑29
+  **Commit/PR:** `58eb1e0` • **Date:** 2025‑08‑29
 * [ ] Implement `scripts/fhir_packages.py` to prefetch IG packages into `.fhir/packages/`  \
   **Owner:** *(fill in)*
 * [ ] CI step to assert packages present and versions pinned  \
@@ -138,7 +138,7 @@ Use this doc to track delivery against the Codex handoff phases. Update checkbox
 
 ## Commit/PR Mapping (Append as You Merge)
 
-* PR #TBD — "Scaffold HL7→FHIR pipeline & CLI"; **Phase(s):** 0,1 • **Merged:** TBD • **SHA:** `47de9831`
+* PR #TBD — "Scaffold HL7→FHIR pipeline & CLI"; **Phase(s):** 0,1 • **Merged:** TBD • **SHA:** `58eb1e0`
 * PR # — "Mapping YAML loader + transforms"; **Phase(s):** 2 • **Merged:** TBD • **SHA:** 
 * PR # — "ADT US Core mapping + tests"; **Phase(s):** 4,5 • **Merged:** TBD • **SHA:** 
 * PR # — "ORU US Core mapping + tests"; **Phase(s):** 4,5 • **Merged:** TBD • **SHA:** 
