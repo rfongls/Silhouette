@@ -8,7 +8,7 @@ Use this doc to track delivery against the Codex handoff phases. Update checkbox
 
 ## At‑a‑Glance Status
 
-* **Current Phase:** 3 — Orchestration & Bundle
+* **Current Phase:** 4 — Reference Maps (US Core)
 * **MVP Definition of Done:**
   * ADT^A01 → `Patient`, `Encounter`, `Provenance` (US Core‑valid)
   * ORU^R01 → `Patient`, `Observation`, `DiagnosticReport` (+`Specimen` if present) (US Core‑valid)
@@ -41,8 +41,8 @@ Use this doc to track delivery against the Codex handoff phases. Update checkbox
   **Commit/PR:** `58eb1e0` • **Date:** 2025‑08‑29
 * [x] Implement `scripts/fhir_packages.py` to prefetch IG packages into `.fhir/packages/`  \
   **Commit/PR:** `c34b83e` • **Date:** 2025‑08‑29
-* [ ] CI step to assert packages present and versions pinned  \
-  **Owner:** *(fill in)*
+* [x] CI step to assert packages present and versions pinned  \
+  **Commit/PR:** `TBD` • **Date:** 2025‑08‑29
 
 **Notes/Blockers:** *(add if tx server or Java availability is an issue)*
 

@@ -2,6 +2,8 @@
 
 This plan drives a **US Core–compliant** HL7 v2 → FHIR pipeline using your existing HL7 QA tool and the new FHIR skill.
 
+> **Note:** When implementing any item, also update [`docs/fhir_progress.md`](fhir_progress.md) to reflect completion.
+
 > Legend per item: **Implement** (what to build), **Test** (how to verify), **DoD** (Definition of Done).  
 > Items already completed per your commit summaries are pre-checked.
 
@@ -19,21 +21,21 @@ This plan drives a **US Core–compliant** HL7 v2 → FHIR pipeline using your e
 
 ---
 
-## Phase 1 — Pin the IG & Package Management
+## Phase 1 — Pin the IG & Package Management ✅
 - [x] Implement `scripts/fhir_packages.py` to prefetch packages into `.fhir/packages/` cache. _(commit: `c34b83e`)_
   - **Test:** Run script; verify cache directory populated; re-runs are no-ops.
   - **DoD:** Cache contains `<package>#<version>` folders; mismatches cause a clear error.
 - [x] Support configuration for package IDs, FHIR version, default profiles and terminology (via `config/fhir_target.yaml`).
   - **DoD:** US Core defaults set (Patient/Encounter/Observation canonical URLs).
-- [ ] Add CI step to assert packages are present with exact versions.
+- [x] Add CI step to assert packages are present with exact versions.
   - **Implement:** In CI, run `python scripts/fhir_packages.py --assert`.
   - **Test:** Break version intentionally → CI fails.
   - **DoD:** CI fails on drift; logs show expected vs actual.
 
 ---
 
-## Phase 2 — Mapping Framework & Transforms (in progress)
-- [ ] Extend translator to ingest **YAML mapping profiles** declaring target profile, resource plan, rules and MustSupport policy.
+## Phase 2 — Mapping Framework & Transforms ✅
+- [x] Extend translator to ingest **YAML mapping profiles** declaring target profile, resource plan, rules and MustSupport policy.
   - **Implement:** `translators/mapping_loader.py` with `MappingSpec`, `ResourcePlan`, `MappingRule` dataclasses; optional `extends` merge.
   - **Test:** Unit test loading minimal map + `extends`.
   - **DoD:** Loader returns typed objects; helpful errors on missing keys.
@@ -41,7 +43,7 @@ This plan drives a **US Core–compliant** HL7 v2 → FHIR pipeline using your e
   - **Add stubs for ORU (Phase 4 will fill):** `obx_cwe_to_codeableconcept`, `obx_status_to_obs_status`, `obr_status_to_report_status`, `obx_value_to_valuex`, `spm_cwe_to_codeableconcept`, `to_oid_uri`.
   - **Test:** `tests/test_transforms.py`—TS precision, gender edges, PV1 class mapping, PID-3 OID vs namespace, UCUM quantity.
   - **DoD:** All transform tests pass.
-- [ ] Ensure every resource sets **`meta.profile`** from mapping or configuration defaults.
+- [x] Ensure every resource sets **`meta.profile`** from mapping or configuration defaults.
   - **Implement:** After creating each resource, set `meta.profile=[...]`.
   - **Test:** Translate ADT; inspect JSON for `meta.profile`.
   - **DoD:** No resource emitted without `meta.profile`.
