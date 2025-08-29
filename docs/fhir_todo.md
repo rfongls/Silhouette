@@ -3,7 +3,7 @@
 This plan drives a **US Core–compliant** HL7 v2 → FHIR pipeline using your existing HL7 QA tool and the new FHIR skill.
 
 > **Note:** When implementing any item, also update [`docs/fhir_progress.md`](fhir_progress.md) to reflect completion.
-
+>
 > Legend per item: **Implement** (what to build), **Test** (how to verify), **DoD** (Definition of Done).  
 > Items already completed per your commit summaries are pre-checked.
 
@@ -68,17 +68,17 @@ This plan drives a **US Core–compliant** HL7 v2 → FHIR pipeline using your e
   - **Implement:** Map PID identifiers/name/DOB/gender; PV1 class, visit number, admit/discharge times; `must_support` policy; `conditional` templates.
   - **Test:** ADT fixture → Patient+Encounter; Patient.identifier type MR (v2-0203); Encounter.class ActCode; `period.start/end` when present.
   - **DoD:** Bundle contains US Core-profiled Patient/Encounter.
- - [x] Add `maps/oru_uscore.yaml` (Patient, DiagnosticReport, Observation[labs], Specimen).
-   - **Implement:** OBR/OBX/SPM mapping; `Observation.value[x]` builder (UCUM for quantities); category `laboratory`.
-   - **Test:** ORU fixture → DiagnosticReport with linked Observations via `result`; Observations have `status`, `code`, `effectiveDateTime`, and `value[x]`.
-   - **DoD:** Bundle contains US Core lab Observation(s) + DiagnosticReport.
+- [x] Add `maps/oru_uscore.yaml` (Patient, DiagnosticReport, Observation[labs], Specimen).
+  - **Implement:** OBR/OBX/SPM mapping; `Observation.value[x]` builder (UCUM for quantities); category `laboratory`.
+  - **Test:** ORU fixture → DiagnosticReport with linked Observations via `result`; Observations have `status`, `code`, `effectiveDateTime`, and `value[x]`.
+  - **DoD:** Bundle contains US Core lab Observation(s) + DiagnosticReport.
 - [x] Snapshot tests comparing generated JSON to gold files in `tests/data/fhir/`.
   - **Implement:** Gold files: `tests/data/fhir/gold/adt_a01_bundle.json`, `.../oru_r01_bundle.json`; snapshot compare (ignore volatile timestamps).
   - **DoD:** Tests pass; diffs highlight mapping regressions.
 
 ---
 
-## Phase 5 — Validation
+## Phase 5 — Validation ✅
 - [x] Local JSON Schema checks.
   - **Implement:** Lightweight shape validator; clear path to offending element.
   - **Test:** Introduce invalid field; expect failure.
@@ -95,7 +95,7 @@ This plan drives a **US Core–compliant** HL7 v2 → FHIR pipeline using your e
 
 ---
 
-## Phase 6 — Terminology MVP
+## Phase 6 — Terminology MVP ✅
 - > **Reminder:** Once these items are implemented, update [`docs/fhir_progress.md`](fhir_progress.md).
 - [x] Add lookup tables under `terminology/` for gender, encounter class and LOINC mappings.
   - **Implement:** Create `sex_map.csv` (`v2,admin_gender`), `pv1_class.csv` (`v2,act_code`), `loinc_map.csv` (`obx3_code,system,display,default_ucum_code,default_unit_text`).
@@ -109,41 +109,43 @@ This plan drives a **US Core–compliant** HL7 v2 → FHIR pipeline using your e
 ---
 
 ## Phase 7 — Posting & Observability — *CURRENT*
-
 - [ ] **HTTP posting with retries**
-  - Implement `silhouette_core/posting.py`:
-    - `post_transaction(bundle: dict, server: str, token: str, timeout=20, max_retries=3)`
-    - Retry on 429/5xx with exponential backoff + jitter; log attempt count and final outcome.
-    - Write failures to `out/deadletter/` as `<messageId>_request.json` and `<messageId>_response.json`.
-  - Acceptance: simulated 429 → retried; 2xx → success recorded.
-
+  - **Implement:** `silhouette_core/posting.py::post_transaction(bundle, server, token, timeout=20, max_retries=3)`
+    - Retry on 429/5xx with exponential backoff + jitter
+    - Log attempt count and final outcome
+    - On final failure, write request+response to `out/deadletter/`
+  - **Test:** Simulate 429 → retries occur; 2xx → success recorded
+  - **DoD:** Retries visible in logs; dead-letter contains `<messageId>_request.json` and `<messageId>_response.json` on failure
 - [ ] **Conditional upserts preserved**
-  - Keep `PUT Patient?identifier=...` and `PUT Encounter?identifier=...` when IDs exist; `POST` otherwise.
-  - Acceptance: sandbox shows idempotent Patient/Encounter upserts across multiple runs.
-
+  - **Implement:** Keep `PUT Patient?identifier=...` and `PUT Encounter?identifier=...` when identifiers exist; otherwise `POST`
+  - **Test:** Run translate+post twice against a sandbox → Patient/Encounter are idempotently updated, not duplicated
+  - **DoD:** Server history shows upserts for Patient/Encounter where identifiers present
+- [ ] **Server-side `$validate` gate (opt-in)**
+  - **Implement:** If `--validate`, call `$validate` on the transaction Bundle before POST; on any error, write to dead-letter and skip POST
+  - **Test:** Introduce a profile violation → `$validate` fails → bundle is not posted; dead-letter written
+  - **DoD:** Posting only occurs after successful validation when `--validate` is set
 - [ ] **Metrics CSV**
-  - Create `out/metrics.csv` with headers:
+  - **Implement:** Append one row per processed message to `out/metrics.csv` with columns:
     ```
     messageId,type,qaStatus,fhirCount,posted,latencyMs,txMisses,postedCount,deadLetter
     ```
-  - Append one row per message; `txMisses` is the per-message total from transforms.
-  - Acceptance: file grows deterministically; values match logs.
-
+  - **Test:** Translate a small corpus; verify counts and latency are populated; `txMisses` reflects transform metrics
+  - **DoD:** File grows deterministically; values match logs
 - [ ] **Structured logs**
-  - Log one JSON line per message:
+  - **Implement:** One JSON log line per message, e.g.:
     ```
-    {"ts":"<iso>", "messageId":"...", "phase":"post", "posted":true, "status":201, "txMisses":2, "resourceCounts":{"Patient":1,"Observation":3}}
+    {"ts":"<iso>","messageId":"...","phase":"post","posted":true,"status":201,"txMisses":2,"resourceCounts":{"Patient":1,"Observation":3}}
     ```
-  - Acceptance: logs parsable by jq; errors include server response summary.
-
+  - **Test:** `jq` can parse logs; failures include server status and a brief response summary
+  - **DoD:** Logs enable quick triage of posting outcomes
 - [ ] **Dry-run safety**
-  - If `--dry-run`, skip posting but still produce artifacts + metrics.
-  - Acceptance: run with and without `--dry-run`; only the latter hits server.
-
+  - **Implement:** If `--dry-run`, skip network calls; still write artifacts + metrics
+  - **Test:** Compare runs with and without `--dry-run`; only the latter performs HTTP
+  - **DoD:** No HTTP traffic when `--dry-run` is set
 - [ ] **CLI wiring**
-  - `silhouette fhir translate ... --server <URL> --token $FHIR_TOKEN` posts bundles unless `--dry-run`.
-  - `--validate` triggers server-side `$validate` before POST; failures route to dead-letter.
-  - Acceptance: bad resources fail `$validate`, do not post, and are captured in dead-letter.
+  - **Implement:** `silhouette fhir translate ... --server <URL> --token $FHIR_TOKEN [--validate] [--dry-run]`
+  - **Test:** Flags honored; informative errors on missing token/server
+  - **DoD:** End-to-end translate+validate+post flow works via CLI
 
 ---
 
@@ -187,3 +189,4 @@ This plan drives a **US Core–compliant** HL7 v2 → FHIR pipeline using your e
 - Prefer **`dateTime`** when timezone is unknown; use **`instant`** only when TZ present *and* the element requires it.
 - **Encounter conditional upsert** only when a stable identifier (e.g., PV1-19) is present; otherwise POST Encounter.
 - Use **`dataAbsentReason`** only where profiles allow; otherwise omit the element and dead-letter with a MustSupport reason.
+````
