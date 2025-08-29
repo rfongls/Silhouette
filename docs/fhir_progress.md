@@ -52,13 +52,14 @@ Use this doc to track delivery against the Codex handoff phases. Update checkbox
 
 * [ ] YAML mapping loader (profile, resourcePlan, rules, MustSupport policy)  \
   **Branch:** *(fill in)*
-* [ ] `translators/transforms.py` with unit tests:
+* [x] `translators/transforms.py` with unit tests:
   * `ts_to_date`, `ts_to_instant`
   * `pid3_to_identifiers`
   * `name_family_given`
   * `sex_to_gender`
   * `pv1_class_to_code`
   * UCUM helpers
+  **Commit/PR:** `2451942` • **Date:** 2025-08-29
 * [ ] Ensure each resource sets `meta.profile` from mapping or defaults
 
 **Notes/Blockers:** *(fill in)*
