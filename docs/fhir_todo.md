@@ -95,7 +95,7 @@ This plan drives a **US Core–compliant** HL7 v2 → FHIR pipeline using your e
 
 ---
 
-## Phase 6 — Terminology MVP ✅
+## Phase 6 — Terminology MVP
 - > **Reminder:** Once these items are implemented, update [`docs/fhir_progress.md`](fhir_progress.md).
 - [x] Add lookup tables under `terminology/` for gender, encounter class and LOINC mappings.
   - **Implement:** Create `sex_map.csv` (`v2,admin_gender`), `pv1_class.csv` (`v2,act_code`), `loinc_map.csv` (`obx3_code,system,display,default_ucum_code,default_unit_text`).
@@ -108,44 +108,42 @@ This plan drives a **US Core–compliant** HL7 v2 → FHIR pipeline using your e
 
 ---
 
-## Phase 7 — Posting & Observability — *CURRENT*
-- [ ] **HTTP posting with retries**
-  - **Implement:** `silhouette_core/posting.py::post_transaction(bundle, server, token, timeout=20, max_retries=3)`
-    - Retry on 429/5xx with exponential backoff + jitter
-    - Log attempt count and final outcome
-    - On final failure, write request+response to `out/deadletter/`
-  - **Test:** Simulate 429 → retries occur; 2xx → success recorded
-  - **DoD:** Retries visible in logs; dead-letter contains `<messageId>_request.json` and `<messageId>_response.json` on failure
-- [ ] **Conditional upserts preserved**
-  - **Implement:** Keep `PUT Patient?identifier=...` and `PUT Encounter?identifier=...` when identifiers exist; otherwise `POST`
-  - **Test:** Run translate+post twice against a sandbox → Patient/Encounter are idempotently updated, not duplicated
-  - **DoD:** Server history shows upserts for Patient/Encounter where identifiers present
-- [ ] **Server-side `$validate` gate (opt-in)**
-  - **Implement:** If `--validate`, call `$validate` on the transaction Bundle before POST; on any error, write to dead-letter and skip POST
-  - **Test:** Introduce a profile violation → `$validate` fails → bundle is not posted; dead-letter written
-  - **DoD:** Posting only occurs after successful validation when `--validate` is set
-- [ ] **Metrics CSV**
-  - **Implement:** Append one row per processed message to `out/metrics.csv` with columns:
+## Phase 7 — Posting & Observability 
+
+- [x] **HTTP posting with retries**
+  - Implement `silhouette_core/posting.py`:
+    - `post_transaction(bundle: dict, server: str, token: str, timeout=20, max_retries=3)`
+    - Retry on 429/5xx with exponential backoff + jitter; log attempt count and final outcome.
+    - Write failures to `out/deadletter/` as `<messageId>_request.json` and `<messageId>_response.json`.
+  - Acceptance: simulated 429 → retried; 2xx → success recorded.
+
+- [x] **Conditional upserts preserved**
+  - Keep `PUT Patient?identifier=...` and `PUT Encounter?identifier=...` when IDs exist; `POST` otherwise.
+  - Acceptance: sandbox shows idempotent Patient/Encounter upserts across multiple runs.
+
+- [x] **Metrics CSV**
+  - Create `out/metrics.csv` with headers:
     ```
     messageId,type,qaStatus,fhirCount,posted,latencyMs,txMisses,postedCount,deadLetter
     ```
-  - **Test:** Translate a small corpus; verify counts and latency are populated; `txMisses` reflects transform metrics
-  - **DoD:** File grows deterministically; values match logs
-- [ ] **Structured logs**
-  - **Implement:** One JSON log line per message, e.g.:
+  - Append one row per message; `txMisses` is the per-message total from transforms.
+  - Acceptance: file grows deterministically; values match logs.
+
+- [x] **Structured logs**
+  - Log one JSON line per message:
     ```
-    {"ts":"<iso>","messageId":"...","phase":"post","posted":true,"status":201,"txMisses":2,"resourceCounts":{"Patient":1,"Observation":3}}
+    {"ts":"<iso>", "messageId":"...", "phase":"post", "posted":true, "status":201, "txMisses":2, "resourceCounts":{"Patient":1,"Observation":3}}
     ```
-  - **Test:** `jq` can parse logs; failures include server status and a brief response summary
-  - **DoD:** Logs enable quick triage of posting outcomes
-- [ ] **Dry-run safety**
-  - **Implement:** If `--dry-run`, skip network calls; still write artifacts + metrics
-  - **Test:** Compare runs with and without `--dry-run`; only the latter performs HTTP
-  - **DoD:** No HTTP traffic when `--dry-run` is set
-- [ ] **CLI wiring**
-  - **Implement:** `silhouette fhir translate ... --server <URL> --token $FHIR_TOKEN [--validate] [--dry-run]`
-  - **Test:** Flags honored; informative errors on missing token/server
-  - **DoD:** End-to-end translate+validate+post flow works via CLI
+  - Acceptance: logs parsable by jq; errors include server response summary.
+
+- [x] **Dry-run safety**
+  - If `--dry-run`, skip posting but still produce artifacts + metrics.
+  - Acceptance: run with and without `--dry-run`; only the latter hits server.
+
+- [x] **CLI wiring**
+  - `silhouette fhir translate ... --server <URL> --token $FHIR_TOKEN` posts bundles unless `--dry-run`.
+  - `--validate` triggers server-side `$validate` before POST; failures route to dead-letter.
+  - Acceptance: bad resources fail `$validate`, do not post, and are captured in dead-letter.
 
 ---
 

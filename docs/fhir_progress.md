@@ -100,6 +100,8 @@ Use this doc to track delivery against the Codex handoff phases. Update checkbox
   **Commit/PR:** `TBD` • **Date:** 2025-08-29
 * [x] Validation runbook (`docs/fhir/validation.md`)  \
   **Commit/PR:** `TBD` • **Date:** 2025-08-29
+* [x] Validation runbook (`docs/fhir/validation.md`)  \\
+  **Commit/PR:** `TBD` • **Date:** 2025-08-29
 
 **Notes/Blockers:** *(fill in)*
 
@@ -118,13 +120,18 @@ Use this doc to track delivery against the Codex handoff phases. Update checkbox
 
 ### Phase 7 — Posting & Observability
 
-* [ ] HTTP posting with retries and dead-letter on failure
-* [ ] Conditional upserts preserved on Patient/Encounter
-* [ ] Server-side `$validate` gate (opt-in) prior to POST
-* [ ] Metrics CSV with `messageId,type,qaStatus,fhirCount,posted,latencyMs,txMisses,postedCount,deadLetter`
-* [ ] Structured JSON logs per message
-* [ ] Dry-run mode skips posting but writes artifacts
-* [ ] CLI wiring for `--server`/`--token` with optional `$validate` gating
+* [x] HTTP posting with retries and dead‑letter on failure  \\
+  **Commit/PR:** `TBD` • **Date:** 2025-08-29
+* [x] Conditional upserts preserved on Patient/Encounter  \\
+  **Commit/PR:** `TBD` • **Date:** 2025-08-29
+* [x] Metrics CSV with txMisses, postedCount and deadLetter columns  \\
+  **Commit/PR:** `TBD` • **Date:** 2025-08-29
+* [x] Structured JSON logs per message  \\
+  **Commit/PR:** `TBD` • **Date:** 2025-08-29
+* [x] Dry-run mode skips posting but writes artifacts  \\
+  **Commit/PR:** `TBD` • **Date:** 2025-08-29
+* [x] CLI wiring for `--server`, `$validate` gating  \\
+  **Commit/PR:** `TBD` • **Date:** 2025-08-29
 
 **Notes/Blockers:** *(fill in)*
 
