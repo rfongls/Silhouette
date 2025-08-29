@@ -282,7 +282,7 @@ See [RELEASE.md](../RELEASE.md) for full checklist.
 ## 11. Where to Go Next
 
 * [README.md](../README.md) \u2192 Overview
-* [PHASES.md](PHASES.md) \u2192 Roadmap
+* [PHASES.md](../PHASES.md) \u2192 Roadmap
 * [MILESTONES.md](../MILESTONES.md) \u2192 PR details
 * [COMPLIANCE.md](../COMPLIANCE.md) \u2192 Governance
 * [RELEASE.md](../RELEASE.md) \u2192 Release playbook
