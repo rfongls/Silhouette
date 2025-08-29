@@ -8,7 +8,7 @@ Use this doc to track delivery against the Codex handoff phases. Update checkbox
 
 ## At‑a‑Glance Status
 
-* **Current Phase:** 6 — Terminology MVP
+* **Current Phase:** 7 — Posting & Observability
 * **MVP Definition of Done:**
   * ADT^A01 → `Patient`, `Encounter`, `Provenance` (US Core‑valid)
   * ORU^R01 → `Patient`, `Observation`, `DiagnosticReport` (+`Specimen` if present) (US Core‑valid)
@@ -103,6 +103,8 @@ Use this doc to track delivery against the Codex handoff phases. Update checkbox
   **Commit/PR:** `TBD` • **Date:** 2025-08-29
 * [x] Optional remote `$validate` before posting  \\
   **Commit/PR:** `TBD` • **Date:** 2025-08-29
+* [x] Validation runbook (`docs/fhir/validation.md`)  \\
+  **Commit/PR:** `TBD` • **Date:** 2025-08-29
 
 **Notes/Blockers:** *(fill in)*
 
@@ -110,8 +112,10 @@ Use this doc to track delivery against the Codex handoff phases. Update checkbox
 
 ### Phase 6 — Terminology MVP
 
-* [ ] `terminology/sex_map.csv`, `pv1_class.csv`, `loinc_map.csv`
-* [ ] Lookup helpers + metrics emission on misses
+* [x] `terminology/sex_map.csv`, `pv1_class.csv`, `loinc_map.csv`  \
+  **Commit/PR:** `TBD` • **Date:** 2025-08-29
+* [x] Lookup helpers + metrics emission on misses  \
+  **Commit/PR:** `TBD` • **Date:** 2025-08-29
 
 **Notes/Blockers:** *(fill in)*
 
