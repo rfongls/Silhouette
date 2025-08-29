@@ -24,24 +24,28 @@ resourcePlan:
         transform: "obx_cwe_to_codeableconcept"
       - hl7_path: "OBR.7"
         fhir_path: "effectiveDateTime"
-        transform: "ts_to_instant"
+        transform: "ts_to_datetime"
       - hl7_path: "OBR.25"
         fhir_path: "status"
         transform: "obr_status_to_report_status"
   - resource: Observation
     profile: "http://hl7.org/fhir/us/core/StructureDefinition/us-core-observation-lab"
     rules:
+      - hl7_path: "-"
+        fhir_path: "category[0]"
+        transform: "obs_category_laboratory"
       - hl7_path: "OBX.3"
         fhir_path: "code"
         transform: "obx_cwe_to_codeableconcept"
-      - hl7_path: "OBX.5"
-        fhir_path: "valueString"
+      - hl7_path: "OBX.2|OBX.5|OBX.6"
+        fhir_path: "value[x]"
+
         transform: "obx_value_to_valuex"
       - hl7_path: "OBX.11"
         fhir_path: "status"
         transform: "obx_status_to_obs_status"
   - resource: Specimen
-    profile: "http://hl7.org/fhir/us/core/StructureDefinition/us-core-specimen"
+    profile: "http://hl7.org/fhir/StructureDefinition/Specimen"
     rules:
       - hl7_path: "SPM.2"
         fhir_path: "id"

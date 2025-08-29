@@ -53,7 +53,7 @@ Use this doc to track delivery against the Codex handoff phases. Update checkbox
  * [x] YAML mapping loader (profile, resourcePlan, rules, MustSupport policy)  \
   **Commit/PR:** `89a814c` • **Date:** 2025‑08‑29
 * [x] `translators/transforms.py` with unit tests:
-  * `ts_to_date`, `ts_to_instant`
+  * `ts_to_date`, `ts_to_datetime`
   * `pid3_to_identifiers`
   * `name_family_given`
   * `sex_to_gender`

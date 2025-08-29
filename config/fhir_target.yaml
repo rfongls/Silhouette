@@ -5,6 +5,9 @@ default_profiles:
   Patient: "http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient"
   Encounter: "http://hl7.org/fhir/us/core/StructureDefinition/us-core-encounter"
   Observation: "http://hl7.org/fhir/us/core/StructureDefinition/us-core-observation-lab"
+  DiagnosticReport: "http://hl7.org/fhir/us/core/StructureDefinition/us-core-diagnosticreport-lab"
+  Specimen: "http://hl7.org/fhir/StructureDefinition/Specimen"
+  Provenance: "http://hl7.org/fhir/StructureDefinition/Provenance"
 terminology:
   use_local_tx: true
   tx_server: "https://tx.fhir.org/r4"
