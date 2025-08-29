@@ -7,7 +7,8 @@ Use this doc to track delivery against the Codex handoff phases. Update checkbox
 ---
 
 ## At‑a‑Glance Status
-* **Current Phase:** 2 — Mapping Framework & Transforms
+
+* **Current Phase:** 3 — Orchestration & Bundle
 * **MVP Definition of Done:**
   * ADT^A01 → `Patient`, `Encounter`, `Provenance` (US Core‑valid)
   * ORU^R01 → `Patient`, `Observation`, `DiagnosticReport` (+`Specimen` if present) (US Core‑valid)
@@ -68,9 +69,12 @@ Use this doc to track delivery against the Codex handoff phases. Update checkbox
 
 ### Phase 3 — Orchestration & Bundle
 
-* [ ] Orchestrate pipeline: HL7 ingest → QA → Map → MustSupport → Bundle (transaction) → Provenance → Artifacts
-* [ ] Deterministic `urn:uuid:` `fullUrl`s and conditional upserts (PUT for Patient/Encounter)
-* [ ] CLI flags: `--map`, `--rules`, `--bundle`, `--out`, `--dry-run`, `--server`, `--token`, `--validate`
+* [x] Orchestrate pipeline: HL7 ingest → QA → Map → MustSupport → Bundle (transaction) → Provenance → Artifacts  \
+  **Commit/PR:** `025c9cb` • **Date:** 2025‑08‑29
+* [x] Deterministic `urn:uuid:` `fullUrl`s and conditional upserts (PUT for Patient/Encounter)  \
+  **Commit/PR:** `025c9cb` • **Date:** 2025‑08‑29
+* [x] CLI flags: `--map`, `--rules`, `--bundle`, `--out`, `--dry-run`, `--server`, `--token`, `--validate`  \
+  **Commit/PR:** `025c9cb` • **Date:** 2025‑08‑29
 
 **Notes/Blockers:** *(fill in)*
 
@@ -142,9 +146,10 @@ Use this doc to track delivery against the Codex handoff phases. Update checkbox
 
 * PR #TBD — "Scaffold HL7→FHIR pipeline & CLI"; **Phase(s):** 0,1 • **Merged:** TBD • **SHA:** `58eb1e0`
 * PR # — "Mapping YAML loader + ADT map"; **Phase(s):** 2,4 • **Merged:** TBD • **SHA:** `89a814c`
-* PR # — "ADT US Core mapping + tests"; **Phase(s):** 4,5 • **Merged:** TBD • **SHA:** 
-* PR # — "ORU US Core mapping + tests"; **Phase(s):** 4,5 • **Merged:** TBD • **SHA:** 
-* PR # — "Posting + observability"; **Phase(s):** 7 • **Merged:** TBD • **SHA:** 
+* PR # — "Orchestrate HL7→FHIR pipeline"; **Phase(s):** 3 • **Merged:** TBD • **SHA:** `025c9cb`
+* PR # — "ADT US Core mapping + tests"; **Phase(s):** 4,5 • **Merged:** TBD • **SHA:**
+* PR # — "ORU US Core mapping + tests"; **Phase(s):** 4,5 • **Merged:** TBD • **SHA:**
+* PR # — "Posting + observability"; **Phase(s):** 7 • **Merged:** TBD • **SHA:**
 
 ---
 

@@ -6,7 +6,7 @@ from collections import defaultdict
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List
-from uuid import uuid4
+from uuid import UUID, uuid4, uuid5, NAMESPACE_URL
 
 import yaml
 
@@ -113,6 +113,25 @@ def _parse_index(token: str) -> tuple[str, int | str | None]:
     return token, None
 
 
+def _message_id(msg: Dict[str, List[List[str]]]) -> str:
+    """Derive a deterministic message identifier from the MSH segment."""
+    msh = msg.get("MSH", [])
+    if msh:
+        line = "|".join(msh[0])
+        return str(uuid5(NAMESPACE_URL, line))
+    return str(uuid4())
+
+
+def _full_url(base: UUID, resource: str, index: int) -> str:
+    """Deterministic urn:uuid for bundle entries."""
+    return f"urn:uuid:{uuid5(base, f'{resource}/{index}')}"
+
+
+def _run_qa(msg: Dict[str, List[List[str]]], rules_path: str | None) -> Dict[str, int]:
+    """Placeholder QA hook."""
+    # Real implementation would apply validation rules; keep stub for now
+    return {"errors": 0, "warnings": 0}
+
 def translate(
     input_path: str,
     rules: str | None = None,
@@ -144,6 +163,7 @@ def translate(
 
     text = Path(input_path).read_text(encoding="utf-8")
     msg = _parse_hl7(text)
+    qa = _run_qa(msg, rules)
 
     resources: List[Dict[str, Any]] = []
 
@@ -163,17 +183,47 @@ def translate(
                 _assign(res, rule.fhir_path, v)
         resources.append(res)
 
-    # Provenance stub
-    provenance = {
+    msg_uuid = UUID(_message_id(msg))
+
+    entries: List[tuple[Dict[str, Any], str]] = []
+    for idx, r in enumerate(resources):
+        fu = _full_url(msg_uuid, r["resourceType"], idx)
+        r["id"] = fu.split(":")[-1]
+        entries.append((r, fu))
+
+    prov = {
         "resourceType": "Provenance",
         "recorded": datetime.now(tz=timezone.utc).isoformat().replace("+00:00", "Z"),
         "agent": [{"type": {"text": "Silhouette HL7→FHIR"}}],
+        "target": [{"reference": fu} for _, fu in entries],
+        "entity": [
+            {
+                "role": "source",
+                "what": {
+                    "identifier": {
+                        "system": "urn:silhouette:message",
+                        "value": str(msg_uuid),
+                    }
+                },
+            },
+            {
+                "role": "derivation",
+                "what": {
+                    "identifier": {
+                        "system": "urn:silhouette:qa",
+                        "value": json.dumps(qa),
+                    }
+                },
+            },
+        ],
     }
-    resources.append(provenance)
+    prov_fu = _full_url(msg_uuid, "Provenance", len(entries))
+    prov["id"] = prov_fu.split(":")[-1]
+    entries.append((prov, prov_fu))
 
     # Write NDJSON
     by_type: Dict[str, List[Dict[str, Any]]] = defaultdict(list)
-    for r in resources:
+    for r, _ in entries:
         by_type[r["resourceType"]].append(r)
     for rt, items in by_type.items():
         p = ndjson_dir / f"{rt}.ndjson"
@@ -182,10 +232,13 @@ def translate(
                 fh.write(json.dumps(item) + "\n")
 
     if bundle == "transaction":
-        bundle_res: Dict[str, Any] = {"resourceType": "Bundle", "type": "transaction", "entry": []}
-        for r in resources:
-            full_url = f"urn:uuid:{uuid4()}"
-            entry = {"fullUrl": full_url, "resource": r, "request": {}}
+        bundle_res: Dict[str, Any] = {
+            "resourceType": "Bundle",
+            "type": "transaction",
+            "entry": [],
+        }
+        for r, fu in entries:
+            entry = {"fullUrl": fu, "resource": r, "request": {}}
             rt = r["resourceType"]
             if rt == "Patient":
                 ident = r.get("identifier", [{}])[0]
@@ -196,7 +249,16 @@ def translate(
                     "url": f"Patient?identifier={system}|{value}",
                 }
             elif rt == "Encounter":
-                entry["request"] = {"method": "POST", "url": "Encounter"}
+                ident = r.get("identifier", [{}])[0]
+                system = ident.get("system", "")
+                value = ident.get("value", "")
+                if system and value:
+                    entry["request"] = {
+                        "method": "PUT",
+                        "url": f"Encounter?identifier={system}|{value}",
+                    }
+                else:
+                    entry["request"] = {"method": "POST", "url": "Encounter"}
             else:
                 entry["request"] = {"method": "POST", "url": rt}
             bundle_res["entry"].append(entry)
