@@ -1,7 +1,9 @@
 """Minimal HL7 v2 → FHIR translation pipeline."""
 from __future__ import annotations
 
+import csv
 import json
+import logging
 from collections import defaultdict
 from datetime import datetime, timezone
 from pathlib import Path
@@ -13,6 +15,10 @@ import yaml
 
 from translators import transforms
 from translators.mapping_loader import load as load_map, MapSpec
+from silhouette_core.posting import post_transaction
+
+logging.basicConfig(level=logging.INFO, format="%(message)s")
+logger = logging.getLogger(__name__)
 
 
 def _remote_validate(server: str, token: str | None, resource: Dict[str, Any]) -> None:
@@ -174,7 +180,9 @@ def translate(
 
     text = Path(input_path).read_text(encoding="utf-8")
     msg = _parse_hl7(text)
+    msg_type = msg.get("MSH", [])[0][8] if msg.get("MSH") and len(msg["MSH"][0]) > 8 else ""
     qa = _run_qa(msg, rules)
+    metrics: Dict[str, int] = {}
 
     resources: List[Dict[str, Any]] = []
 
@@ -192,7 +200,10 @@ def translate(
                     vals.append(ext[0] if ext else None)
                 if rule.transform:
                     fn = getattr(transforms, rule.transform)
-                    v = fn(*vals)
+                    try:
+                        v = fn(*vals, metrics=metrics)
+                    except TypeError:
+                        v = fn(*vals)
                 else:
                     v = vals[0]
                 if v not in ("", None, {}):
@@ -213,7 +224,16 @@ def translate(
                         continue
                 if rule.transform:
                     fn = getattr(transforms, rule.transform)
-                    v = fn() if rule.hl7_path == "-" else fn(v)
+                    if rule.hl7_path == "-":
+                        try:
+                            v = fn(metrics=metrics)
+                        except TypeError:
+                            v = fn()
+                    else:
+                        try:
+                            v = fn(v, metrics=metrics)
+                        except TypeError:
+                            v = fn(v)
                 if v == "" or v is None or v == {}:
                     continue
                 if rule.fhir_path.endswith("[x]") and isinstance(v, dict):
@@ -307,6 +327,7 @@ def translate(
             "resourceType": "Bundle",
             "type": "transaction",
             "entry": [],
+            "id": str(msg_uuid),
         }
         for r, fu in entries:
             entry = {"fullUrl": fu, "resource": r, "request": {}}
@@ -335,3 +356,81 @@ def translate(
             bundle_res["entry"].append(entry)
         out_path = bundle_dir / f"{Path(input_path).stem}.json"
         out_path.write_text(json.dumps(bundle_res, indent=2), encoding="utf-8")
+
+        resource_counts = {k: len(v) for k, v in by_type.items()}
+        fhir_count = len(entries)
+        tx_miss = metrics.get("tx-miss", 0)
+        qa_status = "ok" if qa.get("errors", 0) == 0 else "fail"
+        posted = False
+        status = 0
+        latency_ms = 0
+        dead_letter = False
+
+        if server and not dry_run:
+            if validate:
+                try:
+                    _remote_validate(server, token, bundle_res)
+                except requests.HTTPError as exc:
+                    dead_letter = True
+                    resp = exc.response
+                    dl = base / "deadletter"
+                    (dl / f"{msg_uuid}_request.json").write_text(
+                        json.dumps(bundle_res, indent=2), encoding="utf-8"
+                    )
+                    body = resp.text if resp is not None else str(exc)
+                    (dl / f"{msg_uuid}_response.json").write_text(body, encoding="utf-8")
+                    status = resp.status_code if resp is not None else 0
+                else:
+                    posted, status, latency_ms = post_transaction(
+                        bundle_res, server, token, deadletter_dir=str(base / "deadletter")
+                    )
+                    dead_letter = not posted
+            else:
+                posted, status, latency_ms = post_transaction(
+                    bundle_res, server, token, deadletter_dir=str(base / "deadletter")
+                )
+                dead_letter = not posted
+
+        metrics_path = base / "metrics.csv"
+        if not metrics_path.exists():
+            with metrics_path.open("w", newline="", encoding="utf-8") as fh:
+                writer = csv.writer(fh)
+                writer.writerow(
+                    [
+                        "messageId",
+                        "type",
+                        "qaStatus",
+                        "fhirCount",
+                        "posted",
+                        "latencyMs",
+                        "txMisses",
+                        "postedCount",
+                        "deadLetter",
+                    ]
+                )
+        with metrics_path.open("a", newline="", encoding="utf-8") as fh:
+            writer = csv.writer(fh)
+            writer.writerow(
+                [
+                    str(msg_uuid),
+                    msg_type,
+                    qa_status,
+                    fhir_count,
+                    posted,
+                    latency_ms,
+                    tx_miss,
+                    fhir_count if posted else 0,
+                    dead_letter,
+                ]
+            )
+
+        log_entry = {
+            "ts": datetime.now(tz=timezone.utc).isoformat().replace("+00:00", "Z"),
+            "messageId": str(msg_uuid),
+            "phase": "post",
+            "posted": posted,
+            "status": status,
+            "txMisses": tx_miss,
+            "resourceCounts": resource_counts,
+        }
+        logger.info(json.dumps(log_entry))

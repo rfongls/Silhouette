@@ -5,6 +5,8 @@ from datetime import datetime
 from typing import Any, Dict, Optional
 import re
 
+from silhouette_core import terminology
+
 _V2_IDENTIFIER_SYSTEM = "http://terminology.hl7.org/CodeSystem/v2-0203"
 _V3_ACT_CODE_SYSTEM = "http://terminology.hl7.org/CodeSystem/v3-ActCode"
 _UCUM_SYSTEM = "http://unitsofmeasure.org"
@@ -16,7 +18,7 @@ def ts_to_date(ts: str) -> str:
     supplied, the returned string preserves that level of precision.
     """
     if not ts:
-        raise ValueError("empty timestamp")
+        return ""
     ts = ts.strip()
     if len(ts) >= 8:
         return datetime.strptime(ts[:8], "%Y%m%d").date().isoformat()
@@ -24,7 +26,7 @@ def ts_to_date(ts: str) -> str:
         return datetime.strptime(ts[:6], "%Y%m").strftime("%Y-%m")
     if len(ts) >= 4:
         return ts[:4]
-    raise ValueError("timestamp must have at least a year component")
+    return ""
 
 
 # --- TS parsing (use dateTime when TZ unknown) ---
@@ -67,26 +69,39 @@ def name_family_given(value: str) -> Dict[str, Any]:
     if len(comps) > 1 and comps[1]:
         name["given"] = [comps[1]]
     return name
-_SEX_MAP = {"M": "male", "F": "female", "O": "other", "U": "unknown"}
 
-def sex_to_gender(value: str) -> str:
-    """Map HL7 administrative sex codes to FHIR gender."""
-    if not value:
-        return "unknown"
-    return _SEX_MAP.get(value.upper(), "unknown")
-_PV1_CLASS_MAP = {
-    "I": "IMP",
-    "O": "AMB",
-    "E": "EMER",
-    "R": "AMB",
-    "B": "IMP",  # newborn treated as inpatient for class
-}
+def sex_to_gender(value: str, metrics: Optional[Dict[str, int]] = None) -> str:
+    """Map HL7 administrative sex codes to FHIR gender.
 
-def pv1_class_to_code(value: str) -> Dict[str, str] | dict:
-    """Map PV1-2 to Encounter.class; omit if unknown."""
-    v = (value or "").upper()
-    code = _PV1_CLASS_MAP.get(v)
-    return {"system": _V3_ACT_CODE_SYSTEM, "code": code} if code else {}
+    Increments ``metrics['tx-miss']`` when code is missing.
+    """
+    gender = terminology.lookup_gender(value)
+    if gender:
+        return gender
+    if metrics is not None:
+        metrics["tx-miss"] = metrics.get("tx-miss", 0) + 1
+    return "unknown"
+
+def pv1_class_to_code(value: str, metrics: Optional[Dict[str, int]] = None) -> Dict[str, str] | dict:
+    """Map PV1-2 to Encounter.class; omit if unknown.
+
+    Records a ``tx-miss`` metric when the class code is unmapped.
+    """
+    code = terminology.lookup_encounter_class(value)
+    if code:
+        return {"system": _V3_ACT_CODE_SYSTEM, "code": code}
+    if metrics is not None:
+        metrics["tx-miss"] = metrics.get("tx-miss", 0) + 1
+    return {}
+
+def loinc_details(code: str, metrics: Optional[Dict[str, int]] = None) -> Dict[str, str]:
+    """Return LOINC metadata for an OBX-3 code or record a tx-miss."""
+    row = terminology.lookup_loinc(code)
+    if row:
+        return row
+    if metrics is not None:
+        metrics["tx-miss"] = metrics.get("tx-miss", 0) + 1
+    return {}
 
 def ucum_quantity(value: str | float, unit: str, code: Optional[str] = None) -> Dict[str, Any]:
     """Create a FHIR Quantity with UCUM unit."""
@@ -155,7 +170,13 @@ def obr_status_to_report_status(value: str) -> str:
     return OBR25_TO_DR_STATUS.get((value or "").strip().upper(), "unknown")
 
 
-def obx_value_to_valuex(obx2: str, obx5: Any, obx6: dict | str | None = None) -> Dict[str, Any]:
+def obx_value_to_valuex(
+    obx2: str,
+    obx5: Any,
+    obx6: dict | str | None = None,
+    obx3_code: str | None = None,
+    metrics: Optional[Dict[str, int]] = None,
+) -> Dict[str, Any]:
     """
     Decide Observation.value[x] from OBX-2/5(/6):
       NM/SN -> valueQuantity (UCUM from OBX-6 if present)
@@ -174,6 +195,15 @@ def obx_value_to_valuex(obx2: str, obx5: Any, obx6: dict | str | None = None) ->
             parts = obx6.split("^")
             uc = parts[0] if parts else None
             ut = parts[1] if len(parts) > 1 else None
+        # fallback to LOINC defaults if OBX-6 absent/empty
+        if not uc or not ut:
+            details = loinc_details(obx3_code or "")
+            if details:
+                uc = uc or details.get("default_ucum_code") or None
+                ut = ut or details.get("default_unit_text") or None
+            elif metrics is not None:
+                # count a miss only if OBX-6 absent and no LOINC defaults
+                metrics["tx-miss"] = metrics.get("tx-miss", 0) + 1
         val = float(obx5) if str(obx5).replace(".", "", 1).isdigit() else obx5
         return {"valueQuantity": ucum_quantity(val, ut or uc or "", uc or None)}
     if t in {"CWE", "CE"}:
