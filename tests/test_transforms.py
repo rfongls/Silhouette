@@ -8,6 +8,12 @@ from translators.transforms import (
     sex_to_gender,
     pv1_class_to_code,
     ucum_quantity,
+    obx_cwe_to_codeableconcept,
+    obx_status_to_obs_status,
+    obr_status_to_report_status,
+    obx_value_to_valuex,
+    spm_cwe_to_codeableconcept,
+    to_oid_uri,
 )
 
 
@@ -74,3 +80,15 @@ def test_ucum_quantity():
 
     q3 = ucum_quantity("5", "")
     assert q3 == {"value": 5.0, "system": "http://unitsofmeasure.org"}
+
+
+def test_oru_stub_transforms():
+    cc = obx_cwe_to_codeableconcept("1234^Test^http://loinc.org")
+    assert cc["coding"][0]["code"] == "1234"
+    assert cc["coding"][0]["system"] == "http://loinc.org"
+    assert obx_status_to_obs_status("F") == "f"
+    assert obr_status_to_report_status("P") == "p"
+    assert obx_value_to_valuex("42") == "42"
+    spm = spm_cwe_to_codeableconcept("1^Spec^http://snomed.info/sct")
+    assert spm["coding"][0]["code"] == "1"
+    assert to_oid_uri("1.2.3") == "urn:oid:1.2.3"
