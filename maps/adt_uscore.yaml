@@ -1,0 +1,25 @@
+messageTypes:
+  - "ADT^A01"
+  - "ADT^A04"
+resourcePlan:
+  - resource: Patient
+    profile: "http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient"
+    rules:
+      - hl7_path: "PID.3[*]"
+        fhir_path: "identifier[]"
+        transform: "pid3_to_identifiers"
+      - hl7_path: "PID.5[0]"
+        fhir_path: "name[0]"
+        transform: "name_family_given"
+      - hl7_path: "PID.7"
+        fhir_path: "birthDate"
+        transform: "ts_to_date"
+      - hl7_path: "PID.8"
+        fhir_path: "gender"
+        transform: "sex_to_gender"
+  - resource: Encounter
+    profile: "http://hl7.org/fhir/us/core/StructureDefinition/us-core-encounter"
+    rules:
+      - hl7_path: "PV1.2.1"
+        fhir_path: "class"
+        transform: "pv1_class_to_code"
