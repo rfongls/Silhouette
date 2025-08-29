@@ -94,3 +94,54 @@ def ucum_quantity(value: str | float, unit: str, code: Optional[str] = None) -> 
     if code or unit:
         quant["code"] = code or unit
     return quant
+
+
+# ----- ORU helper stubs (Phase 4 will flesh out) -----
+
+def obx_cwe_to_codeableconcept(value: str) -> Dict[str, Any]:
+    """Map an OBX/OBR CWE field to a FHIR CodeableConcept."""
+    comps = (value or "").split("^")
+    coding: Dict[str, Any] = {}
+    if comps and comps[0]:
+        coding["code"] = comps[0]
+    if len(comps) > 1 and comps[1]:
+        coding["display"] = comps[1]
+    if len(comps) > 2 and comps[2]:
+        coding["system"] = comps[2]
+    return {"coding": [coding]} if coding else {}
+
+
+def obx_status_to_obs_status(value: str) -> str:
+    """Pass through OBX-11 to Observation.status (lowercase)."""
+    return (value or "").lower()
+
+
+def obr_status_to_report_status(value: str) -> str:
+    """Pass through OBR-25 to DiagnosticReport.status (lowercase)."""
+    return (value or "").lower()
+
+
+def obx_value_to_valuex(value: str) -> Any:
+    """Placeholder transform for OBX-5 value[x]."""
+    return value
+
+
+def spm_cwe_to_codeableconcept(value: str) -> Dict[str, Any]:
+    """Map an SPM CWE field to a FHIR CodeableConcept."""
+    comps = (value or "").split("^")
+    coding: Dict[str, Any] = {}
+    if comps and comps[0]:
+        coding["code"] = comps[0]
+    if len(comps) > 1 and comps[1]:
+        coding["display"] = comps[1]
+    if len(comps) > 2 and comps[2]:
+        coding["system"] = comps[2]
+    return {"coding": [coding]} if coding else {}
+
+
+def to_oid_uri(value: str) -> str:
+    """Ensure a value is a `urn:oid:` URI."""
+    v = (value or "").strip()
+    if not v:
+        return v
+    return v if v.startswith("urn:oid:") else f"urn:oid:{v}"
