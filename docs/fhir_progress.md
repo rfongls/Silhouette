@@ -84,7 +84,8 @@ Use this doc to track delivery against the Codex handoff phases. Update checkbox
 
 * [x] `maps/adt_uscore.yaml` (Patient, Encounter, Provenance)  \
   **Commit/PR:** `89a814c` • **Date:** 2025‑08‑29
-* [ ] `maps/oru_uscore.yaml` (Patient, Observation[lab], DiagnosticReport, Specimen, Provenance)
+* [x] `maps/oru_uscore.yaml` (Patient, Observation[lab], DiagnosticReport, Specimen, Provenance)  \\
+  **Commit/PR:** `TBD` • **Date:** 2025-08-29
 * [ ] Snapshot tests (`tests/data/fhir/gold/*.json`)
 
 **Notes/Blockers:** *(fill in)*

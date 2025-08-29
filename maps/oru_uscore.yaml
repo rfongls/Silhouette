@@ -1,0 +1,50 @@
+messageTypes:
+  - "ORU^R01"
+resourcePlan:
+  - resource: Patient
+    profile: "http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient"
+    rules:
+      - hl7_path: "PID.3[*]"
+        fhir_path: "identifier[]"
+        transform: "pid3_to_identifiers"
+      - hl7_path: "PID.5[0]"
+        fhir_path: "name[0]"
+        transform: "name_family_given"
+      - hl7_path: "PID.7"
+        fhir_path: "birthDate"
+        transform: "ts_to_date"
+      - hl7_path: "PID.8"
+        fhir_path: "gender"
+        transform: "sex_to_gender"
+  - resource: DiagnosticReport
+    profile: "http://hl7.org/fhir/us/core/StructureDefinition/us-core-diagnosticreport-lab"
+    rules:
+      - hl7_path: "OBR.4"
+        fhir_path: "code"
+        transform: "obx_cwe_to_codeableconcept"
+      - hl7_path: "OBR.7"
+        fhir_path: "effectiveDateTime"
+        transform: "ts_to_instant"
+      - hl7_path: "OBR.25"
+        fhir_path: "status"
+        transform: "obr_status_to_report_status"
+  - resource: Observation
+    profile: "http://hl7.org/fhir/us/core/StructureDefinition/us-core-observation-lab"
+    rules:
+      - hl7_path: "OBX.3"
+        fhir_path: "code"
+        transform: "obx_cwe_to_codeableconcept"
+      - hl7_path: "OBX.5"
+        fhir_path: "valueString"
+        transform: "obx_value_to_valuex"
+      - hl7_path: "OBX.11"
+        fhir_path: "status"
+        transform: "obx_status_to_obs_status"
+  - resource: Specimen
+    profile: "http://hl7.org/fhir/us/core/StructureDefinition/us-core-specimen"
+    rules:
+      - hl7_path: "SPM.2"
+        fhir_path: "id"
+      - hl7_path: "SPM.4"
+        fhir_path: "type"
+        transform: "spm_cwe_to_codeableconcept"

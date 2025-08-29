@@ -68,10 +68,10 @@ This plan drives a **US Core–compliant** HL7 v2 → FHIR pipeline using your e
   - **Implement:** Map PID identifiers/name/DOB/gender; PV1 class, visit number, admit/discharge times; `must_support` policy; `conditional` templates.
   - **Test:** ADT fixture → Patient+Encounter; Patient.identifier type MR (v2-0203); Encounter.class ActCode; `period.start/end` when present.
   - **DoD:** Bundle contains US Core-profiled Patient/Encounter.
-- [ ] Add `maps/oru_uscore.yaml` (Patient, DiagnosticReport, Observation[labs], Specimen).
-  - **Implement:** OBR/OBX/SPM mapping; `Observation.value[x]` builder (UCUM for quantities); category `laboratory`.
-  - **Test:** ORU fixture → DiagnosticReport with linked Observations via `result`; Observations have `status`, `code`, `effectiveDateTime`, and `value[x]`.
-  - **DoD:** Bundle contains US Core lab Observation(s) + DiagnosticReport.
+ - [x] Add `maps/oru_uscore.yaml` (Patient, DiagnosticReport, Observation[labs], Specimen).
+   - **Implement:** OBR/OBX/SPM mapping; `Observation.value[x]` builder (UCUM for quantities); category `laboratory`.
+   - **Test:** ORU fixture → DiagnosticReport with linked Observations via `result`; Observations have `status`, `code`, `effectiveDateTime`, and `value[x]`.
+   - **DoD:** Bundle contains US Core lab Observation(s) + DiagnosticReport.
 - [ ] Snapshot tests comparing generated JSON to gold files in `tests/data/fhir/`.
   - **Implement:** Gold files: `tests/data/fhir/gold/adt_a01_bundle.json`, `.../oru_r01_bundle.json`; snapshot compare (ignore volatile timestamps).
   - **DoD:** Tests pass; diffs highlight mapping regressions.
