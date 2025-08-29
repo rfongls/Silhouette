@@ -39,8 +39,8 @@ Use this doc to track delivery against the Codex handoff phases. Update checkbox
 
 * [x] Create `config/fhir_target.yaml` (package_id, version, fhir_version, default_profiles, terminology)  \
   **Commit/PR:** `58eb1e0` • **Date:** 2025‑08‑29
-* [ ] Implement `scripts/fhir_packages.py` to prefetch IG packages into `.fhir/packages/`  \
-  **Owner:** *(fill in)*
+* [x] Implement `scripts/fhir_packages.py` to prefetch IG packages into `.fhir/packages/`  \
+  **Commit/PR:** `c34b83e` • **Date:** 2025‑08‑29
 * [ ] CI step to assert packages present and versions pinned  \
   **Owner:** *(fill in)*
 
