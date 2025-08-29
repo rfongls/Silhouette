@@ -90,6 +90,8 @@ This plan drives a **US Core–compliant** HL7 v2 → FHIR pipeline using your e
   - **DoD:** Non-zero exit on profile violations; concise errors with pointers.
 - [x] CLI flag `silhouette fhir validate` to run validators on generated resources.
   - **DoD:** Invokes local and/or HAPI checks as requested.
+- [x] Document validation pipeline in `docs/fhir/validation.md`.
+  - **DoD:** Runbook outlines local, HAPI, and server-side validation commands.
 
 ---
 

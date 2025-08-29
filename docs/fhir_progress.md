@@ -103,6 +103,8 @@ Use this doc to track delivery against the Codex handoff phases. Update checkbox
   **Commit/PR:** `TBD` • **Date:** 2025-08-29
 * [x] Optional remote `$validate` before posting  \\
   **Commit/PR:** `TBD` • **Date:** 2025-08-29
+* [x] Validation runbook (`docs/fhir/validation.md`)  \\
+  **Commit/PR:** `TBD` • **Date:** 2025-08-29
 
 **Notes/Blockers:** *(fill in)*
 
