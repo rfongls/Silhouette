@@ -97,7 +97,6 @@ def ucum_quantity(value: str | float, unit: str, code: Optional[str] = None) -> 
         quant["code"] = code or unit
     return quant
 
-
 # ----- ORU helpers (standards-aligned) -----
 
 def _norm_code_system(s: str) -> str:

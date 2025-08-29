@@ -39,6 +39,7 @@ resourcePlan:
         transform: "obx_cwe_to_codeableconcept"
       - hl7_path: "OBX.2|OBX.5|OBX.6"
         fhir_path: "value[x]"
+
         transform: "obx_value_to_valuex"
       - hl7_path: "OBX.11"
         fhir_path: "status"

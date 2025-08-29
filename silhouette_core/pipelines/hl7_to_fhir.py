@@ -224,6 +224,17 @@ def translate(
                     _assign(res, rule.fhir_path, v)
         resources.append(res)
 
+    if validate:
+        from validators.fhir_profile import (
+            validate_structural_with_pydantic,
+            validate_uscore_jsonschema,
+        )
+        for res in resources:
+            validate_uscore_jsonschema(res)
+            validate_structural_with_pydantic(res)
+            if server:
+                _remote_validate(server, token, res)
+
     msg_uuid = UUID(_message_id(msg))
 
     entries: List[tuple[Dict[str, Any], str]] = []
