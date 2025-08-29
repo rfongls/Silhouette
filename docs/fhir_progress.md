@@ -8,7 +8,7 @@ Use this doc to track delivery against the Codex handoff phases. Update checkbox
 
 ## At‑a‑Glance Status
 
-* **Current Phase:** 3 — Orchestration & Bundle
+* **Current Phase:** 6 — Terminology MVP
 * **MVP Definition of Done:**
   * ADT^A01 → `Patient`, `Encounter`, `Provenance` (US Core‑valid)
   * ORU^R01 → `Patient`, `Observation`, `DiagnosticReport` (+`Specimen` if present) (US Core‑valid)
@@ -41,8 +41,8 @@ Use this doc to track delivery against the Codex handoff phases. Update checkbox
   **Commit/PR:** `58eb1e0` • **Date:** 2025‑08‑29
 * [x] Implement `scripts/fhir_packages.py` to prefetch IG packages into `.fhir/packages/`  \
   **Commit/PR:** `c34b83e` • **Date:** 2025‑08‑29
-* [ ] CI step to assert packages present and versions pinned  \
-  **Owner:** *(fill in)*
+* [x] CI step to assert packages present and versions pinned  \
+  **Commit/PR:** `TBD` • **Date:** 2025‑08‑29
 
 **Notes/Blockers:** *(add if tx server or Java availability is an issue)*
 
@@ -53,7 +53,7 @@ Use this doc to track delivery against the Codex handoff phases. Update checkbox
  * [x] YAML mapping loader (profile, resourcePlan, rules, MustSupport policy)  \
   **Commit/PR:** `89a814c` • **Date:** 2025‑08‑29
 * [x] `translators/transforms.py` with unit tests:
-  * `ts_to_date`, `ts_to_instant`
+  * `ts_to_date`, `ts_to_datetime`
   * `pid3_to_identifiers`
   * `name_family_given`
   * `sex_to_gender`
@@ -84,8 +84,10 @@ Use this doc to track delivery against the Codex handoff phases. Update checkbox
 
 * [x] `maps/adt_uscore.yaml` (Patient, Encounter, Provenance)  \
   **Commit/PR:** `89a814c` • **Date:** 2025‑08‑29
-* [ ] `maps/oru_uscore.yaml` (Patient, Observation[lab], DiagnosticReport, Specimen, Provenance)
-* [ ] Snapshot tests (`tests/data/fhir/gold/*.json`)
+* [x] `maps/oru_uscore.yaml` (Patient, Observation[lab], DiagnosticReport, Specimen, Provenance)  \\
+  **Commit/PR:** `TBD` • **Date:** 2025-08-29
+* [x] Snapshot tests (`tests/data/fhir/gold/*.json`)  \\
+  **Commit/PR:** `TBD` • **Date:** 2025-08-29
 
 **Notes/Blockers:** *(fill in)*
 
@@ -93,10 +95,14 @@ Use this doc to track delivery against the Codex handoff phases. Update checkbox
 
 ### Phase 5 — Validation (JSONSchema + HAPI + $validate opt‑in)
 
-* [ ] Local JSONSchema shape validation wired
-* [ ] `validators/hapi_cli.py` to run HAPI Validator with pinned IGs
-* [ ] CLI: `silhouette fhir validate --in … --hapi`
-* [ ] Optional remote `$validate` before posting
+* [x] Local JSONSchema shape validation wired  \\
+  **Commit/PR:** `TBD` • **Date:** 2025-08-29
+* [x] `validators/hapi_cli.py` to run HAPI Validator with pinned IGs  \\
+  **Commit/PR:** `TBD` • **Date:** 2025-08-29
+* [x] CLI: `silhouette fhir validate --in … --hapi`  \\
+  **Commit/PR:** `TBD` • **Date:** 2025-08-29
+* [x] Optional remote `$validate` before posting  \\
+  **Commit/PR:** `TBD` • **Date:** 2025-08-29
 
 **Notes/Blockers:** *(fill in)*
 

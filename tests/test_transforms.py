@@ -2,12 +2,18 @@ import pytest
 
 from translators.transforms import (
     ts_to_date,
-    ts_to_instant,
+    ts_to_datetime,
     pid3_to_identifiers,
     name_family_given,
     sex_to_gender,
     pv1_class_to_code,
     ucum_quantity,
+    obx_cwe_to_codeableconcept,
+    obx_status_to_obs_status,
+    obr_status_to_report_status,
+    obx_value_to_valuex,
+    spm_cwe_to_codeableconcept,
+    to_oid_uri,
 )
 
 
@@ -17,12 +23,12 @@ def test_ts_to_date():
     assert ts_to_date("20250130") == "2025-01-30"
 
 
-def test_ts_to_instant_with_offset():
-    assert ts_to_instant("20250130123045-0500") == "2025-01-30T12:30:45-05:00"
+def test_ts_to_datetime_with_offset():
+    assert ts_to_datetime("20250130123045-0500") == "2025-01-30T12:30:45-05:00"
 
 
-def test_ts_to_instant_without_offset():
-    assert ts_to_instant("20250130123045") == "2025-01-30T12:30:45Z"
+def test_ts_to_datetime_without_offset():
+    assert ts_to_datetime("20250130123045") == "2025-01-30T12:30:45"
 
 
 def test_pid3_to_identifiers():
@@ -56,8 +62,8 @@ def test_pv1_class_to_code():
     assert pv1_class_to_code("O")["code"] == "AMB"
     assert pv1_class_to_code("E")["code"] == "EMER"
     assert pv1_class_to_code("R")["code"] == "AMB"
-    assert pv1_class_to_code("B")["code"] == "OBSENC"
-    assert pv1_class_to_code("X")["code"] == "UNK"
+    assert pv1_class_to_code("B")["code"] == "IMP"
+    assert pv1_class_to_code("X") == {}
 
 
 def test_ucum_quantity():
@@ -74,3 +80,16 @@ def test_ucum_quantity():
 
     q3 = ucum_quantity("5", "")
     assert q3 == {"value": 5.0, "system": "http://unitsofmeasure.org"}
+
+
+def test_oru_stub_transforms():
+    cc = obx_cwe_to_codeableconcept("1234^Test^LN")
+    assert cc["coding"][0]["code"] == "1234"
+    assert cc["coding"][0]["system"] == "http://loinc.org"
+    assert obx_status_to_obs_status("F") == "final"
+    assert obr_status_to_report_status("P") == "preliminary"
+    vq = obx_value_to_valuex("NM", "42", "mg^milligram^http://unitsofmeasure.org")
+    assert "valueQuantity" in vq and vq["valueQuantity"]["code"] == "mg"
+    spm = spm_cwe_to_codeableconcept("1^Spec^http://snomed.info/sct")
+    assert spm["coding"][0]["code"] == "1"
+    assert to_oid_uri("1.2.3") == "urn:oid:1.2.3"

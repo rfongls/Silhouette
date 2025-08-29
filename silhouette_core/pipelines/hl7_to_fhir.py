@@ -8,10 +8,21 @@ from pathlib import Path
 from typing import Any, Dict, List
 from uuid import UUID, uuid4, uuid5, NAMESPACE_URL
 
+import requests
 import yaml
 
 from translators import transforms
 from translators.mapping_loader import load as load_map, MapSpec
+
+
+def _remote_validate(server: str, token: str | None, resource: Dict[str, Any]) -> None:
+    """POST resource to FHIR server's $validate endpoint."""
+    headers = {"Content-Type": "application/fhir+json"}
+    if token:
+        headers["Authorization"] = f"Bearer {token}"
+    url = server.rstrip("/") + "/$validate"
+    resp = requests.post(url, json=resource, headers=headers)
+    resp.raise_for_status()
 
 
 def _parse_hl7(text: str) -> Dict[str, List[List[str]]]:
@@ -173,14 +184,44 @@ def translate(
         if profile:
             res.setdefault("meta", {})["profile"] = [profile]
         for rule in plan.rules:
-            values = _extract_values(msg, rule.hl7_path)
-            for v in values:
-                if v == "" or v is None:
-                    continue
+            if "|" in rule.hl7_path:
+                paths = rule.hl7_path.split("|")
+                vals = []
+                for p in paths:
+                    ext = _extract_values(msg, p)
+                    vals.append(ext[0] if ext else None)
                 if rule.transform:
                     fn = getattr(transforms, rule.transform)
-                    v = fn(v)
-                _assign(res, rule.fhir_path, v)
+                    v = fn(*vals)
+                else:
+                    v = vals[0]
+                if v not in ("", None, {}):
+                    if rule.fhir_path.endswith("[x]") and isinstance(v, dict):
+                        for k, val in v.items():
+                            if val not in ("", None, {}):
+                                _assign(res, k, val)
+                    else:
+                        _assign(res, rule.fhir_path, v)
+                continue
+            if rule.hl7_path == "-":
+                values = [None]
+            else:
+                values = _extract_values(msg, rule.hl7_path)
+            for v in values:
+                if v == "" or v is None:
+                    if rule.hl7_path != "-":
+                        continue
+                if rule.transform:
+                    fn = getattr(transforms, rule.transform)
+                    v = fn() if rule.hl7_path == "-" else fn(v)
+                if v == "" or v is None or v == {}:
+                    continue
+                if rule.fhir_path.endswith("[x]") and isinstance(v, dict):
+                    for k, val in v.items():
+                        if val not in ("", None, {}):
+                            _assign(res, k, val)
+                else:
+                    _assign(res, rule.fhir_path, v)
         resources.append(res)
 
     msg_uuid = UUID(_message_id(msg))
@@ -190,6 +231,24 @@ def translate(
         fu = _full_url(msg_uuid, r["resourceType"], idx)
         r["id"] = fu.split(":")[-1]
         entries.append((r, fu))
+
+    obs_refs = [
+        {"reference": fu} for r, fu in entries if r["resourceType"] == "Observation"
+    ]
+    for r, _ in entries:
+        if r["resourceType"] == "DiagnosticReport" and obs_refs:
+            r.setdefault("result", []).extend(obs_refs)
+
+    if validate:
+        from validators.fhir_profile import (
+            validate_structural_with_pydantic,
+            validate_uscore_jsonschema,
+        )
+        for r, _ in entries:
+            validate_uscore_jsonschema(r)
+            validate_structural_with_pydantic(r)
+            if server:
+                _remote_validate(server, token, r)
 
     prov = {
         "resourceType": "Provenance",
@@ -217,6 +276,7 @@ def translate(
             },
         ],
     }
+    prov.setdefault("meta", {})["profile"] = [defaults.get("Provenance", "http://hl7.org/fhir/StructureDefinition/Provenance")]
     prov_fu = _full_url(msg_uuid, "Provenance", len(entries))
     prov["id"] = prov_fu.split(":")[-1]
     entries.append((prov, prov_fu))
