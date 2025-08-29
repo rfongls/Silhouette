@@ -48,24 +48,25 @@ The end state (Phase 10) is a **production-ready agent system** that can:
 
 ## 🔍 What It Does (Current Features)
 
-* **Alignment-first agent loop**: persona DSL config (`persona.dsl`), deny rules, self-check.  
-* **Memory & context**: logs interactions, replays into structured memory JSONL.  
-* **Skills system**: dynamic tool registry (`skills/registry.yaml`), versioned (`name@vN`).  
-* **Runtime evals**: cross-language build/test inside Docker (Java, .NET, Android, Web, Python, C++).  
-* **Linters**: Python (ruff, black), Web/JS (eslint), C++ (clang-tidy optional).  
-* **Offline-first mode**: deterministic stub generation when models are unavailable.
-* **Training adapters**: SFT + KD wrappers (student models distilled from teacher traces).
-* **Research Toolpack (offline)**: read PDF → index (SQLite FTS5) → search/retrieve → cite [n]. Requires citations for research prompts.
-* **Cybersecurity Toolpack**: authorized scans & audits — Nmap (host/top-1000), OWASP ZAP baseline, Trivy (image/fs), Checkov (IaC), CIS local checks, CVE lookup; scope-guarded & containerized.
-* **Cybersecurity Reference Pack**: CDSE/NIST checklists and references mapped to findings, plus task orchestration that produces cited assessment reports.
-* **Interoperability Toolkit**: HL7 v2, C-CDA, and X12 translators with mock connectors, validators, and end-to-end tests.
-* **Data Flywheel v2**: runtime traces auto-promoted to curated datasets by lane.
-* **Compliance**: SPDX license scan, redaction rules, configurable thresholds.
-* **Regression gates**: enforce pass-rate thresholds and latency budgets in CI.
-* **Provenance**: WATERMARK.json in every artifact with repo commit + SHA256.
-* **Self-replication**: export profiles, distill knowledge, quantize models, package clones.
-* **Release governance**: structured release pipeline with attached compliance and provenance artifacts.
-* **Customer licensing**: issue per-customer license files and embed IDs into WATERMARK.json.
+
+* **Alignment-first agent loop** – persona DSL config (`persona.dsl`), deny rules, self-check. See [Agents](docs/Agents.md).
+* **Memory & context** – logs interactions, replays into structured memory JSONL.
+* **Skills system** – dynamic tool registry (`skills/registry.yaml`), versioned (`name@vN`). See [Skills](docs/Skills.md).
+* **Runtime evals** – cross-language build/test inside Docker (Java, .NET, Android, Web, Python, C++). See [Eval](docs/Eval.md).
+* **Linters** – Python (ruff, black), Web/JS (eslint), C++ (clang-tidy optional).
+* **Offline-first mode** – deterministic stub generation when models are unavailable. See [Offline Mode](docs/Offline_Mode.md).
+* **Training adapters** – SFT + KD wrappers (student models distilled from teacher traces). See [Training](docs/Training.md) and [Knowledge Distillation](docs/Knowledge_Distillation.md).
+* **Research Toolpack (offline)** – read PDF → index (SQLite FTS5) → search/retrieve → cite [n]. Requires citations for research prompts.
+* **Cybersecurity Toolpack** – authorized scans & audits — Nmap (host/top-1000), OWASP ZAP baseline, Trivy (image/fs), Checkov (IaC), CIS local checks, CVE lookup; scope-guarded & containerized.
+* **Cybersecurity Reference Pack** – CDSE/NIST checklists and references mapped to findings, plus task orchestration that produces cited assessment reports.
+* **Interoperability Toolkit** – HL7 v2, C-CDA, and X12 translators with mock connectors, validators, and end-to-end tests. See [HL7 QA](docs/hl7_testing.md).
+* **Data Flywheel v2** – runtime traces auto-promoted to curated datasets by lane.
+* **Compliance** – SPDX license scan, redaction rules, configurable thresholds. See [Security](docs/Security.md).
+* **Regression gates** – enforce pass-rate thresholds and latency budgets in CI. See [Eval](docs/Eval.md).
+* **Provenance** – WATERMARK.json in every artifact with repo commit + SHA256. See [Security](docs/Security.md).
+* **Self-replication** – export profiles, distill knowledge, quantize models, package clones. See [Knowledge Distillation](docs/Knowledge_Distillation.md), [Quantization](docs/Quantization.md), and [Package Clone](docs/Package_Clone.md).
+* **Release governance** – structured release pipeline with attached compliance and provenance artifacts.
+* **Customer licensing** – issue per-customer license files and embed IDs into WATERMARK.json. See [Security](docs/Security.md).
 
 ### Interoperability at a glance
 
@@ -107,6 +108,8 @@ Silhouette/
 ├── LICENSE                     # Proprietary license
 ├── COMPLIANCE.md               # Compliance policy
 ├── CUSTOMER_LICENSE_TEMPLATE.md# Customer license template
-├── docs/PHASES.md              # Phase-by-phase breakdown
+├── PHASES.md                   # Phase-by-phase breakdown
 ├── MILESTONES.md               # PR-by-PR milestones
 └── README.md                   # This file
+```
+
