@@ -46,26 +46,26 @@ The end state (Phase 10) is a **production-ready agent system** that can:
 
 ---
 
-## 🔍 What It Does (Current Features)
+### 🔍 What It Does (Current Features)
 
-* **Alignment-first agent loop**: persona DSL config (`persona.dsl`), deny rules, self-check.  
-* **Memory & context**: logs interactions, replays into structured memory JSONL.  
-* **Skills system**: dynamic tool registry (`skills/registry.yaml`), versioned (`name@vN`).  
-* **Runtime evals**: cross-language build/test inside Docker (Java, .NET, Android, Web, Python, C++).  
-* **Linters**: Python (ruff, black), Web/JS (eslint), C++ (clang-tidy optional).  
-* **Offline-first mode**: deterministic stub generation when models are unavailable.
-* **Training adapters**: SFT + KD wrappers (student models distilled from teacher traces).
-* **Research Toolpack (offline)**: read PDF → index (SQLite FTS5) → search/retrieve → cite [n]. Requires citations for research prompts.
-* **Cybersecurity Toolpack**: authorized scans & audits — Nmap (host/top-1000), OWASP ZAP baseline, Trivy (image/fs), Checkov (IaC), CIS local checks, CVE lookup; scope-guarded & containerized.
-* **Cybersecurity Reference Pack**: CDSE/NIST checklists and references mapped to findings, plus task orchestration that produces cited assessment reports.
-* **Interoperability Toolkit**: HL7 v2, C-CDA, and X12 translators with mock connectors, validators, and end-to-end tests.
-* **Data Flywheel v2**: runtime traces auto-promoted to curated datasets by lane.
-* **Compliance**: SPDX license scan, redaction rules, configurable thresholds.
-* **Regression gates**: enforce pass-rate thresholds and latency budgets in CI.
-* **Provenance**: WATERMARK.json in every artifact with repo commit + SHA256.
-* **Self-replication**: export profiles, distill knowledge, quantize models, package clones.
-* **Release governance**: structured release pipeline with attached compliance and provenance artifacts.
-* **Customer licensing**: issue per-customer license files and embed IDs into WATERMARK.json.
+- **Alignment-first agent loop** — [Agents](docs/Agents.md) · [Agent API](docs/agent_api.md) · [Profiles (persona DSL)](docs/Profiles.md)
+- **Memory & context** — [Artifacts & logs](docs/Artifacts.md) · [User Guide](docs/User_Guide.md) · [Codex Handoff](docs/codex_handoff.md)
+- **Skills system** — [Skills](docs/Skills.md) · [Skills Catalog](docs/skills_catalog.md) · [Agent API](docs/agent_api.md)
+- **Runtime evals** — [Eval Guide](docs/Eval.md) · [CLI](docs/CLI.md)
+- **Linters** — [Contributing (linting/workflow)](docs/contributing.md) · [Install Quickstart](docs/INSTALL_QUICKSTART.md) · [Repo Integration](docs/repo_integration.md)
+- **Offline-first mode** — [Offline Mode](docs/Offline_Mode.md)
+- **Training adapters (SFT + KD)** — [Training](docs/Training.md) · [Knowledge Distillation](docs/Knowledge_Distillation.md) · [Manual Training Guide](docs/manual_training_guide.md)
+- **Research Toolpack (offline)** — [Research Toolpack](docs/research_toolpack.md) · [Skills Catalog](docs/skills_catalog.md)
+- **Cybersecurity Toolpack** — [Cyber Toolpack](docs/cyber_toolpack.md) · [Persona Guide](docs/persona-guide.md)
+- **Cybersecurity Reference Pack** — [RC Checklist](docs/rc_checklist.md) · [Skills Catalog](docs/skills_catalog.md)
+- **Interoperability Toolkit** — [HL7 Testing Runbook](docs/hl7_testing.md) · [Interop Overview](docs/interoperability/overview.md)
+- **Data Flywheel v2** — [PHASES (roadmap)](docs/PHASES.md) · [Manual Training Guide](docs/manual_training_guide.md)
+- **Compliance** — [Security / Redaction / PII](docs/Security.md) · [API Index](docs/API.md)
+- **Regression gates** — [Monitoring & SLOs](docs/monitoring.md) · [PHASES](docs/PHASES.md)
+- **Provenance** — [Security (provenance notes)](docs/Security.md) · [README (release artifacts)](docs/README.md)
+- **Self-replication** — [Package Clone](docs/Package_Clone.md) · [Quantization](docs/Quantization.md)
+- **Release governance** — [Deploy Guide](docs/deploy-guide.md) · [CHANGELOG](CHANGELOG.md) · [PHASES](docs/PHASES.md)
+- **Customer licensing** — [Security](docs/Security.md) · [PHASES](docs/PHASES.md)
 
 ### Interoperability at a glance
 
