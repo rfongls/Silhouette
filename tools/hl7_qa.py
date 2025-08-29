@@ -22,10 +22,12 @@ Timestamp policy (rules.yaml → timestamps.mode):
   - calendar              — additionally check real calendar ranges
   - off                   — skip TS checks
 
-Report output defaults (when --report is omitted):
-  - If running inside tests/, write to tests/artifacts/hl7/<input_stem>_<engine>.csv
-  - Otherwise write to artifacts/hl7/<input_stem>_<engine>.csv at repo root
-  - Override with --report-dir or env HL7_QA_REPORT_DIR; explicit --report always wins
+Report behavior:
+  - CSV defaults to **per-issue rows** with columns:
+      index,msg_ctrl_id,msg_type,version,field,value_received,validation_value,issue_type,issue
+    Use --report-mode per-message to aggregate back into one row per message.
+  - Default output path (when --report is omitted): <repo root>/tests/artifacts/hl7/<input_stem>_<engine>.csv
+    Override with --report-dir or env HL7_QA_REPORT_DIR; explicit --report always wins.
 """
 
 from __future__ import annotations
@@ -46,7 +48,7 @@ from datetime import datetime
 from multiprocessing import cpu_count
 from pathlib import Path
 from time import perf_counter
-from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
+from typing import Any, Dict, List, Optional, Sequence, Tuple
 
 # ---------- Optional: PyYAML for rules ----------
 try:
@@ -56,7 +58,7 @@ except ModuleNotFoundError:  # pragma: no cover
 
 # ---------- hl7apy (optional, only used if engine=hl7apy) ----------
 try:
-    from hl7apy.core import Message, Segment
+    from hl7apy.core import Message, Segment  # noqa: F401  (for type hints / runtime when installed)
     from hl7apy.exceptions import HL7apyException
     HL7APY_AVAILABLE = True
 except ModuleNotFoundError:  # pragma: no cover
@@ -75,13 +77,6 @@ UTF16_BE_BOM = b"\xfe\xff"
 MSH_START_RE = re.compile(br'(?:(?<=\r)|(?<=\n)|\A)MSH.', re.I)
 
 def _normalize_blob(blob: bytes) -> bytes:
-    """
-    Normalize incoming bytes before splitting/reading fields:
-    - Strip UTF-8 BOM
-    - If UTF-16 (LE/BE), decode then re-encode as UTF-8
-    - Normalize newlines to CR (\r) for HL7
-    - Strip HLLP/MLLP control chars and NULs
-    """
     if blob.startswith(UTF8_BOM):
         blob = blob[len(UTF8_BOM):]
     if blob.startswith(UTF16_LE_BOM):
@@ -94,11 +89,6 @@ def _normalize_blob(blob: bytes) -> bytes:
     return blob
 
 def fast_split_messages(blob: bytes) -> List[bytes]:
-    """
-    Robust split:
-      - Match message starts at buffer-begin or right after any newline
-      - Accept any field separator after 'MSH'
-    """
     blob = _normalize_blob(blob)
     starts = [m.start() for m in MSH_START_RE.finditer(blob)]
     if not starts:
@@ -114,11 +104,6 @@ def ensure_text(b: bytes) -> str:
     return b.decode("utf-8", errors="ignore")
 
 def _detect_fs_and_encs(first_line: str) -> Tuple[str, str, str, str]:
-    """
-    Detect field separator & encoding chars from the first segment line.
-    - MSH-1 = char at position 3 (0-based)
-    - MSH-2 = positions 4..7 (comp, rep, escape, sub)
-    """
     fs = first_line[3:4] if len(first_line) >= 4 else "|"
     encs = first_line[4:8] if len(first_line) >= 8 else "^~\\&"
     comp = encs[0:1] if len(encs) >= 1 else "^"
@@ -184,14 +169,12 @@ def configure_hl7apy_logging(quiet: bool = True) -> None:
 
 @contextmanager
 def suppress_hl7apy_output(enabled: bool = True):
-    """Redirect BOTH stdout and stderr so validators can't print."""
     if not enabled:
         yield; return
     with open(os.devnull, "w") as devnull, redirect_stderr(devnull), redirect_stdout(devnull):
         yield
 
 def parse_hl7(text: str, *, quiet: bool = True, validation: str = "none"):
-    """Parse while silencing any hl7apy prints and setting validation level."""
     lvl = _map_validation_level(validation)
     from hl7apy.parser import parse_message as _parse_message
     with suppress_hl7apy_output(quiet):
@@ -218,7 +201,7 @@ class TimestampRuleConfig:
     fail_on_dtm: bool = True
     allowed_lengths: set[int] = field(default_factory=lambda: set(_TS_BASE_ALLOWED_DEFAULT))
     compliant_lengths: set[int] = field(default_factory=lambda: set(_TS_BASE_ALLOWED_DEFAULT))
-    fields: List[str] = field(default_factory=list)  # optional override
+    fields: List[str] = field(default_factory=list)
     mode: str = "length_only"  # 'length_only' | 'calendar' | 'off'
 
     @staticmethod
@@ -237,7 +220,7 @@ class AllowedValuesConfig:
     obr24: List[str] = field(default_factory=list)
     result_status: List[str] = field(default_factory=list)
     obx11_empty_allows: List[str] = field(default_factory=list)
-    encounter_class: List[str] = field(default_factory=list)   # ADT PV1-2 allowed values
+    encounter_class: List[str] = field(default_factory=list)
 
     @staticmethod
     def from_dict(d: Dict[str, Any]) -> "AllowedValuesConfig":
@@ -281,8 +264,8 @@ class PoliciesConfig:
 @dataclass
 class Profile:
     name: str
-    types: List[str] = field(default_factory=list)  # root types e.g., ["ORU","ADT",...]
-    engine: Optional[str] = None                   # "fast" | "hl7apy" (optional; default fast)
+    types: List[str] = field(default_factory=list)  # ORU, ADT, ...
+    engine: Optional[str] = None                   # "fast" | "hl7apy"
     timestamps: Optional[TimestampRuleConfig] = None
     allowed: AllowedValuesConfig = field(default_factory=AllowedValuesConfig)
     policies: PoliciesConfig = field(default_factory=PoliciesConfig)
@@ -326,7 +309,6 @@ class RuleSet:
             return self.profiles[self.default_profile]
         return None
 
-    # serialization for parallel
     def to_dict(self) -> Dict[str, Any]:
         out = {"default_profile": self.default_profile, "profiles": {}}
         for name, p in self.profiles.items():
@@ -387,11 +369,11 @@ def parse_field_spec(spec: str) -> Tuple[str, int, Optional[int], Optional[int]]
     sub = int(m.group(4)) if m.group(4) else None
     return seg, fld, comp, sub
 
-def values_from_parsed(msg: Message, spec: str) -> List[str]:
+def values_from_parsed(msg: "Message", spec: str) -> List[str]:
     seg, fld, comp, sub = parse_field_spec(spec)
     out: List[str] = []
     try:
-        segs: List[Segment] = list(msg.segments(seg))  # type: ignore[attr-defined]
+        segs: List["Segment"] = list(msg.segments(seg))  # type: ignore[attr-defined]
         for s in segs:
             try:
                 field_obj = s[fld]
@@ -416,6 +398,7 @@ def values_from_parsed(msg: Message, spec: str) -> List[str]:
         pass
     return [v.strip() for v in out if str(v).strip()]
 
+# ---------- FIXED: correct MSH indexing in raw path ----------
 def values_from_raw(raw: bytes, spec: str) -> List[str]:
     text = ensure_text(raw)
     lines = text.split("\r")
@@ -428,9 +411,20 @@ def values_from_raw(raw: bytes, spec: str) -> List[str]:
         if not ln.startswith(seg + fs):
             continue
         fields = ln.split(fs)
-        if len(fields) <= fld:
-            continue
-        fval = fields[fld]
+        # SPECIAL: MSH has off-by-one indexing because MSH-1 is the separator itself
+        if seg == "MSH":
+            if fld == 1:
+                fval = fs
+            else:
+                pos = fld - 1
+                if len(fields) <= pos:
+                    continue
+                fval = fields[pos]
+        else:
+            if len(fields) <= fld:
+                continue
+            fval = fields[fld]
+        # Handle repetitions/components/subcomponents
         for f_rep in fval.split(rep):
             if comp_i is None:
                 out.append(f_rep)
@@ -446,6 +440,7 @@ def values_from_raw(raw: bytes, spec: str) -> List[str]:
                             out.append(subs[sub_i - 1])
     return [v.strip() for v in out if v.strip()]
 
+# ---------- (RE)ADDED: build the fast ER7 index ----------
 def build_msg_index(raw: bytes) -> Tuple[Dict[str, List[List[str]]], str, str, str, str]:
     """
     Return (index, fs, comp, rep, sub)
@@ -467,15 +462,26 @@ def build_msg_index(raw: bytes) -> Tuple[Dict[str, List[List[str]]], str, str, s
         idx.setdefault(seg, []).append(fields)
     return idx, fs, comp, rep, sub
 
+# ---------- FIXED: correct MSH indexing in indexed path ----------
 def values_from_index(idx: Dict[str, List[List[str]]],
                       fs: str, comp: str, rep: str, sub: str,
                       spec: str) -> List[str]:
     seg, fld, comp_i, sub_i = parse_field_spec(spec)
     out: List[str] = []
     for fields in idx.get(seg, []):
-        if len(fields) <= fld:
-            continue
-        fval = fields[fld]
+        # SPECIAL: MSH has off-by-one indexing because MSH-1 is the separator itself
+        if seg == "MSH":
+            if fld == 1:
+                fval = fs
+            else:
+                pos = fld - 1
+                if len(fields) <= pos:
+                    continue
+                fval = fields[pos]
+        else:
+            if len(fields) <= fld:
+                continue
+            fval = fields[fld]
         for f_rep in fval.split(rep):
             if comp_i is None:
                 out.append(f_rep)
@@ -544,49 +550,60 @@ def ts_calendar_ok(ts: str) -> Tuple[bool, str]:
         y = int(base[0:4])
         if len(base) == 4:
             return True, ""
-        m = int(base[4:6])
-        if not (1 <= m <= 12):
-            return False, f"month {m:02d} out of range"
+        m = int(base[4:6]);  assert 1 <= m <= 12
         if len(base) == 6:
             return True, ""
-        d = int(base[6:8])
+        d = int(base[6:8]);  datetime(y, m, d)
         if len(base) == 8:
-            datetime(y, m, d); return True, ""
-        H = int(base[8:10])
-        if not (0 <= H <= 23):
-            return False, f"hour {H:02d} out of range"
+            return True, ""
+        H = int(base[8:10]); assert 0 <= H <= 23
         if len(base) == 10:
             datetime(y, m, d, H, 0, 0); return True, ""
-        M = int(base[10:12])
-        if not (0 <= M <= 59):
-            return False, f"minute {M:02d} out of range"
+        M = int(base[10:12]); assert 0 <= M <= 59
         if len(base) == 12:
             datetime(y, m, d, H, M, 0); return True, ""
-        S = int(base[12:14])
-        if not (0 <= S <= 59):
-            return False, f"second {S:02d} out of range"
+        S = int(base[12:14]); assert 0 <= S <= 59
         datetime(y, m, d, H, M, S); return True, ""
-    except ValueError as e:
+    except Exception as e:
         return False, f"invalid date/time: {e}"
 
 
 # =======================================================================
-# Issue container
+# Issue container (now structured)
 # =======================================================================
 
 @dataclass
+class IssueItem:
+    kind: str                 # "error" | "warning"
+    message: str
+    spec: Optional[str] = None
+    value: Optional[str] = None
+    expected: Optional[str] = None
+
+@dataclass
 class IssueSet:
-    errors: List[str] = field(default_factory=list)
-    warnings: List[str] = field(default_factory=list)
+    errors: List[str] = field(default_factory=list)     # legacy prints
+    warnings: List[str] = field(default_factory=list)   # legacy prints
+    items: List[IssueItem] = field(default_factory=list)
 
-    def add_err(self, msg: str, cap: int):
-        if len(self.errors) < cap:
-            self.errors.append(msg)
-        elif len(self.errors) == cap:
-            self.errors.append(f"... truncated at {cap} errors")
+    def add_issue(self, kind: str, message: str, cap: int,
+                  spec: Optional[str] = None,
+                  value: Optional[str] = None,
+                  expected: Optional[str] = None):
+        # Maintain legacy lists (respect cap)
+        target = self.errors if kind == "error" else self.warnings
+        if len(target) < cap:
+            target.append(message)
+            self.items.append(IssueItem(kind=kind, message=message, spec=spec, value=value, expected=expected))
+        elif len(target) == cap:
+            target.append(f"... truncated at {cap} {kind}s")
 
-    def add_warn(self, msg: str):
+    def add_err(self, msg: str, cap: int, **meta):
+        self.add_issue("error", msg, cap, **meta)
+
+    def add_warn(self, msg: str, **meta):
         self.warnings.append(msg)
+        self.items.append(IssueItem(kind="warning", message=msg, **meta))
 
 
 # =======================================================================
@@ -612,12 +629,10 @@ def validate_message(
     if profile is None:
         return {"msg_type": hdr["msg_type"], "msg_ctrl_id": hdr["msg_ctrl_id"], "version": hdr["version"]}, issues
 
-    # Determine engine for this message
     engine_eff = ctx.engine_pref if ctx.engine_pref != "auto" else (profile.engine or "fast")
 
-    # Build fast index once; build hl7apy tree only if requested
     idx_pack = build_msg_index(raw)
-    parsed: Optional[Message] = None
+    parsed: Optional["Message"] = None
     if engine_eff == "hl7apy":
         if not HL7APY_AVAILABLE:
             issues.add_err("hl7apy not installed; cannot use hl7apy engine", max_errors_per_msg)
@@ -628,85 +643,108 @@ def validate_message(
                 except HL7apyException as e:
                     issues.add_err(f"parse_error: {e}", max_errors_per_msg)
 
-    # ---------------- Timestamps (respect mode; use engine-agnostic access) ----------------
+    # ---------------- Timestamps ----------------
     if profile.timestamps and profile.timestamps.mode != "off":
         ts_cfg = profile.timestamps
         ts_fields = ts_cfg.fields if ts_cfg.fields else list(DEFAULT_TS_FIELDS)
+        allowed_str = f"allowed lengths: {sorted(ts_cfg.allowed_lengths)}"
+        compliant_str = f"compliant lengths: {sorted(ts_cfg.allowed_lengths)}"
         for spec in ts_fields:
             for v in get_values(spec, engine_eff, raw, idx_pack, parsed):
                 if not v:
                     continue
                 ok_len, why_len = ts_length_ok(v, ts_cfg.allowed_lengths)
                 if not ok_len:
-                    if ts_cfg.strict and ts_cfg.fail_on_dtm:
-                        issues.add_err(f"{spec} invalid TS '{v}': {why_len}", max_errors_per_msg)
-                    else:
-                        issues.add_warn(f"{spec} TS not valid: '{v}' ({why_len})")
+                    issues.add_err(
+                        f"{spec} invalid TS '{v}': {why_len}",
+                        max_errors_per_msg,
+                        spec=spec, value=v, expected=allowed_str
+                    )
                     continue
                 if ts_cfg.mode == "calendar":
                     ok_cal, why_cal = ts_calendar_ok(v)
                     if not ok_cal:
-                        if ts_cfg.strict and ts_cfg.fail_on_dtm:
-                            issues.add_err(f"{spec} invalid TS '{v}': {why_cal}", max_errors_per_msg)
-                        else:
-                            issues.add_warn(f"{spec} TS not calendar-valid: '{v}' ({why_cal})")
+                        issues.add_err(
+                            f"{spec} invalid TS '{v}': {why_cal}",
+                            max_errors_per_msg,
+                            spec=spec, value=v, expected="calendar-valid date/time"
+                        )
                 m = re.match(r'^(\d{4,14})', v)
                 base_len = len(m.group(1)) if m else len(v)
                 if base_len not in ts_cfg.compliant_lengths:
-                    issues.add_warn(f"{spec} TS length {base_len} accepted but non-compliant")
+                    issues.add_warn(
+                        f"{spec} TS length {base_len} accepted but non-compliant",
+                        spec=spec, value=v, expected=compliant_str
+                    )
 
-    # ---------------- Policies (all via get_values) ----------------
+    # ---------------- Policies & allowed values ----------------
     pol = profile.policies
     allowed = profile.allowed
 
     if pol.required_fields:
         for spec in pol.required_fields:
             if not any(get_values(spec, engine_eff, raw, idx_pack, parsed)):
-                issues.add_err(f"{spec} required but missing/empty", max_errors_per_msg)
+                issues.add_err(f"{spec} required but missing/empty",
+                               max_errors_per_msg, spec=spec, value="", expected="non-empty")
 
     if pol.require_pid3_shape:
         ok_shape = (any(get_values("PID-3.1", engine_eff, raw, idx_pack, parsed)) and
                     (any(get_values("PID-3.4", engine_eff, raw, idx_pack, parsed)) or
                      any(get_values("PID-3.5", engine_eff, raw, idx_pack, parsed))))
         if not ok_shape:
-            issues.add_err("PID-3 shape invalid: require .1 and (.4 or .5)", max_errors_per_msg)
+            issues.add_err("PID-3 shape invalid: require .1 and (.4 or .5)",
+                           max_errors_per_msg, spec="PID-3", expected="PID-3.1 and (PID-3.4 or PID-3.5)")
 
     if pol.require_obr2_or_obr3:
-        if not (any(get_values("OBR-2.1", engine_eff, raw, idx_pack, parsed)) or
-                any(get_values("OBR-3.1", engine_eff, raw, idx_pack, parsed))):
-            issues.add_err("OBR requires at least one of OBR-2 (placer) or OBR-3 (filler)", max_errors_per_msg)
+        has2 = any(get_values("OBR-2.1", engine_eff, raw, idx_pack, parsed))
+        has3 = any(get_values("OBR-3.1", engine_eff, raw, idx_pack, parsed))
+        if not (has2 or has3):
+            issues.add_err("OBR requires at least one of OBR-2 (placer) or OBR-3 (filler)",
+                           max_errors_per_msg, spec="OBR-2|OBR-3", expected="OBR-2.1 or OBR-3.1 present")
 
     if pol.obr4_coded:
-        if not (any(get_values("OBR-4.1", engine_eff, raw, idx_pack, parsed)) and
-                any(get_values("OBR-4.3", engine_eff, raw, idx_pack, parsed))):
-            issues.add_err("OBR-4 must be coded (requires .1 id and .3 system)", max_errors_per_msg)
+        has41 = any(get_values("OBR-4.1", engine_eff, raw, idx_pack, parsed))
+        has43 = any(get_values("OBR-4.3", engine_eff, raw, idx_pack, parsed))
+        if not (has41 and has43):
+            issues.add_err("OBR-4 must be coded (requires .1 id and .3 system)",
+                           max_errors_per_msg, spec="OBR-4", expected="OBR-4.1 and OBR-4.3 present")
 
     if pol.obr25_allowed and allowed.result_status:
         for v in get_values("OBR-25", engine_eff, raw, idx_pack, parsed):
             if v and v not in allowed.result_status:
-                issues.add_err(f"OBR-25 result_status '{v}' not allowed", max_errors_per_msg)
+                issues.add_err(f"OBR-25 result_status '{v}' not allowed",
+                               max_errors_per_msg, spec="OBR-25", value=v,
+                               expected=f"allowed: {allowed.result_status}")
 
     if allowed.obr24:
         for v in get_values("OBR-24", engine_eff, raw, idx_pack, parsed):
             if v and v not in allowed.obr24:
-                issues.add_err(f"OBR-24 specimen_action_code '{v}' not in allowed list", max_errors_per_msg)
+                issues.add_err(f"OBR-24 specimen_action_code '{v}' not in allowed list",
+                               max_errors_per_msg, spec="OBR-24", value=v,
+                               expected=f"allowed: {allowed.obr24}")
 
     if pol.obx11_allowed and allowed.result_status:
         for v in get_values("OBX-11", engine_eff, raw, idx_pack, parsed):
             if v and v not in allowed.result_status:
-                issues.add_err(f"OBX-11 result_status '{v}' not allowed", max_errors_per_msg)
+                issues.add_err(f"OBX-11 result_status '{v}' not allowed",
+                               max_errors_per_msg, spec="OBX-11", value=v,
+                               expected=f"allowed: {allowed.result_status}")
 
     if pol.obx5_required_unless_status_in_empty_allows:
         obx11 = get_values("OBX-11", engine_eff, raw, idx_pack, parsed)
         obx5  = get_values("OBX-5.1", engine_eff, raw, idx_pack, parsed) or \
                 get_values("OBX-5",   engine_eff, raw, idx_pack, parsed)
         if any(v and v not in allowed.obx11_empty_allows for v in obx11) and not any(obx5):
-            issues.add_err("OBX-5 required unless OBX-11 in empty-allows", max_errors_per_msg)
+            issues.add_err("OBX-5 required unless OBX-11 in empty-allows",
+                           max_errors_per_msg, spec="OBX-5",
+                           expected=f"required unless OBX-11 ∈ {allowed.obx11_empty_allows}")
 
     if pol.obx3_coded:
-        if not (any(get_values("OBX-3.1", engine_eff, raw, idx_pack, parsed)) and
-                any(get_values("OBX-3.3", engine_eff, raw, idx_pack, parsed))):
-            issues.add_err("OBX-3 must be coded (requires .1 id and .3 system)", max_errors_per_msg)
+        has31 = any(get_values("OBX-3.1", engine_eff, raw, idx_pack, parsed))
+        has33 = any(get_values("OBX-3.3", engine_eff, raw, idx_pack, parsed))
+        if not (has31 and has33):
+            issues.add_err("OBX-3 must be coded (requires .1 id and .3 system)",
+                           max_errors_per_msg, spec="OBX-3", expected="OBX-3.1 and OBX-3.3 present")
 
     if pol.obx2_vs_obx5_typecheck:
         for t in (v.strip().upper() for v in get_values("OBX-2", engine_eff, raw, idx_pack, parsed)):
@@ -715,28 +753,37 @@ def validate_message(
             obx5_val = next(iter(get_values("OBX-5", engine_eff, raw, idx_pack, parsed)), "")
             if t == "NM":
                 if not obx5_val or not NUMERIC_RE.match(obx5_val):
-                    issues.add_err("OBX-2=NM requires OBX-5 numeric", max_errors_per_msg)
+                    issues.add_err("OBX-2=NM requires OBX-5 numeric",
+                                   max_errors_per_msg, spec="OBX-5", value=obx5_val, expected="numeric")
             elif t in ("TS","DT","DTM"):
                 ok_len, why_len = ts_length_ok(obx5_val, profile.timestamps.allowed_lengths if profile.timestamps else _TS_BASE_ALLOWED_DEFAULT)
                 if not ok_len:
-                    issues.add_err(f"OBX-2={t} requires OBX-5 TS-valid: '{obx5_val}' ({why_len})", max_errors_per_msg)
+                    issues.add_err(f"OBX-2={t} requires OBX-5 TS-valid: '{obx5_val}' ({why_len})",
+                                   max_errors_per_msg, spec="OBX-5", value=obx5_val,
+                                   expected=f"TS {sorted(profile.timestamps.allowed_lengths if profile.timestamps else _TS_BASE_ALLOWED_DEFAULT)}")
             elif t in ("CE","CWE"):
                 if not any(get_values("OBX-5.1", engine_eff, raw, idx_pack, parsed)):
-                    issues.add_err("OBX-2=CE/CWE requires OBX-5.1 coded id", max_errors_per_msg)
+                    issues.add_err("OBX-2=CE/CWE requires OBX-5.1 coded id",
+                                   max_errors_per_msg, spec="OBX-5.1", expected="coded id present")
 
     if pol.txa2_coded:
-        if not (any(get_values("TXA-2.1", engine_eff, raw, idx_pack, parsed)) and
-                any(get_values("TXA-2.3", engine_eff, raw, idx_pack, parsed))):
-            issues.add_err("TXA-2 must be coded (requires .1 id and .3 system)", max_errors_per_msg)
+        has21 = any(get_values("TXA-2.1", engine_eff, raw, idx_pack, parsed))
+        has23 = any(get_values("TXA-2.3", engine_eff, raw, idx_pack, parsed))
+        if not (has21 and has23):
+            issues.add_err("TXA-2 must be coded (requires .1 id and .3 system)",
+                           max_errors_per_msg, spec="TXA-2", expected="TXA-2.1 and TXA-2.3 present")
 
     if pol.require_pv1_2_encounter_class:
         pv1_2_vals = get_values("PV1-2", engine_eff, raw, idx_pack, parsed)
         if not any(pv1_2_vals):
-            issues.add_err("PV1-2 (encounter/patient class) required but missing/empty", max_errors_per_msg)
+            issues.add_err("PV1-2 (encounter/patient class) required but missing/empty",
+                           max_errors_per_msg, spec="PV1-2", expected="non-empty")
         elif allowed.encounter_class:
             for v in pv1_2_vals:
                 if v and v not in allowed.encounter_class:
-                    issues.add_err(f"PV1-2 encounter class '{v}' not in allowed set", max_errors_per_msg)
+                    issues.add_err(f"PV1-2 encounter class '{v}' not in allowed set",
+                                   max_errors_per_msg, spec="PV1-2", value=v,
+                                   expected=f"allowed: {allowed.encounter_class}")
 
     return {"msg_type": hdr["msg_type"], "msg_ctrl_id": hdr["msg_ctrl_id"], "version": hdr["version"]}, issues
 
@@ -764,97 +811,63 @@ def _worker_validate_chunk(
 # Reporting (defaults + robust writers)
 # =======================================================================
 
-def _default_report_dir(cwd: Path) -> Path:
-    """
-    If running inside tests/, prefer tests/artifacts/hl7; otherwise repo-root artifacts/hl7.
-    """
-    try:
-        if cwd.name.lower() == "tests" or (cwd / "fixtures").exists():
-            return cwd / "artifacts" / "hl7"
-        repo_root = Path(__file__).resolve().parent.parent
-        return repo_root / "artifacts" / "hl7"
-    except Exception:
-        return cwd / "artifacts" / "hl7"
+def _default_report_dir(_cwd: Path) -> Path:
+    """Always default to <repo root>/tests/artifacts/hl7."""
+    repo_root = Path(__file__).resolve().parent.parent
+    return repo_root / "tests" / "artifacts" / "hl7"
 
-
-def resolve_report_path(
-    report: Optional[str],
-    input_file: str,
-    engine_name: str,
-    report_dir: Optional[str] = None,
-) -> Path:
-    """
-    Decide where to write the CSV/JSONL report when --report isn't provided.
-
-    Precedence:
-      1) --report (exact file path)
-      2) --report-dir directory (file name auto = <input_stem>_<engine>.csv)
-      3) env HL7_QA_REPORT_DIR
-      4) auto default based on CWD (tests/ vs repo root)
-
-    If no extension is provided, defaults to .csv.
-    """
+def resolve_report_path(report: Optional[str], input_file: str, engine_name: str, report_dir: Optional[str] = None) -> Path:
     if report:
         p = Path(report)
         if p.suffix.lower() not in (".csv", ".jsonl", ""):
             p = p.with_suffix(".csv")
         return p
-
     base_dir = Path(report_dir) if report_dir else None
     if base_dir is None:
         env_dir = os.getenv("HL7_QA_REPORT_DIR")
         base_dir = Path(env_dir) if env_dir else None
     if base_dir is None:
         base_dir = _default_report_dir(Path.cwd())
-
     base_dir.mkdir(parents=True, exist_ok=True)
     stem = Path(input_file).stem or "report"
     return base_dir / f"{stem}_{engine_name}.csv"
 
-
-def open_csv_writer(path: str | Path) -> Tuple[io.TextIOBase, csv.writer]:
+def open_csv_writer(path: str | Path, mode: str = "per-issue") -> Tuple[io.TextIOBase, csv.writer]:
     p = Path(path)
     p.parent.mkdir(parents=True, exist_ok=True)
     fh = p.open("w", newline="", encoding="utf-8", buffering=1024 * 1024)
     w = csv.writer(fh)
-    w.writerow(["index", "msg_ctrl_id", "msg_type", "version", "errors", "warnings"])
+    if mode == "per-message":
+        w.writerow(["index", "msg_ctrl_id", "msg_type", "version", "errors", "warnings"])
+    else:
+        w.writerow(["index", "msg_ctrl_id", "msg_type", "version", "field", "value_received", "validation_value", "issue_type", "issue"])
     return fh, w
 
-
 def open_jsonl_writer(path: str | Path) -> io.TextIOBase:
-    p = Path(path)
-    p.parent.mkdir(parents=True, exist_ok=True)
+    p = Path(path); p.parent.mkdir(parents=True, exist_ok=True)
     return p.open("w", encoding="utf-8", buffering=1024 * 1024)
 
+def write_csv_row_per_message(writer: csv.writer, idx: int, header: Dict[str, str], issues: IssueSet) -> None:
+    writer.writerow([idx, header.get("msg_ctrl_id",""), header.get("msg_type",""),
+                     header.get("version",""), "; ".join(issues.errors), "; ".join(issues.warnings)])
 
-def write_csv_row(writer: csv.writer, idx: int, header: Dict[str, str], issues: IssueSet) -> None:
-    writer.writerow(
-        [
-            idx,
-            header.get("msg_ctrl_id", ""),
-            header.get("msg_type", ""),
-            header.get("version", ""),
-            "; ".join(issues.errors),
-            "; ".join(issues.warnings),
-        ]
-    )
-
+def write_csv_rows_per_issue(writer: csv.writer, idx: int, header: Dict[str, str], issues: IssueSet) -> None:
+    base = [idx, header.get("msg_ctrl_id", ""), header.get("msg_type", ""), header.get("version", "")]
+    for it in issues.items:
+        if it.message.startswith("... "):  # skip truncation meta-lines
+            continue
+        writer.writerow(base + [it.spec or "", it.value or "", it.expected or "", it.kind, it.message])
 
 def write_jsonl_row(fh: io.TextIOBase, idx: int, header: Dict[str, str], issues: IssueSet) -> None:
-    fh.write(
-        json.dumps(
-            {
-                "index": idx,
-                "msg_ctrl_id": header.get("msg_ctrl_id", ""),
-                "msg_type": header.get("msg_type", ""),
-                "version": header.get("version", ""),
-                "errors": issues.errors,
-                "warnings": issues.warnings,
-            },
-            ensure_ascii=False,
-        )
-        + "\n"
-    )
+    fh.write(json.dumps({
+        "index": idx,
+        "msg_ctrl_id": header.get("msg_ctrl_id",""),
+        "msg_type": header.get("msg_type",""),
+        "version": header.get("version",""),
+        "errors": issues.errors,
+        "warnings": issues.warnings,
+        "issues": [it.__dict__ for it in issues.items],
+    }, ensure_ascii=False) + "\n")
 
 
 # =======================================================================
@@ -865,35 +878,24 @@ def parse_args(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
     p = argparse.ArgumentParser(description="HL7 QA: rules-aware per-message validator (profiles)")
     p.add_argument("input", help="Path to HL7 file")
     p.add_argument("--rules", help="Path to YAML rules file", required=False)
-    p.add_argument(
-        "--report",
-        help="Output file (.csv or .jsonl). If omitted, a default path is chosen (see --report-dir / HL7_QA_REPORT_DIR).",
-        required=False,
-    )
-    p.add_argument(
-        "--report-dir",
-        help="Directory for report when --report is omitted (env HL7_QA_REPORT_DIR also supported).",
-        required=False,
-    )
+    p.add_argument("--report", help="Output (.csv or .jsonl). If omitted, a default path is chosen.", required=False)
+    p.add_argument("--report-dir", help="Directory for report when --report is omitted (env HL7_QA_REPORT_DIR also supported).", required=False)
+    p.add_argument("--report-mode", choices=["per-issue", "per-message"], default="per-issue",
+                   help="CSV rows: 'per-issue' (default) or 'per-message' (aggregate).")
     p.add_argument("--progress-every", type=int, default=0)
     p.add_argument("--progress-time", type=float, default=0.0)
     p.add_argument("--start", type=int, default=0)
     p.add_argument("--limit", type=int, default=0)
-    p.add_argument("--only", help="Comma-separated list of message types to include (e.g., ORU_R01, ADT_A01)")
+    p.add_argument("--only", help="Comma-separated message types (ORU_R01, ADT_A01, ...)")
     p.add_argument("--max-print", type=int, default=3)
     p.add_argument("--max-errors-per-msg", type=int, default=50)
-    # Engine selection
     p.add_argument("--engine", choices=["auto", "fast", "hl7apy"], default="auto",
-                   help="Engine: 'auto' (use profile.engine or fast), 'fast' (raw ER7), 'hl7apy' (object model).")
-    # Legacy parse/validation controls (kept for convenience)
+                   help="Engine: 'auto' (use profile.engine or fast), 'fast', 'hl7apy'.")
     g = p.add_mutually_exclusive_group()
     g.add_argument("--light-parse", action="store_true", help="Alias for --engine fast")
     g.add_argument("--full-parse", action="store_true", help="Alias for --engine hl7apy")
-    p.add_argument("--no-quiet-parse", action="store_true",
-                   help="Show hl7apy parser logs/warnings (default: suppressed)")
-    p.add_argument("--hl7apy-validation", choices=["none","tolerant","strict"], default="none",
-                   help="hl7apy validation level during parse (default: none)")
-    # Parallel
+    p.add_argument("--no-quiet-parse", action="store_true", help="Show hl7apy logs (default: suppressed)")
+    p.add_argument("--hl7apy-validation", choices=["none","tolerant","strict"], default="none")
     p.add_argument("--workers", default="0", help="'auto' or integer (0 = no parallel)")
     p.add_argument("--chunk", type=int, default=200)
     return p.parse_args(argv)
@@ -906,8 +908,7 @@ def parse_args(argv: Optional[Sequence[str]] = None) -> argparse.Namespace:
 def main(argv: Optional[Sequence[str]] = None) -> int:
     args = parse_args(argv)
 
-    # Determine engine preference from flags
-    engine_pref = args.engine  # "auto" by default
+    engine_pref = args.engine
     if args.light_parse:
         engine_pref = "fast"
     elif args.full_parse:
@@ -920,9 +921,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     quiet_parse = not args.no_quiet_parse
     configure_hl7apy_logging(quiet=quiet_parse)
     hl7apy_validation = args.hl7apy_validation
-    ctx = ValidationContext(quiet_parse=quiet_parse,
-                            hl7apy_validation=hl7apy_validation,
-                            engine_pref=engine_pref)
+    ctx = ValidationContext(quiet_parse=quiet_parse, hl7apy_validation=hl7apy_validation, engine_pref=engine_pref)
 
     blob = read_file_bytes(args.input)
     msgs = fast_split_messages(blob)
@@ -938,14 +937,12 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         return 1
     work_msgs = msgs[start:end]
 
-    # rules
     if args.rules:
         print(f"[rules] using: {Path(args.rules).resolve()}")
         rules = RuleSet.load(args.rules)
     else:
         rules = RuleSet()
 
-    # filter by type (string match on normalized MSH-9 or raw)
     only_set: Optional[set[str]] = None
     if args.only:
         only_set = {x.strip() for x in args.only.split(",") if x.strip()}
@@ -957,12 +954,11 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
                     filtered.append(raw)
             work_msgs = filtered
 
-    # report (now defaults when --report is omitted)
     writer_csv: Optional[csv.writer] = None
     fh_report: Optional[io.TextIOBase] = None
     write_row_fn = None
 
-    engine_label = engine_pref  # may be 'auto'
+    engine_label = engine_pref
     report_path = resolve_report_path(args.report, args.input, engine_label, args.report_dir)
 
     ext = Path(report_path).suffix.lower()
@@ -971,8 +967,11 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         ext = ".csv"
 
     if ext == ".csv":
-        fh_report, writer_csv = open_csv_writer(report_path)
-        write_row_fn = lambda idx, header, issues: write_csv_row(writer_csv, idx, header, issues)
+        fh_report, writer_csv = open_csv_writer(report_path, mode=args.report_mode)
+        if args.report_mode == "per-message":
+            write_row_fn = lambda idx, header, issues: write_csv_row_per_message(writer_csv, idx, header, issues)
+        else:
+            write_row_fn = lambda idx, header, issues: write_csv_rows_per_issue(writer_csv, idx, header, issues)
     elif ext == ".jsonl":
         fh_report = open_jsonl_writer(report_path)
         write_row_fn = lambda idx, header, issues: write_jsonl_row(fh_report, idx, header, issues)
@@ -1003,17 +1002,14 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     if isinstance(args.workers, str):
         w = args.workers.strip().lower()
         if w == "auto":
-            max_workers = max(1, cpu_count()-1)
-            parallel = True
+            max_workers = max(1, cpu_count()-1); parallel = True
         else:
             try:
-                max_workers = int(w)
-                parallel = max_workers > 0
+                max_workers = int(w); parallel = max_workers > 0
             except Exception:
                 parallel = False
     else:
-        max_workers = int(args.workers)
-        parallel = max_workers > 0
+        max_workers = int(args.workers); parallel = max_workers > 0
 
     if parallel:
         chunks: List[List[bytes]] = []
@@ -1035,9 +1031,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     else:
         def gen():
             for i, raw in enumerate(work_msgs, 1):
-                head, iss = validate_message(raw, rules,
-                                             max_errors_per_msg=int(args.max_errors_per_msg),
-                                             ctx=ctx)
+                head, iss = validate_message(raw, rules, max_errors_per_msg=int(args.max_errors_per_msg), ctx=ctx)
                 maybe_progress(i)
                 yield head, iss
         results_iter = gen()
@@ -1049,14 +1043,12 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         if args.max_print and (issues.errors or issues.warnings):
             printed = 0
             for e in issues.errors[:args.max_print]:
-                print(f"[{idx}] ERR: {e}")
-                printed += 1
+                print(f"[{idx}] ERR: {e}"); printed += 1
             if printed < args.max_print:
                 for w in issues.warnings[:(args.max_print-printed)]:
                     print(f"[{idx}] WRN: {w}")
         if write_row_fn:
-            write_row_fn(idx, header, issues)
-            n_rows += 1
+            write_row_fn(idx, header, issues); n_rows += 1
 
     if fh_report:
         fh_report.close()
@@ -1067,8 +1059,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
 
     dt = perf_counter() - t0
     rate = (n_proc / dt) if dt else 0.0
-    print(f"[summary] msgs={n_proc} elapsed={dt:.1f}s rate={rate:.1f} msg/s "
-          f"errors={tot_err} warnings={tot_warn}")
+    print(f"[summary] msgs={n_proc} elapsed={dt:.1f}s rate={rate:.1f} msg/s errors={tot_err} warnings={tot_warn}")
     return 0
 
 
