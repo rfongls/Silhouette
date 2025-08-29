@@ -8,7 +8,7 @@ Use this doc to track delivery against the Codex handoff phases. Update checkbox
 
 ## At‑a‑Glance Status
 
-* **Current Phase:** 4 — Reference Maps (US Core)
+* **Current Phase:** 5 — Validation
 * **MVP Definition of Done:**
   * ADT^A01 → `Patient`, `Encounter`, `Provenance` (US Core‑valid)
   * ORU^R01 → `Patient`, `Observation`, `DiagnosticReport` (+`Specimen` if present) (US Core‑valid)
@@ -86,7 +86,8 @@ Use this doc to track delivery against the Codex handoff phases. Update checkbox
   **Commit/PR:** `89a814c` • **Date:** 2025‑08‑29
 * [x] `maps/oru_uscore.yaml` (Patient, Observation[lab], DiagnosticReport, Specimen, Provenance)  \\
   **Commit/PR:** `TBD` • **Date:** 2025-08-29
-* [ ] Snapshot tests (`tests/data/fhir/gold/*.json`)
+* [x] Snapshot tests (`tests/data/fhir/gold/*.json`)  \\
+  **Commit/PR:** `TBD` • **Date:** 2025-08-29
 
 **Notes/Blockers:** *(fill in)*
 
