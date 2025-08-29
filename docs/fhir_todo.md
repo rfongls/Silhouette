@@ -94,11 +94,14 @@ This plan drives a **US Core–compliant** HL7 v2 → FHIR pipeline using your e
 ---
 
 ## Phase 6 — Terminology MVP
-- [ ] Add lookup tables under `terminology/` for gender, encounter class and LOINC mappings.
-  - **Files:** `sex_map.csv` (`v2,admin_gender`), `pv1_class.csv` (`v2,act_code`), `loinc_map.csv` (`obx3_code,system,display,default_ucum_code,default_unit_text`).
+- > **Reminder:** Once these items are implemented, update [`docs/fhir_progress.md`](fhir_progress.md).
+- [x] Add lookup tables under `terminology/` for gender, encounter class and LOINC mappings.
+  - **Implement:** Create `sex_map.csv` (`v2,admin_gender`), `pv1_class.csv` (`v2,act_code`), `loinc_map.csv` (`obx3_code,system,display,default_ucum_code,default_unit_text`).
+  - **Test:** Load each table via terminology loader; known codes resolve, unknown codes return `None`.
   - **DoD:** Files exist; loader reads into dicts.
-- [ ] Add lookup helpers emitting metrics when codes are missing.
+- [x] Add lookup helpers emitting metrics when codes are missing.
   - **Implement:** Helpers in `translators/transforms.py`; emit **tx-miss** metric once per unknown code.
+  - **Test:** Translate sample HL7 with known and unknown codes; ensure metrics increment only for misses.
   - **DoD:** Observations include UCUM when known; misses recorded.
 
 ---
