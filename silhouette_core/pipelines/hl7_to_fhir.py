@@ -175,6 +175,7 @@ def translate(
     text = Path(input_path).read_text(encoding="utf-8")
     msg = _parse_hl7(text)
     qa = _run_qa(msg, rules)
+    metrics: Dict[str, int] = {}
 
     resources: List[Dict[str, Any]] = []
 
@@ -192,7 +193,10 @@ def translate(
                     vals.append(ext[0] if ext else None)
                 if rule.transform:
                     fn = getattr(transforms, rule.transform)
-                    v = fn(*vals)
+                    try:
+                        v = fn(*vals, metrics=metrics)
+                    except TypeError:
+                        v = fn(*vals)
                 else:
                     v = vals[0]
                 if v not in ("", None, {}):
@@ -213,7 +217,16 @@ def translate(
                         continue
                 if rule.transform:
                     fn = getattr(transforms, rule.transform)
-                    v = fn() if rule.hl7_path == "-" else fn(v)
+                    if rule.hl7_path == "-":
+                        try:
+                            v = fn(metrics=metrics)
+                        except TypeError:
+                            v = fn()
+                    else:
+                        try:
+                            v = fn(v, metrics=metrics)
+                        except TypeError:
+                            v = fn(v)
                 if v == "" or v is None or v == {}:
                     continue
                 if rule.fhir_path.endswith("[x]") and isinstance(v, dict):
