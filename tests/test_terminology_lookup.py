@@ -32,3 +32,4 @@ def test_reset_cache():
     terminology.lookup_gender("F")
     terminology.reset_cache()
     assert terminology.lookup_gender("F") == "female"
+
