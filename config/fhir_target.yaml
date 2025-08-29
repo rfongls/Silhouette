@@ -1,0 +1,10 @@
+package_id: hl7.fhir.us.core
+package_version: 6.1.0
+fhir_version: 4.0.1
+default_profiles:
+  Patient: "http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient"
+  Encounter: "http://hl7.org/fhir/us/core/StructureDefinition/us-core-encounter"
+  Observation: "http://hl7.org/fhir/us/core/StructureDefinition/us-core-observation-lab"
+terminology:
+  use_local_tx: true
+  tx_server: "https://tx.fhir.org/r4"
