@@ -6,6 +6,7 @@ from typing import Any, Dict, Optional
 import re
 
 from silhouette_core import terminology
+from silhouette_core.identifier_registry import get_system
 
 _V2_IDENTIFIER_SYSTEM = "http://terminology.hl7.org/CodeSystem/v2-0203"
 _V3_ACT_CODE_SYSTEM = "http://terminology.hl7.org/CodeSystem/v3-ActCode"
@@ -268,19 +269,87 @@ def cx_to_identifier(value: str) -> Dict[str, Any]:
     return ident
 
 
-def xcn_to_reference(value: str) -> Dict[str, Any]:
-    """Map an HL7 XCN field to a FHIR Reference with display."""
+def xcn_to_identifier(value: str) -> Dict[str, Any]:
+    """Map an HL7 XCN field to a Practitioner identifier."""
+    comps = [c.strip() for c in (value or "").split("^")]
+    ident: Dict[str, Any] = {"value": comps[0] if comps else ""}
+    system = get_system("practitioner")
+    if system:
+        ident["system"] = system
+    return ident
+
+
+def xcn_to_name(value: str) -> Dict[str, Any]:
+    """Extract a HumanName from an HL7 XCN field."""
     comps = [c.strip() for c in (value or "").split("^")]
     family = comps[1] if len(comps) > 1 else ""
     given = comps[2] if len(comps) > 2 else ""
-    name = " ".join(p for p in [given, family] if p)
-    return {"display": name} if name else {}
+    name: Dict[str, Any] = {}
+    if family:
+        name["family"] = family
+    if given:
+        name["given"] = [given]
+    return name
+
+
+def xcn_to_reference(value: str) -> Dict[str, Any]:
+    """Map an HL7 XCN field to a FHIR Reference with identifier and display."""
+    ident = xcn_to_identifier(value)
+    name = xcn_to_name(value)
+    ref: Dict[str, Any] = {}
+    if ident:
+        ref["identifier"] = ident
+    if name:
+        ref["display"] = " ".join(name.get("given", []) + [name.get("family", "")]).strip()
+    return ref
 
 
 def string_to_reference(value: str) -> Dict[str, Any]:
     """Wrap a plain string as a FHIR Reference.display."""
     val = (value or "").strip()
     return {"display": val} if val else {}
+
+
+def string_to_org_identifier(value: str) -> Dict[str, Any]:
+    """Convert a plain string to an Organization identifier."""
+    val = (value or "").strip()
+    if not val:
+        return {}
+    system = get_system("organization")
+    ident: Dict[str, Any] = {"value": val}
+    if system:
+        ident["system"] = system
+    return ident
+
+
+def string_to_location_identifier(value: str) -> Dict[str, Any]:
+    """Convert a plain string to a Location identifier."""
+    val = (value or "").strip()
+    if not val:
+        return {}
+    system = get_system("location")
+    ident: Dict[str, Any] = {"value": val}
+    if system:
+        ident["system"] = system
+    return ident
+
+
+def string_to_org_reference(value: str) -> Dict[str, Any]:
+    ident = string_to_org_identifier(value)
+    ref: Dict[str, Any] = {}
+    if ident:
+        ref["identifier"] = ident
+        ref["display"] = ident["value"]
+    return ref
+
+
+def string_to_location_reference(value: str) -> Dict[str, Any]:
+    ident = string_to_location_identifier(value)
+    ref: Dict[str, Any] = {}
+    if ident:
+        ref["identifier"] = ident
+        ref["display"] = ident["value"]
+    return ref
 
 
 # ----- Default value helpers -----
@@ -350,10 +419,33 @@ _SCH_STATUS_TO_APPT_STATUS = {
     "PENDING": "pending",
 }
 
+_FHIR_APPT_STATUSES = {
+    "proposed",
+    "pending",
+    "booked",
+    "arrived",
+    "fulfilled",
+    "cancelled",
+    "noshow",
+    "entered-in-error",
+    "checked-in",
+    "waitlist",
+}
+
 
 def sch_status_to_appt_status(value: str) -> str:
     """Map SCH-25 appointment status to FHIR Appointment.status."""
-
+    key = (value or "").strip()
+    if not key:
+        return "proposed"
+    key_upper = key.upper()
+    mapped = _SCH_STATUS_TO_APPT_STATUS.get(key_upper)
+    if mapped:
+        return mapped
+    key_lower = key.lower()
+    if key_lower in _FHIR_APPT_STATUSES:
+        return key_lower
+    return "proposed"
 
 _ADT_EVENT_TO_ENCOUNTER_STATUS = {
     "A02": "in-progress",

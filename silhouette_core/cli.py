@@ -5,6 +5,7 @@ import sys
 from pathlib import Path
 
 import click
+import yaml
 
 from . import __version__
 from .analysis import hotpaths as analysis_hotpaths
@@ -209,6 +210,7 @@ def fhir_group():
 @click.option("--validate", is_flag=True, help="Validate output resources")
 @click.option("--dry-run", is_flag=True, help="Run without posting to server")
 @click.option("--message-mode", is_flag=True, help="Emit message bundles with MessageHeader")
+@click.option("--partner", default=None, help="Partner config to apply")
 def fhir_translate_cmd(
     input_path,
     rules,
@@ -220,6 +222,7 @@ def fhir_translate_cmd(
     validate,
     dry_run,
     message_mode,
+    partner,
 ):
     """Translate HL7 v2 messages to FHIR (stub)."""
     from .pipelines import hl7_to_fhir
@@ -235,13 +238,15 @@ def fhir_translate_cmd(
         validate=validate,
         dry_run=dry_run,
         message_mode=message_mode,
+        partner=partner,
     )
 
 
 @fhir_group.command("validate")
 @click.option("--in", "input_glob", required=True, help="NDJSON file(s) to validate")
 @click.option("--hapi", is_flag=True, help="Also run HAPI FHIR validator")
-def fhir_validate_cmd(input_glob, hapi):
+@click.option("--partner", default=None, help="Partner config to apply")
+def fhir_validate_cmd(input_glob, hapi, partner):
     """Validate NDJSON FHIR resources."""
     import glob
     import json
@@ -266,8 +271,13 @@ def fhir_validate_cmd(input_glob, hapi):
 
     if hapi:
         from validators import hapi_cli
-
-        hapi_cli.run(paths)
+        package_ids = None
+        if partner:
+            p_cfg = yaml.safe_load(
+                Path(f"config/partners/{partner}.yaml").read_text(encoding="utf-8")
+            )
+            package_ids = p_cfg.get("package_ids")
+        hapi_cli.run(paths, package_ids=package_ids)
 
 
 @main.group("analyze")
