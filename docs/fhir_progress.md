@@ -8,7 +8,7 @@ Use this doc to track delivery against the Codex handoff phases. Update checkbox
 
 ## At-a-Glance Status
 
-* **Current Phase:** 26 — Console Entrypoint & README Sync
+* **Current Phase:** 30 — Roadmap Complete
 * **MVP Definition of Done:**
   * ADT^A01 → `Patient`, `Encounter`, `Provenance` (US Core-valid)
   * ORU^R01 → `Patient`, `Observation`, `DiagnosticReport` (+`Specimen` if present) (US Core-valid)
@@ -259,22 +259,22 @@ Use this doc to track delivery against the Codex handoff phases. Update checkbox
 ---
 
 ### Phase 26 — Console Entrypoint & README Sync
-- [ ] Console script released; README examples aligned
+- [x] Console script released; README examples aligned
 
 ---
 
 ### Phase 27 — Terminology Services & ValueSet Caching
-- [ ] Local cache & optional remote TX/VSAC
+- [x] Local cache & optional remote TX/VSAC
 
 ---
 
 ### Phase 28 — Bulk Ingest/Export Paths
-- [ ] NDJSON batching & optional $import/$export
+- [x] NDJSON batching & optional $import/$export
 
 ---
 
 ### Phase 29 — Security & Auditing
-- [ ] AuditEvent, PHI de-id switch, retention
+- [x] AuditEvent, PHI de-id switch, retention
 
 ---
 
@@ -288,6 +288,7 @@ Use this doc to track delivery against the Codex handoff phases. Update checkbox
 * PR # — "Posting + observability"; **Phase(s):** 7 • **Merged:** TBD • **SHA:**
 * PR # — "CI translation + validation"; **Phase(s):** 8 • **Merged:** TBD • **SHA:**
 * PR #TBD — "Complete identifier registry, partner IGs, and messaging mode"; **Phase(s):** 17-19 • **Merged:** TBD • **SHA:** `2f401d7`
+* PR #TBD — "Console entrypoint, terminology cache, bulk and audit"; **Phase(s):** 26-29 • **Merged:** TBD • **SHA:** `TBD`
 
 ---
 

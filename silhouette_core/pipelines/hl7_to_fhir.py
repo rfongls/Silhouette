@@ -16,6 +16,7 @@ import yaml
 from translators import transforms
 from translators.mapping_loader import load as load_map, MapSpec
 from silhouette_core.posting import post_transaction
+from skills import audit
 
 logging.basicConfig(level=logging.INFO, format="%(message)s")
 logger = logging.getLogger(__name__)
@@ -167,6 +168,7 @@ def translate(
     partner: str | None = None,
     message_endpoint: str | None = None,
     notify_url: str | None = None,
+    deidentify: bool = False,
 ) -> None:
     """Translate HL7 messages to FHIR resources."""
 
@@ -258,6 +260,11 @@ def translate(
                 else:
                     _assign(res, rule.fhir_path, v)
         resources.append(res)
+
+    if deidentify:
+        for r in resources:
+            if r.get("resourceType") == "Patient":
+                r.pop("name", None)
 
     if validate:
         from validators.fhir_profile import (
@@ -557,3 +564,7 @@ def translate(
                     break
                 except Exception:
                     continue
+
+        audit.emit_and_persist(
+            audit.fhir_audit_event("translate", "success", "cli", str(msg_uuid))
+        )

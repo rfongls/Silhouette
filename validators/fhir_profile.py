@@ -10,6 +10,7 @@ from fhir.resources.medicationstatement import MedicationStatement
 from fhir.resources.encounter import Encounter
 from fhir.resources.diagnosticreport import DiagnosticReport
 import pathlib
+from silhouette_core import terminology_service
 
 SCHEMA_DIR = pathlib.Path("schemas/fhir/uscore")
 
@@ -49,3 +50,9 @@ def validate_structural_with_pydantic(resource: Dict[str, Any]) -> None:
         Encounter(**resource)
     elif rtype == "DiagnosticReport":
         DiagnosticReport(**resource)
+
+
+def validate_terminology(resource: Dict[str, Any], cache_dir: str | None) -> None:
+    """Run lightweight terminology validation using the local cache."""
+    if not terminology_service.validate_resource(resource, cache_dir=cache_dir):
+        raise ValueError("Terminology check failed")

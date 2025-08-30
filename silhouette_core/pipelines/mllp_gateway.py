@@ -55,4 +55,3 @@ def send(host: str, port: int, message: bytes) -> bytes:
         sock.sendall(frame)
         ack = sock.recv(1024)
     return ack
-
