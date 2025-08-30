@@ -251,3 +251,48 @@ This plan drives a **US Core–compliant** HL7 v2 → FHIR pipeline using your e
 ## Phase 19 — Messaging Mode (optional) ✅
 - [x] Add **Bundle.type=message** support with **MessageHeader** for sites that require messaging. _(commit: `2f401d7`)_
   - **DoD:** Message bundles validate; posting path remains transaction by default.
+
+## Phase 20 — Full Message Mode (MessageHeader + Posting)
+- **Implement:** emit `Bundle.type=message` with `MessageHeader` (event from v2 trigger) + resources in order.
+- **Posting:** add `--message-endpoint`; keep transaction path intact.
+- **Validate:** HAPI message validation; snapshot tests for A01/A04/R01.
+- **DoD:** message bundles generated and posted when configured; validation green.
+
+## Phase 21 — Partner IG Matrix & Runtime Overrides
+- **Implement:** honor `--partner <name>` in translate/validate; load `config/partners/<name>.yaml`.
+- **CI:** matrix job runs HAPI per partner; artifacts uploaded per partner.
+- **DoD:** CI matrix passes for example partner(s); failures localized per partner job.
+
+## Phase 22 — Reference Entities Upsert & True References
+- **Implement:** upsert Organization/Practitioner/PractitionerRole/Location (conditional PUT keys from `config/identifier_systems.yaml`).
+- **Transforms:** upgrade XCN/locations to real `Reference` (not display-only).
+- **DoD:** bundles include referenced entities; HAPI passes MustSupport.
+
+## Phase 23 — FHIR → HL7 v2 Rendering (Reverse)
+- **Implement:** reverse maps under `maps_reverse/`; CLI `hl7 render` (or `fhir render-v2`) to produce v2 segments from FHIR bundles.
+- **Tests:** snapshot + round-trip (v2→FHIR→v2) for ADT/ORU.
+- **DoD:** key fields preserved; renderers pass unit tests.
+
+## Phase 24 — Real-time Subscriptions / Notifications
+- **Implement:** REST-hook/WebSocket Subscription or webhook emit from pipeline events.
+- **DoD:** sample notification on Encounter/Observation creation; retry/backoff documented.
+
+## Phase 25 — MLLP Gateway / Daemon
+- **Implement:** inbound MLLP server → pipeline; outbound client for FHIR→v2 renders; ACK/NAK handling.
+- **DoD:** loopback tests pass; configurable TLS.
+
+## Phase 26 — Console Entrypoint & README Sync
+- **Implement:** `pyproject.toml` console script `silhouette = "silhouette_core.cli:main"`.
+- **DoD:** `silhouette fhir translate -h` works on clean install; README examples updated later.
+
+## Phase 27 — Terminology Services & ValueSet Caching
+- **Implement:** local cache + optional remote TX/VSAC; code validation hooks in validate/post.
+- **DoD:** reduced tx-miss; offline cache used in CI.
+
+## Phase 28 — Bulk Ingest/Export Paths
+- **Implement:** NDJSON batching; (optional) FHIR `$import`/`$export` compatibility where available.
+- **DoD:** pipeline handles large folders; memory/backpressure documented.
+
+## Phase 29 — Security & Auditing
+- **Implement:** AuditEvent entries, PHI de-id switch, enhanced logs; configurable retention.
+- **DoD:** audit trail captures translate/validate/post events with message IDs.

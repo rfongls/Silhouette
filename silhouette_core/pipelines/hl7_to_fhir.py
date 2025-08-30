@@ -165,6 +165,8 @@ def translate(
     dry_run: bool = False,
     message_mode: bool = False,
     partner: str | None = None,
+    message_endpoint: str | None = None,
+    notify_url: str | None = None,
 ) -> None:
     """Translate HL7 messages to FHIR resources."""
 
@@ -182,6 +184,8 @@ def translate(
 
     with open("config/fhir_target.yaml", "r", encoding="utf-8") as f:
         cfg = yaml.safe_load(f)
+    with open("config/identifier_systems.yaml", "r", encoding="utf-8") as f:
+        id_systems = yaml.safe_load(f)
     defaults = cfg.get("default_profiles", {})
     if partner:
         partner_path = Path("config/partners") / f"{partner}.yaml"
@@ -199,7 +203,7 @@ def translate(
 
     for plan in spec.resourcePlan:
         res: Dict[str, Any] = {"resourceType": plan.resource}
-        profile = plan.profile or defaults.get(plan.resource)
+        profile = defaults.get(plan.resource) or plan.profile
         if profile:
             res.setdefault("meta", {})["profile"] = [profile]
         for rule in plan.rules:
@@ -302,6 +306,15 @@ def translate(
                         actor["reference"] = fu
         elif res["resourceType"] == "PractitionerRole":
             for key in ("practitioner", "organization", "location"):
+                ref = res.get(key)
+                if isinstance(ref, dict):
+                    ident = ref.get("identifier")
+                    if ident:
+                        fu = lookup.get((ident.get("system"), ident.get("value")))
+                        if fu:
+                            ref["reference"] = fu
+        else:
+            for key in ("organization", "location", "practitioner"):
                 ref = res.get(key)
                 if isinstance(ref, dict):
                     ident = ref.get("identifier")
@@ -431,6 +444,17 @@ def translate(
                     }
                 else:
                     entry["request"] = {"method": "POST", "url": "Appointment"}
+            elif rt in ("Organization", "Practitioner", "PractitionerRole", "Location"):
+                ident = r.get("identifier", [{}])[0]
+                system = ident.get("system", "") or id_systems.get(rt.lower(), "")
+                value = ident.get("value", "")
+                if system and value:
+                    entry["request"] = {
+                        "method": "PUT",
+                        "url": f"{rt}?identifier={system}|{value}",
+                    }
+                else:
+                    entry["request"] = {"method": "POST", "url": rt}
             else:
                 entry["request"] = {"method": "POST", "url": rt}
             bundle_res["entry"].append(entry)
@@ -448,7 +472,15 @@ def translate(
         latency_ms = 0
         dead_letter = False
 
-        if server and not dry_run and not message_mode:
+        if message_mode and message_endpoint and not dry_run:
+            try:
+                resp = requests.post(message_endpoint, json=bundle_res)
+                status = resp.status_code
+                posted = resp.ok
+            except requests.RequestException:
+                dead_letter = True
+                status = 0
+        elif server and not dry_run and not message_mode:
             if validate:
                 try:
                     _remote_validate(server, token, bundle_res)
@@ -516,3 +548,12 @@ def translate(
             "resourceCounts": resource_counts,
         }
         logger.info(json.dumps(log_entry))
+
+        if notify_url:
+            payload = {"messageId": str(msg_uuid), "resourceCounts": resource_counts}
+            for _ in range(3):
+                try:
+                    requests.post(notify_url, json=payload, timeout=5)
+                    break
+                except Exception:
+                    continue
