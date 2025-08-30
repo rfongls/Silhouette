@@ -6,12 +6,12 @@ Use this doc to track delivery against the Codex handoff phases. Update checkbox
 
 ---
 
-## At‑a‑Glance Status
+## At-a-Glance Status
 
 * **Current Phase:** 9 — Docs & Runbook
 * **MVP Definition of Done:**
-  * ADT^A01 → `Patient`, `Encounter`, `Provenance` (US Core‑valid)
-  * ORU^R01 → `Patient`, `Observation`, `DiagnosticReport` (+`Specimen` if present) (US Core‑valid)
+  * ADT^A01 → `Patient`, `Encounter`, `Provenance` (US Core-valid)
+  * ORU^R01 → `Patient`, `Observation`, `DiagnosticReport` (+`Specimen` if present) (US Core-valid)
   * Dual validation (JSONSchema + HAPI) in CI
   * Conditional upserts verified on sandbox
   * Runbook in `docs/fhir/`
@@ -23,13 +23,13 @@ Use this doc to track delivery against the Codex handoff phases. Update checkbox
 ### Phase 0 — Preflight & Scaffolding
 
 * [x] Create directories: `config/`, `maps/`, `terminology/`, `validators/`, `scripts/`, `out/{qa,fhir/{ndjson,bundles},deadletter}`  \
-  **Commit/PR:** `58eb1e0` • **Date:** 2025‑08‑29
+  **Commit/PR:** `58eb1e0` • **Date:** 2025-08-29
 * [x] Add skeleton `silhouette_core/pipelines/hl7_to_fhir.py`  \
-  **Commit/PR:** `58eb1e0` • **Date:** 2025‑08‑29
+  **Commit/PR:** `58eb1e0` • **Date:** 2025-08-29
 * [x] Wire `silhouette fhir translate` subcommand (help + flags)  \
-  **Commit/PR:** `58eb1e0` • **Date:** 2025‑08‑29
+  **Commit/PR:** `58eb1e0` • **Date:** 2025-08-29
 * [x] Add HL7 test fixtures (`tests/data/hl7/adt_a01.hl7`, `oru_r01.hl7`)  \
-  **Commit/PR:** `58eb1e0` • **Date:** 2025‑08‑29
+  **Commit/PR:** `58eb1e0` • **Date:** 2025-08-29
 
 **Notes/Blockers:** *(none yet)*
 
@@ -38,11 +38,11 @@ Use this doc to track delivery against the Codex handoff phases. Update checkbox
 ### Phase 1 — Pin the IG & Package Management
 
 * [x] Create `config/fhir_target.yaml` (package_id, version, fhir_version, default_profiles, terminology)  \
-  **Commit/PR:** `58eb1e0` • **Date:** 2025‑08‑29
+  **Commit/PR:** `58eb1e0` • **Date:** 2025-08-29
 * [x] Implement `scripts/fhir_packages.py` to prefetch IG packages into `.fhir/packages/`  \
-  **Commit/PR:** `c34b83e` • **Date:** 2025‑08‑29
+  **Commit/PR:** `c34b83e` • **Date:** 2025-08-29
 * [x] CI step to assert packages present and versions pinned  \
-  **Commit/PR:** `TBD` • **Date:** 2025‑08‑29
+  **Commit/PR:** `TBD` • **Date:** 2025-08-29
 
 **Notes/Blockers:** *(add if tx server or Java availability is an issue)*
 
@@ -50,18 +50,13 @@ Use this doc to track delivery against the Codex handoff phases. Update checkbox
 
 ### Phase 2 — Mapping Framework & Transforms
 
- * [x] YAML mapping loader (profile, resourcePlan, rules, MustSupport policy)  \
-  **Commit/PR:** `89a814c` • **Date:** 2025‑08‑29
-* [x] `translators/transforms.py` with unit tests:
-  * `ts_to_date`, `ts_to_datetime`
-  * `pid3_to_identifiers`
-  * `name_family_given`
-  * `sex_to_gender`
-  * `pv1_class_to_code`
-  * UCUM helpers
+* [x] YAML mapping loader (profile, resourcePlan, rules, MustSupport policy)  \
+  **Commit/PR:** `89a814c` • **Date:** 2025-08-29
+* [x] `translators/transforms.py` with unit tests: \
+  `ts_to_date`, `ts_to_datetime`, `pid3_to_identifiers`, `name_family_given`, `sex_to_gender`, `pv1_class_to_code`, UCUM helpers  \
   **Commit/PR:** `2451942` • **Date:** 2025-08-29
- * [x] Ensure each resource sets `meta.profile` from mapping or defaults  \
-  **Commit/PR:** `89a814c` • **Date:** 2025‑08‑29
+* [x] Ensure each resource sets `meta.profile` from mapping or defaults  \
+  **Commit/PR:** `89a814c` • **Date:** 2025-08-29
 
 **Notes/Blockers:** *(fill in)*
 
@@ -70,11 +65,11 @@ Use this doc to track delivery against the Codex handoff phases. Update checkbox
 ### Phase 3 — Orchestration & Bundle
 
 * [x] Orchestrate pipeline: HL7 ingest → QA → Map → MustSupport → Bundle (transaction) → Provenance → Artifacts  \
-  **Commit/PR:** `025c9cb` • **Date:** 2025‑08‑29
+  **Commit/PR:** `025c9cb` • **Date:** 2025-08-29
 * [x] Deterministic `urn:uuid:` `fullUrl`s and conditional upserts (PUT for Patient/Encounter)  \
-  **Commit/PR:** `025c9cb` • **Date:** 2025‑08‑29
+  **Commit/PR:** `025c9cb` • **Date:** 2025-08-29
 * [x] CLI flags: `--map`, `--rules`, `--bundle`, `--out`, `--dry-run`, `--server`, `--token`, `--validate`  \
-  **Commit/PR:** `025c9cb` • **Date:** 2025‑08‑29
+  **Commit/PR:** `025c9cb` • **Date:** 2025-08-29
 
 **Notes/Blockers:** *(fill in)*
 
@@ -83,25 +78,31 @@ Use this doc to track delivery against the Codex handoff phases. Update checkbox
 ### Phase 4 — Reference Maps (US Core)
 
 * [x] `maps/adt_uscore.yaml` (Patient, Encounter, Provenance)  \
-  **Commit/PR:** `89a814c` • **Date:** 2025‑08‑29
-* [x] `maps/oru_uscore.yaml` (Patient, Observation[lab], DiagnosticReport, Specimen, Provenance)  \\
+  **Commit/PR:** `89a814c` • **Date:** 2025-08-29
+* [x] `maps/oru_uscore.yaml` (Patient, Observation[lab], DiagnosticReport, Specimen, Provenance)  \
   **Commit/PR:** `TBD` • **Date:** 2025-08-29
-* [x] Snapshot tests (`tests/data/fhir/gold/*.json`)  \\
+* [x] Snapshot tests (`tests/data/fhir/gold/*.json`)  \
   **Commit/PR:** `TBD` • **Date:** 2025-08-29
 
 **Notes/Blockers:** *(fill in)*
 
 ---
 
-### Phase 5 — Validation (JSONSchema + HAPI + $validate opt‑in)
+### Phase 5 — Validation (JSONSchema + HAPI + $validate opt-in)
 
-* [x] Local JSONSchema shape validation wired  \\
+* [x] Local JSONSchema shape validation wired  \
   **Commit/PR:** `TBD` • **Date:** 2025-08-29
-* [x] `validators/hapi_cli.py` to run HAPI Validator with pinned IGs  \\
+* [x] `validators/hapi_cli.py` to run HAPI Validator with pinned IGs  \
   **Commit/PR:** `TBD` • **Date:** 2025-08-29
-* [x] CLI: `silhouette fhir validate --in … --hapi`  \\
+* [x] CLI: `silhouette fhir validate --in … --hapi`  \
   **Commit/PR:** `TBD` • **Date:** 2025-08-29
-* [x] Optional remote `$validate` before posting  \\
+* [x] Optional remote `$validate` before posting  \
+  **Commit/PR:** `TBD` • **Date:** 2025-08-29
+* [x] Validation runbook (`docs/fhir/validation.md`)  \
+  **Commit/PR:** `TBD` • **Date:** 2025-08-29
+* [x] Validation runbook (`docs/fhir/validation.md`)  \\
+  **Commit/PR:** `TBD` • **Date:** 2025-08-29
+* [x] Validation runbook (`docs/fhir/validation.md`)  \\
   **Commit/PR:** `TBD` • **Date:** 2025-08-29
 * [x] Validation runbook (`docs/fhir/validation.md`)  \\
   **Commit/PR:** `TBD` • **Date:** 2025-08-29
@@ -153,7 +154,7 @@ Use this doc to track delivery against the Codex handoff phases. Update checkbox
 ### Phase 9 — Docs & Runbook
 
 * [ ] Developer guide: mapping authoring conventions, transforms catalog, MustSupport policy
-* [ ] Ops runbook: config, posting, validator errors, tx‑miss triage
+* [ ] Ops runbook: config, posting, validator errors, tx-miss triage
 * [ ] Examples in README and `docs/fhir/`
 
 **Notes/Blockers:** *(fill in)*
@@ -170,12 +171,13 @@ Use this doc to track delivery against the Codex handoff phases. Update checkbox
 * PR # — "Posting + observability"; **Phase(s):** 7 • **Merged:** TBD • **SHA:**
 * PR # — "CI translation + validation"; **Phase(s):** 8 • **Merged:** TBD • **SHA:**
 
+
 ---
 
 ## Known Risks & Mitigations
 
 * **IG drift** → Pin and add a scheduled job to check latest; open issue w/ diff
-* **Terminology gaps** → Log tx‑miss; expand maps iteratively
+* **Terminology gaps** → Log tx-miss; expand maps iteratively
 * **Ambiguous HL7 fields** → Prefer conservative mapping + `dataAbsentReason` per profile rules
 
 ---
@@ -184,6 +186,5 @@ Use this doc to track delivery against the Codex handoff phases. Update checkbox
 
 Use this section for bugs, profile violations, and work items that pop up during validation.
 
-* [ ] *(example)* ORU: OBX‑5 units missing UCUM → add defaulting rule for specific LOINC codes
-* [ ] *(example)* ADT: PID‑3 OID mapping to URI for assigner → introduce org URI registry
-
+* [ ] *(example)* ORU: OBX-5 units missing UCUM → add defaulting rule for specific LOINC codes
+* [ ] *(example)* ADT: PID-3 OID mapping to URI for assigner → introduce org URI registry
