@@ -1,4 +1,4 @@
-from typing import Any, Dict, Type
+from typing import Any, Dict, Type, get_origin
 import json
 import jsonschema
 from jsonschema import validate as js_validate
@@ -10,6 +10,8 @@ from fhir.resources.condition import Condition
 from fhir.resources.medicationstatement import MedicationStatement
 from fhir.resources.encounter import Encounter
 from fhir.resources.diagnosticreport import DiagnosticReport
+from fhir.resources.provenance import Provenance
+from fhir.resources.specimen import Specimen
 import pathlib
 from silhouette_core import terminology_service
 
@@ -40,6 +42,40 @@ MODEL_REGISTRY: Dict[str, Type[BaseModel]] = {
     "Specimen": Specimen,
 }
 
+
+def _normalize_singletons_to_lists(model: Type[BaseModel], data: dict) -> dict:
+    """Coerce singleton values into one-item lists when model expects a list."""
+    if hasattr(model, "model_fields"):
+        fields = model.model_fields.items()
+        def _ann(f):
+            return getattr(f, "annotation", None)
+    elif hasattr(model, "__fields__"):
+        fields = model.__fields__.items()
+        def _ann(f):
+            return getattr(f, "annotation", None) or getattr(f, "outer_type_", None)
+    else:
+        return data
+    out = dict(data)
+    for fname, finfo in fields:
+        alias = getattr(finfo, "alias", None) or fname
+        if alias not in out:
+            continue
+        ann = _ann(finfo)
+        if get_origin(ann) in (list, tuple):
+            val = out[alias]
+            if val is not None and not isinstance(val, (list, tuple)):
+                out[alias] = [val]
+    return out
+
+
+def _validate_model(model: Type[BaseModel], data: dict) -> None:
+    """Pydantic validation respecting aliases and singleton→list coercion."""
+    data = _normalize_singletons_to_lists(model, data)
+    if hasattr(model, "model_validate"):
+        model.model_validate(data)
+    else:  # pragma: no cover
+        model.parse_obj(data)
+
 def validate_uscore_jsonschema(resource: Dict[str, Any]) -> None:
     rtype = resource.get("resourceType")
     schema = SCHEMA_INDEX.get(rtype)
@@ -53,10 +89,7 @@ def validate_structural_with_pydantic(resource: Dict[str, Any]) -> None:
     model = MODEL_REGISTRY.get(rtype)
     if not model:
         return
-    if hasattr(model, "model_validate"):
-        model.model_validate(resource)
-    else:
-        model(**resource)
+    _validate_model(model, resource)
 
 
 def validate_terminology(resource: Dict[str, Any], cache_dir: str | None) -> None:

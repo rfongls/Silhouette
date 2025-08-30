@@ -267,6 +267,65 @@ def translate(
                     _assign(res, rule.fhir_path, v)
         resources.append(res)
 
+    # --- Post-processing to normalize shapes & fill required references ---
+
+    def _wrap_encounter_class(res: dict) -> None:
+        # Some fhir.resources builds model Encounter.class as a list; wrap only if required
+        if res.get("resourceType") != "Encounter":
+            return
+        c = res.get("class")
+        if c is None or isinstance(c, list):
+            return
+        wants_list = False
+        try:
+            from fhir.resources.encounter import Encounter as EncounterModel
+            if hasattr(EncounterModel, "model_fields"):
+                ann = EncounterModel.model_fields.get("class_fhir").annotation
+                from typing import get_origin
+                wants_list = get_origin(ann) in (list, tuple)
+            else:
+                field = getattr(EncounterModel, "__fields__", {}).get("class_fhir")
+                if field is not None:
+                    from typing import get_origin
+                    wants_list = get_origin(getattr(field, "outer_type_", None)) in (list, tuple)
+        except Exception:
+            wants_list = False
+        if wants_list:
+            res["class"] = [c]
+
+    def _ensure_provenance_agent_who(res: dict, default_ref: str | None) -> None:
+        # Ensure Provenance.agent[0].who exists; use default actor if missing
+        if res.get("resourceType") != "Provenance":
+            return
+        agents = res.get("agent")
+        if not isinstance(agents, list) or not agents:
+            if default_ref:
+                res["agent"] = [{"who": {"reference": default_ref}}]
+            return
+        first = agents[0]
+        if "who" not in first and default_ref:
+            first["who"] = {"reference": default_ref}
+
+    # Decide a default 'who' reference. Prefer a real Practitioner/Organization if you emit one.
+    default_who_ref = None
+
+    # Create (once) a Device to represent the translator as a fallback actor.
+    if not any(r.get("resourceType") == "Device" and r.get("id") == "silhouette-translator" for r in resources):
+        device = {
+            "resourceType": "Device",
+            "id": "silhouette-translator",
+            "status": "active",
+            "deviceName": [{"name": "Silhouette Translator", "type": "user-friendly-name"}],
+            "type": {"coding": [{"system": "http://terminology.hl7.org/CodeSystem/device-kind", "code": "transmitter"}]},
+        }
+        resources.append(device)
+    default_who_ref = "Device/silhouette-translator"
+
+    # Apply the normalizers to all resources
+    for _res in resources:
+        _wrap_encounter_class(_res)
+        _ensure_provenance_agent_who(_res, default_who_ref)
+
     if deidentify:
         for r in resources:
             if r.get("resourceType") == "Patient":
@@ -376,6 +435,7 @@ def translate(
     prov.setdefault("meta", {})["profile"] = [defaults.get("Provenance", "http://hl7.org/fhir/StructureDefinition/Provenance")]
     prov_fu = _full_url(msg_uuid, "Provenance", len(entries))
     prov["id"] = prov_fu.split(":")[-1]
+    _ensure_provenance_agent_who(prov, default_who_ref)
     entries.append((prov, prov_fu))
 
     # Write NDJSON

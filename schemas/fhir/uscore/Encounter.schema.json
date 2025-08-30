@@ -6,7 +6,12 @@
   "properties": {
     "resourceType": { "const": "Encounter" },
     "status": { "type": "string" },
-    "class": { "type": "object" },
+    "class": {
+      "anyOf": [
+        {"type": "object"},
+        {"type": "array", "items": {"type": "object"}, "minItems": 1}
+      ]
+    },
     "subject": { "type": "object" },
     "period": { "type": "object" }
   }
