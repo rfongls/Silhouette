@@ -1,5 +1,8 @@
-from translators.x12_270_271 import parse_270, generate_271_response
-from translators.x12_278_275 import translate_fhir_pas_to_278, attach_275
+from silhouette_core.translators.x12_270_271 import parse_270, generate_271_response
+from silhouette_core.translators.x12_278_275 import (
+    translate_fhir_pas_to_278,
+    attach_275,
+)
 
 def test_270_271_roundtrip():
     edi = open("tests/fixtures/x12/sample_270_eligibility.edi").read()

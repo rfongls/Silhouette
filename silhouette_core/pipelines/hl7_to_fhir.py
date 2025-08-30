@@ -13,8 +13,14 @@ from uuid import UUID, uuid4, uuid5, NAMESPACE_URL
 import requests
 import yaml
 
-from ..translators import transforms
-from translators.mapping_loader import load as load_map, MapSpec
+try:
+    # Prefer package-relative import to avoid ModuleNotFoundError when installed
+    from ..translators import transforms
+    from ..translators.mapping_loader import load as load_map, MapSpec
+except Exception as e:  # pragma: no cover - import error path
+    raise RuntimeError(
+        "Failed to import translators. Ensure the package is installed (pip install -e .)"
+    ) from e
 from silhouette_core.posting import post_transaction
 from skills import audit
 
