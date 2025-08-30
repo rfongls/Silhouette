@@ -44,4 +44,3 @@ resourcePlan:
         transform: "obx_cwe_to_codeableconcept"
       - hl7_path: "PID.3"
         fhir_path: "patient.identifier"
-        transform: "cx_to_identifier"

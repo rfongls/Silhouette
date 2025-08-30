@@ -132,7 +132,6 @@ def test_string_to_reference():
     assert string_to_reference("Clinic") == {"display": "Clinic"}
     assert string_to_reference("") == {}
 
-
 def test_orc_control_to_status():
     assert orc_control_to_status("NW") == "active"
     assert orc_control_to_status("CA") == "cancelled"
