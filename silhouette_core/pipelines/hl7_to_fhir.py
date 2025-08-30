@@ -267,6 +267,40 @@ def translate(
                     _assign(res, rule.fhir_path, v)
         resources.append(res)
 
+    def _wrap_encounter_class(res: Dict[str, Any]) -> None:
+        if res.get("resourceType") == "Encounter":
+            cls = res.get("class")
+            if cls is not None and not isinstance(cls, list):
+                res["class"] = [cls]
+
+    def _ensure_provenance_agent_who(res: Dict[str, Any], default_ref: str | None) -> None:
+        if res.get("resourceType") != "Provenance":
+            return
+        agents = res.get("agent")
+        if not isinstance(agents, list) or not agents:
+            if default_ref:
+                res["agent"] = [{"who": {"reference": default_ref}}]
+            return
+        first = agents[0]
+        if "who" not in first and default_ref:
+            first["who"] = {"reference": default_ref}
+
+    default_who_ref: str | None = None
+    if not any(r.get("resourceType") == "Device" and r.get("id") == "silhouette-translator" for r in resources):
+        device = {
+            "resourceType": "Device",
+            "id": "silhouette-translator",
+            "status": "active",
+            "deviceName": [{"name": "Silhouette Translator", "type": "user-friendly-name"}],
+            "type": {"coding": [{"system": "http://terminology.hl7.org/CodeSystem/device-kind", "code": "transmitter"}]},
+        }
+        resources.append(device)
+    default_who_ref = "Device/silhouette-translator"
+
+    for res in resources:
+        _wrap_encounter_class(res)
+        _ensure_provenance_agent_who(res, default_who_ref)
+
     if deidentify:
         for r in resources:
             if r.get("resourceType") == "Patient":
