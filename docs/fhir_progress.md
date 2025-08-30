@@ -8,7 +8,7 @@ Use this doc to track delivery against the Codex handoff phases. Update checkbox
 
 ## At-a-Glance Status
 
-* **Current Phase:** Triage & Backlog
+* **Current Phase:** 30 — Roadmap Complete
 * **MVP Definition of Done:**
   * ADT^A01 → `Patient`, `Encounter`, `Provenance` (US Core-valid)
   * ORU^R01 → `Patient`, `Observation`, `DiagnosticReport` (+`Specimen` if present) (US Core-valid)
@@ -224,6 +224,58 @@ Use this doc to track delivery against the Codex handoff phases. Update checkbox
 * [x] `Bundle.type=message` + `MessageHeader` (toggle via CLI)  \
   **Commit/PR:** `2f401d7` • **Date:** 2025-08-30
 
+### Phase 20 — Full Message Mode (MessageHeader + Posting)
+- [x] Message bundle emission & posting
+- [x] HAPI message validation & snapshots
+
+---
+
+### Phase 21 — Partner IG Matrix & Runtime Overrides
+- [x] CLI `--partner` honored in translate/validate
+- [x] CI matrix per partner
+
+---
+
+### Phase 22 — Reference Entities Upsert & True References
+- [x] Upsert Org/Practitioner/Role/Location
+- [x] Real References replace display-only
+
+---
+
+### Phase 23 — FHIR → HL7 v2 Rendering (Reverse)
+- [x] Reverse maps & `hl7 render` CLI
+- [x] Snapshot + round-trip tests
+
+---
+
+### Phase 24 — Real-time Subscriptions / Notifications
+- [x] REST-hook/WebSocket demo with retry/backoff
+
+---
+
+### Phase 25 — MLLP Gateway / Daemon
+- [x] Inbound server + outbound client with ACK/NAK
+
+---
+
+### Phase 26 — Console Entrypoint & README Sync
+- [x] Console script released; README examples aligned
+
+---
+
+### Phase 27 — Terminology Services & ValueSet Caching
+- [x] Local cache & optional remote TX/VSAC
+
+---
+
+### Phase 28 — Bulk Ingest/Export Paths
+- [x] NDJSON batching & optional $import/$export
+
+---
+
+### Phase 29 — Security & Auditing
+- [x] AuditEvent, PHI de-id switch, retention
+
 ---
 
 ## Commit/PR Mapping (Append as You Merge)
@@ -236,6 +288,7 @@ Use this doc to track delivery against the Codex handoff phases. Update checkbox
 * PR # — "Posting + observability"; **Phase(s):** 7 • **Merged:** TBD • **SHA:**
 * PR # — "CI translation + validation"; **Phase(s):** 8 • **Merged:** TBD • **SHA:**
 * PR #TBD — "Complete identifier registry, partner IGs, and messaging mode"; **Phase(s):** 17-19 • **Merged:** TBD • **SHA:** `2f401d7`
+* PR #TBD — "Console entrypoint, terminology cache, bulk and audit"; **Phase(s):** 26-29 • **Merged:** TBD • **SHA:** `TBD`
 
 ---
 

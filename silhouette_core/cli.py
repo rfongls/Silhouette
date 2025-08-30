@@ -211,6 +211,9 @@ def fhir_group():
 @click.option("--dry-run", is_flag=True, help="Run without posting to server")
 @click.option("--message-mode", is_flag=True, help="Emit message bundles with MessageHeader")
 @click.option("--partner", default=None, help="Partner config to apply")
+@click.option("--message-endpoint", default=None, help="Endpoint for message bundle POST")
+@click.option("--notify-url", default=None, help="Webhook to notify on translation")
+@click.option("--deid", is_flag=True, help="Redact PHI such as names")
 def fhir_translate_cmd(
     input_path,
     rules,
@@ -223,6 +226,9 @@ def fhir_translate_cmd(
     dry_run,
     message_mode,
     partner,
+    message_endpoint,
+    notify_url,
+    deid,
 ):
     """Translate HL7 v2 messages to FHIR (stub)."""
     from .pipelines import hl7_to_fhir
@@ -239,6 +245,9 @@ def fhir_translate_cmd(
         dry_run=dry_run,
         message_mode=message_mode,
         partner=partner,
+        message_endpoint=message_endpoint,
+        notify_url=notify_url,
+        deidentify=deid,
     )
 
 
@@ -246,7 +255,8 @@ def fhir_translate_cmd(
 @click.option("--in", "input_glob", required=True, help="NDJSON file(s) to validate")
 @click.option("--hapi", is_flag=True, help="Also run HAPI FHIR validator")
 @click.option("--partner", default=None, help="Partner config to apply")
-def fhir_validate_cmd(input_glob, hapi, partner):
+@click.option("--tx-cache", default=None, help="Directory with ValueSet JSON for offline terminology checks")
+def fhir_validate_cmd(input_glob, hapi, partner, tx_cache):
     """Validate NDJSON FHIR resources."""
     import glob
     import json
@@ -268,6 +278,10 @@ def fhir_validate_cmd(input_glob, hapi, partner):
                 res = json.loads(line)
                 validate_uscore_jsonschema(res)
                 validate_structural_with_pydantic(res)
+                if tx_cache:
+                    from validators.fhir_profile import validate_terminology
+
+                    validate_terminology(res, tx_cache)
 
     if hapi:
         from validators import hapi_cli
@@ -278,6 +292,51 @@ def fhir_validate_cmd(input_glob, hapi, partner):
             )
             package_ids = p_cfg.get("package_ids")
         hapi_cli.run(paths, package_ids=package_ids)
+
+    from skills import audit
+    for p in paths:
+        audit.emit_and_persist(
+            audit.fhir_audit_event("validate", "success", "cli", p)
+        )
+
+
+@fhir_group.command("bulk-bundle")
+@click.option("--in", "input_dir", required=True, help="Directory of NDJSON resources")
+@click.option("--out", default="out/fhir/bulk", show_default=True, help="Output directory")
+@click.option("--batch", default=100, show_default=True, help="Resources per batch file")
+def fhir_bulk_bundle_cmd(input_dir, out, batch):
+    """Bundle NDJSON resources into batches for bulk import."""
+    from .pipelines import bulk
+
+    bulk.bundle_ndjson(input_dir, out, batch)
+
+
+@fhir_group.command("render-v2")
+@click.option("--in", "input_path", required=True, help="FHIR bundle JSON")
+@click.option("--map", "map_path", default=None, help="Reverse mapping YAML")
+@click.option("--out", default="out/hl7", show_default=True, help="Output directory")
+def fhir_render_v2_cmd(input_path, map_path, out):
+    """Render FHIR bundles back to HL7 v2 messages (stub)."""
+    from .pipelines import fhir_to_v2
+
+    fhir_to_v2.render(input_path=input_path, map_path=map_path, out=out)
+
+
+@main.group("hl7")
+def hl7_group():
+    """HL7 v2 utilities."""
+    pass
+
+
+@hl7_group.command("mllp-gateway")
+@click.option("--listen", default="127.0.0.1:2575", show_default=True, help="Host:port to bind")
+@click.option("--out", default="out/hl7", show_default=True, help="Directory to write messages")
+def hl7_mllp_gateway_cmd(listen, out):
+    """Run a minimal MLLP server that writes inbound messages."""
+    from .pipelines import mllp_gateway
+
+    host, port = listen.split(":")
+    mllp_gateway.run(host=host, port=int(port), out_dir=out)
 
 
 @main.group("analyze")
