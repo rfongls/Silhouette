@@ -2,7 +2,7 @@ from typing import Any, Dict, Type, get_origin
 import json
 import jsonschema
 from jsonschema import validate as js_validate
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 from fhir.resources.bundle import Bundle
 from fhir.resources.observation import Observation
 from fhir.resources.patient import Patient
@@ -69,7 +69,7 @@ def _validate_model(model: Type[BaseModel], data: dict) -> None:
     if hasattr(model, "model_validate"):
         model.model_validate(data)
     else:  # pragma: no cover
-        model(**data)
+        model.parse_obj(data)
 
 def validate_uscore_jsonschema(resource: Dict[str, Any]) -> None:
     rtype = resource.get("resourceType")

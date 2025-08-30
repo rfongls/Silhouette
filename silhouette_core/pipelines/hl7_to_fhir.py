@@ -267,13 +267,17 @@ def translate(
                     _assign(res, rule.fhir_path, v)
         resources.append(res)
 
-    def _wrap_encounter_class(res: Dict[str, Any]) -> None:
-        if res.get("resourceType") == "Encounter":
-            cls = res.get("class")
-            if cls is not None and not isinstance(cls, list):
-                res["class"] = [cls]
+    # --- Post-processing to normalize shapes & fill required references ---
 
-    def _ensure_provenance_agent_who(res: Dict[str, Any], default_ref: str | None) -> None:
+    def _wrap_encounter_class(res: dict) -> None:
+        # Some builds model Encounter.class as a list; wrap singleton if needed
+        if res.get("resourceType") == "Encounter":
+            c = res.get("class")
+            if c is not None and not isinstance(c, list):
+                res["class"] = [c]
+
+    def _ensure_provenance_agent_who(res: dict, default_ref: str | None) -> None:
+        # Ensure Provenance.agent[0].who exists; use default actor if missing
         if res.get("resourceType") != "Provenance":
             return
         agents = res.get("agent")
@@ -285,7 +289,10 @@ def translate(
         if "who" not in first and default_ref:
             first["who"] = {"reference": default_ref}
 
-    default_who_ref: str | None = None
+    # Decide a default 'who' reference. Prefer a real Practitioner/Organization if you emit one.
+    default_who_ref = None
+
+    # Create (once) a Device to represent the translator as a fallback actor.
     if not any(r.get("resourceType") == "Device" and r.get("id") == "silhouette-translator" for r in resources):
         device = {
             "resourceType": "Device",
@@ -297,9 +304,10 @@ def translate(
         resources.append(device)
     default_who_ref = "Device/silhouette-translator"
 
-    for res in resources:
-        _wrap_encounter_class(res)
-        _ensure_provenance_agent_who(res, default_who_ref)
+    # Apply the normalizers to all resources
+    for _res in resources:
+        _wrap_encounter_class(_res)
+        _ensure_provenance_agent_who(_res, default_who_ref)
 
     if deidentify:
         for r in resources:
