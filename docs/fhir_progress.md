@@ -225,36 +225,36 @@ Use this doc to track delivery against the Codex handoff phases. Update checkbox
   **Commit/PR:** `2f401d7` • **Date:** 2025-08-30
 
 ### Phase 20 — Full Message Mode (MessageHeader + Posting)
-- [ ] Message bundle emission & posting
+- [x] Message bundle emission & posting
 - [ ] HAPI message validation & snapshots
 
 ---
 
 ### Phase 21 — Partner IG Matrix & Runtime Overrides
-- [ ] CLI `--partner` honored in translate/validate
+- [x] CLI `--partner` honored in translate/validate
 - [ ] CI matrix per partner
 
 ---
 
 ### Phase 22 — Reference Entities Upsert & True References
-- [ ] Upsert Org/Practitioner/Role/Location
-- [ ] Real References replace display-only
+- [x] Upsert Org/Practitioner/Role/Location
+- [x] Real References replace display-only
 
 ---
 
 ### Phase 23 — FHIR → HL7 v2 Rendering (Reverse)
-- [ ] Reverse maps & `hl7 render` CLI
+- [x] Reverse maps & `hl7 render` CLI
 - [ ] Snapshot + round-trip tests
 
 ---
 
 ### Phase 24 — Real-time Subscriptions / Notifications
-- [ ] REST-hook/WebSocket demo with retry/backoff
+- [x] REST-hook/WebSocket demo with retry/backoff
 
 ---
 
 ### Phase 25 — MLLP Gateway / Daemon
-- [ ] Inbound server + outbound client with ACK/NAK
+- [x] Inbound server + outbound client with ACK/NAK
 
 ---
 
