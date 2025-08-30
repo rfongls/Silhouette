@@ -147,8 +147,8 @@ This plan drives a **US Core–compliant** HL7 v2 → FHIR pipeline using your e
 
 ---
 
-## Phase 8 — CI/CD & Quality Gates — *CURRENT*
-- [ ] CI job runs unit tests, sample translations and HAPI validation with cached packages.
+## Phase 8 — CI/CD & Quality Gates ✅
+- [x] CI job runs unit tests, sample translations and HAPI validation with cached packages.
   - **Steps:**
     1. Setup Python + Java.
     2. `python scripts/fhir_packages.py --assert`.
@@ -157,12 +157,12 @@ This plan drives a **US Core–compliant** HL7 v2 → FHIR pipeline using your e
     5. `silhouette fhir validate --in out/fhir/ndjson/*.ndjson --hapi`.
     6. Upload `out/` artifacts.
   - **DoD:** CI fails on mapping/validation regressions; artifacts attached to PR.
-- [ ] Upload QA and FHIR artifacts on pull requests.
+- [x] Upload QA and FHIR artifacts on pull requests.
   - **DoD:** `out/qa/*`, `out/fhir/*` visible in PR checks.
 
 ---
 
-## Phase 9 — Docs & Runbook
+## Phase 9 — Docs & Runbook — *CURRENT*
 - [ ] Author **developer guide** (`docs/fhir/developer_guide.md`).
   - Mapping authoring conventions; transforms catalog; MustSupport policy; adding new message types.
   - **DoD:** Doc includes code snippets and examples.

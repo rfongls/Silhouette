@@ -14,6 +14,8 @@ from translators.transforms import (
     obx_value_to_valuex,
     spm_cwe_to_codeableconcept,
     to_oid_uri,
+    default_dr_status,
+    default_encounter_status,
 )
 
 
@@ -100,3 +102,5 @@ def test_oru_stub_transforms():
     spm = spm_cwe_to_codeableconcept("1^Spec^http://snomed.info/sct")
     assert spm["coding"][0]["code"] == "1"
     assert to_oid_uri("1.2.3") == "urn:oid:1.2.3"
+    assert default_dr_status() == "unknown"
+    assert default_encounter_status() == "finished"

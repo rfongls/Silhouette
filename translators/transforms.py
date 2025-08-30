@@ -170,6 +170,14 @@ def obr_status_to_report_status(value: str) -> str:
     return OBR25_TO_DR_STATUS.get((value or "").strip().upper(), "unknown")
 
 
+def default_dr_status() -> str:
+    return "unknown"
+
+
+def default_encounter_status() -> str:
+    return "finished"
+
+
 def obx_value_to_valuex(
     obx2: str,
     obx5: Any,

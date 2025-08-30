@@ -8,7 +8,7 @@ Use this doc to track delivery against the Codex handoff phases. Update checkbox
 
 ## At-a-Glance Status
 
-* **Current Phase:** 8 — CI/CD & Quality Gates
+* **Current Phase:** 9 — Docs & Runbook
 * **MVP Definition of Done:**
   * ADT^A01 → `Patient`, `Encounter`, `Provenance` (US Core-valid)
   * ORU^R01 → `Patient`, `Observation`, `DiagnosticReport` (+`Specimen` if present) (US Core-valid)
@@ -104,6 +104,8 @@ Use this doc to track delivery against the Codex handoff phases. Update checkbox
   **Commit/PR:** `TBD` • **Date:** 2025-08-29
 * [x] Validation runbook (`docs/fhir/validation.md`)  \\
   **Commit/PR:** `TBD` • **Date:** 2025-08-29
+* [x] Validation runbook (`docs/fhir/validation.md`)  \\
+  **Commit/PR:** `TBD` • **Date:** 2025-08-29
 
 **Notes/Blockers:** *(fill in)*
 
@@ -141,9 +143,9 @@ Use this doc to track delivery against the Codex handoff phases. Update checkbox
 
 ### Phase 8 — CI/CD & Quality Gates
 
-* [ ] CI: unit tests + translation on fixtures + HAPI validation
-* [ ] Cache FHIR packages; pin Java/HAPI versions
-* [ ] Upload `out/*` artifacts on PRs
+* [x] CI: unit tests + translation on fixtures + HAPI validation
+* [x] Cache FHIR packages; pin Java/HAPI versions
+* [x] Upload `out/*` artifacts on PRs
 
 **Notes/Blockers:** *(fill in)*
 
@@ -162,13 +164,13 @@ Use this doc to track delivery against the Codex handoff phases. Update checkbox
 ## Commit/PR Mapping (Append as You Merge)
 
 * PR #TBD — "Scaffold HL7→FHIR pipeline & CLI"; **Phase(s):** 0,1 • **Merged:** TBD • **SHA:** `58eb1e0`
-* PR #TBD — "Mapping YAML loader + ADT map"; **Phase(s):** 2,4 • **Merged:** TBD • **SHA:** `89a814c`
-* PR #TBD — "Orchestrate HL7→FHIR pipeline"; **Phase(s):** 3 • **Merged:** TBD • **SHA:** `025c9cb`
-* PR #TBD — "ADT US Core mapping + tests"; **Phase(s):** 4,5 • **Merged:** TBD • **SHA:** `TBD`
-* PR #TBD — "ORU US Core mapping + tests"; **Phase(s):** 4,5 • **Merged:** TBD • **SHA:** `TBD`
-* PR #TBD — "Validation pipeline (HAPI CLI + $validate)"; **Phase(s):** 5 • **Merged:** TBD • **SHA:** `TBD`
-* PR #TBD — "Terminology tables + transform metrics"; **Phase(s):** 6 • **Merged:** TBD • **SHA:** `be80b8c`
-* PR #TBD — "Posting + observability"; **Phase(s):** 7 • **Merged:** TBD • **SHA:** `TBD`
+* PR # — "Mapping YAML loader + ADT map"; **Phase(s):** 2,4 • **Merged:** TBD • **SHA:** `89a814c`
+* PR # — "Orchestrate HL7→FHIR pipeline"; **Phase(s):** 3 • **Merged:** TBD • **SHA:** `025c9cb`
+* PR # — "ADT US Core mapping + tests"; **Phase(s):** 4,5 • **Merged:** TBD • **SHA:**
+* PR # — "ORU US Core mapping + tests"; **Phase(s):** 4,5 • **Merged:** TBD • **SHA:**
+* PR # — "Posting + observability"; **Phase(s):** 7 • **Merged:** TBD • **SHA:**
+* PR # — "CI translation + validation"; **Phase(s):** 8 • **Merged:** TBD • **SHA:**
+
 
 ---
 

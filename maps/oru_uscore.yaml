@@ -19,6 +19,9 @@ resourcePlan:
   - resource: DiagnosticReport
     profile: "http://hl7.org/fhir/us/core/StructureDefinition/us-core-diagnosticreport-lab"
     rules:
+      - hl7_path: "-"
+        fhir_path: "status"
+        transform: "default_dr_status"
       - hl7_path: "OBR.4"
         fhir_path: "code"
         transform: "obx_cwe_to_codeableconcept"
