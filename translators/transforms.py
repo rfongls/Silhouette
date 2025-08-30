@@ -325,7 +325,6 @@ def default_chargeitem_status() -> str:
 def default_account_status() -> str:
     return "active"
 
-
 # ----- Status mappers -----
 
 _ORC_CONTROL_TO_STATUS = {
@@ -354,7 +353,6 @@ _SCH_STATUS_TO_APPT_STATUS = {
 
 def sch_status_to_appt_status(value: str) -> str:
     """Map SCH-25 appointment status to FHIR Appointment.status."""
-    return _SCH_STATUS_TO_APPT_STATUS.get((value or "").strip().upper(), "proposed")
 
 
 _ADT_EVENT_TO_ENCOUNTER_STATUS = {

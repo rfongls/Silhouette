@@ -24,3 +24,4 @@ resourcePlan:
         transform: "cx_to_identifier"
       - hl7_path: "FT1.21"
         fhir_path: "identifier[0].value"
+

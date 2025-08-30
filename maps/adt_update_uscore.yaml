@@ -25,3 +25,4 @@ resourcePlan:
       - hl7_path: "MSH.9.2"
         fhir_path: "status"
         transform: "adt_event_to_encounter_status"
+

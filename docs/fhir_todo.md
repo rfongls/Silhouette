@@ -248,5 +248,4 @@ This plan drives a **US Core–compliant** HL7 v2 → FHIR pipeline using your e
 
 ## Phase 19 — Messaging Mode (optional)
 - [x] Add **Bundle.type=message** support with **MessageHeader** for sites that require messaging.
-  - **Implement:** `--message-mode` flag; map MSH-9 triggers to MessageHeader `event`.
   - **DoD:** Message bundles validate; posting path remains transaction by default.
