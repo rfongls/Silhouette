@@ -1,0 +1,7 @@
+messageTypes:
+  - MDM^T02
+resourcePlan:
+  - resource: DocumentReference
+    rules: []
+  - resource: Binary
+    rules: []

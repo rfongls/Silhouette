@@ -163,6 +163,7 @@ def translate(
     token: str | None = None,
     validate: bool = False,
     dry_run: bool = False,
+    message_mode: bool = False,
 ) -> None:
     """Translate HL7 messages to FHIR resources."""
 
@@ -326,6 +327,9 @@ def translate(
             for item in items:
                 fh.write(json.dumps(item) + "\n")
 
+    if message_mode:
+        logger.info("Message bundle support not yet implemented")
+
     if bundle == "transaction":
         bundle_res: Dict[str, Any] = {
             "resourceType": "Bundle",
@@ -355,6 +359,28 @@ def translate(
                     }
                 else:
                     entry["request"] = {"method": "POST", "url": "Encounter"}
+            elif rt == "ServiceRequest":
+                ident = r.get("identifier", [{}])[0]
+                system = ident.get("system", "")
+                value = ident.get("value", "")
+                if system and value:
+                    entry["request"] = {
+                        "method": "PUT",
+                        "url": f"ServiceRequest?identifier={system}|{value}",
+                    }
+                else:
+                    entry["request"] = {"method": "POST", "url": "ServiceRequest"}
+            elif rt == "Appointment":
+                ident = r.get("identifier", [{}])[0]
+                system = ident.get("system", "")
+                value = ident.get("value", "")
+                if system and value:
+                    entry["request"] = {
+                        "method": "PUT",
+                        "url": f"Appointment?identifier={system}|{value}",
+                    }
+                else:
+                    entry["request"] = {"method": "POST", "url": "Appointment"}
             else:
                 entry["request"] = {"method": "POST", "url": rt}
             bundle_res["entry"].append(entry)

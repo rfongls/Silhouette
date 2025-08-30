@@ -187,4 +187,72 @@ This plan drives a **US Core–compliant** HL7 v2 → FHIR pipeline using your e
 - Prefer **`dateTime`** when timezone is unknown; use **`instant`** only when TZ present *and* the element requires it.
 - **Encounter conditional upsert** only when a stable identifier (e.g., PV1-19) is present; otherwise POST Encounter.
 - Use **`dataAbsentReason`** only where profiles allow; otherwise omit the element and dead-letter with a MustSupport reason.
-````
+---
+
+## Phase 10 — Orders (ORM/OML → ServiceRequest)
+- [x] Map **ORM/OML** orders to **ServiceRequest** (+ optional **Task** for workflow).
+  - **Implement:** `maps/orm_uscore.yaml` with placer/filler numbers (ORC/OBR), code (OBR-4), priority, reason, requester, performer.
+  - **Linkage:** Results reference orders via `DiagnosticReport.basedOn` / `Observation.basedOn`.
+  - **Identifiers:** Define conditional upsert keys: placer/filler order identifiers with **real system URIs**.
+  - **Pipeline:** Use conditional PUT for `ServiceRequest` when such identifiers are present.
+  - **DoD:** ServiceRequest created/updated; ORU bundles reference it; HAPI passes.
+
+## Phase 11 — Scheduling (SIU → Appointment)
+- [x] Map **SIU** events to **Appointment** (+ **Schedule/Slot** optional).
+  - **Implement:** `maps/siu_uscore.yaml` with participants (**Patient**, **PractitionerRole**, **Location**, **Organization**), start/end, status (`booked`, `cancelled`, `noshow`).
+  - **Identifiers:** Stable business keys for conditional upsert (placer schedule/appointment ID).
+  - **Pipeline:** Conditional PUT when Appointment identifiers include a real system.
+  - **DoD:** Appointment created/updated per triggers (book/update/cancel); HAPI passes.
+
+## Phase 12 — Immunizations (VXU → Immunization)
+- [x] Map **VXU^V04** to **Immunization**.
+  - **Implement:** `maps/vxu_uscore.yaml` with CVX code, lot/expiry, occurrence date, performer, route/site.
+  - **Identifiers:** vaccine record ID to prevent dupes; organization/performer references.
+  - **DoD:** Immunization upserts validate; snapshot tests green.
+
+## Phase 13 — Pharmacy (RDE/RXO/RXE → Medication*)
+- [x] Map order/dispense/admin:
+  - **MedicationRequest** (order intent/status), **MedicationDispense**, **MedicationAdministration**.
+  - **Implement:** `maps/rde_uscore.yaml` covering medication coding (RxNorm where available), dose/route/frequency, quantity, status transitions (new/change/cancel).
+  - **DoD:** Resources emitted and linked to Patient/Encounter; HAPI passes core checks.
+
+## Phase 14 — Documents (MDM → DocumentReference/Binary)
+- [ ] Map **MDM** add/update to **DocumentReference** (+ **Binary**).
+  - **Implement:** `maps/mdm_uscore.yaml` with type (LOINC/SNOMED as available), author, facility, creation date, attachment (contentType, hash, size).
+  - **Versioning:** New version on updates; maintain master ID for conditional upsert.
+  - **Scaffold:** `maps/mdm_uscore.yaml` with placeholder resources.
+  - **DoD:** DocumentReference + Binary validate; snapshot tests green.
+
+## Phase 15 — Charges/Accounts (DFT/BAR → ChargeItem/Account)
+- [ ] Map **DFT/BAR** to **ChargeItem** (+ **Account**; optional **Claim** for payer flows).
+  - **Implement:** `maps/dft_uscore.yaml` with code, amount, subject (Patient), context (Encounter), account linkage.
+  - **Scaffold:** `maps/dft_uscore.yaml` with placeholder resources.
+  - **DoD:** Charge items persist and link; basic validation passes.
+
+## Phase 16 — ADT Extensions & Merge/Corrections
+- [ ] Handle **A02/A03/A08/A11/A13** Encounter state updates; **A40** merges.
+  - **Implement:** State machine: transfer/discharge → `Encounter.status/location/period`; cancel → `status=cancelled`; updates→ PUT.
+  - **Merge:** Set old **Patient.active=false** and `Patient.link.type = replaced-by` → new Patient.
+  - **ORU corrections:** `Observation.status=corrected` with Provenance.
+  - **Scaffold:** `maps/adt_update_uscore.yaml` for update/merge triggers.
+  - **DoD:** Snapshot fixtures for each trigger; HAPI passes.
+
+## Phase 17 — Reference Entities & Identifier Registry
+- [ ] Upsert **Organization**, **Practitioner**, **PractitionerRole**, **Location** and reference them from Encounter/DR/Observation/ServiceRequest/Appointment.
+  - **Implement:** `config/identifier_systems.yaml` for canonical URIs (MRN, visit, order, specimen, organization, practitioner, location).
+  - **Upgrade:** Enhance `xcn_to_reference` to emit true `reference` links once those entities exist.
+  - **Scaffold:** `config/identifier_systems.yaml` with placeholder systems.
+  - **DoD:** All emitted resources use real system URIs; references resolve; validation passes.
+
+## Phase 18 — Partner IG Profiles & Validation
+- [ ] Support partner-specific IG packages and `$validate` against them.
+  - **Implement:** `config/partners/<name>.yaml` (IG list, profile overrides, MustSupport rules).
+  - **CLI:** `--partner <name>` toggles IG set and schema expectations.
+  - **Scaffold:** `config/partners/example.yaml` with package list placeholder.
+  - **DoD:** HAPI runs with partner IG; CI matrix executes per partner config.
+
+## Phase 19 — Messaging Mode (optional)
+- [ ] Add **Bundle.type=message** support with **MessageHeader** for sites that require messaging.
+  - **Implement:** `--message-mode` flag; map MSH-9 triggers to MessageHeader `event`.
+  - **Scaffold:** `--message-mode` CLI flag recognized.
+  - **DoD:** Message bundles validate; posting path remains transaction by default.

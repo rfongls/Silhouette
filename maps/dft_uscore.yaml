@@ -1,0 +1,7 @@
+messageTypes:
+  - DFT^P03
+resourcePlan:
+  - resource: ChargeItem
+    rules: []
+  - resource: Account
+    rules: []
