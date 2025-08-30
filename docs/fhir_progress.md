@@ -106,6 +106,8 @@ Use this doc to track delivery against the Codex handoff phases. Update checkbox
   **Commit/PR:** `TBD` • **Date:** 2025-08-29
 * [x] Validation runbook (`docs/fhir/validation.md`)  \\
   **Commit/PR:** `TBD` • **Date:** 2025-08-29
+* [x] Validation runbook (`docs/fhir/validation.md`)  \\
+  **Commit/PR:** `TBD` • **Date:** 2025-08-29
 
 **Notes/Blockers:** *(fill in)*
 
@@ -153,8 +155,10 @@ Use this doc to track delivery against the Codex handoff phases. Update checkbox
 
 ### Phase 9 — Docs & Runbook
 
-* [ ] Developer guide: mapping authoring conventions, transforms catalog, MustSupport policy
-* [ ] Ops runbook: config, posting, validator errors, tx-miss triage
+* [x] Developer guide: mapping authoring conventions, transforms catalog, MustSupport policy  \\
+  **Commit/PR:** `TBD` • **Date:** 2025-08-29
+* [x] Ops runbook: config, posting, validator errors, tx‑miss triage  \\
+  **Commit/PR:** `TBD` • **Date:** 2025-08-29
 * [ ] Examples in README and `docs/fhir/`
 
 **Notes/Blockers:** *(fill in)*
@@ -170,7 +174,6 @@ Use this doc to track delivery against the Codex handoff phases. Update checkbox
 * PR # — "ORU US Core mapping + tests"; **Phase(s):** 4,5 • **Merged:** TBD • **SHA:**
 * PR # — "Posting + observability"; **Phase(s):** 7 • **Merged:** TBD • **SHA:**
 * PR # — "CI translation + validation"; **Phase(s):** 8 • **Merged:** TBD • **SHA:**
-
 
 ---
 

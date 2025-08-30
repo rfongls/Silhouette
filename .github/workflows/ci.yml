@@ -29,9 +29,29 @@ jobs:
           pip install -e .
           pip install ruff pytest
 
-      - name: Download HAPI validator CLI
+      - name: Cache HAPI validator CLI
+        id: cache_validator
+        uses: actions/cache@v4
+        with:
+          path: validators/validator_cli.jar
+          key: hapi-validator-6.6.0
+
+      - name: Download HAPI validator CLI (if not cached)
+        if: steps.cache_validator.outputs.cache-hit != 'true'
         run: |
-          curl -L https://github.com/hapifhir/org.hl7.fhir.core/releases/download/v6.6.0/org.hl7.fhir.validator.jar -o validators/validator_cli.jar
+          mkdir -p validators
+          curl -L https://github.com/hapifhir/org.hl7.fhir.core/releases/download/v6.6.0/org.hl7.fhir.validator.jar \
+            -o validators/validator_cli.jar
+
+      - name: Verify validator CLI
+        run: |
+          java -jar validators/validator_cli.jar -version
+
+      - name: Cache FHIR package cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.fhir/packages
+          key: fhir-pkgs-${{ hashFiles('config/fhir_target.yaml') }}
 
       - name: Prefetch FHIR packages
         run: python scripts/fhir_packages.py
