@@ -2,7 +2,7 @@ from typing import Any, Dict, Type, get_origin
 import json
 import jsonschema
 from jsonschema import validate as js_validate
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 from fhir.resources.bundle import Bundle
 from fhir.resources.observation import Observation
 from fhir.resources.patient import Patient
