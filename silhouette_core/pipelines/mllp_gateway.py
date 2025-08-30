@@ -1,6 +1,5 @@
 """Minimal MLLP server for HL7 v2 messages."""
 from __future__ import annotations
-
 import socket
 import socketserver
 from datetime import datetime

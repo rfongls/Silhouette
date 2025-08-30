@@ -214,6 +214,7 @@ def fhir_group():
 @click.option("--message-endpoint", default=None, help="Endpoint for message bundle POST")
 @click.option("--notify-url", default=None, help="Webhook to notify on translation")
 @click.option("--deid", is_flag=True, help="Redact PHI such as names")
+
 def fhir_translate_cmd(
     input_path,
     rules,
@@ -309,6 +310,34 @@ def fhir_bulk_bundle_cmd(input_dir, out, batch):
     from .pipelines import bulk
 
     bulk.bundle_ndjson(input_dir, out, batch)
+
+
+@fhir_group.command("render-v2")
+@click.option("--in", "input_path", required=True, help="FHIR bundle JSON")
+@click.option("--map", "map_path", default=None, help="Reverse mapping YAML")
+@click.option("--out", default="out/hl7", show_default=True, help="Output directory")
+def fhir_render_v2_cmd(input_path, map_path, out):
+    """Render FHIR bundles back to HL7 v2 messages (stub)."""
+    from .pipelines import fhir_to_v2
+
+    fhir_to_v2.render(input_path=input_path, map_path=map_path, out=out)
+
+
+@main.group("hl7")
+def hl7_group():
+    """HL7 v2 utilities."""
+    pass
+
+
+@hl7_group.command("mllp-gateway")
+@click.option("--listen", default="127.0.0.1:2575", show_default=True, help="Host:port to bind")
+@click.option("--out", default="out/hl7", show_default=True, help="Directory to write messages")
+def hl7_mllp_gateway_cmd(listen, out):
+    """Run a minimal MLLP server that writes inbound messages."""
+    from .pipelines import mllp_gateway
+
+    host, port = listen.split(":")
+    mllp_gateway.run(host=host, port=int(port), out_dir=out)
 
 
 @fhir_group.command("render-v2")
