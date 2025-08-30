@@ -217,7 +217,7 @@ Use this doc to track delivery against the Codex handoff phases. Update checkbox
 ### Phase 18 — Partner IG Profiles & Validation
 * [x] Partner configs; HAPI runs against partner IGs; CI matrix  \
   **Commit/PR:** `2f401d7` • **Date:** 2025-08-30
-
+  
 ---
 
 ### Phase 19 — Messaging Mode (optional)
