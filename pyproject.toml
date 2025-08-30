@@ -52,7 +52,10 @@ silhouette = "silhouette_core.cli:main"
 
 [tool.setuptools]
 include-package-data = true
-packages = ["silhouette_core", "cli", "eval", "scripts", "training", "security"]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["silhouette_core*", "cli*", "eval*", "scripts*", "training*", "security*"]
 
 [tool.setuptools.package-data]
 silhouette_core = [

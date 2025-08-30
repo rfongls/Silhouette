@@ -1,4 +1,4 @@
-from translators.mapping_loader import load
+from silhouette_core.translators.mapping_loader import load
 
 def test_load_oru_map():
     spec = load("maps/oru_uscore.yaml")

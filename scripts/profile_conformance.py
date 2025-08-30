@@ -18,8 +18,8 @@ if str(ROOT) not in sys.path:
     sys.path.append(str(ROOT))
 
 from validators.fhir_profile import validate_uscore_jsonschema, validate_structural_with_pydantic
-from translators.hl7v2_to_fhir import HL7v2ToFHIRTranslator, load_rules
-from translators.cda_to_fhir import CDAToFHIRTranslator
+from silhouette_core.translators.hl7v2_to_fhir import HL7v2ToFHIRTranslator, load_rules
+from silhouette_core.translators.cda_to_fhir import CDAToFHIRTranslator
 
 VS = {
     'loinc': json.loads((ROOT / 'profiles/value_sets/loinc_common.json').read_text(encoding='utf-8')),

@@ -1,6 +1,6 @@
 import pytest
 
-from translators.transforms import (
+from silhouette_core.translators.transforms import (
     ts_to_date,
     ts_to_datetime,
     pid3_to_identifiers,
