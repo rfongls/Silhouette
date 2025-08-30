@@ -258,7 +258,7 @@ def fhir_translate_cmd(
     "in_glob",
     required=False,
     type=str,
-    help="Literal glob for NDJSON files, e.g. 'out/fhir/ndjson/*.ndjson' (quote on PowerShell)",
+    help="Literal glob for NDJSON files, e.g. 'out/fhir/ndjson/*.ndjson' (quote on PowerShell).",
 )
 @click.option(
     "--in-dir",
@@ -272,20 +272,32 @@ def fhir_translate_cmd(
 @click.option(
     "--tx-cache", default=None, help="Directory with ValueSet JSON for offline terminology checks"
 )
+@click.option("--fail-fast/--no-fail-fast", default=False, show_default=True, help="Stop at first error")
 @click.option(
     "--server",
     default="http://localhost:8080/fhir",
     show_default=True,
     help="HAPI FHIR base URL (used with --hapi)",
 )
-def fhir_validate_cmd(in_glob, in_dir, hapi, partner, tx_cache, server):
+def fhir_validate_cmd(in_glob, in_dir, hapi, partner, tx_cache, fail_fast, server):
     """Validate NDJSON FHIR resources."""
     import glob
     import json
-    from .validators.fhir_profile import (
-        validate_structural_with_pydantic,
-        validate_uscore_jsonschema,
-    )
+    try:
+        from .validators.fhir_profile import (
+            validate_structural_with_pydantic,
+            validate_uscore_jsonschema,
+        )
+    except ImportError as e:
+        raise click.ClickException(
+            "Validation dependencies are missing.\n"
+            "Install them with:\n"
+            "  pip install -e .[validate]\n"
+            "or:\n"
+            "  pip install jsonschema pydantic fhir.resources\n"
+            f"Details: {e}"
+        )
+    from pydantic import ValidationError
 
     paths: list[Path] = []
     if in_glob:
@@ -294,11 +306,13 @@ def fhir_validate_cmd(in_glob, in_dir, hapi, partner, tx_cache, server):
         paths = sorted(Path(in_dir).glob("*.ndjson"))
     else:
         raise click.UsageError("Provide either --in <glob> or --in-dir <folder>.")
-
     if not paths:
         raise click.ClickException("No NDJSON files found for input.")
 
     click.echo(f"Preparing to validate {len(paths)} file(s).")
+
+    ok = 0
+    bad = 0
 
     for p in paths:
         with open(p, "r", encoding="utf-8") as fh:
@@ -307,12 +321,24 @@ def fhir_validate_cmd(in_glob, in_dir, hapi, partner, tx_cache, server):
                 if not line:
                     continue
                 res = json.loads(line)
-                validate_uscore_jsonschema(res)
-                validate_structural_with_pydantic(res)
-                if tx_cache:
-                    from .validators.fhir_profile import validate_terminology
+                try:
+                    validate_uscore_jsonschema(res)
+                    validate_structural_with_pydantic(res)
+                    if tx_cache:
+                        from .validators.fhir_profile import validate_terminology
 
-                    validate_terminology(res, tx_cache)
+                        validate_terminology(res, tx_cache)
+                    ok += 1
+                except ValidationError as ve:
+                    bad += 1
+                    e0 = ve.errors()[0] if ve.errors() else {}
+                    loc = ".".join(str(x) for x in e0.get("loc", [])) or "<root>"
+                    msg = e0.get("msg", str(ve))
+                    rid = res.get("id", "<no-id>")
+                    rtype = res.get("resourceType", "<unknown>")
+                    click.echo(f"[FAIL] {rtype}/{rid} at {loc}: {msg}", err=True)
+                    if fail_fast:
+                        raise click.ClickException("Fail-fast enabled; stopping on first error.")
 
     if hapi:
         click.echo(f"Validating against HAPI server: {server}")
@@ -331,6 +357,10 @@ def fhir_validate_cmd(in_glob, in_dir, hapi, partner, tx_cache, server):
         audit.emit_and_persist(
             audit.fhir_audit_event("validate", "success", "cli", str(p))
         )
+
+    click.echo(f"Validation summary: {ok} passed, {bad} failed.")
+    if bad:
+        raise click.ClickException(f"{bad} resource(s) failed validation.")
 
 
 @fhir_group.command("bulk-bundle")

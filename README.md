@@ -82,6 +82,9 @@ Ready-made diagrams cover HL7 v2 ↔ FHIR mapping, TEFCA/QHIN flows, IHE XDS.b e
 
 ```bash
 pip install -e .
+
+# Include validation extras for `silhouette fhir validate`
+pip install -e .[validate]
 ```
 
 ## HL7 v2 → FHIR CLI Examples

@@ -1,7 +1,8 @@
-from typing import Dict, Any
+from typing import Any, Dict, Type
 import json
 import jsonschema
 from jsonschema import validate as js_validate
+from pydantic import BaseModel
 from fhir.resources.bundle import Bundle
 from fhir.resources.observation import Observation
 from fhir.resources.patient import Patient
@@ -27,6 +28,18 @@ SCHEMA_INDEX = {
     "DiagnosticReport": _load("DiagnosticReport.schema.json"),
 }
 
+MODEL_REGISTRY: Dict[str, Type[BaseModel]] = {
+    "Bundle": Bundle,
+    "Patient": Patient,
+    "Observation": Observation,
+    "Condition": Condition,
+    "MedicationStatement": MedicationStatement,
+    "Encounter": Encounter,
+    "DiagnosticReport": DiagnosticReport,
+    "Provenance": Provenance,
+    "Specimen": Specimen,
+}
+
 def validate_uscore_jsonschema(resource: Dict[str, Any]) -> None:
     rtype = resource.get("resourceType")
     schema = SCHEMA_INDEX.get(rtype)
@@ -35,21 +48,15 @@ def validate_uscore_jsonschema(resource: Dict[str, Any]) -> None:
     js_validate(instance=resource, schema=schema)
 
 def validate_structural_with_pydantic(resource: Dict[str, Any]) -> None:
+    """Validate structure using pydantic FHIR models (alias aware)."""
     rtype = resource.get("resourceType")
-    if rtype == "Bundle":
-        Bundle(**resource)
-    elif rtype == "Patient":
-        Patient(**resource)
-    elif rtype == "Observation":
-        Observation(**resource)
-    elif rtype == "Condition":
-        Condition(**resource)
-    elif rtype == "MedicationStatement":
-        MedicationStatement(**resource)
-    elif rtype == "Encounter":
-        Encounter(**resource)
-    elif rtype == "DiagnosticReport":
-        DiagnosticReport(**resource)
+    model = MODEL_REGISTRY.get(rtype)
+    if not model:
+        return
+    if hasattr(model, "model_validate"):
+        model.model_validate(resource)
+    else:
+        model(**resource)
 
 
 def validate_terminology(resource: Dict[str, Any], cache_dir: str | None) -> None:
