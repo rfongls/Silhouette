@@ -14,7 +14,7 @@ class HapiValidationError(RuntimeError):
     """Raised when the HAPI validator reports an error."""
 
 
-def run(files: Iterable[str]) -> None:
+def run(files: Iterable[str], package_ids: Iterable[str] | None = None) -> None:
     """Validate FHIR resources using the HAPI validator CLI.
 
     Args:
@@ -33,20 +33,15 @@ def run(files: Iterable[str]) -> None:
     if not JAR_PATH.exists():
         raise RuntimeError(f"HAPI validator CLI jar not found at {JAR_PATH}")
 
-    cfg = yaml.safe_load(Path("config/fhir_target.yaml").read_text(encoding="utf-8"))
-    package_id = cfg.get("package_id", "hl7.fhir.us.core")
-    package_version = cfg.get("package_version")
-    ig_arg = f"{package_id}#{package_version}" if package_version else package_id
+    if package_ids is None:
+        cfg = yaml.safe_load(Path("config/fhir_target.yaml").read_text(encoding="utf-8"))
+        package_id = cfg.get("package_id", "hl7.fhir.us.core")
+        package_version = cfg.get("package_version")
+        package_ids = [f"{package_id}#{package_version}" if package_version else package_id]
 
-    cmd = [
-        str(java),
-        "-jar",
-        str(JAR_PATH),
-        "-ig",
-        ig_arg,
-        "-package-cache",
-        ".fhir/packages",
-    ]
+    cmd = [str(java), "-jar", str(JAR_PATH), "-package-cache", ".fhir/packages"]
+    for ig in package_ids:
+        cmd.extend(["-ig", ig])
     cmd.extend(str(Path(f)) for f in files)
 
     try:

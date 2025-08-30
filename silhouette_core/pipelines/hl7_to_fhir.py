@@ -164,6 +164,7 @@ def translate(
     validate: bool = False,
     dry_run: bool = False,
     message_mode: bool = False,
+    partner: str | None = None,
 ) -> None:
     """Translate HL7 messages to FHIR resources."""
 
@@ -182,6 +183,11 @@ def translate(
     with open("config/fhir_target.yaml", "r", encoding="utf-8") as f:
         cfg = yaml.safe_load(f)
     defaults = cfg.get("default_profiles", {})
+    if partner:
+        partner_path = Path("config/partners") / f"{partner}.yaml"
+        if partner_path.exists():
+            p_cfg = yaml.safe_load(partner_path.read_text(encoding="utf-8")) or {}
+            defaults.update(p_cfg.get("profiles", {}))
 
     text = Path(input_path).read_text(encoding="utf-8")
     msg = _parse_hl7(text)
@@ -275,6 +281,35 @@ def translate(
         if r["resourceType"] == "DiagnosticReport" and obs_refs:
             r.setdefault("result", []).extend(obs_refs)
 
+    # Resolve identifier-based references
+    lookup: Dict[tuple[str, str], str] = {}
+    for res, fu in entries:
+        ids = res.get("identifier")
+        if isinstance(ids, list):
+            for ident in ids:
+                sys = ident.get("system")
+                val = ident.get("value")
+                if sys and val:
+                    lookup[(sys, val)] = fu
+    for res, _ in entries:
+        if res["resourceType"] == "Appointment":
+            for part in res.get("participant", []):
+                actor = part.get("actor", {})
+                ident = actor.get("identifier")
+                if ident:
+                    fu = lookup.get((ident.get("system"), ident.get("value")))
+                    if fu:
+                        actor["reference"] = fu
+        elif res["resourceType"] == "PractitionerRole":
+            for key in ("practitioner", "organization", "location"):
+                ref = res.get(key)
+                if isinstance(ref, dict):
+                    ident = ref.get("identifier")
+                    if ident:
+                        fu = lookup.get((ident.get("system"), ident.get("value")))
+                        if fu:
+                            ref["reference"] = fu
+
     if validate:
         from validators.fhir_profile import (
             validate_structural_with_pydantic,
@@ -327,11 +362,26 @@ def translate(
             for item in items:
                 fh.write(json.dumps(item) + "\n")
 
+    bundle_res: Dict[str, Any] | None = None
     if message_mode:
-        logger.info("Message bundle support not yet implemented")
-
-    if bundle == "transaction":
-        bundle_res: Dict[str, Any] = {
+        header = {
+            "resourceType": "MessageHeader",
+            "eventCoding": {"code": msg_type},
+            "source": {"name": "Silhouette HL7→FHIR"},
+            "focus": [{"reference": fu} for _, fu in entries],
+        }
+        header_fu = _full_url(msg_uuid, "MessageHeader", len(entries))
+        header["id"] = header_fu.split(":")[-1]
+        bundle_res = {
+            "resourceType": "Bundle",
+            "type": "message",
+            "id": str(msg_uuid),
+            "entry": [{"fullUrl": header_fu, "resource": header}],
+        }
+        for r, fu in entries:
+            bundle_res["entry"].append({"fullUrl": fu, "resource": r})
+    elif bundle == "transaction":
+        bundle_res = {
             "resourceType": "Bundle",
             "type": "transaction",
             "entry": [],
@@ -384,11 +434,13 @@ def translate(
             else:
                 entry["request"] = {"method": "POST", "url": rt}
             bundle_res["entry"].append(entry)
+
+    if bundle_res:
         out_path = bundle_dir / f"{Path(input_path).stem}.json"
         out_path.write_text(json.dumps(bundle_res, indent=2), encoding="utf-8")
 
         resource_counts = {k: len(v) for k, v in by_type.items()}
-        fhir_count = len(entries)
+        fhir_count = len(entries) + (1 if message_mode else 0)
         tx_miss = metrics.get("tx-miss", 0)
         qa_status = "ok" if qa.get("errors", 0) == 0 else "fail"
         posted = False
@@ -396,7 +448,7 @@ def translate(
         latency_ms = 0
         dead_letter = False
 
-        if server and not dry_run:
+        if server and not dry_run and not message_mode:
             if validate:
                 try:
                     _remote_validate(server, token, bundle_res)

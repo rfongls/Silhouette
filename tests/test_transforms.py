@@ -132,6 +132,8 @@ def test_cx_to_identifier():
 def test_xcn_to_reference():
     ref = xcn_to_reference("1234^Smith^John")
     assert ref["display"] == "John Smith"
+    assert ref["identifier"]["system"] == "http://example.org/practitioner"
+    assert ref["identifier"]["value"] == "1234"
 
 
 def test_string_to_reference():
@@ -149,6 +151,7 @@ def test_sch_status_to_appt_status():
     assert sch_status_to_appt_status("BOOKED") == "booked"
     assert sch_status_to_appt_status("cancelled") == "cancelled"
     assert sch_status_to_appt_status("") == "proposed"
+    assert sch_status_to_appt_status("resched") == "proposed"
 
 
 def test_default_helpers_and_code_systems():
