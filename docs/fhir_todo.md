@@ -189,27 +189,27 @@ This plan drives a **US Core–compliant** HL7 v2 → FHIR pipeline using your e
 - Use **`dataAbsentReason`** only where profiles allow; otherwise omit the element and dead-letter with a MustSupport reason.
 ---
 
-## Phase 10 — Orders (ORM/OML → ServiceRequest) — *NEW*
-- [ ] Map **ORM/OML** orders to **ServiceRequest** (+ optional **Task** for workflow).
+## Phase 10 — Orders (ORM/OML → ServiceRequest)
+- [x] Map **ORM/OML** orders to **ServiceRequest** (+ optional **Task** for workflow).
   - **Implement:** `maps/orm_uscore.yaml` with placer/filler numbers (ORC/OBR), code (OBR-4), priority, reason, requester, performer.
   - **Linkage:** Results reference orders via `DiagnosticReport.basedOn` / `Observation.basedOn`.
   - **Identifiers:** Define conditional upsert keys: placer/filler order identifiers with **real system URIs**.
   - **DoD:** ServiceRequest created/updated; ORU bundles reference it; HAPI passes.
 
-## Phase 11 — Scheduling (SIU → Appointment) — *NEW*
-- [ ] Map **SIU** events to **Appointment** (+ **Schedule/Slot** optional).
+## Phase 11 — Scheduling (SIU → Appointment)
+- [x] Map **SIU** events to **Appointment** (+ **Schedule/Slot** optional).
   - **Implement:** `maps/siu_uscore.yaml` with participants (**Patient**, **PractitionerRole**, **Location**, **Organization**), start/end, status (`booked`, `cancelled`, `noshow`).
   - **Identifiers:** Stable business keys for conditional upsert (placer schedule/appointment ID).
   - **DoD:** Appointment created/updated per triggers (book/update/cancel); HAPI passes.
 
-## Phase 12 — Immunizations (VXU → Immunization) — *NEW*
-- [ ] Map **VXU^V04** to **Immunization**.
+## Phase 12 — Immunizations (VXU → Immunization)
+- [x] Map **VXU^V04** to **Immunization**.
   - **Implement:** `maps/vxu_uscore.yaml` with CVX code, lot/expiry, occurrence date, performer, route/site.
   - **Identifiers:** vaccine record ID to prevent dupes; organization/performer references.
   - **DoD:** Immunization upserts validate; snapshot tests green.
 
-## Phase 13 — Pharmacy (RDE/RXO/RXE → Medication*) — *NEW*
-- [ ] Map order/dispense/admin:
+## Phase 13 — Pharmacy (RDE/RXO/RXE → Medication*)
+- [x] Map order/dispense/admin:
   - **MedicationRequest** (order intent/status), **MedicationDispense**, **MedicationAdministration**.
   - **Implement:** `maps/rde_uscore.yaml` covering medication coding (RxNorm where available), dose/route/frequency, quantity, status transitions (new/change/cancel).
   - **DoD:** Resources emitted and linked to Patient/Encounter; HAPI passes core checks.

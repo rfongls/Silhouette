@@ -1,0 +1,13 @@
+messageTypes:
+  - "SIU^S12"
+resourcePlan:
+  - resource: Appointment
+    profile: "http://hl7.org/fhir/us/core/StructureDefinition/us-core-appointment"
+    rules:
+      - hl7_path: "SCH.1"
+        fhir_path: "identifier[0].value"
+      - hl7_path: "SCH.6"
+        fhir_path: "start"
+        transform: "ts_to_datetime"
+      - hl7_path: "SCH.11.4"
+        fhir_path: "status"

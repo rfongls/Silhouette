@@ -1,0 +1,11 @@
+messageTypes:
+  - "ORM^O01"
+resourcePlan:
+  - resource: ServiceRequest
+    profile: "http://hl7.org/fhir/us/core/StructureDefinition/us-core-servicerequest"
+    rules:
+      - hl7_path: "OBR.4"
+        fhir_path: "code"
+        transform: "obx_cwe_to_codeableconcept"
+      - hl7_path: "ORC.2"
+        fhir_path: "identifier[0].value"

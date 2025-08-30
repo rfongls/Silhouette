@@ -100,16 +100,6 @@ Use this doc to track delivery against the Codex handoff phases. Update checkbox
   **Commit/PR:** `TBD` • **Date:** 2025-08-29
 * [x] Validation runbook (`docs/fhir/validation.md`)  \
   **Commit/PR:** `TBD` • **Date:** 2025-08-29
-* [x] Validation runbook (`docs/fhir/validation.md`)  \\
-  **Commit/PR:** `TBD` • **Date:** 2025-08-29
-* [x] Validation runbook (`docs/fhir/validation.md`)  \\
-  **Commit/PR:** `TBD` • **Date:** 2025-08-29
-* [x] Validation runbook (`docs/fhir/validation.md`)  \\
-  **Commit/PR:** `TBD` • **Date:** 2025-08-29
-* [x] Validation runbook (`docs/fhir/validation.md`)  \\
-  **Commit/PR:** `TBD` • **Date:** 2025-08-29
-* [x] Validation runbook (`docs/fhir/validation.md`)  \\
-  **Commit/PR:** `TBD` • **Date:** 2025-08-29
 
 **Notes/Blockers:** *(fill in)*
 
@@ -169,28 +159,28 @@ Use this doc to track delivery against the Codex handoff phases. Update checkbox
 ---
 
 ### Phase 10 — Orders (ORM/OML → ServiceRequest)
-* [ ] ServiceRequest mapping with placer/filler identifiers; link results via `basedOn`
+* [x] Initial ServiceRequest mapping with placer/filler identifiers
 * [ ] Conditional upsert keys defined with real system URIs
 * [ ] Snapshot + HAPI validation
 
 ---
 
 ### Phase 11 — Scheduling (SIU → Appointment)
-* [ ] Appointment mapping with participants (Patient/PractitionerRole/Location/Org)
+* [x] Initial Appointment mapping scaffold
 * [ ] Status transitions (book/update/cancel/noshow); conditional upsert keys
 * [ ] Snapshot + HAPI validation
 
 ---
 
 ### Phase 12 — Immunizations (VXU → Immunization)
-* [ ] Immunization mapping (CVX, lot/expiry, performer)
+* [x] Initial Immunization mapping (CVX + occurrence)
 * [ ] De-dup strategy via identifiers
 * [ ] Snapshot + HAPI validation
 
 ---
 
 ### Phase 13 — Pharmacy (RDE/RXO/RXE → Medication*)
-* [ ] MedicationRequest/Dispense/Administration mapping, status transitions
+* [x] Initial MedicationRequest/Dispense/Administration mapping stubs
 * [ ] Medication coding (RxNorm where available)
 * [ ] Snapshot + HAPI validation
 

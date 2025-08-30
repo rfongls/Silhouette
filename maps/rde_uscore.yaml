@@ -1,0 +1,23 @@
+messageTypes:
+  - "RDE^O11"
+resourcePlan:
+  - resource: MedicationRequest
+    profile: "http://hl7.org/fhir/us/core/StructureDefinition/us-core-medicationrequest"
+    rules:
+      - hl7_path: "RXE.2"
+        fhir_path: "medicationCodeableConcept"
+        transform: "obx_cwe_to_codeableconcept"
+      - hl7_path: "RXE.3"
+        fhir_path: "dosageInstruction[0].doseAndRate[0].doseQuantity.value"
+  - resource: MedicationDispense
+    profile: "http://hl7.org/fhir/us/core/StructureDefinition/us-core-medicationdispense"
+    rules:
+      - hl7_path: "RXD.3"
+        fhir_path: "medicationCodeableConcept"
+        transform: "obx_cwe_to_codeableconcept"
+  - resource: MedicationAdministration
+    profile: "http://hl7.org/fhir/us/core/StructureDefinition/us-core-medicationadministration"
+    rules:
+      - hl7_path: "RXA.5"
+        fhir_path: "medicationCodeableConcept"
+        transform: "obx_cwe_to_codeableconcept"
