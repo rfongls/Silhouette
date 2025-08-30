@@ -1,0 +1,3 @@
+package_ids:
+  - hl7.fhir.us.core#6.1.0
+profiles: {}

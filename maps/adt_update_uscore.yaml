@@ -1,0 +1,27 @@
+messageTypes:
+  - ADT^A02
+  - ADT^A03
+  - ADT^A08
+  - ADT^A11
+  - ADT^A13
+  - ADT^A40
+resourcePlan:
+  - resource: Patient
+    rules:
+      - hl7_path: "PID.3[*]"
+        fhir_path: "identifier[]"
+        transform: "pid3_to_identifiers"
+      - hl7_path: "MSH.9.2"
+        fhir_path: "active"
+        transform: "adt_event_to_patient_active"
+  - resource: Encounter
+    rules:
+      - hl7_path: "PID.3"
+        fhir_path: "subject.identifier"
+        transform: "cx_to_identifier"
+      - hl7_path: "PV1.19"
+        fhir_path: "identifier[0]"
+        transform: "cx_to_identifier"
+      - hl7_path: "MSH.9.2"
+        fhir_path: "status"
+        transform: "adt_event_to_encounter_status"
