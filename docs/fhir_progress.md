@@ -8,7 +8,7 @@ Use this doc to track delivery against the Codex handoff phases. Update checkbox
 
 ## At‑a‑Glance Status
 
-* **Current Phase:** 6 — Terminology MVP
+* **Current Phase:** 8 — CI/CD & Quality Gates
 * **MVP Definition of Done:**
   * ADT^A01 → `Patient`, `Encounter`, `Provenance` (US Core‑valid)
   * ORU^R01 → `Patient`, `Observation`, `DiagnosticReport` (+`Specimen` if present) (US Core‑valid)
@@ -103,6 +103,8 @@ Use this doc to track delivery against the Codex handoff phases. Update checkbox
   **Commit/PR:** `TBD` • **Date:** 2025-08-29
 * [x] Optional remote `$validate` before posting  \\
   **Commit/PR:** `TBD` • **Date:** 2025-08-29
+* [x] Validation runbook (`docs/fhir/validation.md`)  \\
+  **Commit/PR:** `TBD` • **Date:** 2025-08-29
 
 **Notes/Blockers:** *(fill in)*
 
@@ -110,8 +112,10 @@ Use this doc to track delivery against the Codex handoff phases. Update checkbox
 
 ### Phase 6 — Terminology MVP
 
-* [ ] `terminology/sex_map.csv`, `pv1_class.csv`, `loinc_map.csv`
-* [ ] Lookup helpers + metrics emission on misses
+* [x] `terminology/sex_map.csv`, `pv1_class.csv`, `loinc_map.csv`  \
+  **Commit/PR:** `be80b8c` • **Date:** 2025-08-29
+* [x] Lookup helpers + metrics emission on misses  \
+  **Commit/PR:** `be80b8c` • **Date:** 2025-08-29
 
 **Notes/Blockers:** *(fill in)*
 
@@ -119,10 +123,18 @@ Use this doc to track delivery against the Codex handoff phases. Update checkbox
 
 ### Phase 7 — Posting & Observability
 
-* [ ] Transaction POST/PUT logic with retries & backoff
-* [ ] Dead‑letter writes on failure (request + response)
-* [ ] Metrics CSV (`out/metrics.csv`)
-* [ ] Structured logs per message
+* [x] HTTP posting with retries and dead‑letter on failure  \\
+  **Commit/PR:** `TBD` • **Date:** 2025-08-29
+* [x] Conditional upserts preserved on Patient/Encounter  \\
+  **Commit/PR:** `TBD` • **Date:** 2025-08-29
+* [x] Metrics CSV with txMisses, postedCount and deadLetter columns  \\
+  **Commit/PR:** `TBD` • **Date:** 2025-08-29
+* [x] Structured JSON logs per message  \\
+  **Commit/PR:** `TBD` • **Date:** 2025-08-29
+* [x] Dry-run mode skips posting but writes artifacts  \\
+  **Commit/PR:** `TBD` • **Date:** 2025-08-29
+* [x] CLI wiring for `--server`, `$validate` gating  \\
+  **Commit/PR:** `TBD` • **Date:** 2025-08-29
 
 **Notes/Blockers:** *(fill in)*
 
