@@ -27,6 +27,7 @@ def post_transaction(
         "Content-Type": "application/fhir+json",
         "Prefer": "handling=strict",
     }
+
     if token:
         headers["Authorization"] = f"Bearer {token}"
     url = server.rstrip("/")
