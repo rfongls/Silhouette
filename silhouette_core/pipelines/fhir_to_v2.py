@@ -35,7 +35,6 @@ def _render_observation(res: Dict[str, Any], idx: int) -> str:
 
 def render(input_path: str, map_path: str | None = None, out: str = "out/hl7") -> None:
     """Render a FHIR bundle JSON to a single HL7 v2 message.
-
     ``map_path`` is reserved for future detailed reverse mapping. The
     current implementation emits a very small subset of segments for
     demonstration and testing: ``MSH``, ``PID`` and ``OBX`` derived from
@@ -63,3 +62,4 @@ def render(input_path: str, map_path: str | None = None, out: str = "out/hl7") -
     out_dir.mkdir(parents=True, exist_ok=True)
     out_path = out_dir / (Path(input_path).stem + ".hl7")
     out_path.write_text(hl7_message, encoding="utf-8")
+
