@@ -207,18 +207,21 @@ Use this doc to track delivery against the Codex handoff phases. Update checkbox
 ---
 
 ### Phase 17 — Reference Entities & Identifier Registry
-* [x] Org/Practitioner/PractitionerRole/Location upsert + references
-* [x] `config/identifier_systems.yaml` with canonical system URIs
+* [ ] Org/Practitioner/PractitionerRole/Location upsert + references
+* [ ] `config/identifier_systems.yaml` with canonical system URIs  \\
+  **Scaffold:** `config/identifier_systems.yaml` present
 
 ---
 
 ### Phase 18 — Partner IG Profiles & Validation
-* [x] Partner configs; HAPI runs against partner IGs; CI matrix
+* [ ] Partner configs; HAPI runs against partner IGs; CI matrix  \\
+  **Scaffold:** `config/partners/example.yaml` present (US Core 6.1.0)
 
 ---
 
 ### Phase 19 — Messaging Mode (optional)
-* [x] `Bundle.type=message` + `MessageHeader` (toggle via CLI)
+* [ ] `Bundle.type=message` + `MessageHeader` (toggle via CLI)  \\
+  **Scaffold:** `--message-mode` flag recognized; emission TBD
 
 ---
 
