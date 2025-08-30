@@ -207,21 +207,22 @@ Use this doc to track delivery against the Codex handoff phases. Update checkbox
 ---
 
 ### Phase 17 — Reference Entities & Identifier Registry
-* [ ] Org/Practitioner/PractitionerRole/Location upsert + references
-* [ ] `config/identifier_systems.yaml` with canonical system URIs  \\
-  **Scaffold:** `config/identifier_systems.yaml` present
+* [x] Org/Practitioner/PractitionerRole/Location upsert + references  \
+  **Commit/PR:** `2f401d7` • **Date:** 2025-08-30
+* [x] `config/identifier_systems.yaml` with canonical system URIs  \
+  **Commit/PR:** `2f401d7` • **Date:** 2025-08-30
 
 ---
 
 ### Phase 18 — Partner IG Profiles & Validation
-* [ ] Partner configs; HAPI runs against partner IGs; CI matrix  \\
-  **Scaffold:** `config/partners/example.yaml` present (US Core 6.1.0)
-
+* [x] Partner configs; HAPI runs against partner IGs; CI matrix  \
+  **Commit/PR:** `2f401d7` • **Date:** 2025-08-30
+  
 ---
 
 ### Phase 19 — Messaging Mode (optional)
-* [ ] `Bundle.type=message` + `MessageHeader` (toggle via CLI)  \\
-  **Scaffold:** `--message-mode` flag recognized; emission TBD
+* [x] `Bundle.type=message` + `MessageHeader` (toggle via CLI)  \
+  **Commit/PR:** `2f401d7` • **Date:** 2025-08-30
 
 ---
 
@@ -234,6 +235,7 @@ Use this doc to track delivery against the Codex handoff phases. Update checkbox
 * PR # — "ORU US Core mapping + tests"; **Phase(s):** 4,5 • **Merged:** TBD • **SHA:**
 * PR # — "Posting + observability"; **Phase(s):** 7 • **Merged:** TBD • **SHA:**
 * PR # — "CI translation + validation"; **Phase(s):** 8 • **Merged:** TBD • **SHA:**
+* PR #TBD — "Complete identifier registry, partner IGs, and messaging mode"; **Phase(s):** 17-19 • **Merged:** TBD • **SHA:** `2f401d7`
 
 ---
 
