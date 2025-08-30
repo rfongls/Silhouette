@@ -159,30 +159,30 @@ Use this doc to track delivery against the Codex handoff phases. Update checkbox
 ---
 
 ### Phase 10 — Orders (ORM/OML → ServiceRequest)
-* [x] Initial ServiceRequest mapping with placer/filler identifiers
-* [ ] Conditional upsert keys defined with real system URIs
-* [ ] Snapshot + HAPI validation
+* [x] ServiceRequest mapping with placer/filler identifiers; link results via `basedOn`
+* [x] Conditional upsert keys defined with real system URIs
+* [x] Snapshot + HAPI validation
 
 ---
 
 ### Phase 11 — Scheduling (SIU → Appointment)
-* [x] Initial Appointment mapping scaffold
-* [ ] Status transitions (book/update/cancel/noshow); conditional upsert keys
-* [ ] Snapshot + HAPI validation
+* [x] Appointment mapping with participants (Patient/PractitionerRole/Location/Org)
+* [x] Status transitions (book/update/cancel/noshow); conditional upsert keys
+* [x] Snapshot + HAPI validation
 
 ---
 
 ### Phase 12 — Immunizations (VXU → Immunization)
-* [x] Initial Immunization mapping (CVX + occurrence)
-* [ ] De-dup strategy via identifiers
-* [ ] Snapshot + HAPI validation
+* [x] Immunization mapping (CVX, lot/expiry, performer)
+* [x] De-dup strategy via identifiers
+* [x] Snapshot + HAPI validation
 
 ---
 
 ### Phase 13 — Pharmacy (RDE/RXO/RXE → Medication*)
-* [x] Initial MedicationRequest/Dispense/Administration mapping stubs
-* [ ] Medication coding (RxNorm where available)
-* [ ] Snapshot + HAPI validation
+* [x] MedicationRequest/Dispense/Administration mapping, status transitions
+* [x] Medication coding (RxNorm where available)
+* [x] Snapshot + HAPI validation
 
 ---
 
