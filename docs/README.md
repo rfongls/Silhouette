@@ -2,7 +2,9 @@
 
 ## Getting Started
 - [INSTALL_QUICKSTART](./INSTALL_QUICKSTART.md)
-- **HL7 QA Validator** — run commands & options: [hl7_testing.md](./hl7_testing.md)
+- **HL7 QA Validator** — run commands & options: [skills/hl7/](skills/hl7/)
+- **FHIR Translator** — run commands & options: [skills/fhir/](skills/fhir/)
+- Unified workflows: [skills/workflows/hl7_fhir_workflows.md](skills/workflows/hl7_fhir_workflows.md)
 - Unified CLI (silhouette): [CLI.md](./CLI.md)
 - API surface: [API.md](./API.md)
 - Interoperability quickstart: [interoperability/quickstart.md](./interoperability/quickstart.md)
@@ -20,9 +22,11 @@
 - Security (license scanner, redaction, watermark): [Security.md](./Security.md)
 
 ## Reference
-- Phases overview: [PHASES.md](./PHASES.md)
+- Phases overview: [PHASES.md](../PHASES.md)
 - Knowledge store hierarchy: [knowledge_store/hierarchy.md](./knowledge_store/hierarchy.md)
 - Alignment kernel handoff: [alignment_kernel/](./alignment_kernel/)
+- Map index: [reference/maps.md](reference/maps.md)
+- Config reference: [reference/configs.md](reference/configs.md)
 
 ## Evaluation, Training, Config & Artifacts
 - Evaluations & gates: [Eval.md](./Eval.md)
@@ -31,7 +35,7 @@
 - Artifacts (scoreboards, logs, traces): [Artifacts.md](./Artifacts.md)
 
 ## Project Ops
-- Release playbook: ../RELEASE.md  
-- Changelog: ../CHANGELOG.md  
-- Compliance policy: ../COMPLIANCE.md  
+- Release playbook: ../RELEASE.md
+- Changelog: ../CHANGELOG.md
+- Compliance policy: ../COMPLIANCE.md
 - Customer license template: ../CUSTOMER_LICENSE_TEMPLATE.md

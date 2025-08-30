@@ -234,18 +234,18 @@ This plan drives a **US Core–compliant** HL7 v2 → FHIR pipeline using your e
   - **ORU corrections:** `Observation.status=corrected` with Provenance.
   - **DoD:** Snapshot fixtures for each trigger; HAPI passes.
 
-## Phase 17 — Reference Entities & Identifier Registry
-- [x] Upsert **Organization**, **Practitioner**, **PractitionerRole**, **Location** and reference them from Encounter/DR/Observation/ServiceRequest/Appointment.
+## Phase 17 — Reference Entities & Identifier Registry ✅
+- [x] Upsert **Organization**, **Practitioner**, **PractitionerRole**, **Location** and reference them from Encounter/DR/Observation/ServiceRequest/Appointment. _(commit: `2f401d7`)_
   - **Implement:** `config/identifier_systems.yaml` for canonical URIs (MRN, visit, order, specimen, organization, practitioner, location).
   - **Upgrade:** Enhance `xcn_to_reference` to emit true `reference` links once those entities exist.
   - **DoD:** All emitted resources use real system URIs; references resolve; validation passes.
 
-## Phase 18 — Partner IG Profiles & Validation
-- [x] Support partner-specific IG packages and `$validate` against them.
+## Phase 18 — Partner IG Profiles & Validation ✅
+- [x] Support partner-specific IG packages and `$validate` against them. _(commit: `2f401d7`)_
   - **Implement:** `config/partners/<name>.yaml` (IG list, profile overrides, MustSupport rules).
   - **CLI:** `--partner <name>` toggles IG set and schema expectations.
   - **DoD:** HAPI runs with partner IG; CI matrix executes per partner config.
 
-## Phase 19 — Messaging Mode (optional)
-- [x] Add **Bundle.type=message** support with **MessageHeader** for sites that require messaging.
+## Phase 19 — Messaging Mode (optional) ✅
+- [x] Add **Bundle.type=message** support with **MessageHeader** for sites that require messaging. _(commit: `2f401d7`)_
   - **DoD:** Message bundles validate; posting path remains transaction by default.

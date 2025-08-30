@@ -286,8 +286,8 @@ See [RELEASE.md](../RELEASE.md) for full checklist.
 * [MILESTONES.md](../MILESTONES.md) \u2192 PR details
 * [COMPLIANCE.md](../COMPLIANCE.md) \u2192 Governance
 * [RELEASE.md](../RELEASE.md) \u2192 Release playbook
-* [docs/HANDOFF_GUIDE.md](HANDOFF_GUIDE.md) \u2192 Codex automation
-* [docs/Phase_10_Completion.md](Phase_10_Completion.md) \u2192 Phase 10 summary
+* [codex_handoff.md](codex_handoff.md) \u2192 Codex automation
+* [PHASES.md](../PHASES.md) \u2192 Phase 10 summary
 
 ---
 

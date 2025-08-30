@@ -33,7 +33,42 @@ resourcePlan:
         transform: "default_participant_status"
       - hl7_path: "AIL.3"
         fhir_path: "participant[2].actor"
-        transform: "string_to_reference"
+        transform: "string_to_location_reference"
       - hl7_path: "-"
         fhir_path: "participant[2].status"
         transform: "default_participant_status"
+
+  - resource: Organization
+    profile: "http://hl7.org/fhir/us/core/StructureDefinition/us-core-organization"
+    rules:
+      - hl7_path: "MSH.4"
+        fhir_path: "identifier[0]"
+        transform: "string_to_org_identifier"
+      - hl7_path: "MSH.4"
+        fhir_path: "name"
+  - resource: Practitioner
+    profile: "http://hl7.org/fhir/us/core/StructureDefinition/us-core-practitioner"
+    rules:
+      - hl7_path: "AIP.3"
+        fhir_path: "identifier[0]"
+        transform: "xcn_to_identifier"
+      - hl7_path: "AIP.3"
+        fhir_path: "name"
+        transform: "xcn_to_name"
+  - resource: PractitionerRole
+    profile: "http://hl7.org/fhir/us/core/StructureDefinition/us-core-practitionerrole"
+    rules:
+      - hl7_path: "AIP.3"
+        fhir_path: "practitioner.identifier"
+        transform: "xcn_to_identifier"
+      - hl7_path: "MSH.4"
+        fhir_path: "organization.identifier"
+        transform: "string_to_org_identifier"
+  - resource: Location
+    profile: "http://hl7.org/fhir/us/core/StructureDefinition/us-core-location"
+    rules:
+      - hl7_path: "AIL.3"
+        fhir_path: "identifier[0]"
+        transform: "string_to_location_identifier"
+      - hl7_path: "AIL.3"
+        fhir_path: "name"
