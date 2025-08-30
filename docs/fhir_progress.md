@@ -8,7 +8,7 @@ Use this doc to track delivery against the Codex handoff phases. Update checkbox
 
 ## At-a-Glance Status
 
-* **Current Phase:** Triage & Backlog
+* **Current Phase:** 26 — Console Entrypoint & README Sync
 * **MVP Definition of Done:**
   * ADT^A01 → `Patient`, `Encounter`, `Provenance` (US Core-valid)
   * ORU^R01 → `Patient`, `Observation`, `DiagnosticReport` (+`Specimen` if present) (US Core-valid)
@@ -226,13 +226,13 @@ Use this doc to track delivery against the Codex handoff phases. Update checkbox
 
 ### Phase 20 — Full Message Mode (MessageHeader + Posting)
 - [x] Message bundle emission & posting
-- [ ] HAPI message validation & snapshots
+- [x] HAPI message validation & snapshots
 
 ---
 
 ### Phase 21 — Partner IG Matrix & Runtime Overrides
 - [x] CLI `--partner` honored in translate/validate
-- [ ] CI matrix per partner
+- [x] CI matrix per partner
 
 ---
 

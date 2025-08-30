@@ -203,7 +203,7 @@ def translate(
 
     for plan in spec.resourcePlan:
         res: Dict[str, Any] = {"resourceType": plan.resource}
-        profile = plan.profile or defaults.get(plan.resource)
+        profile = defaults.get(plan.resource) or plan.profile
         if profile:
             res.setdefault("meta", {})["profile"] = [profile]
         for rule in plan.rules:
