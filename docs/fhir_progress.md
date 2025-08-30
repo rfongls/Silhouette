@@ -100,16 +100,6 @@ Use this doc to track delivery against the Codex handoff phases. Update checkbox
   **Commit/PR:** `TBD` • **Date:** 2025-08-29
 * [x] Validation runbook (`docs/fhir/validation.md`)  \
   **Commit/PR:** `TBD` • **Date:** 2025-08-29
-* [x] Validation runbook (`docs/fhir/validation.md`)  \\
-  **Commit/PR:** `TBD` • **Date:** 2025-08-29
-* [x] Validation runbook (`docs/fhir/validation.md`)  \\
-  **Commit/PR:** `TBD` • **Date:** 2025-08-29
-* [x] Validation runbook (`docs/fhir/validation.md`)  \\
-  **Commit/PR:** `TBD` • **Date:** 2025-08-29
-* [x] Validation runbook (`docs/fhir/validation.md`)  \\
-  **Commit/PR:** `TBD` • **Date:** 2025-08-29
-* [x] Validation runbook (`docs/fhir/validation.md`)  \\
-  **Commit/PR:** `TBD` • **Date:** 2025-08-29
 
 **Notes/Blockers:** *(fill in)*
 
@@ -165,6 +155,70 @@ Use this doc to track delivery against the Codex handoff phases. Update checkbox
   **Commit/PR:** `TBD` • **Date:** 2025-08-29
 
 **Notes/Blockers:** *(fill in)*
+
+---
+
+### Phase 10 — Orders (ORM/OML → ServiceRequest)
+* [x] Initial ServiceRequest mapping with placer/filler identifiers
+* [ ] Conditional upsert keys defined with real system URIs
+* [ ] Snapshot + HAPI validation
+
+---
+
+### Phase 11 — Scheduling (SIU → Appointment)
+* [x] Initial Appointment mapping scaffold
+* [ ] Status transitions (book/update/cancel/noshow); conditional upsert keys
+* [ ] Snapshot + HAPI validation
+
+---
+
+### Phase 12 — Immunizations (VXU → Immunization)
+* [x] Initial Immunization mapping (CVX + occurrence)
+* [ ] De-dup strategy via identifiers
+* [ ] Snapshot + HAPI validation
+
+---
+
+### Phase 13 — Pharmacy (RDE/RXO/RXE → Medication*)
+* [x] Initial MedicationRequest/Dispense/Administration mapping stubs
+* [ ] Medication coding (RxNorm where available)
+* [ ] Snapshot + HAPI validation
+
+---
+
+### Phase 14 — Documents (MDM → DocumentReference/Binary)
+* [ ] DocumentReference + Binary mapping with versioning
+* [ ] Conditional upsert by master document ID
+* [ ] Snapshot + HAPI validation
+
+---
+
+### Phase 15 — Charges/Accounts (DFT/BAR → ChargeItem/Account)
+* [ ] ChargeItem + Account mapping and linking to Encounter/Patient
+* [ ] Snapshot + baseline validation
+
+---
+
+### Phase 16 — ADT Extensions & Merge/Corrections
+* [ ] A02/A03/A08/A11/A13 Encounter state machine updates
+* [ ] A40 Patient merge (link replaced-by; old inactive)
+* [ ] ORU corrections (`status=corrected`) + Provenance
+
+---
+
+### Phase 17 — Reference Entities & Identifier Registry
+* [ ] Org/Practitioner/PractitionerRole/Location upsert + references
+* [ ] `config/identifier_systems.yaml` with canonical system URIs
+
+---
+
+### Phase 18 — Partner IG Profiles & Validation
+* [ ] Partner configs; HAPI runs against partner IGs; CI matrix
+
+---
+
+### Phase 19 — Messaging Mode (optional)
+* [ ] `Bundle.type=message` + `MessageHeader` (toggle via CLI)
 
 ---
 

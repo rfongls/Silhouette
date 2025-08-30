@@ -1,0 +1,12 @@
+messageTypes:
+  - "VXU^V04"
+resourcePlan:
+  - resource: Immunization
+    profile: "http://hl7.org/fhir/us/core/StructureDefinition/us-core-immunization"
+    rules:
+      - hl7_path: "RXA.5"
+        fhir_path: "vaccineCode"
+        transform: "obx_cwe_to_codeableconcept"
+      - hl7_path: "RXA.3"
+        fhir_path: "occurrenceDateTime"
+        transform: "ts_to_datetime"
