@@ -21,6 +21,7 @@ dependencies = [
   "click>=8.1",
   "tqdm>=4.66",
   "jinja2>=3.1",
+  "requests>=2.31",
 ]
 
 [project.optional-dependencies]
@@ -45,6 +46,11 @@ eval = [
   "pytest>=8.2",
   "requests>=2.32",
 ]
+validate = [
+  "jsonschema>=4.18",
+  "pydantic>=2.6",
+  "fhir.resources>=7.0",
+]
 all = ["silhouette-core[runtime,ml,dev,eval]"]
 
 [project.scripts]
@@ -52,7 +58,10 @@ silhouette = "silhouette_core.cli:main"
 
 [tool.setuptools]
 include-package-data = true
-packages = ["silhouette_core", "cli", "eval", "scripts", "training", "security"]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["silhouette_core*", "cli*", "eval*", "scripts*", "training*", "security*"]
 
 [tool.setuptools.package-data]
 silhouette_core = [

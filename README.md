@@ -78,6 +78,15 @@ Ready-made diagrams cover HL7 v2 ↔ FHIR mapping, TEFCA/QHIN flows, IHE XDS.b e
 - [FHIR translator](docs/skills/fhir/)
 - [HL7⇄FHIR workflows](docs/skills/workflows/hl7_fhir_workflows.md)
 
+### Install (editable)
+
+```bash
+pip install -e .
+
+# Include validation extras for `silhouette fhir validate`
+pip install -e .[validate]
+```
+
 ## HL7 v2 → FHIR CLI Examples
 
 Translate an HL7 message to FHIR without posting it:
@@ -94,9 +103,15 @@ silhouette fhir translate \
 Validate the generated resources against US Core using the HAPI validator:
 
 ```bash
+# Option A: quoted literal glob (PowerShell requires quotes)
 silhouette fhir validate \
-  --in out/fhir/ndjson/*.ndjson \
-  --hapi \
+  --in 'out/fhir/ndjson/*.ndjson' \
+  --hapi
+
+# Option B: directory of NDJSON files
+silhouette fhir validate \
+  --in-dir out/fhir/ndjson \
+  --hapi
 ```
 
 Post a bundle to a FHIR server with server-side `$validate`:

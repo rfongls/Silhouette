@@ -3,8 +3,8 @@ pytest.importorskip("jsonschema")
 pytest.importorskip("hl7apy")
 pytest.importorskip("fhir.resources")
 
-from translators.cda_to_fhir import CDAToFHIRTranslator  # noqa: E402
-from translators.hl7v2_to_fhir import HL7v2ToFHIRTranslator, load_rules  # noqa: E402
+from silhouette_core.translators.cda_to_fhir import CDAToFHIRTranslator  # noqa: E402
+from silhouette_core.translators.hl7v2_to_fhir import HL7v2ToFHIRTranslator, load_rules  # noqa: E402
 from validators.fhir import validate_fhir_bundle  # noqa: E402
 from validators.fhir_profile import (  # noqa: E402
     validate_structural_with_pydantic,

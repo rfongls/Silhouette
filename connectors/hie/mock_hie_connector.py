@@ -1,5 +1,5 @@
 from typing import List, Dict
-from skills.audit import fhir_audit_event, emit_and_persist
+from silhouette_core.skills.audit import fhir_audit_event, emit_and_persist
 
 
 class MockHIEConnector:
