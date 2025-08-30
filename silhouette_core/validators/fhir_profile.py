@@ -10,8 +10,6 @@ from fhir.resources.condition import Condition
 from fhir.resources.medicationstatement import MedicationStatement
 from fhir.resources.encounter import Encounter
 from fhir.resources.diagnosticreport import DiagnosticReport
-from fhir.resources.provenance import Provenance
-from fhir.resources.specimen import Specimen
 import pathlib
 from silhouette_core import terminology_service
 

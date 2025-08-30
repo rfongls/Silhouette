@@ -306,7 +306,6 @@ def fhir_validate_cmd(in_glob, in_dir, hapi, partner, tx_cache, fail_fast, serve
         paths = sorted(Path(in_dir).glob("*.ndjson"))
     else:
         raise click.UsageError("Provide either --in <glob> or --in-dir <folder>.")
-
     if not paths:
         raise click.ClickException("No NDJSON files found for input.")
 
