@@ -194,12 +194,14 @@ This plan drives a **US Core–compliant** HL7 v2 → FHIR pipeline using your e
   - **Implement:** `maps/orm_uscore.yaml` with placer/filler numbers (ORC/OBR), code (OBR-4), priority, reason, requester, performer.
   - **Linkage:** Results reference orders via `DiagnosticReport.basedOn` / `Observation.basedOn`.
   - **Identifiers:** Define conditional upsert keys: placer/filler order identifiers with **real system URIs**.
+  - **Pipeline:** Use conditional PUT for `ServiceRequest` when such identifiers are present.
   - **DoD:** ServiceRequest created/updated; ORU bundles reference it; HAPI passes.
 
 ## Phase 11 — Scheduling (SIU → Appointment)
 - [x] Map **SIU** events to **Appointment** (+ **Schedule/Slot** optional).
   - **Implement:** `maps/siu_uscore.yaml` with participants (**Patient**, **PractitionerRole**, **Location**, **Organization**), start/end, status (`booked`, `cancelled`, `noshow`).
   - **Identifiers:** Stable business keys for conditional upsert (placer schedule/appointment ID).
+  - **Pipeline:** Conditional PUT when Appointment identifiers include a real system.
   - **DoD:** Appointment created/updated per triggers (book/update/cancel); HAPI passes.
 
 ## Phase 12 — Immunizations (VXU → Immunization)
@@ -235,6 +237,7 @@ This plan drives a **US Core–compliant** HL7 v2 → FHIR pipeline using your e
 ## Phase 17 — Reference Entities & Identifier Registry — *NEW*
 - [ ] Upsert **Organization**, **Practitioner**, **PractitionerRole**, **Location** and reference them from Encounter/DR/Observation/ServiceRequest/Appointment.
   - **Implement:** `config/identifier_systems.yaml` for canonical URIs (MRN, visit, order, specimen, organization, practitioner, location).
+  - **Upgrade:** Enhance `xcn_to_reference` to emit true `reference` links once those entities exist.
   - **DoD:** All emitted resources use real system URIs; references resolve; validation passes.
 
 ## Phase 18 — Partner IG Profiles & Validation — *NEW*

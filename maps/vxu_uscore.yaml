@@ -19,6 +19,9 @@ resourcePlan:
   - resource: Immunization
     profile: "http://hl7.org/fhir/us/core/StructureDefinition/us-core-immunization"
     rules:
+      - hl7_path: "-"
+        fhir_path: "status"
+        transform: "default_immunization_status"
       - hl7_path: "RXA.5"
         fhir_path: "vaccineCode"
         transform: "obx_cwe_to_codeableconcept"
@@ -39,4 +42,5 @@ resourcePlan:
       - hl7_path: "RXR.2"
         fhir_path: "site"
         transform: "obx_cwe_to_codeableconcept"
-
+      - hl7_path: "PID.3"
+        fhir_path: "patient.identifier"

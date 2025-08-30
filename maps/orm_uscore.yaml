@@ -4,6 +4,9 @@ resourcePlan:
   - resource: ServiceRequest
     profile: "http://hl7.org/fhir/us/core/StructureDefinition/us-core-servicerequest"
     rules:
+      - hl7_path: "-"
+        fhir_path: "intent"
+        transform: "default_servicerequest_intent"
       - hl7_path: "ORC.1"
         fhir_path: "status"
         transform: "orc_control_to_status"
@@ -28,3 +31,9 @@ resourcePlan:
       - hl7_path: "OBR.31"
         fhir_path: "reasonCode[0]"
         transform: "obx_cwe_to_codeableconcept"
+      - hl7_path: "PID.3"
+        fhir_path: "subject.identifier"
+        transform: "cx_to_identifier"
+      - hl7_path: "PV1.19"
+        fhir_path: "encounter.identifier"
+        transform: "cx_to_identifier"

@@ -120,6 +120,10 @@ def _norm_code_system(s: str) -> str:
         return "http://loinc.org"
     if u.upper() in {"SCT", "SNOMED"}:
         return "http://snomed.info/sct"
+    if u.upper() == "CVX":
+        return "http://hl7.org/fhir/sid/cvx"
+    if u.upper() in {"RXNORM", "RXN"}:
+        return "http://www.nlm.nih.gov/research/umls/rxnorm"
     return u
 
 def obx_cwe_to_codeableconcept(value: str | dict) -> Dict[str, Any]:
@@ -271,6 +275,39 @@ def xcn_to_reference(value: str) -> Dict[str, Any]:
     given = comps[2] if len(comps) > 2 else ""
     name = " ".join(p for p in [given, family] if p)
     return {"display": name} if name else {}
+
+
+def string_to_reference(value: str) -> Dict[str, Any]:
+    """Wrap a plain string as a FHIR Reference.display."""
+    val = (value or "").strip()
+    return {"display": val} if val else {}
+
+
+# ----- Default value helpers -----
+
+
+def default_servicerequest_intent() -> str:
+    return "order"
+
+
+def default_participant_status() -> str:
+    return "accepted"
+
+
+def default_immunization_status() -> str:
+    return "completed"
+
+
+def default_medicationrequest_intent() -> str:
+    return "order"
+
+
+def default_medicationdispense_status() -> str:
+    return "completed"
+
+
+def default_medicationadmin_status() -> str:
+    return "completed"
 
 
 # ----- Status mappers -----
