@@ -310,6 +310,21 @@ def default_medicationadmin_status() -> str:
     return "completed"
 
 
+def default_documentreference_status() -> str:
+    return "current"
+
+
+def default_binary_content_type() -> str:
+    return "application/octet-stream"
+
+
+def default_chargeitem_status() -> str:
+    return "billable"
+
+
+def default_account_status() -> str:
+    return "active"
+
 # ----- Status mappers -----
 
 _ORC_CONTROL_TO_STATUS = {
@@ -338,4 +353,23 @@ _SCH_STATUS_TO_APPT_STATUS = {
 
 def sch_status_to_appt_status(value: str) -> str:
     """Map SCH-25 appointment status to FHIR Appointment.status."""
-    return _SCH_STATUS_TO_APPT_STATUS.get((value or "").strip().upper(), "proposed")
+
+
+_ADT_EVENT_TO_ENCOUNTER_STATUS = {
+    "A02": "in-progress",
+    "A03": "finished",
+    "A08": "in-progress",
+    "A11": "cancelled",
+    "A13": "cancelled",
+    "A40": "finished",
+}
+
+
+def adt_event_to_encounter_status(value: str) -> str:
+    """Map ADT trigger events to Encounter.status."""
+    return _ADT_EVENT_TO_ENCOUNTER_STATUS.get((value or "").strip().upper(), "in-progress")
+
+
+def adt_event_to_patient_active(value: str) -> bool:
+    """Determine Patient.active based on ADT trigger."""
+    return (value or "").strip().upper() != "A40"

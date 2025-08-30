@@ -2,6 +2,26 @@ messageTypes:
   - DFT^P03
 resourcePlan:
   - resource: ChargeItem
-    rules: []
+    rules:
+      - hl7_path: "-"
+        fhir_path: "status"
+        transform: "default_chargeitem_status"
+      - hl7_path: "FT1.4"
+        fhir_path: "code"
+        transform: "obx_cwe_to_codeableconcept"
+      - hl7_path: "FT1.6"
+        fhir_path: "quantity.value"
+      - hl7_path: "PID.3"
+        fhir_path: "subject.identifier"
+        transform: "cx_to_identifier"
   - resource: Account
-    rules: []
+    rules:
+      - hl7_path: "-"
+        fhir_path: "status"
+        transform: "default_account_status"
+      - hl7_path: "PID.3"
+        fhir_path: "subject[0].identifier"
+        transform: "cx_to_identifier"
+      - hl7_path: "FT1.21"
+        fhir_path: "identifier[0].value"
+

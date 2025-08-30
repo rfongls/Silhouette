@@ -2,6 +2,28 @@ messageTypes:
   - MDM^T02
 resourcePlan:
   - resource: DocumentReference
-    rules: []
+    rules:
+      - hl7_path: "-"
+        fhir_path: "status"
+        transform: "default_documentreference_status"
+      - hl7_path: "PID.3"
+        fhir_path: "subject.identifier"
+        transform: "cx_to_identifier"
+      - hl7_path: "TXA.2"
+        fhir_path: "type"
+        transform: "obx_cwe_to_codeableconcept"
+      - hl7_path: "TXA.6"
+        fhir_path: "date"
+        transform: "ts_to_datetime"
+      - hl7_path: "OBX.5"
+        fhir_path: "content[0].attachment.data"
+      - hl7_path: "-"
+        fhir_path: "content[0].attachment.contentType"
+        transform: "default_binary_content_type"
   - resource: Binary
-    rules: []
+    rules:
+      - hl7_path: "-"
+        fhir_path: "contentType"
+        transform: "default_binary_content_type"
+      - hl7_path: "OBX.5"
+        fhir_path: "data"

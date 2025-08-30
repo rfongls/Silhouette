@@ -187,44 +187,38 @@ Use this doc to track delivery against the Codex handoff phases. Update checkbox
 ---
 
 ### Phase 14 — Documents (MDM → DocumentReference/Binary)
-* [ ] DocumentReference + Binary mapping with versioning  \
-  **Scaffold:** `maps/mdm_uscore.yaml`
-* [ ] Conditional upsert by master document ID
-* [ ] Snapshot + HAPI validation
+* [x] DocumentReference + Binary mapping with versioning
+* [x] Conditional upsert by master document ID
+* [x] Snapshot + HAPI validation
 
 ---
 
 ### Phase 15 — Charges/Accounts (DFT/BAR → ChargeItem/Account)
-* [ ] ChargeItem + Account mapping and linking to Encounter/Patient  \
-  **Scaffold:** `maps/dft_uscore.yaml`
-* [ ] Snapshot + baseline validation
+* [x] ChargeItem + Account mapping and linking to Encounter/Patient
+* [x] Snapshot + baseline validation
 
 ---
 
 ### Phase 16 — ADT Extensions & Merge/Corrections
-* [ ] A02/A03/A08/A11/A13 Encounter state machine updates  \
-  **Scaffold:** `maps/adt_update_uscore.yaml`
-* [ ] A40 Patient merge (link replaced-by; old inactive)
-* [ ] ORU corrections (`status=corrected`) + Provenance
+* [x] A02/A03/A08/A11/A13 Encounter state machine updates
+* [x] A40 Patient merge (link replaced-by; old inactive)
+* [x] ORU corrections (`status=corrected`) + Provenance
 
 ---
 
 ### Phase 17 — Reference Entities & Identifier Registry
-* [ ] Org/Practitioner/PractitionerRole/Location upsert + references  \
-  **Scaffold:** `config/identifier_systems.yaml`
-* [ ] `config/identifier_systems.yaml` with canonical system URIs
+* [x] Org/Practitioner/PractitionerRole/Location upsert + references
+* [x] `config/identifier_systems.yaml` with canonical system URIs
 
 ---
 
 ### Phase 18 — Partner IG Profiles & Validation
-* [ ] Partner configs; HAPI runs against partner IGs; CI matrix  \
-  **Scaffold:** `config/partners/example.yaml`
+* [x] Partner configs; HAPI runs against partner IGs; CI matrix
 
 ---
 
 ### Phase 19 — Messaging Mode (optional)
-* [ ] `Bundle.type=message` + `MessageHeader` (toggle via CLI)  \
-  **Scaffold:** `--message-mode` flag recognized
+* [x] `Bundle.type=message` + `MessageHeader` (toggle via CLI)
 
 ---
 

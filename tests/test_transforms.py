@@ -27,6 +27,12 @@ from translators.transforms import (
     default_medicationrequest_intent,
     default_medicationdispense_status,
     default_medicationadmin_status,
+    default_documentreference_status,
+    default_binary_content_type,
+    default_chargeitem_status,
+    default_account_status,
+    adt_event_to_encounter_status,
+    adt_event_to_patient_active,
 )
 
 
@@ -152,7 +158,19 @@ def test_default_helpers_and_code_systems():
     assert default_medicationrequest_intent() == "order"
     assert default_medicationdispense_status() == "completed"
     assert default_medicationadmin_status() == "completed"
+    assert default_documentreference_status() == "current"
+    assert default_binary_content_type() == "application/octet-stream"
+    assert default_chargeitem_status() == "billable"
+    assert default_account_status() == "active"
     cc = obx_cwe_to_codeableconcept("123^test^CVX")
     assert cc["coding"][0]["system"] == "http://hl7.org/fhir/sid/cvx"
     cc2 = obx_cwe_to_codeableconcept("555^Med^RXNORM")
     assert cc2["coding"][0]["system"] == "http://www.nlm.nih.gov/research/umls/rxnorm"
+
+
+def test_adt_event_helpers():
+    assert adt_event_to_encounter_status("A02") == "in-progress"
+    assert adt_event_to_encounter_status("A03") == "finished"
+    assert adt_event_to_encounter_status("ZZ") == "in-progress"
+    assert adt_event_to_patient_active("A40") is False
+    assert adt_event_to_patient_active("A08") is True
