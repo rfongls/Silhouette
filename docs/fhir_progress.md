@@ -8,7 +8,7 @@ Use this doc to track delivery against the Codex handoff phases. Update checkbox
 
 ## At-a-Glance Status
 
-* **Current Phase:** 9 — Docs & Runbook
+* **Current Phase:** Triage & Backlog
 * **MVP Definition of Done:**
   * ADT^A01 → `Patient`, `Encounter`, `Provenance` (US Core-valid)
   * ORU^R01 → `Patient`, `Observation`, `DiagnosticReport` (+`Specimen` if present) (US Core-valid)
@@ -108,6 +108,8 @@ Use this doc to track delivery against the Codex handoff phases. Update checkbox
   **Commit/PR:** `TBD` • **Date:** 2025-08-29
 * [x] Validation runbook (`docs/fhir/validation.md`)  \\
   **Commit/PR:** `TBD` • **Date:** 2025-08-29
+* [x] Validation runbook (`docs/fhir/validation.md`)  \\
+  **Commit/PR:** `TBD` • **Date:** 2025-08-29
 
 **Notes/Blockers:** *(fill in)*
 
@@ -159,7 +161,8 @@ Use this doc to track delivery against the Codex handoff phases. Update checkbox
   **Commit/PR:** `TBD` • **Date:** 2025-08-29
 * [x] Ops runbook: config, posting, validator errors, tx‑miss triage  \\
   **Commit/PR:** `TBD` • **Date:** 2025-08-29
-* [ ] Examples in README and `docs/fhir/`
+* [x] Examples in README and `docs/fhir/`  \\
+  **Commit/PR:** `TBD` • **Date:** 2025-08-29
 
 **Notes/Blockers:** *(fill in)*
 
@@ -189,5 +192,6 @@ Use this doc to track delivery against the Codex handoff phases. Update checkbox
 
 Use this section for bugs, profile violations, and work items that pop up during validation.
 
-* [ ] *(example)* ORU: OBX-5 units missing UCUM → add defaulting rule for specific LOINC codes
-* [ ] *(example)* ADT: PID-3 OID mapping to URI for assigner → introduce org URI registry
+* [x] ORU: OBX‑5 units missing UCUM → add defaulting rule for specific LOINC codes  \\
+  **Commit/PR:** `be80b8c` • **Date:** 2025-08-29
+* [ ] ADT: PID‑3 OID mapping to URI for assigner → introduce org URI registry

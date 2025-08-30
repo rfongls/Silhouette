@@ -162,14 +162,14 @@ This plan drives a **US Core–compliant** HL7 v2 → FHIR pipeline using your e
 
 ---
 
-## Phase 9 — Docs & Runbook — *CURRENT*
+## Phase 9 — Docs & Runbook ✅
 - [x] Author **developer guide** (`docs/fhir/developer_guide.md`).
   - Mapping authoring conventions; transforms catalog; MustSupport policy; adding new message types.
   - **DoD:** Doc includes code snippets and examples.
 - [x] Author **ops runbook** (`docs/fhir/runbook.md`).
   - Config; posting modes; validator usage; tx-miss triage; dead-letter handling.
   - **DoD:** A new engineer can run ADT→FHIR in <10 minutes following docs.
-- [ ] Add **CLI examples** in README.
+- [x] Add **CLI examples** in README.
   - **DoD:** Copy-paste commands for translate (dry-run), validate, post.
 
 ---

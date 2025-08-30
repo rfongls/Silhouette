@@ -72,6 +72,42 @@ The end state (Phase 10) is a **production-ready agent system** that can:
 
 Ready-made diagrams cover HL7 v2 ↔ FHIR mapping, TEFCA/QHIN flows, IHE XDS.b exchanges, Direct Secure Messaging, SMART on FHIR authorization, prior authorization (FHIR + X12), MDM entity resolution, and HIE record locator queries. See [docs/interoperability](docs/interoperability/).
 
+## HL7 v2 → FHIR CLI Examples
+
+Translate an HL7 message to FHIR without posting it:
+
+```bash
+silhouette fhir translate \
+  --in tests/data/hl7/adt_a01.hl7 \
+  --map maps/adt_uscore.yaml \
+  --bundle transaction \
+  --out out/ \
+  --dry-run
+```
+
+Validate the generated resources against US Core using the HAPI validator:
+
+```bash
+silhouette fhir validate \
+  --in out/fhir/ndjson/*.ndjson \
+  --hapi \
+  --fhir-version 4.0.1 \
+  --ig hl7.fhir.us.core#6.1.0
+```
+
+Post a bundle to a FHIR server with server-side `$validate`:
+
+```bash
+silhouette fhir translate \
+  --in tests/data/hl7/adt_a01.hl7 \
+  --map maps/adt_uscore.yaml \
+  --bundle transaction \
+  --out out/ \
+  --server https://example.com/fhir \
+  --token $FHIR_TOKEN \
+  --validate
+```
+
 ## 📂 Project Structure
 
 ```text
