@@ -267,6 +267,48 @@ def translate(
                     _assign(res, rule.fhir_path, v)
         resources.append(res)
 
+    # --- Post-processing to normalize shapes & fill required references ---
+
+    def _wrap_encounter_class(res: dict) -> None:
+        # Some builds model Encounter.class as a list; wrap singleton if needed
+        if res.get("resourceType") == "Encounter":
+            c = res.get("class")
+            if c is not None and not isinstance(c, list):
+                res["class"] = [c]
+
+    def _ensure_provenance_agent_who(res: dict, default_ref: str | None) -> None:
+        # Ensure Provenance.agent[0].who exists; use default actor if missing
+        if res.get("resourceType") != "Provenance":
+            return
+        agents = res.get("agent")
+        if not isinstance(agents, list) or not agents:
+            if default_ref:
+                res["agent"] = [{"who": {"reference": default_ref}}]
+            return
+        first = agents[0]
+        if "who" not in first and default_ref:
+            first["who"] = {"reference": default_ref}
+
+    # Decide a default 'who' reference. Prefer a real Practitioner/Organization if you emit one.
+    default_who_ref = None
+
+    # Create (once) a Device to represent the translator as a fallback actor.
+    if not any(r.get("resourceType") == "Device" and r.get("id") == "silhouette-translator" for r in resources):
+        device = {
+            "resourceType": "Device",
+            "id": "silhouette-translator",
+            "status": "active",
+            "deviceName": [{"name": "Silhouette Translator", "type": "user-friendly-name"}],
+            "type": {"coding": [{"system": "http://terminology.hl7.org/CodeSystem/device-kind", "code": "transmitter"}]},
+        }
+        resources.append(device)
+    default_who_ref = "Device/silhouette-translator"
+
+    # Apply the normalizers to all resources
+    for _res in resources:
+        _wrap_encounter_class(_res)
+        _ensure_provenance_agent_who(_res, default_who_ref)
+
     if deidentify:
         for r in resources:
             if r.get("resourceType") == "Patient":
