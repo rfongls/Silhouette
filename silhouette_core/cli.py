@@ -253,22 +253,52 @@ def fhir_translate_cmd(
 
 
 @fhir_group.command("validate")
-@click.option("--in", "input_glob", required=True, help="NDJSON file(s) to validate")
+@click.option(
+    "--in",
+    "in_glob",
+    required=False,
+    type=str,
+    help="Literal glob for NDJSON files, e.g. 'out/fhir/ndjson/*.ndjson' (quote on PowerShell)",
+)
+@click.option(
+    "--in-dir",
+    "in_dir",
+    required=False,
+    type=click.Path(exists=True, file_okay=False, path_type=Path),
+    help="Directory containing NDJSON files.",
+)
 @click.option("--hapi", is_flag=True, help="Also run HAPI FHIR validator")
 @click.option("--partner", default=None, help="Partner config to apply")
-@click.option("--tx-cache", default=None, help="Directory with ValueSet JSON for offline terminology checks")
-def fhir_validate_cmd(input_glob, hapi, partner, tx_cache):
+@click.option(
+    "--tx-cache", default=None, help="Directory with ValueSet JSON for offline terminology checks"
+)
+@click.option(
+    "--server",
+    default="http://localhost:8080/fhir",
+    show_default=True,
+    help="HAPI FHIR base URL (used with --hapi)",
+)
+def fhir_validate_cmd(in_glob, in_dir, hapi, partner, tx_cache, server):
     """Validate NDJSON FHIR resources."""
     import glob
     import json
-    from validators.fhir_profile import (
+    from .validators.fhir_profile import (
         validate_structural_with_pydantic,
         validate_uscore_jsonschema,
     )
 
-    paths = sorted(glob.glob(input_glob))
+    paths: list[Path] = []
+    if in_glob:
+        paths = [Path(p) for p in glob.glob(in_glob)]
+    elif in_dir:
+        paths = sorted(Path(in_dir).glob("*.ndjson"))
+    else:
+        raise click.UsageError("Provide either --in <glob> or --in-dir <folder>.")
+
     if not paths:
-        raise click.ClickException("No input files found")
+        raise click.ClickException("No NDJSON files found for input.")
+
+    click.echo(f"Preparing to validate {len(paths)} file(s).")
 
     for p in paths:
         with open(p, "r", encoding="utf-8") as fh:
@@ -280,24 +310,26 @@ def fhir_validate_cmd(input_glob, hapi, partner, tx_cache):
                 validate_uscore_jsonschema(res)
                 validate_structural_with_pydantic(res)
                 if tx_cache:
-                    from validators.fhir_profile import validate_terminology
+                    from .validators.fhir_profile import validate_terminology
 
                     validate_terminology(res, tx_cache)
 
     if hapi:
-        from validators import hapi_cli
+        click.echo(f"Validating against HAPI server: {server}")
+        from .validators import hapi_cli
+
         package_ids = None
         if partner:
             p_cfg = yaml.safe_load(
                 Path(f"config/partners/{partner}.yaml").read_text(encoding="utf-8")
             )
             package_ids = p_cfg.get("package_ids")
-        hapi_cli.run(paths, package_ids=package_ids)
+        hapi_cli.run([str(p) for p in paths], package_ids=package_ids)
 
-    from skills import audit
+    from .skills import audit
     for p in paths:
         audit.emit_and_persist(
-            audit.fhir_audit_event("validate", "success", "cli", p)
+            audit.fhir_audit_event("validate", "success", "cli", str(p))
         )
 
 
@@ -310,34 +342,6 @@ def fhir_bulk_bundle_cmd(input_dir, out, batch):
     from .pipelines import bulk
 
     bulk.bundle_ndjson(input_dir, out, batch)
-
-
-@fhir_group.command("render-v2")
-@click.option("--in", "input_path", required=True, help="FHIR bundle JSON")
-@click.option("--map", "map_path", default=None, help="Reverse mapping YAML")
-@click.option("--out", default="out/hl7", show_default=True, help="Output directory")
-def fhir_render_v2_cmd(input_path, map_path, out):
-    """Render FHIR bundles back to HL7 v2 messages (stub)."""
-    from .pipelines import fhir_to_v2
-
-    fhir_to_v2.render(input_path=input_path, map_path=map_path, out=out)
-
-
-@main.group("hl7")
-def hl7_group():
-    """HL7 v2 utilities."""
-    pass
-
-
-@hl7_group.command("mllp-gateway")
-@click.option("--listen", default="127.0.0.1:2575", show_default=True, help="Host:port to bind")
-@click.option("--out", default="out/hl7", show_default=True, help="Directory to write messages")
-def hl7_mllp_gateway_cmd(listen, out):
-    """Run a minimal MLLP server that writes inbound messages."""
-    from .pipelines import mllp_gateway
-
-    host, port = listen.split(":")
-    mllp_gateway.run(host=host, port=int(port), out_dir=out)
 
 
 @fhir_group.command("render-v2")

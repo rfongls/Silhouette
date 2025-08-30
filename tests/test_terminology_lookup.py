@@ -1,4 +1,8 @@
-from translators.transforms import sex_to_gender, pv1_class_to_code, loinc_details
+from silhouette_core.translators.transforms import (
+    sex_to_gender,
+    pv1_class_to_code,
+    loinc_details,
+)
 from silhouette_core import terminology
 
 

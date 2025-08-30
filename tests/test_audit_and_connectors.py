@@ -1,13 +1,13 @@
 import json
 from connectors.hie.mock_hie_connector import MockHIEConnector
 from connectors.tefca.mock_tefca_connector import MockTEFCAConnector
-from skills.audit import AUDIT_FILE
+from silhouette_core.skills.audit import AUDIT_FILE
 import pathlib
 
 
 def test_hie_emits_audit_event(tmp_path, monkeypatch):
     audit_file = tmp_path / "audit.ndjson"
-    monkeypatch.setattr("skills.audit.AUDIT_FILE", audit_file)
+    monkeypatch.setattr("silhouette_core.skills.audit.AUDIT_FILE", audit_file)
 
     c = MockHIEConnector()
     docs = c.query_documents("123456")
@@ -21,7 +21,7 @@ def test_hie_emits_audit_event(tmp_path, monkeypatch):
 
 def test_tefca_emits_audit_event(tmp_path, monkeypatch):
     audit_file = tmp_path / "audit_tefca.ndjson"
-    monkeypatch.setattr("skills.audit.AUDIT_FILE", audit_file)
+    monkeypatch.setattr("silhouette_core.skills.audit.AUDIT_FILE", audit_file)
 
     t = MockTEFCAConnector()
     res = t.cross_qhin_query({"family_name": "DOE", "dob": "1980-01-01"})

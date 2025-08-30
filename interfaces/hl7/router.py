@@ -1,7 +1,7 @@
 from __future__ import annotations
 import importlib, asyncio
 from typing import Any, Dict
-from skills.audit import fhir_audit_event, emit_and_persist
+from silhouette_core.skills.audit import fhir_audit_event, emit_and_persist
 
 
 class HL7Router:

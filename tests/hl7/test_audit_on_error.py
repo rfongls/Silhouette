@@ -8,7 +8,7 @@ BAD = "MSH|^~\\&|IMM|SENDER|IIS|STATE|202402091030||VXU^V04|BAD1|P|2.5.1\rRXA|0|
 @pytest.mark.hl7
 def test_audit_records_error(tmp_path, monkeypatch):
     audit_file = tmp_path / "audit.ndjson"
-    monkeypatch.setattr("skills.audit.AUDIT_FILE", audit_file)
+    monkeypatch.setattr("silhouette_core.skills.audit.AUDIT_FILE", audit_file)
     router = HL7Router(yaml.safe_load(open("config/routes.yaml")))
     ack = asyncio.run(router.process(BAD))
     assert "|AE|BAD1" in ack or "|AR|BAD1" in ack
