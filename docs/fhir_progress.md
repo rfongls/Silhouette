@@ -168,6 +168,70 @@ Use this doc to track delivery against the Codex handoff phases. Update checkbox
 
 ---
 
+### Phase 10 — Orders (ORM/OML → ServiceRequest)
+* [ ] ServiceRequest mapping with placer/filler identifiers; link results via `basedOn`
+* [ ] Conditional upsert keys defined with real system URIs
+* [ ] Snapshot + HAPI validation
+
+---
+
+### Phase 11 — Scheduling (SIU → Appointment)
+* [ ] Appointment mapping with participants (Patient/PractitionerRole/Location/Org)
+* [ ] Status transitions (book/update/cancel/noshow); conditional upsert keys
+* [ ] Snapshot + HAPI validation
+
+---
+
+### Phase 12 — Immunizations (VXU → Immunization)
+* [ ] Immunization mapping (CVX, lot/expiry, performer)
+* [ ] De-dup strategy via identifiers
+* [ ] Snapshot + HAPI validation
+
+---
+
+### Phase 13 — Pharmacy (RDE/RXO/RXE → Medication*)
+* [ ] MedicationRequest/Dispense/Administration mapping, status transitions
+* [ ] Medication coding (RxNorm where available)
+* [ ] Snapshot + HAPI validation
+
+---
+
+### Phase 14 — Documents (MDM → DocumentReference/Binary)
+* [ ] DocumentReference + Binary mapping with versioning
+* [ ] Conditional upsert by master document ID
+* [ ] Snapshot + HAPI validation
+
+---
+
+### Phase 15 — Charges/Accounts (DFT/BAR → ChargeItem/Account)
+* [ ] ChargeItem + Account mapping and linking to Encounter/Patient
+* [ ] Snapshot + baseline validation
+
+---
+
+### Phase 16 — ADT Extensions & Merge/Corrections
+* [ ] A02/A03/A08/A11/A13 Encounter state machine updates
+* [ ] A40 Patient merge (link replaced-by; old inactive)
+* [ ] ORU corrections (`status=corrected`) + Provenance
+
+---
+
+### Phase 17 — Reference Entities & Identifier Registry
+* [ ] Org/Practitioner/PractitionerRole/Location upsert + references
+* [ ] `config/identifier_systems.yaml` with canonical system URIs
+
+---
+
+### Phase 18 — Partner IG Profiles & Validation
+* [ ] Partner configs; HAPI runs against partner IGs; CI matrix
+
+---
+
+### Phase 19 — Messaging Mode (optional)
+* [ ] `Bundle.type=message` + `MessageHeader` (toggle via CLI)
+
+---
+
 ## Commit/PR Mapping (Append as You Merge)
 
 * PR #TBD — "Scaffold HL7→FHIR pipeline & CLI"; **Phase(s):** 0,1 • **Merged:** TBD • **SHA:** `58eb1e0`
