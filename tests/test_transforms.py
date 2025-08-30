@@ -16,6 +16,10 @@ from translators.transforms import (
     to_oid_uri,
     default_dr_status,
     default_encounter_status,
+    cx_to_identifier,
+    xcn_to_reference,
+    orc_control_to_status,
+    sch_status_to_appt_status,
 )
 
 
@@ -104,3 +108,26 @@ def test_oru_stub_transforms():
     assert to_oid_uri("1.2.3") == "urn:oid:1.2.3"
     assert default_dr_status() == "unknown"
     assert default_encounter_status() == "finished"
+
+
+def test_cx_to_identifier():
+    ident = cx_to_identifier("ABC123^99^ABC^&1.2.3&ISO")
+    assert ident["value"] == "ABC123"
+    assert ident["system"] == "urn:oid:1.2.3"
+
+
+def test_xcn_to_reference():
+    ref = xcn_to_reference("1234^Smith^John")
+    assert ref["display"] == "John Smith"
+
+
+def test_orc_control_to_status():
+    assert orc_control_to_status("NW") == "active"
+    assert orc_control_to_status("CA") == "cancelled"
+    assert orc_control_to_status("ZZ") == "unknown"
+
+
+def test_sch_status_to_appt_status():
+    assert sch_status_to_appt_status("BOOKED") == "booked"
+    assert sch_status_to_appt_status("cancelled") == "cancelled"
+    assert sch_status_to_appt_status("") == "proposed"
