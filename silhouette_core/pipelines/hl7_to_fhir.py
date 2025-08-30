@@ -13,7 +13,7 @@ from uuid import UUID, uuid4, uuid5, NAMESPACE_URL
 import requests
 import yaml
 
-from translators import transforms
+from ..translators import transforms
 from translators.mapping_loader import load as load_map, MapSpec
 from silhouette_core.posting import post_transaction
 from skills import audit
