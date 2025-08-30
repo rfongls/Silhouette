@@ -59,7 +59,7 @@ The end state (Phase 10) is a **production-ready agent system** that can:
 * **Research Toolpack (offline)** – read PDF → index (SQLite FTS5) → search/retrieve → cite [n]. Requires citations for research prompts.
 * **Cybersecurity Toolpack** – authorized scans & audits — Nmap (host/top-1000), OWASP ZAP baseline, Trivy (image/fs), Checkov (IaC), CIS local checks, CVE lookup; scope-guarded & containerized.
 * **Cybersecurity Reference Pack** – CDSE/NIST checklists and references mapped to findings, plus task orchestration that produces cited assessment reports.
-* **Interoperability Toolkit** – HL7 v2, C-CDA, and X12 translators with mock connectors, validators, and end-to-end tests. See [HL7 QA](docs/hl7_testing.md).
+* **Interoperability Toolkit** – HL7 v2, C-CDA, and X12 translators with mock connectors, validators, and end-to-end tests. See [HL7 skill docs](docs/skills/hl7/).
 * **Data Flywheel v2** – runtime traces auto-promoted to curated datasets by lane.
 * **Compliance** – SPDX license scan, redaction rules, configurable thresholds. See [Security](docs/Security.md).
 * **Regression gates** – enforce pass-rate thresholds and latency budgets in CI. See [Eval](docs/Eval.md).
@@ -71,6 +71,12 @@ The end state (Phase 10) is a **production-ready agent system** that can:
 ### Interoperability at a glance
 
 Ready-made diagrams cover HL7 v2 ↔ FHIR mapping, TEFCA/QHIN flows, IHE XDS.b exchanges, Direct Secure Messaging, SMART on FHIR authorization, prior authorization (FHIR + X12), MDM entity resolution, and HIE record locator queries. See [docs/interoperability](docs/interoperability/).
+
+
+## Using the HL7 & FHIR skills
+- [HL7 QA](docs/skills/hl7/)
+- [FHIR translator](docs/skills/fhir/)
+- [HL7⇄FHIR workflows](docs/skills/workflows/hl7_fhir_workflows.md)
 
 ## HL7 v2 → FHIR CLI Examples
 
@@ -91,8 +97,6 @@ Validate the generated resources against US Core using the HAPI validator:
 silhouette fhir validate \
   --in out/fhir/ndjson/*.ndjson \
   --hapi \
-  --fhir-version 4.0.1 \
-  --ig hl7.fhir.us.core#6.1.0
 ```
 
 Post a bundle to a FHIR server with server-side `$validate`:

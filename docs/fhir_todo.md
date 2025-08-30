@@ -242,6 +242,7 @@ This plan drives a **US Core–compliant** HL7 v2 → FHIR pipeline using your e
   - **DoD:** All emitted resources use real system URIs; references resolve; validation passes.
 
 ## Phase 18 — Partner IG Profiles & Validation ✅
+- [x] Support partner-specific IG packages and `$validate` against them. _(commit: `2f401d7`)_
   - **Implement:** `config/partners/<name>.yaml` (IG list, profile overrides, MustSupport rules).
   - **CLI:** `--partner <name>` toggles IG set and schema expectations.
   - **Scaffold:** `config/partners/example.yaml` present (US Core 6.1.0).
