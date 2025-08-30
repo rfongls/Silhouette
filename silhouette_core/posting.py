@@ -22,7 +22,12 @@ def post_transaction(
 
     Returns a tuple of (posted, status_code, latency_ms).
     """
-    headers = {"Content-Type": "application/fhir+json"}
+    headers = {
+        "Accept": "application/fhir+json",
+        "Content-Type": "application/fhir+json",
+        "Prefer": "handling=strict",
+    }
+
     if token:
         headers["Authorization"] = f"Bearer {token}"
     url = server.rstrip("/")

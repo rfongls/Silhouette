@@ -108,7 +108,7 @@ This plan drives a **US Core–compliant** HL7 v2 → FHIR pipeline using your e
 
 ---
 
-## Phase 7 — Posting & Observability 
+## Phase 7 — Posting & Observability ✅
 
 - [x] **HTTP posting with retries**
   - Implement `silhouette_core/posting.py`:
@@ -147,7 +147,7 @@ This plan drives a **US Core–compliant** HL7 v2 → FHIR pipeline using your e
 
 ---
 
-## Phase 8 — CI/CD & Quality Gates
+## Phase 8 — CI/CD & Quality Gates — *CURRENT*
 - [ ] CI job runs unit tests, sample translations and HAPI validation with cached packages.
   - **Steps:**
     1. Setup Python + Java.

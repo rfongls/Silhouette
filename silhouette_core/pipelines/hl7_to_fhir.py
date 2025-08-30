@@ -23,7 +23,11 @@ logger = logging.getLogger(__name__)
 
 def _remote_validate(server: str, token: str | None, resource: Dict[str, Any]) -> None:
     """POST resource to FHIR server's $validate endpoint."""
-    headers = {"Content-Type": "application/fhir+json"}
+    headers = {
+        "Accept": "application/fhir+json",
+        "Content-Type": "application/fhir+json",
+        "Prefer": "handling=strict",
+    }
     if token:
         headers["Authorization"] = f"Bearer {token}"
     url = server.rstrip("/") + "/$validate"

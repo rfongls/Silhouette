@@ -8,7 +8,7 @@ Use this doc to track delivery against the Codex handoff phases. Update checkbox
 
 ## At-a-Glance Status
 
-* **Current Phase:** 7 — Posting & Observability
+* **Current Phase:** 8 — CI/CD & Quality Gates
 * **MVP Definition of Done:**
   * ADT^A01 → `Patient`, `Encounter`, `Provenance` (US Core-valid)
   * ORU^R01 → `Patient`, `Observation`, `DiagnosticReport` (+`Specimen` if present) (US Core-valid)
@@ -99,6 +99,8 @@ Use this doc to track delivery against the Codex handoff phases. Update checkbox
 * [x] Optional remote `$validate` before posting  \
   **Commit/PR:** `TBD` • **Date:** 2025-08-29
 * [x] Validation runbook (`docs/fhir/validation.md`)  \
+  **Commit/PR:** `TBD` • **Date:** 2025-08-29
+* [x] Validation runbook (`docs/fhir/validation.md`)  \\
   **Commit/PR:** `TBD` • **Date:** 2025-08-29
 * [x] Validation runbook (`docs/fhir/validation.md`)  \\
   **Commit/PR:** `TBD` • **Date:** 2025-08-29
