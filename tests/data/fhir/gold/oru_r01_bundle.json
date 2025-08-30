@@ -1,6 +1,7 @@
 {
   "resourceType": "Bundle",
   "type": "transaction",
+  "id": "7d01ee31-b791-51db-bead-f9214b731063",
   "entry": [
     {
       "fullUrl": "urn:uuid:593eab13-42d3-583b-9167-a0d8684fcc2f",
@@ -61,6 +62,7 @@
           ]
         },
         "id": "f0823654-a3f2-5bc2-9acd-a06bce85e6d9",
+        "status": "unknown",
         "result": [
           {
             "reference": "urn:uuid:d0a24ecf-a124-5fb2-8668-52d17ceeaab4"
