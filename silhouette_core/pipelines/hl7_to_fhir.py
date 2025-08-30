@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Any, Dict, List
 from uuid import UUID, uuid4, uuid5, NAMESPACE_URL
 
-import requests
+import requests  # runtime dependency
 import yaml
 
 try:
@@ -21,8 +21,8 @@ except Exception as e:  # pragma: no cover - import error path
     raise RuntimeError(
         "Failed to import translators. Ensure the package is installed (pip install -e .)"
     ) from e
-from silhouette_core.posting import post_transaction
-from skills import audit
+from ..posting import post_transaction
+from ..skills import audit
 
 logging.basicConfig(level=logging.INFO, format="%(message)s")
 logger = logging.getLogger(__name__)
@@ -273,7 +273,7 @@ def translate(
                 r.pop("name", None)
 
     if validate:
-        from validators.fhir_profile import (
+        from ..validators.fhir_profile import (
             validate_structural_with_pydantic,
             validate_uscore_jsonschema,
         )
@@ -337,7 +337,7 @@ def translate(
                             ref["reference"] = fu
 
     if validate:
-        from validators.fhir_profile import (
+        from ..validators.fhir_profile import (
             validate_structural_with_pydantic,
             validate_uscore_jsonschema,
         )

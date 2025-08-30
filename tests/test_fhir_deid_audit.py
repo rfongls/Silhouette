@@ -1,6 +1,6 @@
 import json
 from silhouette_core.pipelines import hl7_to_fhir
-import skills.audit as audit
+import silhouette_core.skills.audit as audit
 
 def test_deidentify_and_audit(tmp_path, monkeypatch):
     # redirect audit file
