@@ -120,6 +120,10 @@ def _norm_code_system(s: str) -> str:
         return "http://loinc.org"
     if u.upper() in {"SCT", "SNOMED"}:
         return "http://snomed.info/sct"
+    if u.upper() == "CVX":
+        return "http://hl7.org/fhir/sid/cvx"
+    if u.upper() in {"RXNORM", "RXN"}:
+        return "http://www.nlm.nih.gov/research/umls/rxnorm"
     return u
 
 def obx_cwe_to_codeableconcept(value: str | dict) -> Dict[str, Any]:
@@ -247,3 +251,91 @@ def to_oid_uri(value: str) -> str:
     if not v:
         return v
     return v if v.startswith("urn:oid:") else f"urn:oid:{v}"
+
+
+# ----- Generic identifier / reference helpers -----
+
+def cx_to_identifier(value: str) -> Dict[str, Any]:
+    """Map an HL7 CX field to a FHIR Identifier."""
+    comps = [c.strip() for c in (value or "").split("^")]
+    ident: Dict[str, Any] = {"value": comps[0] if comps else ""}
+    if len(comps) > 3 and comps[3]:
+        auth = comps[3].split("&")
+        if len(auth) >= 3 and auth[1] and auth[2].upper() == "ISO":
+            ident["system"] = f"urn:oid:{auth[1]}"
+        else:
+            ident["system"] = f"urn:id:{auth[0]}" if auth[0] else f"urn:id:{comps[3]}"
+    return ident
+
+
+def xcn_to_reference(value: str) -> Dict[str, Any]:
+    """Map an HL7 XCN field to a FHIR Reference with display."""
+    comps = [c.strip() for c in (value or "").split("^")]
+    family = comps[1] if len(comps) > 1 else ""
+    given = comps[2] if len(comps) > 2 else ""
+    name = " ".join(p for p in [given, family] if p)
+    return {"display": name} if name else {}
+
+
+def string_to_reference(value: str) -> Dict[str, Any]:
+    """Wrap a plain string as a FHIR Reference.display."""
+    val = (value or "").strip()
+    return {"display": val} if val else {}
+
+
+# ----- Default value helpers -----
+
+
+def default_servicerequest_intent() -> str:
+    return "order"
+
+
+def default_participant_status() -> str:
+    return "accepted"
+
+
+def default_immunization_status() -> str:
+    return "completed"
+
+
+def default_medicationrequest_intent() -> str:
+    return "order"
+
+
+def default_medicationdispense_status() -> str:
+    return "completed"
+
+
+def default_medicationadmin_status() -> str:
+    return "completed"
+
+
+# ----- Status mappers -----
+
+_ORC_CONTROL_TO_STATUS = {
+    "NW": "active",
+    "OK": "active",
+    "UA": "active",
+    "CA": "cancelled",
+    "DC": "stopped",
+    "CM": "completed",
+}
+
+
+def orc_control_to_status(value: str) -> str:
+    """Translate ORC-1 order control codes to FHIR status."""
+    return _ORC_CONTROL_TO_STATUS.get((value or "").strip().upper(), "unknown")
+
+
+_SCH_STATUS_TO_APPT_STATUS = {
+    "BOOKED": "booked",
+    "CANCELLED": "cancelled",
+    "NOSHOW": "noshow",
+    "FULFILLED": "fulfilled",
+    "PENDING": "pending",
+}
+
+
+def sch_status_to_appt_status(value: str) -> str:
+    """Map SCH-25 appointment status to FHIR Appointment.status."""
+    return _SCH_STATUS_TO_APPT_STATUS.get((value or "").strip().upper(), "proposed")
