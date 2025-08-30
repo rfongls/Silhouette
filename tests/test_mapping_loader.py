@@ -29,3 +29,24 @@ def test_load_rde_map():
     assert "RDE^O11" in spec.messageTypes
     resources = {rp.resource for rp in spec.resourcePlan}
     assert {"MedicationRequest", "MedicationDispense", "MedicationAdministration"} <= resources
+
+
+def test_load_mdm_map():
+    spec = load("maps/mdm_uscore.yaml")
+    assert "MDM^T02" in spec.messageTypes
+    resources = {rp.resource for rp in spec.resourcePlan}
+    assert {"DocumentReference", "Binary"} <= resources
+
+
+def test_load_dft_map():
+    spec = load("maps/dft_uscore.yaml")
+    assert "DFT^P03" in spec.messageTypes
+    resources = {rp.resource for rp in spec.resourcePlan}
+    assert {"ChargeItem", "Account"} <= resources
+
+
+def test_load_adt_update_map():
+    spec = load("maps/adt_update_uscore.yaml")
+    assert "ADT^A40" in spec.messageTypes
+    resources = {rp.resource for rp in spec.resourcePlan}
+    assert {"Patient", "Encounter"} <= resources

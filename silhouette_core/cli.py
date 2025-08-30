@@ -208,6 +208,7 @@ def fhir_group():
 @click.option("--token", default=None, help="Auth token for FHIR server")
 @click.option("--validate", is_flag=True, help="Validate output resources")
 @click.option("--dry-run", is_flag=True, help="Run without posting to server")
+@click.option("--message-mode", is_flag=True, help="Emit message bundles with MessageHeader")
 def fhir_translate_cmd(
     input_path,
     rules,
@@ -218,6 +219,7 @@ def fhir_translate_cmd(
     token,
     validate,
     dry_run,
+    message_mode,
 ):
     """Translate HL7 v2 messages to FHIR (stub)."""
     from .pipelines import hl7_to_fhir
@@ -232,6 +234,7 @@ def fhir_translate_cmd(
         token=token,
         validate=validate,
         dry_run=dry_run,
+        message_mode=message_mode,
     )
 
 

@@ -1,0 +1,12 @@
+messageTypes:
+  - ADT^A02
+  - ADT^A03
+  - ADT^A08
+  - ADT^A11
+  - ADT^A13
+  - ADT^A40
+resourcePlan:
+  - resource: Patient
+    rules: []
+  - resource: Encounter
+    rules: []

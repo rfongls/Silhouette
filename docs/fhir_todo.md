@@ -216,37 +216,43 @@ This plan drives a **US Core–compliant** HL7 v2 → FHIR pipeline using your e
   - **Implement:** `maps/rde_uscore.yaml` covering medication coding (RxNorm where available), dose/route/frequency, quantity, status transitions (new/change/cancel).
   - **DoD:** Resources emitted and linked to Patient/Encounter; HAPI passes core checks.
 
-## Phase 14 — Documents (MDM → DocumentReference/Binary) — *NEW*
+## Phase 14 — Documents (MDM → DocumentReference/Binary)
 - [ ] Map **MDM** add/update to **DocumentReference** (+ **Binary**).
   - **Implement:** `maps/mdm_uscore.yaml` with type (LOINC/SNOMED as available), author, facility, creation date, attachment (contentType, hash, size).
   - **Versioning:** New version on updates; maintain master ID for conditional upsert.
+  - **Scaffold:** `maps/mdm_uscore.yaml` with placeholder resources.
   - **DoD:** DocumentReference + Binary validate; snapshot tests green.
 
-## Phase 15 — Charges/Accounts (DFT/BAR → ChargeItem/Account) — *NEW*
+## Phase 15 — Charges/Accounts (DFT/BAR → ChargeItem/Account)
 - [ ] Map **DFT/BAR** to **ChargeItem** (+ **Account**; optional **Claim** for payer flows).
   - **Implement:** `maps/dft_uscore.yaml` with code, amount, subject (Patient), context (Encounter), account linkage.
+  - **Scaffold:** `maps/dft_uscore.yaml` with placeholder resources.
   - **DoD:** Charge items persist and link; basic validation passes.
 
-## Phase 16 — ADT Extensions & Merge/Corrections — *NEW*
+## Phase 16 — ADT Extensions & Merge/Corrections
 - [ ] Handle **A02/A03/A08/A11/A13** Encounter state updates; **A40** merges.
-  - **Implement:** State machine: transfer/discharge → `Encounter.status/location/period`; cancel → `status=cancelled`; updates → PUT.
+  - **Implement:** State machine: transfer/discharge → `Encounter.status/location/period`; cancel → `status=cancelled`; updates→ PUT.
   - **Merge:** Set old **Patient.active=false** and `Patient.link.type = replaced-by` → new Patient.
   - **ORU corrections:** `Observation.status=corrected` with Provenance.
+  - **Scaffold:** `maps/adt_update_uscore.yaml` for update/merge triggers.
   - **DoD:** Snapshot fixtures for each trigger; HAPI passes.
 
-## Phase 17 — Reference Entities & Identifier Registry — *NEW*
+## Phase 17 — Reference Entities & Identifier Registry
 - [ ] Upsert **Organization**, **Practitioner**, **PractitionerRole**, **Location** and reference them from Encounter/DR/Observation/ServiceRequest/Appointment.
   - **Implement:** `config/identifier_systems.yaml` for canonical URIs (MRN, visit, order, specimen, organization, practitioner, location).
   - **Upgrade:** Enhance `xcn_to_reference` to emit true `reference` links once those entities exist.
+  - **Scaffold:** `config/identifier_systems.yaml` with placeholder systems.
   - **DoD:** All emitted resources use real system URIs; references resolve; validation passes.
 
-## Phase 18 — Partner IG Profiles & Validation — *NEW*
+## Phase 18 — Partner IG Profiles & Validation
 - [ ] Support partner-specific IG packages and `$validate` against them.
   - **Implement:** `config/partners/<name>.yaml` (IG list, profile overrides, MustSupport rules).
   - **CLI:** `--partner <name>` toggles IG set and schema expectations.
+  - **Scaffold:** `config/partners/example.yaml` with package list placeholder.
   - **DoD:** HAPI runs with partner IG; CI matrix executes per partner config.
 
-## Phase 19 — Messaging Mode (optional) — *NEW*
+## Phase 19 — Messaging Mode (optional)
 - [ ] Add **Bundle.type=message** support with **MessageHeader** for sites that require messaging.
   - **Implement:** `--message-mode` flag; map MSH-9 triggers to MessageHeader `event`.
+  - **Scaffold:** `--message-mode` CLI flag recognized.
   - **DoD:** Message bundles validate; posting path remains transaction by default.

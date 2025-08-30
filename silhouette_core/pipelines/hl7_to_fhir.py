@@ -163,6 +163,7 @@ def translate(
     token: str | None = None,
     validate: bool = False,
     dry_run: bool = False,
+    message_mode: bool = False,
 ) -> None:
     """Translate HL7 messages to FHIR resources."""
 
@@ -325,6 +326,9 @@ def translate(
         with p.open("w", encoding="utf-8") as fh:
             for item in items:
                 fh.write(json.dumps(item) + "\n")
+
+    if message_mode:
+        logger.info("Message bundle support not yet implemented")
 
     if bundle == "transaction":
         bundle_res: Dict[str, Any] = {
