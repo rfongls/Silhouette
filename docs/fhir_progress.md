@@ -244,7 +244,7 @@ Use this doc to track delivery against the Codex handoff phases. Update checkbox
 
 ### Phase 23 — FHIR → HL7 v2 Rendering (Reverse)
 - [x] Reverse maps & `hl7 render` CLI
-- [ ] Snapshot + round-trip tests
+- [x] Snapshot + round-trip tests
 
 ---
 
