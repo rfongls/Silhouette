@@ -270,11 +270,28 @@ def translate(
     # --- Post-processing to normalize shapes & fill required references ---
 
     def _wrap_encounter_class(res: dict) -> None:
-        # Some builds model Encounter.class as a list; wrap singleton if needed
-        if res.get("resourceType") == "Encounter":
-            c = res.get("class")
-            if c is not None and not isinstance(c, list):
-                res["class"] = [c]
+        # Some fhir.resources builds model Encounter.class as a list; wrap only if required
+        if res.get("resourceType") != "Encounter":
+            return
+        c = res.get("class")
+        if c is None or isinstance(c, list):
+            return
+        wants_list = False
+        try:
+            from fhir.resources.encounter import Encounter as EncounterModel
+            if hasattr(EncounterModel, "model_fields"):
+                ann = EncounterModel.model_fields.get("class_fhir").annotation
+                from typing import get_origin
+                wants_list = get_origin(ann) in (list, tuple)
+            else:
+                field = getattr(EncounterModel, "__fields__", {}).get("class_fhir")
+                if field is not None:
+                    from typing import get_origin
+                    wants_list = get_origin(getattr(field, "outer_type_", None)) in (list, tuple)
+        except Exception:
+            wants_list = False
+        if wants_list:
+            res["class"] = [c]
 
     def _ensure_provenance_agent_who(res: dict, default_ref: str | None) -> None:
         # Ensure Provenance.agent[0].who exists; use default actor if missing
@@ -418,6 +435,7 @@ def translate(
     prov.setdefault("meta", {})["profile"] = [defaults.get("Provenance", "http://hl7.org/fhir/StructureDefinition/Provenance")]
     prov_fu = _full_url(msg_uuid, "Provenance", len(entries))
     prov["id"] = prov_fu.split(":")[-1]
+    _ensure_provenance_agent_who(prov, default_who_ref)
     entries.append((prov, prov_fu))
 
     # Write NDJSON

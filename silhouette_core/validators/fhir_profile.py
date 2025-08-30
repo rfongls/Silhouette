@@ -45,20 +45,25 @@ MODEL_REGISTRY: Dict[str, Type[BaseModel]] = {
 
 def _normalize_singletons_to_lists(model: Type[BaseModel], data: dict) -> dict:
     """Coerce singleton values into one-item lists when model expects a list."""
-    if not hasattr(model, "model_fields"):
+    if hasattr(model, "model_fields"):
+        fields = model.model_fields.items()
+        def _ann(f):
+            return getattr(f, "annotation", None)
+    elif hasattr(model, "__fields__"):
+        fields = model.__fields__.items()
+        def _ann(f):
+            return getattr(f, "annotation", None) or getattr(f, "outer_type_", None)
+    else:
         return data
     out = dict(data)
-    for fname, finfo in model.model_fields.items():
+    for fname, finfo in fields:
         alias = getattr(finfo, "alias", None) or fname
         if alias not in out:
             continue
-        ann = getattr(finfo, "annotation", None)
-        origin = get_origin(ann)
-        if origin in (list, tuple):
+        ann = _ann(finfo)
+        if get_origin(ann) in (list, tuple):
             val = out[alias]
-            if val is None:
-                continue
-            if not isinstance(val, (list, tuple)):
+            if val is not None and not isinstance(val, (list, tuple)):
                 out[alias] = [val]
     return out
 
