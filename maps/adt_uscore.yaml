@@ -20,6 +20,9 @@ resourcePlan:
   - resource: Encounter
     profile: "http://hl7.org/fhir/us/core/StructureDefinition/us-core-encounter"
     rules:
+      - hl7_path: "-"
+        fhir_path: "status"
+        transform: "default_encounter_status"
       - hl7_path: "PV1.2.1"
         fhir_path: "class"
         transform: "pv1_class_to_code"
