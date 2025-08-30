@@ -19,6 +19,9 @@ resourcePlan:
   - resource: DiagnosticReport
     profile: "http://hl7.org/fhir/us/core/StructureDefinition/us-core-diagnosticreport-lab"
     rules:
+      - hl7_path: "-"
+        fhir_path: "status"
+        transform: "default_dr_status"
       - hl7_path: "OBR.4"
         fhir_path: "code"
         transform: "obx_cwe_to_codeableconcept"
@@ -37,9 +40,8 @@ resourcePlan:
       - hl7_path: "OBX.3"
         fhir_path: "code"
         transform: "obx_cwe_to_codeableconcept"
-      - hl7_path: "OBX.2|OBX.5|OBX.6"
+      - hl7_path: "OBX.2|OBX.5|OBX.6|OBX.3"
         fhir_path: "value[x]"
-
         transform: "obx_value_to_valuex"
       - hl7_path: "OBX.11"
         fhir_path: "status"

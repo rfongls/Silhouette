@@ -90,31 +90,65 @@ This plan drives a **US Core–compliant** HL7 v2 → FHIR pipeline using your e
   - **DoD:** Non-zero exit on profile violations; concise errors with pointers.
 - [x] CLI flag `silhouette fhir validate` to run validators on generated resources.
   - **DoD:** Invokes local and/or HAPI checks as requested.
+- [x] Document validation pipeline in `docs/fhir/validation.md`.
+  - **DoD:** Runbook outlines local, HAPI, and server-side validation commands.
 
 ---
 
 ## Phase 6 — Terminology MVP
-- [ ] Add lookup tables under `terminology/` for gender, encounter class and LOINC mappings.
-  - **Files:** `sex_map.csv` (`v2,admin_gender`), `pv1_class.csv` (`v2,act_code`), `loinc_map.csv` (`obx3_code,system,display,default_ucum_code,default_unit_text`).
+- > **Reminder:** Once these items are implemented, update [`docs/fhir_progress.md`](fhir_progress.md).
+- [x] Add lookup tables under `terminology/` for gender, encounter class and LOINC mappings.
+  - **Implement:** Create `sex_map.csv` (`v2,admin_gender`), `pv1_class.csv` (`v2,act_code`), `loinc_map.csv` (`obx3_code,system,display,default_ucum_code,default_unit_text`).
+  - **Test:** Load each table via terminology loader; known codes resolve, unknown codes return `None`.
   - **DoD:** Files exist; loader reads into dicts.
-- [ ] Add lookup helpers emitting metrics when codes are missing.
+- [x] Add lookup helpers emitting metrics when codes are missing.
   - **Implement:** Helpers in `translators/transforms.py`; emit **tx-miss** metric once per unknown code.
+  - **Test:** Translate sample HL7 with known and unknown codes; ensure metrics increment only for misses.
   - **DoD:** Observations include UCUM when known; misses recorded.
 
 ---
 
-## Phase 7 — Posting & Observability
-- [ ] Support posting **transaction Bundles** with conditional upserts and retries.
-  - **Implement:** If `--server`, POST bundle; retry on 429/5xx with backoff; write failures to `out/deadletter/` (request+response).
-  - **DoD:** Success/failure recorded; retries observed in logs.
-- [ ] Emit **metrics CSV** and structured logs; dead-letter failed requests.
-  - **Implement:** `out/metrics.csv` columns: `messageId,type,qaStatus,fhirCount,posted,latencyMs,txMisses`.
-  - **DoD:** One row per message; logs include messageId and outcome.
+## Phase 7 — Posting & Observability ✅
+
+- [x] **HTTP posting with retries**
+  - Implement `silhouette_core/posting.py`:
+    - `post_transaction(bundle: dict, server: str, token: str, timeout=20, max_retries=3)`
+    - Retry on 429/5xx with exponential backoff + jitter; log attempt count and final outcome.
+    - Write failures to `out/deadletter/` as `<messageId>_request.json` and `<messageId>_response.json`.
+  - Acceptance: simulated 429 → retried; 2xx → success recorded.
+
+- [x] **Conditional upserts preserved**
+  - Keep `PUT Patient?identifier=...` and `PUT Encounter?identifier=...` when IDs exist; `POST` otherwise.
+  - Acceptance: sandbox shows idempotent Patient/Encounter upserts across multiple runs.
+
+- [x] **Metrics CSV**
+  - Create `out/metrics.csv` with headers:
+    ```
+    messageId,type,qaStatus,fhirCount,posted,latencyMs,txMisses,postedCount,deadLetter
+    ```
+  - Append one row per message; `txMisses` is the per-message total from transforms.
+  - Acceptance: file grows deterministically; values match logs.
+
+- [x] **Structured logs**
+  - Log one JSON line per message:
+    ```
+    {"ts":"<iso>", "messageId":"...", "phase":"post", "posted":true, "status":201, "txMisses":2, "resourceCounts":{"Patient":1,"Observation":3}}
+    ```
+  - Acceptance: logs parsable by jq; errors include server response summary.
+
+- [x] **Dry-run safety**
+  - If `--dry-run`, skip posting but still produce artifacts + metrics.
+  - Acceptance: run with and without `--dry-run`; only the latter hits server.
+
+- [x] **CLI wiring**
+  - `silhouette fhir translate ... --server <URL> --token $FHIR_TOKEN` posts bundles unless `--dry-run`.
+  - `--validate` triggers server-side `$validate` before POST; failures route to dead-letter.
+  - Acceptance: bad resources fail `$validate`, do not post, and are captured in dead-letter.
 
 ---
 
-## Phase 8 — CI/CD & Quality Gates
-- [ ] CI job runs unit tests, sample translations and HAPI validation with cached packages.
+## Phase 8 — CI/CD & Quality Gates ✅
+- [x] CI job runs unit tests, sample translations and HAPI validation with cached packages.
   - **Steps:**
     1. Setup Python + Java.
     2. `python scripts/fhir_packages.py --assert`.
@@ -123,19 +157,19 @@ This plan drives a **US Core–compliant** HL7 v2 → FHIR pipeline using your e
     5. `silhouette fhir validate --in out/fhir/ndjson/*.ndjson --hapi`.
     6. Upload `out/` artifacts.
   - **DoD:** CI fails on mapping/validation regressions; artifacts attached to PR.
-- [ ] Upload QA and FHIR artifacts on pull requests.
+- [x] Upload QA and FHIR artifacts on pull requests.
   - **DoD:** `out/qa/*`, `out/fhir/*` visible in PR checks.
 
 ---
 
-## Phase 9 — Docs & Runbook
-- [ ] Author **developer guide** (`docs/fhir/developer_guide.md`).
+## Phase 9 — Docs & Runbook ✅
+- [x] Author **developer guide** (`docs/fhir/developer_guide.md`).
   - Mapping authoring conventions; transforms catalog; MustSupport policy; adding new message types.
   - **DoD:** Doc includes code snippets and examples.
-- [ ] Author **ops runbook** (`docs/fhir/runbook.md`).
+- [x] Author **ops runbook** (`docs/fhir/runbook.md`).
   - Config; posting modes; validator usage; tx-miss triage; dead-letter handling.
   - **DoD:** A new engineer can run ADT→FHIR in <10 minutes following docs.
-- [ ] Add **CLI examples** in README.
+- [x] Add **CLI examples** in README.
   - **DoD:** Copy-paste commands for translate (dry-run), validate, post.
 
 ---

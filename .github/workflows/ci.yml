@@ -17,17 +17,58 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
       - name: Install
         run: |
           python -m pip install -U pip
           pip install -e .
           pip install ruff pytest
 
+      - name: Cache HAPI validator CLI
+        id: cache_validator
+        uses: actions/cache@v4
+        with:
+          path: validators/validator_cli.jar
+          key: hapi-validator-6.6.0
+
+      - name: Download HAPI validator CLI (if not cached)
+        if: steps.cache_validator.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p validators
+          curl -L https://github.com/hapifhir/org.hl7.fhir.core/releases/download/v6.6.0/org.hl7.fhir.validator.jar \
+            -o validators/validator_cli.jar
+
+      - name: Verify validator CLI
+        run: |
+          java -jar validators/validator_cli.jar -version
+
+      - name: Cache FHIR package cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.fhir/packages
+          key: fhir-pkgs-${{ hashFiles('config/fhir_target.yaml') }}
+
+      - name: Prefetch FHIR packages
+        run: python scripts/fhir_packages.py
+
       - name: Lint
         run: ruff check silhouette_core tests
 
       - name: Unit tests (auto-skip optional suites)
         run: pytest -q
+
+      - name: HL7 → FHIR translation (ADT & ORU)
+        run: |
+          python -m silhouette_core.cli fhir translate --in tests/data/hl7/adt_a01.hl7 --map maps/adt_uscore.yaml --bundle transaction --out out --dry-run
+          python -m silhouette_core.cli fhir translate --in tests/data/hl7/oru_r01.hl7 --map maps/oru_uscore.yaml --bundle transaction --out out --dry-run
+
+      - name: HAPI validation
+        run: python -m silhouette_core.cli fhir validate --in "out/fhir/ndjson/*.ndjson" --hapi
 
       - name: Security scan (core)
         run: >
@@ -43,5 +84,8 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ci-artifacts
-          path: artifacts/**
+          path: |
+            artifacts/**
+            out/qa/**
+            out/fhir/**
 
