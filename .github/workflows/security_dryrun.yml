@@ -1,0 +1,27 @@
+name: security_dryrun
+
+on:
+  push:
+    branches: [main, staging]
+  pull_request:
+    branches: [main, staging]
+
+jobs:
+  dryrun:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+      - run: pip install -e .
+      - run: |
+          python -m silhouette_core.cli security evidence --source docs/fixtures/security_sample --dry-run
+          python -m silhouette_core.cli security scan --tool trivy --target docs/fixtures/app --use-seed
+          latest=$(ls -d out/security/2* | tail -n1)
+          python -m silhouette_core.cli security map-controls --framework cis_v8 --evidence $latest/evidence
+          python -m silhouette_core.cli security report --format html --in $latest --offline
+      - uses: actions/upload-artifact@v3
+        with:
+          name: security-out
+          path: out/security

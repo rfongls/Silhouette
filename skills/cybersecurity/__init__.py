@@ -1,0 +1,1 @@
+"""Cybersecurity skill package."""

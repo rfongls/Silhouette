@@ -1,0 +1,12 @@
+{
+  "matches": [
+    {
+      "artifact": {"name": "sampleapp"},
+      "vulnerability": {
+        "id": "CVE-2023-1234",
+        "description": "Sample vulnerability",
+        "severity": "HIGH"
+      }
+    }
+  ]
+}
