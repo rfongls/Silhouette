@@ -1,0 +1,18 @@
+name: Build Launcher (Windows)
+on:
+  push:
+    tags: ["launcher-v*"]
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements.txt pyinstaller
+      - run: pyinstaller --noconfirm --onefile --windowed -n SilhouetteLauncher launcher/main.py
+      - uses: actions/upload-artifact@v4
+        with:
+          name: SilhouetteLauncher
+          path: dist/SilhouetteLauncher.exe
