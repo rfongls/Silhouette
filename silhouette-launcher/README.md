@@ -13,6 +13,14 @@ python -m venv .venv
 source .venv/bin/activate && pip install -r requirements.txt && python -m launcher.main
 ```
 
+## CLI fallback (headless)
+
+Run without PySide6 (e.g., on servers or behind proxies):
+
+```bash
+python -m launcher.main --cli --repo C:\path\to\Silhouette --skill fhir --with-hapi
+```
+
 ## Build a single EXE (Windows)
 
 ```bat
