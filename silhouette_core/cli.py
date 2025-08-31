@@ -468,7 +468,6 @@ def summarize_ci_cmd(json_out):
     else:
         _echo(str(data))
 
-
 @main.group("propose")
 def propose_group():
     """Proposals."""
