@@ -146,7 +146,11 @@ class HL7v2ToFHIRTranslator:
         if transform.startswith('loinc:'):
             code = str(value).strip()
             return {'system': 'http://loinc.org', 'code': code}
+    
+        if transform.startswith('literal:'):
+            return transform.split(':', 1)[1]
         return value
+    
 
 def load_rules(path: str) -> List[MappingRule]:
     raw = yaml.safe_load(open(path))
