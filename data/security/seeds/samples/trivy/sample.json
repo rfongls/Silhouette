@@ -1,0 +1,15 @@
+{
+  "results": [
+    {
+      "Target": "sample-app",
+      "Vulnerabilities": [
+        {
+          "VulnerabilityID": "CVE-0001",
+          "Title": "Sample vuln",
+          "Description": "Example description",
+          "Severity": "HIGH"
+        }
+      ]
+    }
+  ]
+}
