@@ -4,6 +4,8 @@ Operational notes for running (and validating) the HL7→FHIR pipeline locally.
 
 > Target: Windows (CMD). PowerShell/macOS/Linux tips included where helpful.
 
+> **Portable GUI option:** Use the Silhouette Launcher app to bootstrap any skill (creates `.venv`, installs extras, optional local HAPI). See the launcher README for download and usage.
+
 ---
 
 ## Quick start (TL;DR)
