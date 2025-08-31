@@ -69,11 +69,41 @@ def collect_evidence(source: Path, run_dir: Path) -> Path:
         writer.writeheader()
         writer.writerows(checksums)
 
-    # create pack zip with redacted + manifest + checksums
-    pack_path = pack_dir / 'pack.zip'
-    RunIO.zip_dir(redacted, pack_path)
-    # Append manifest and checksums to zip
-    with zipfile.ZipFile(pack_path, 'a', zipfile.ZIP_DEFLATED) as z:
-        z.write(manifest_path, 'manifest.json')
-        z.write(checksums_path, 'checksums.csv')
+    # initial evidence pack
+    build_evidence_pack(run_dir)
     return evidence_dir
+
+
+def build_evidence_pack(run_dir: Path) -> Path:
+    evidence_dir = run_dir / 'evidence'
+    pack_dir = run_dir / 'evidence_packs'
+    pack_dir.mkdir(parents=True, exist_ok=True)
+    pack_path = pack_dir / 'pack.zip'
+    with zipfile.ZipFile(pack_path, 'w', zipfile.ZIP_DEFLATED) as z:
+        for src, arcbase in [
+            (evidence_dir / 'originals', 'evidence/originals'),
+            (evidence_dir / 'redacted', 'evidence/redacted'),
+        ]:
+            if src.exists():
+                for f in src.rglob('*'):
+                    if f.is_file():
+                        z.write(f, f"{arcbase}/{f.relative_to(src)}")
+        for name in ['manifest.json', 'checksums.csv']:
+            p = evidence_dir / name
+            if p.exists():
+                z.write(p, f"evidence/{name}")
+        controls_dir = run_dir / 'controls'
+        for name in ['coverage.json', 'coverage.html']:
+            p = controls_dir / name
+            if p.exists():
+                z.write(p, f"controls/{name}")
+        scans_dir = run_dir / 'scans'
+        if scans_dir.exists():
+            for norm in scans_dir.rglob('normalized.json'):
+                tool = norm.parent.name
+                z.write(norm, f"scans/{tool}/normalized.json")
+        report_dir = run_dir / 'report'
+        if report_dir.exists():
+            for file in report_dir.glob('report.*'):
+                z.write(file, f"report/{file.name}")
+    return pack_path

@@ -43,6 +43,23 @@ def normalize_generic(tool: str, raw: Dict[str, Any]) -> List[Dict[str, Any]]:
                 'identifiers': [res.get('check_id')],
                 'recommended_action': res.get('guideline', ''),
             })
+    elif tool == 'grype':
+        for match in raw.get('matches', []):
+            vuln = match.get('vulnerability', {})
+            art = match.get('artifact', {})
+            vid = vuln.get('id')
+            findings.append({
+                'tool': tool,
+                'target': art.get('name'),
+                'title': vid or '',
+                'description': vuln.get('description', ''),
+                'severity': SEVERITY_MAP.get(vuln.get('severity', '').upper(), 'info'),
+                'category': 'container/vuln',
+                'location': '',
+                'evidence': {},
+                'identifiers': [vid] if vid else [],
+                'recommended_action': '',
+            })
     else:
         findings.append({'tool': tool, 'target': '', 'title': 'stub', 'description': '', 'severity': 'info', 'category': '', 'location': '', 'evidence': {}, 'identifiers': [], 'recommended_action': ''})
     return findings

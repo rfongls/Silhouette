@@ -1,6 +1,8 @@
 import json
+import json
 import subprocess
 import sys
+import zipfile
 from pathlib import Path
 
 
@@ -28,9 +30,15 @@ def test_pipeline(tmp_path):
     # scan
     run(['security', '--out', str(run_dir), 'scan', '--tool', 'trivy', '--target', 'docs/fixtures/app', '--use-seed'])
     run(['security', '--out', str(run_dir), 'scan', '--tool', 'checkov', '--target', 'docs/fixtures/infra', '--use-seed'])
+    run(['security', '--out', str(run_dir), 'scan', '--tool', 'grype', '--target', 'docs/fixtures/app', '--use-seed'])
     norm = json.loads((run_dir / 'scans' / 'trivy' / 'normalized.json').read_text())
     assert norm['findings'][0]['severity'] == 'high'
 
     # report
     run(['security', 'report', '--format', 'html', '--in', str(run_dir), '--offline'])
     assert (run_dir / 'report' / 'report.html').exists()
+    # pack includes controls and normalized scans
+    with zipfile.ZipFile(run_dir / 'evidence_packs' / 'pack.zip') as z:
+        names = z.namelist()
+        assert 'controls/coverage.json' in names
+        assert 'scans/grype/normalized.json' in names

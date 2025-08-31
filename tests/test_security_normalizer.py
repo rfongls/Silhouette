@@ -23,3 +23,18 @@ def test_normalizer_keys():
         'category', 'location', 'evidence', 'identifiers', 'recommended_action'
     }
     assert required <= res[0].keys()
+
+
+def test_normalizer_grype():
+    raw = {
+        "matches": [
+            {
+                "artifact": {"name": "pkg"},
+                "vulnerability": {
+                    "id": "CVE-1", "description": "x", "severity": "HIGH"
+                },
+            }
+        ]
+    }
+    res = normalize_generic('grype', raw)
+    assert res[0]['severity'] == 'high'

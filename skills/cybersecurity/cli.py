@@ -1,12 +1,9 @@
-import json
 from pathlib import Path
 import datetime as dt
-
 import click
-
-from .util.gates import is_active_command, require_ack_authorized, POLICY_BANNER_PATH
+from .util.gates import require_ack_authorized, POLICY_BANNER_PATH
 from .util.io import RunIO
-from .evidence.collector import collect_evidence
+from .evidence.collector import collect_evidence, build_evidence_pack
 from .controls.mapper import map_controls
 from .scan import dispatch_scan
 from .report.writer import write_report
@@ -81,6 +78,7 @@ def report_cmd(ctx, fmt, in_dir, offline):
     run_dir = Path(in_dir)
     write_report(run_dir, fmt)
     _record(ctx, 'report', {'format': fmt, 'in': in_dir, 'offline': offline})
+    build_evidence_pack(run_dir)
     click.echo(str(run_dir / 'report'))
 
 
@@ -99,6 +97,28 @@ def pentest_recon(ctx, dry_run):
     click.echo(str(run_dir))
 
 
+@pentest_group.command('net-survey')
+@click.option('--dry-run', is_flag=True)
+@click.pass_context
+def pentest_netsurvey(ctx, dry_run):
+    run_dir = _record(ctx, 'pentest.net-survey', {'dry_run': dry_run})
+    click.echo(str(run_dir))
+
+
+@pentest_group.command('dast')
+@click.option('--dry-run', is_flag=True)
+@click.pass_context
+def pentest_dast(ctx, dry_run):
+    run_dir = _record(ctx, 'pentest.dast', {'dry_run': dry_run})
+    click.echo(str(run_dir))
+
+
+@pentest_group.command('api')
+@click.option('--dry-run', is_flag=True)
+@click.pass_context
+def pentest_api(ctx, dry_run):
+    run_dir = _record(ctx, 'pentest.api', {'dry_run': dry_run})
+    click.echo(str(run_dir))
 # placeholders for other subcommands and stubs
 @cli.command('assess')
 @click.option('--dry-run', is_flag=True)
@@ -106,8 +126,12 @@ def pentest_recon(ctx, dry_run):
 def assess_cmd(ctx, dry_run):
     run_dir = _record(ctx, 'assess', {'dry_run': dry_run})
     click.echo(str(run_dir))
-
-
+@cli.command('capture')
+@click.option('--dry-run', is_flag=True)
+@click.pass_context
+def capture_cmd(ctx, dry_run):
+    run_dir = _record(ctx, 'capture', {'dry_run': dry_run})
+    click.echo(str(run_dir))
 @cli.command('pcap')
 @click.option('--dry-run', is_flag=True)
 @click.pass_context
