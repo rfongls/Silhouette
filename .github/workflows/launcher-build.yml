@@ -1,0 +1,33 @@
+name: launcher-build
+
+on:
+  push:
+    tags:
+      - 'launcher-v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: silhouette-launcher
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build launcher
+        run: build_windows.bat
+      - name: Compute checksum
+        shell: pwsh
+        run: |
+          $hash = (Get-FileHash 'dist/SilhouetteLauncher.exe' -Algorithm SHA256).Hash
+          $hash | Out-File -Encoding ascii 'dist/SilhouetteLauncher.exe.sha256.txt'
+      - name: Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            silhouette-launcher/dist/SilhouetteLauncher.exe
+            silhouette-launcher/dist/SilhouetteLauncher.exe.sha256.txt
+          generate_release_notes: true
+          fail_on_unmatched_files: true
