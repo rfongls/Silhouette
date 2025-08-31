@@ -6,6 +6,31 @@ It is purpose-aligned, hardware-flexible, and built to be **carried, revived, an
 > **Docs Index:** See [docs/README.md](docs/README.md) for the full table of contents.
 ---
 
+## 🚀 One-Click Agent Setup
+
+- Windows: double-click `setup.bat`
+- macOS: double-click `setup.command`
+- Linux/macOS terminal: `./setup.sh`
+
+Non-interactive example:
+
+```bash
+python setup.py --skill fhir --with-hapi --yes
+```
+
+| Skill | Extras |
+|-------|--------|
+| core | *(none)* |
+| runtime | `[runtime]` |
+| ml | `[ml]` |
+| dev | `[dev]` |
+| eval | `[eval]` |
+| validate | `[validate]` |
+| fhir | `[fhir]` |
+| all | `[runtime,ml,dev,eval,validate,fhir]` |
+
+For more details see [docs/ops/agent_setup.md](docs/ops/agent_setup.md).
+
 ## 🌐 Vision
 
 Silhouette Core is a **general, self-hostable agent system**. It is designed to:
