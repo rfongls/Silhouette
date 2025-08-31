@@ -17,7 +17,7 @@ if not exist %SHA% (
   exit /b 1
 )
 for /f %%i in (%SHA%) do set EXPECTED=%%i
-for /f %%i in ('certutil -hashfile %EXE% SHA256 ^| findstr /v "hash" ^| findstr /v "CertUtil"') do set ACTUAL=%%i
+for /f %%i in ('powershell -NoP -C "(Get-FileHash ''%EXE%'' -Algorithm SHA256).Hash"') do set ACTUAL=%%i
 if /I not "%EXPECTED%"=="%ACTUAL%" (
   echo [x] Checksum mismatch
   exit /b 1

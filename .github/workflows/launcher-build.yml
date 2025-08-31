@@ -19,7 +19,10 @@ jobs:
       - name: Build launcher
         run: build_windows.bat
       - name: Compute checksum
-        run: certutil -hashfile dist\\SilhouetteLauncher.exe SHA256 > dist\\SilhouetteLauncher.exe.sha256.txt
+        shell: pwsh
+        run: |
+          $hash = (Get-FileHash 'dist/SilhouetteLauncher.exe' -Algorithm SHA256).Hash
+          $hash | Out-File -Encoding ascii 'dist/SilhouetteLauncher.exe.sha256.txt'
       - name: Release
         uses: softprops/action-gh-release@v2
         with:
