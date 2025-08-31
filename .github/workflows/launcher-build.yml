@@ -1,0 +1,24 @@
+name: launcher-build
+
+on:
+  push:
+    tags:
+      - 'launcher-v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: silhouette-launcher
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build launcher
+        run: build_windows.bat
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: silhouette-launcher/dist/SilhouetteLauncher.exe
