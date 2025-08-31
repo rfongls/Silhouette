@@ -12,6 +12,7 @@ from .analysis import hotpaths as analysis_hotpaths
 from .analysis import service as analysis_service
 from .analysis import suggest_tests as analysis_suggest_tests
 from .analysis import summarize_ci as analysis_summarize_ci
+from skills.cybersecurity.cli import cli as security_cli
 from .impact.impact_set import compute_impact
 from .patch.pr_body import compose_pr_body
 from .patch.propose import propose_patch as propose_patch_fn
@@ -467,175 +468,6 @@ def summarize_ci_cmd(json_out):
     else:
         _echo(str(data))
 
-
-@main.group("security")
-@click.option("--scope", default=None, help="Scope file, CIDR, or domains")
-@click.option("--out", default="out/security", show_default=True, help="Output directory")
-@click.option(
-    "--ack-authorized",
-    is_flag=True,
-    help="Acknowledge you are authorized for active operations",
-)
-@click.pass_context
-def security_group(ctx, scope, out, ack_authorized):
-    """Cybersecurity utilities."""
-    ctx.ensure_object(dict)
-    ctx.obj.update({"scope": scope, "out": Path(out), "ack": ack_authorized})
-
-
-def _require_auth(ctx, dry_run):
-    if not dry_run and not ctx.obj.get("ack"):
-        raise click.ClickException("--ack-authorized flag required for active runs")
-
-
-def _write_stub(ctx, name: str, content: str = "stub") -> Path:
-    out: Path = ctx.obj["out"]
-    out.mkdir(parents=True, exist_ok=True)
-    path = out / f"{name}_stub.txt"
-    path.write_text(content, encoding="utf-8")
-    return path
-
-
-@security_group.command("assess")
-@click.option("--dry-run", is_flag=True, help="Preview actions without executing")
-@click.pass_context
-def security_assess(ctx, dry_run):
-    """Assess security posture (stub)."""
-    _require_auth(ctx, dry_run)
-    path = _write_stub(ctx, "assess")
-    click.echo(f"Wrote {path}")
-
-
-@security_group.command("evidence")
-@click.option("--source", default=".", show_default=True, help="Source directory")
-@click.option("--dry-run", is_flag=True, help="Preview actions without executing")
-@click.pass_context
-def security_evidence(ctx, source, dry_run):
-    """Capture evidence artifacts (stub)."""
-    _require_auth(ctx, dry_run)
-    path = _write_stub(ctx, "evidence", f"source={source}\n")
-    click.echo(f"Wrote {path}")
-
-
-@security_group.command("map-controls")
-@click.option("--framework", default="nist_csf", show_default=True)
-@click.option("--dry-run", is_flag=True, help="Preview actions without executing")
-@click.pass_context
-def security_map_controls(ctx, framework, dry_run):
-    """Map evidence to control frameworks (stub)."""
-    _require_auth(ctx, dry_run)
-    path = _write_stub(ctx, f"map_{framework}")
-    click.echo(f"Wrote {path}")
-
-
-@security_group.command("report")
-@click.option(
-    "--format",
-    "fmt",
-    type=click.Choice(["md", "html", "pdf"]),
-    default="md",
-    show_default=True,
-)
-@click.option("--dry-run", is_flag=True, help="Preview actions without executing")
-@click.pass_context
-def security_report(ctx, fmt, dry_run):
-    """Generate security report (stub)."""
-    _require_auth(ctx, dry_run)
-    path = _write_stub(ctx, f"report.{fmt}")
-    click.echo(f"Wrote {path}")
-
-
-@security_group.command("scan")
-@click.option("--tool", required=True, help="Scanner to run")
-@click.option("--dry-run", is_flag=True, help="Preview actions without executing")
-@click.pass_context
-def security_scan(ctx, tool, dry_run):
-    """Run defensive scanners (stub)."""
-    _require_auth(ctx, dry_run)
-    path = _write_stub(ctx, f"scan_{tool}")
-    click.echo(f"Wrote {path}")
-
-
-@security_group.group("pentest")
-@click.pass_context
-def security_pentest(ctx):
-    """External penetration testing commands (stub)."""
-    pass
-
-
-def _pentest_stub(ctx, name: str, dry_run: bool):
-    _require_auth(ctx, dry_run)
-    path = _write_stub(ctx, f"pentest_{name}")
-    click.echo(f"Wrote {path}")
-
-
-@security_pentest.command("recon")
-@click.option("--dry-run", is_flag=True, help="Preview actions without executing")
-@click.pass_context
-def security_pentest_recon(ctx, dry_run):
-    """Reconnaissance phase (stub)."""
-    _pentest_stub(ctx, "recon", dry_run)
-
-
-@security_pentest.command("net-survey")
-@click.option("--dry-run", is_flag=True, help="Preview actions without executing")
-@click.pass_context
-def security_pentest_net_survey(ctx, dry_run):
-    """Network survey phase (stub)."""
-    _pentest_stub(ctx, "net_survey", dry_run)
-
-
-@security_pentest.command("dast")
-@click.option("--dry-run", is_flag=True, help="Preview actions without executing")
-@click.pass_context
-def security_pentest_dast(ctx, dry_run):
-    """Dynamic application security testing (stub)."""
-    _pentest_stub(ctx, "dast", dry_run)
-
-
-@security_pentest.command("api")
-@click.option("--dry-run", is_flag=True, help="Preview actions without executing")
-@click.pass_context
-def security_pentest_api(ctx, dry_run):
-    """API testing phase (stub)."""
-    _pentest_stub(ctx, "api", dry_run)
-
-
-@security_group.command("capture")
-@click.option("--dry-run", is_flag=True, help="Preview actions without executing")
-@click.pass_context
-def security_capture(ctx, dry_run):
-    """Capture network traffic (stub)."""
-    _require_auth(ctx, dry_run)
-    path = _write_stub(ctx, "capture")
-    click.echo(f"Wrote {path}")
-
-
-@security_group.command("pcap")
-@click.option("--dry-run", is_flag=True, help="Preview actions without executing")
-@click.pass_context
-def security_pcap(ctx, dry_run):
-    """PCAP processing (stub)."""
-    _require_auth(ctx, dry_run)
-    path = _write_stub(ctx, "pcap")
-    click.echo(f"Wrote {path}")
-
-
-@security_group.command("ids")
-@click.option(
-    "--engine",
-    type=click.Choice(["zeek", "suricata"]),
-    default="zeek",
-    show_default=True,
-)
-@click.option("--dry-run", is_flag=True, help="Preview actions without executing")
-@click.pass_context
-def security_ids(ctx, engine, dry_run):
-    """IDS analysis (stub)."""
-    _require_auth(ctx, dry_run)
-    path = _write_stub(ctx, f"ids_{engine}")
-    click.echo(f"Wrote {path}")
-
 @main.group("propose")
 def propose_group():
     """Proposals."""
@@ -666,6 +498,8 @@ def propose_patch_cmd(goal, hint, strategy):
         pr_body = compose_pr_body(goal, impact, result["summary"])
         (run_dir / "proposed_pr_body.md").write_text(pr_body, encoding="utf-8")
     _echo(f"Wrote {diff_path}")
+
+main.add_command(security_cli, name="security")
 
 if __name__ == "__main__":
     main()

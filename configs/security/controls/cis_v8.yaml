@@ -1,0 +1,7 @@
+controls:
+  - id: CIS-1
+    description: Ensure app config present
+    evidence: configs/app.conf
+  - id: CIS-2
+    description: Ensure app log present
+    evidence: logs/app.log
