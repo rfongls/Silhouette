@@ -1,4 +1,4 @@
-$Url = "https://github.com/silhouette-ai/Silhouette/releases/latest/download/SilhouetteLauncher.exe"
+$Url = "https://github.com/rfongls/Silhouette/releases/latest/download/SilhouetteLauncher.exe"
 $Exe = "SilhouetteLauncher.exe"
 try {
   Invoke-WebRequest $Url -OutFile $Exe -UseBasicParsing

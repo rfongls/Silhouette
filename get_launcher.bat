@@ -1,6 +1,6 @@
 @echo off
 setlocal
-set URL=https://github.com/silhouette-ai/Silhouette/releases/latest/download/SilhouetteLauncher.exe
+set URL=https://github.com/rfongls/Silhouette/releases/latest/download/SilhouetteLauncher.exe
 set EXE=SilhouetteLauncher.exe
 
 :: Try PowerShell, else curl
