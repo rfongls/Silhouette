@@ -16,10 +16,10 @@
 - Phase 10 — Extensions (Cloud / SOAR / AI): ☑
 
 ## Commits / PRs - Organize by date of PR
-- 2025-08-30 
+###2025-08-30 
 - Finalize phases 0–5 offline pipeline
 
-- 2025-08-31
+###2025-08-31
 - Kick off Phase 6 runbook scaffolding
 - Scaffold phase 6–10 modules
 - Add CI test workflow and link Phase 6–10 docs
@@ -32,7 +32,7 @@
 - Add playbook inject scheduling and pentest kill switch
 - Document ownership verification and recon enrichment plans
 
-- 2025-09-01
+###2025-09-01
 - Detail outstanding tasks for phases 6–10 and expand TODOs
 - Add gate deny-lists/schedule windows, recon enrichment, and flow indexing
 - Finalize Phase 6–10 tasks with ownership checks, Nmap/DAST, and netforensics artifacts
