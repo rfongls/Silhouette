@@ -1,5 +1,9 @@
 # Cybersecurity Skill
 
+## Documentation Index
+
+- [Phases 6–10 (Scaffold, Offline-First)](./PHASES_6_10_README.md)
+
 ## Quickstart
 
 ```bash
