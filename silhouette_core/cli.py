@@ -12,6 +12,7 @@ from .analysis import hotpaths as analysis_hotpaths
 from .analysis import service as analysis_service
 from .analysis import suggest_tests as analysis_suggest_tests
 from .analysis import summarize_ci as analysis_summarize_ci
+from skills.cybersecurity.cli import cli as security_cli
 from .impact.impact_set import compute_impact
 from .patch.pr_body import compose_pr_body
 from .patch.propose import propose_patch as propose_patch_fn
@@ -467,6 +468,7 @@ def summarize_ci_cmd(json_out):
     else:
         _echo(str(data))
 
+
 @main.group("propose")
 def propose_group():
     """Proposals."""
@@ -497,6 +499,8 @@ def propose_patch_cmd(goal, hint, strategy):
         pr_body = compose_pr_body(goal, impact, result["summary"])
         (run_dir / "proposed_pr_body.md").write_text(pr_body, encoding="utf-8")
     _echo(f"Wrote {diff_path}")
+
+main.add_command(security_cli, name="security")
 
 if __name__ == "__main__":
     main()

@@ -1,0 +1,1 @@
+{ "advisories": [ { "module_name": "left-pad", "severity": "low", "cves": ["CVE-2021-0002"] } ] }

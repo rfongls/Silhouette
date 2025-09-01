@@ -1,14 +1,14 @@
 # Cybersecurity Skill — Progress Log
 
-**Current Phase:** 0 — Policy & Scaffold
+**Current Phase:** 6 — IR Playbooks & Tabletop
 
 ## Phase Status
-- Phase 0 — Policy & Scaffold: ☐
-- Phase 1 — CLI Surface & Manifest: ☐
-- Phase 2 — Evidence Capture (Defensive): ☐
-- Phase 3 — Controls Mapping: ☐
-- Phase 4 — Defensive Scanners: ☐
-- Phase 5 — Risk Scoring & Reporting: ☐
+- Phase 0 — Policy & Scaffold: ☑
+- Phase 1 — CLI Surface & Manifest: ☑
+- Phase 2 — Evidence Capture (Defensive): ☑
+- Phase 3 — Controls Mapping: ☑
+- Phase 4 — Defensive Scanners: ☑
+- Phase 5 — Risk Scoring & Reporting: ☑
 - Phase 6 — IR Playbooks & Tabletop: ☐
 - Phase 7 — Pentest Gates (Auth/Scope/Verification): ☐
 - Phase 8 — Recon & Active Testing (Nmap/DAST/API): ☐
@@ -16,7 +16,7 @@
 - Phase 10 — Extensions (Cloud / SOAR / AI): ☐
 
 ## Commits / PRs
-- _Add entries here as you merge (SHA, date, phase)._
+- 2025-08-31 — Finalize phases 0–5 offline pipeline
 
 ## Risks / Notes
 - **Legal/Authorization:** never execute active modules without written authorization + verified scope.
