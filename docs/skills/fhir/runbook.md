@@ -221,7 +221,7 @@ After fixes, rerun the pipeline; successful posts remove previous dead letters.
 | `ModuleNotFoundError: validators` (import inside CLI)                    | Package not installed to current venv                                   | Activate venv; `pip install -e .[validate]`                                                |
 | `unexpected extra arguments (... .ndjson)`                               | PowerShell expanded `*` before Click parsed                             | Quote the glob in PS (`'out\fhir\ndjson\*.ndjson'`) or use `--in-dir`                      |
 | Translate only writes `Device` and `Provenance`                          | You passed a **legacy** map (profiles\*) or rules didn’t match message | Use a MapSpec under `maps/*.yaml` that includes your message type and rules                |
-| `Encounter.class … Input should be a valid list`                         | Your installed models expect `class` as a **list**                      | Ensure map writes to `class[]` (list) or regenerate outputs; stale files will keep failing |
+| `Encounter.class … Input should be a valid dict`                         | Your installed models expect `class` as an object                     | Ensure map writes to `class` (Coding object) or regenerate outputs; stale files will keep failing |
 | `Provenance.agent[0].who: Field required`                                | Missing actor for Provenance                                            | Re-translate (pipeline adds a fallback Device actor) or patch NDJSON in place              |
 
 **NDJSON in-place patcher (optional)**
@@ -235,8 +235,8 @@ def fix_file(p, ref="Device/silhouette-translator"):
     for s in p.read_text(encoding="utf-8").splitlines():
         if not s.strip(): continue
         o = json.loads(s)
-        if o.get("resourceType")=="Encounter" and isinstance(o.get("class"), dict):
-            o["class"]=[o["class"]]; n+=1
+        if o.get("resourceType")=="Encounter" and isinstance(o.get("class"), list):
+            o["class"]=o["class"][0]; n+=1
         if o.get("resourceType")=="Provenance":
             agents=o.get("agent")
             if not isinstance(agents,list) or not agents:

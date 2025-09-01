@@ -26,9 +26,9 @@ resourcePlan:
   - resource: Encounter
     profile: "http://hl7.org/fhir/us/core/StructureDefinition/us-core-encounter"
     rules:
-      # PV1-2 -> Encounter.class as a LIST item (object with system+code)
+      # PV1-2 -> Encounter.class (object with system+code)
       - hl7_path: "PV1.2"
-        fhir_path: "class[]"
+        fhir_path: "class"
         transform: "pv1_class_to_code"
 
       - hl7_path: "PV1.44"
