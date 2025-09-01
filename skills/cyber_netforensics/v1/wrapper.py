@@ -1,24 +1,25 @@
 import json
 import struct
 from collections import Counter
+from ipaddress import ip_address
 from pathlib import Path
 from skills.cyber_common import write_result
 
 
-def _analyze_pcap(pcap_path: Path) -> tuple[int, int]:
-    """Return packet and flow counts from a PCAP file.
+def _analyze_pcap(pcap_path: Path) -> tuple[int, Counter[tuple[bytes, bytes, int, int, int]]]:
+    """Return packet count and flow index from a PCAP file.
 
     Only handles Ethernet/IPv4/TCP-UDP packets. Counts a *flow* as the
     5-tuple ``(src_ip, dst_ip, src_port, dst_port, protocol)``.
     """
     if not pcap_path.exists():
-        return 0, 0
+        return 0, Counter()
     flows: Counter[tuple[bytes, bytes, int, int, int]] = Counter()
     packets = 0
     with pcap_path.open("rb") as fh:
         header = fh.read(24)
         if len(header) < 24:
-            return 0, 0
+            return 0, Counter()
         magic = header[:4]
         endian = "<" if magic == b"\xd4\xc3\xb2\xa1" else ">"
         unpack_hdr = endian + "IIII"
@@ -47,7 +48,7 @@ def _analyze_pcap(pcap_path: Path) -> tuple[int, int]:
             else:
                 src_port = dst_port = 0
             flows[(src_ip, dst_ip, src_port, dst_port, proto)] += 1
-    return packets, len(flows)
+    return packets, flows
 
 
 def tool(payload: str) -> str:
@@ -59,6 +60,17 @@ def tool(payload: str) -> str:
     out_dir = args.get("out_dir")
     pcap_path = Path(pcap)
     packets, flows = _analyze_pcap(pcap_path)
-    data = {"pcap": pcap, "packets": packets, "flows": flows, "alerts": []}
+    index = [
+        {
+            "src": str(ip_address(src)),
+            "dst": str(ip_address(dst)),
+            "src_port": sp,
+            "dst_port": dp,
+            "proto": proto,
+            "count": cnt,
+        }
+        for (src, dst, sp, dp, proto), cnt in flows.items()
+    ]
+    data = {"pcap": pcap, "packets": packets, "flows": len(flows), "index": index, "alerts": []}
     path = write_result("netforensics", data, run_dir=out_dir)
     return json.dumps({"ok": True, "result": path})
