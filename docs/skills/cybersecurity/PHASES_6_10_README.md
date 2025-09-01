@@ -33,7 +33,7 @@ python -m silhouette_core.cli security --ack-authorized pentest playbook --incid
 **Outputs:**
 
 * `<run>/active/ir_playbook.json` with a minimal step list.
-
+* 
 ---
 
 ## Phase 7 — Pentest Gates (Authorization & Scope)
