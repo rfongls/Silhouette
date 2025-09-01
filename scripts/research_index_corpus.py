@@ -14,7 +14,7 @@ def main(root="docs/corpus"):
             [
                 sys.executable,
                 "-c",
-                "from skills.research_read_pdf.v1.wrapper import tool; import sys; print(tool(sys.argv[1]))",
+                "from silhouette_core.skills.research_read_pdf.v1.wrapper import tool; import sys; print(tool(sys.argv[1]))",
                 str(p),
             ]
         )
@@ -22,7 +22,7 @@ def main(root="docs/corpus"):
             [
                 sys.executable,
                 "-c",
-                "from skills.research_index.v1.wrapper import tool; import sys; print(tool(sys.stdin.read()))",
+                "from silhouette_core.skills.research_index.v1.wrapper import tool; import sys; print(tool(sys.stdin.read()))",
             ],
             input=read_out,
             text=True,
