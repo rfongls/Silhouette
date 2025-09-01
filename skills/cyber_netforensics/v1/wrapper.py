@@ -86,7 +86,10 @@ def tool(payload: str) -> str:
     for (src, dst, sp, dp, proto), cnt in flows.items():
         if dp == 23:
             alerts.append({"dst": str(ip_address(dst)), "port": dp, "reason": "telnet"})
+    from datetime import datetime, timezone
     data = {
+        "schema": "netforensics.v1",
+        "created_at": datetime.now(timezone.utc).isoformat(),
         "pcap": pcap,
         "packets": packets,
         "flows": len(flows),
