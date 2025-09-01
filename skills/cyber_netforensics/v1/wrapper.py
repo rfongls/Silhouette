@@ -1,14 +1,64 @@
 import json
+import struct
+from collections import Counter
+from pathlib import Path
 from skills.cyber_common import write_result
 
 
+def _analyze_pcap(pcap_path: Path) -> tuple[int, int]:
+    """Return packet and flow counts from a PCAP file.
+
+    Only handles Ethernet/IPv4/TCP-UDP packets. Counts a *flow* as the
+    5-tuple ``(src_ip, dst_ip, src_port, dst_port, protocol)``.
+    """
+    if not pcap_path.exists():
+        return 0, 0
+    flows: Counter[tuple[bytes, bytes, int, int, int]] = Counter()
+    packets = 0
+    with pcap_path.open("rb") as fh:
+        header = fh.read(24)
+        if len(header) < 24:
+            return 0, 0
+        magic = header[:4]
+        endian = "<" if magic == b"\xd4\xc3\xb2\xa1" else ">"
+        unpack_hdr = endian + "IIII"
+        while True:
+            pkt_hdr = fh.read(16)
+            if len(pkt_hdr) < 16:
+                break
+            _ts_sec, _ts_usec, incl_len, _orig_len = struct.unpack(unpack_hdr, pkt_hdr)
+            payload = fh.read(incl_len)
+            if len(payload) < incl_len:
+                break
+            packets += 1
+            if len(payload) < 34:  # insufficient for Ethernet+IPv4
+                continue
+            eth_type = struct.unpack("!H", payload[12:14])[0]
+            if eth_type != 0x0800:
+                continue  # not IPv4
+            ihl = (payload[14] & 0x0F) * 4
+            proto = payload[23]
+            if len(payload) < 14 + ihl + 4:
+                continue
+            src_ip = payload[26:30]
+            dst_ip = payload[30:34]
+            if proto in (6, 17) and len(payload) >= 14 + ihl + 4:
+                src_port, dst_port = struct.unpack("!HH", payload[14 + ihl:14 + ihl + 4])
+            else:
+                src_port = dst_port = 0
+            flows[(src_ip, dst_ip, src_port, dst_port, proto)] += 1
+    return packets, len(flows)
+
+
 def tool(payload: str) -> str:
-    """Placeholder network forensics processing.
+    """Network forensics processing.
     Input JSON: {"pcap":"capture.pcap","out_dir":"..."}
     """
     args = json.loads(payload or "{}")
     pcap = args.get("pcap", "")
     out_dir = args.get("out_dir")
-    data = {"pcap": pcap, "flows": 0, "alerts": []}
+    pcap_path = Path(pcap)
+    packets, flows = _analyze_pcap(pcap_path)
+    data = {"pcap": pcap, "packets": packets, "flows": flows, "alerts": []}
     path = write_result("netforensics", data, run_dir=out_dir)
     return json.dumps({"ok": True, "result": path})

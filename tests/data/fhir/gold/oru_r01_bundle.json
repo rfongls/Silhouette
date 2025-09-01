@@ -1,7 +1,6 @@
 {
   "resourceType": "Bundle",
   "type": "transaction",
-  "id": "7d01ee31-b791-51db-bead-f9214b731063",
   "entry": [
     {
       "fullUrl": "urn:uuid:593eab13-42d3-583b-9167-a0d8684fcc2f",
@@ -52,6 +51,7 @@
             "http://hl7.org/fhir/us/core/StructureDefinition/us-core-diagnosticreport-lab"
           ]
         },
+        "status": "unknown",
         "code": {
           "coding": [
             {
@@ -62,7 +62,6 @@
           ]
         },
         "id": "f0823654-a3f2-5bc2-9acd-a06bce85e6d9",
-        "status": "unknown",
         "result": [
           {
             "reference": "urn:uuid:d0a24ecf-a124-5fb2-8668-52d17ceeaab4"
@@ -133,14 +132,43 @@
       }
     },
     {
-      "fullUrl": "urn:uuid:36c26565-6fbb-582a-beba-e0cb28353318",
+      "fullUrl": "urn:uuid:54ec0dd4-3e06-5cbd-aa4c-edb5c5c593a5",
+      "resource": {
+        "resourceType": "Device",
+        "id": "54ec0dd4-3e06-5cbd-aa4c-edb5c5c593a5",
+        "status": "active",
+        "deviceName": [
+          {
+            "name": "Silhouette Translator",
+            "type": "user-friendly-name"
+          }
+        ],
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/device-kind",
+              "code": "transmitter"
+            }
+          ]
+        }
+      },
+      "request": {
+        "method": "POST",
+        "url": "Device"
+      }
+    },
+    {
+      "fullUrl": "urn:uuid:3ef0ae1b-fca5-5b81-b7c2-699f8543ced5",
       "resource": {
         "resourceType": "Provenance",
-        "recorded": "2025-08-29T21:39:52.086768Z",
+        "recorded": "IGNORE",
         "agent": [
           {
             "type": {
               "text": "Silhouette HL7\u2192FHIR"
+            },
+            "who": {
+              "reference": "Device/silhouette-translator"
             }
           }
         ],
@@ -156,6 +184,9 @@
           },
           {
             "reference": "urn:uuid:b8b24a57-53c5-59a7-9978-eeb06b583fa7"
+          },
+          {
+            "reference": "urn:uuid:54ec0dd4-3e06-5cbd-aa4c-edb5c5c593a5"
           }
         ],
         "entity": [
@@ -183,12 +214,13 @@
             "http://hl7.org/fhir/StructureDefinition/Provenance"
           ]
         },
-        "id": "36c26565-6fbb-582a-beba-e0cb28353318"
+        "id": "3ef0ae1b-fca5-5b81-b7c2-699f8543ced5"
       },
       "request": {
         "method": "POST",
         "url": "Provenance"
       }
     }
-  ]
+  ],
+  "id": "7d01ee31-b791-51db-bead-f9214b731063"
 }

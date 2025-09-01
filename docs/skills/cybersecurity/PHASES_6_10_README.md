@@ -16,7 +16,7 @@ This document describes the **Phase 6–10** scaffolds for the Cybersecurity Ski
 
 **Skill:** `skills/cyber_ir_playbook.v1.wrapper:tool`
 
-**Status:** scaffold with templates
+**Status:** basic playbooks with communication plan
 
 **CLI:**
 
@@ -34,7 +34,10 @@ Supported incidents: `ransomware`, `credential`, `pii` (falls back to generic).
 
 **Outputs:**
 
-* `<run>/active/ir_playbook.json` with incident-specific steps.
+* `<run>/active/ir_playbook.json` with incident-specific steps, communication plan, and contacts.
+
+**Next Steps:**
+- Flesh out tabletop inject library and scheduling.
 
 ---
 
@@ -42,7 +45,7 @@ Supported incidents: `ransomware`, `credential`, `pii` (falls back to generic).
 
 **Skill:** `skills/cyber_pentest_gate.v1.wrapper:tool`
 
-**Status:** scaffold
+**Status:** scaffold with audit logging
 
 **CLI:**
 
@@ -63,7 +66,10 @@ python -m silhouette_core.cli security --ack-authorized pentest gate \
 
 **Outputs:**
 
-* `<run>/active/pentest_gate.json` when authorized.
+* `<run>/active/pentest_gate.json` and audit log when authorized.
+
+**Next Steps:**
+- Implement ownership verification via DNS TXT/HTTP.
 
 ---
 
@@ -71,25 +77,29 @@ python -m silhouette_core.cli security --ack-authorized pentest gate \
 
 **Skill:** `skills/cyber_recon_scan.v1.wrapper:tool`
 
-**Status:** scaffold; **wired to CLI**
+**Status:** scaffold; **wired to CLI** with scan profiles
 
 **CLI:**
 
 ```bash
 python -m silhouette_core.cli security --ack-authorized pentest recon \
   --target sub.example.com \
-  --scope-file docs/cyber/scope_example.txt
+  --scope-file docs/cyber/scope_example.txt \
+  --profile version
 ```
 
 **Inputs (JSON):**
 
 ```json
-{"target":"sub.example.com","scope_file":"docs/cyber/scope_example.txt","out_dir":"<run>"}
+{"target":"sub.example.com","scope_file":"docs/cyber/scope_example.txt","profile":"version","out_dir":"<run>"}
 ```
 
 **Outputs:**
 
-* `<run>/active/recon.json` containing an inventory stub.
+* `<run>/active/recon.json` containing the selected profile and inventory stub.
+
+**Next Steps:**
+- Normalize and enrich findings offline.
 
 ---
 
@@ -97,7 +107,7 @@ python -m silhouette_core.cli security --ack-authorized pentest recon \
 
 **Skill:** `skills/cyber_netforensics.v1.wrapper:tool`
 
-**Status:** scaffold
+**Status:** parses PCAPs for packet and flow counts
 
 **CLI:**
 
@@ -113,7 +123,11 @@ python -m silhouette_core.cli security --ack-authorized pentest netforensics --p
 
 **Outputs:**
 
-* `<run>/active/netforensics.json` with placeholder fields.
+* `<run>/active/netforensics.json` with packet and flow counts.
+
+**Next Steps:**
+- Support tcpdump capture and Zeek/Suricata parsing.
+- Enable TLS decryption and YARA/ClamAV triage.
 
 ---
 
@@ -132,6 +146,9 @@ python -m silhouette_core.cli security --ack-authorized pentest netforensics --p
 **Outputs:**
 
 * `<run>/active/cyber_extension.json` with `status: "not_implemented"`.
+
+**Next Steps:**
+- Explore cloud posture modules and SOAR export hooks.
 
 ---
 
@@ -162,7 +179,8 @@ python -m silhouette_core.cli security report --format html --in "$latest" --off
 # 2) Phase 8 scaffold (requires ack + scope)
 python -m silhouette_core.cli security --ack-authorized pentest recon \
   --target sub.example.com \
-  --scope-file docs/cyber/scope_example.txt
+  --scope-file docs/cyber/scope_example.txt \
+  --profile safe
 ```
 
 ---
