@@ -51,10 +51,12 @@
             "http://hl7.org/fhir/us/core/StructureDefinition/us-core-encounter"
           ]
         },
-        "class": {
-          "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
-          "code": "IMP"
-        },
+        "class": [
+          {
+            "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+            "code": "IMP"
+          }
+        ],
         "status": "finished",
         "id": "a2f52088-92f6-5846-ab4a-af71012ff2bf"
       },

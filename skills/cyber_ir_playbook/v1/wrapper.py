@@ -53,7 +53,6 @@ def tool(payload: str) -> str:
         "pr",
         "it_ops",
     ]
-
     inject_library = {
         "ransomware": ["ransom_note", "encrypted_files"],
         "credential": ["phishing_email", "vpn_login"],
@@ -67,7 +66,6 @@ def tool(payload: str) -> str:
         }
         for idx, inj in enumerate(injects)
     ]
-
     playbook = {
         "incident": incident,
         "steps": steps,
