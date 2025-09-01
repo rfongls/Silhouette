@@ -20,3 +20,17 @@
 
 > ⏱️ **Time windows are UTC**. `CYBER_PENTEST_WINDOW=09:00-17:00` is compared against `datetime.utcnow()`.
 > Convert your local window to UTC when setting this value.
+
+## Quickstart (Windows, offline-friendly)
+
+```bat
+scripts\win_bootstrap_security.bat
+```
+
+Outputs land in `out\security\manual\active\...`.
+
+**CLI without Click:**
+`python -m silhouette_core.cli recon --target sub.example.com --scope-file docs\cyber\scope_example.txt --profile version`
+
+**Full CLI with Click:**
+`pip install click==8.1.7` then use `python -m silhouette_core.cli ...` or the `silhouette` launcher if configured.

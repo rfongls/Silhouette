@@ -18,7 +18,7 @@ jobs:
       - name: Install
         run: |
           python -m pip install -U pip
-          pip install pytest
+          pip install click==8.1.7 pytest
       - name: Prepare offline seeds
         run: |
           mkdir -p data/security/seeds/cve data/security/seeds/kev
