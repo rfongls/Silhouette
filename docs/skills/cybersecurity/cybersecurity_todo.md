@@ -76,7 +76,7 @@ Legend: **Implement** (what to build) • **Test** (how to verify) • **DoD** (
 ## Phase 7 — Pentest Gates (Authorization & Scope)
 - **Implement:**
   - Enforce submission of **auth doc** (`--auth-doc`). ✅
-  - Require **scope file** detailing allowed targets.
+  - Require **scope file** detailing allowed targets. ✅
   - Ownership verification via DNS TXT, HTTP well-known, or allowlist entries.
   - Global kill-switch, deny-lists, throttles, schedule windows.
   - Audit log recording for all gate decisions.
@@ -92,7 +92,7 @@ Legend: **Implement** (what to build) • **Test** (how to verify) • **DoD** (
   - **Nmap:** profiles `safe`/`version`/`full` (last requires risk ack).
   - **DAST/API:** bounded crawler/fuzzer with excludes, auth support, 429/5xx backoff.
   - **NEW:** Normalize findings via schema + enrich with CVE cache, KEV list, MITRE ATT&CK mapping (all offline-first with seeded datasets).
-  - Scaffold stub module `skills/cyber_recon_scan`.
+  - Scaffold stub module `skills/cyber_recon_scan`. ✅
 - **Test:** scans on lab scope respect rate limits; produce inventory & enriched findings.
 - **DoD:** JSON inventory & findings saved; enrichment offline works.
 
@@ -105,7 +105,7 @@ Legend: **Implement** (what to build) • **Test** (how to verify) • **DoD** (
   - **IDS:** Zeek/Suricata normalize to CSV/Parquet.
   - **TLS decrypt:** SSLKEYLOGFILE support; limitations documented.
   - **Triage:** YARA/ClamAV on extracted files; anomaly stats (offline z-score models).
-  - Scaffold stub module `skills/cyber_netforensics`.
+  - Scaffold stub module `skills/cyber_netforensics`. ✅
 - **Test:** seeded PCAPs produce flows, alerts, decrypted sessions (when keys provided), triage hits.
 - **DoD:** end-to-end pipeline reproducible offline.
 
@@ -116,6 +116,6 @@ Legend: **Implement** (what to build) • **Test** (how to verify) • **DoD** (
   - Cloud security posture mgmt (ScoutSuite, Prowler; offline configs where possible).
   - SOAR connectors (export to Splunk/ELK/Jira; offline file export supported).
   - AI-assisted triage: deduplicate findings, prioritize by exploitability.
-  - Scaffold stub module `skills/cyber_extension`.
+  - Scaffold stub module `skills/cyber_extension`. ✅
 - **Test:** offline datasets confirm outputs without network.
 - **DoD:** extensions optional, gated by configs.
