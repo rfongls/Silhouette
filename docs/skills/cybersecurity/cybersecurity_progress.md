@@ -21,7 +21,6 @@
 - 2025-09-16 — Scaffold phase 6–10 modules
 - 2025-09-17 — Add CI test workflow and link Phase 6–10 docs
 - 2025-09-18 — Wire pentest gate/playbook/netforensics and add smoke tests
-- 2025-09-19 — Add incident templates and auth doc enforcement
 
 ## Risks / Notes
 - **Legal/Authorization:** never execute active modules without written authorization + verified scope.

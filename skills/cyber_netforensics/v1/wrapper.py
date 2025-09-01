@@ -4,7 +4,6 @@ from skills.cyber_common import write_result
 
 def tool(payload: str) -> str:
     """Placeholder network forensics processing.
-
     Input JSON: {"pcap":"capture.pcap","out_dir":"..."}
     """
     args = json.loads(payload or "{}")
