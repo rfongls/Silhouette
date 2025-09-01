@@ -9,7 +9,7 @@
 
 ## Project Summary
 
-Silhouette LLC will build a survivable, modular AI agent platform capable of operating offline, ingesting new skills, and evaluating code across multiple runtimes. The system emphasizes alignment, provenance, and continuous improvement through training, distillation, and quantization. Deliverables include cross-language evaluation harnesses, domain-specific toolpacks, compliance pipelines, and packaged releases for edge and enterprise environments.
+Silhouette LLC will build a survivable, modular AI agent platform capable of operating offline, ingesting new skills, and evaluating code across multiple runtimes. The system emphasizes alignment, provenance, and continuous improvement through training, distillation, and quantization. Deliverables include cross-language evaluation harnesses and a full suite of domain skills—interoperability (HL7, FHIR, C-CDA, X12), research (index, search, retrieve, read, cite), cybersecurity (Nmap, ZAP, Trivy, Checkov, control mapping), and governance (audit and consent)—alongside compliance pipelines and packaged releases for edge and enterprise environments.
 
 ---
 
@@ -90,20 +90,21 @@ All estimates follow industry-standard complexity buckets:
 
 ---
 
-### Phase 5: Interoperability & Domain Skills
+### Phase 5: Interoperability, Research, Cybersecurity & Governance Skills
 
 | Task Category                 | Description                                                                    | Estimated Hours |
 |-------------------------------|--------------------------------------------------------------------------------|-----------------|
 | HL7 ↔ FHIR Translators        | Mapping logic with validators and mock connectors                             | 10–15 (complex) |
 | C-CDA & X12 Connectors        | Additional healthcare data formats                                            | 10–15 (complex) |
-| Research Toolpack             | Offline PDF indexing and citation retrieval                                   | 8–12 (moderate) |
-| Cybersecurity Toolpack        | Containerized scans (Nmap, ZAP, Trivy, Checkov)                               | 10–15 (complex) |
+| Research Skill Suite          | `research_index`, `research_search`, `research_retrieve`, `research_read_pdf`, `research_cite` | 8–12 (moderate) |
+| Cybersecurity Skill Suite     | `cyber_nmap_scan`, `cyber_checkov_scan`, `cyber_checklist_cdse`, `cyber_control_mapper` | 10–15 (complex) |
+| Audit & Consent Skills        | `audit` and `consent` governance helpers                                      | 6–8 (simple)    |
 | Interoperability Docs         | Diagrams and workflow explanations                                            | 6–8 (simple)    |
 | Skill Testing & QA            | End-to-end validation across skills                                           | 8–12 (moderate) |
 | Skill Packaging & Versioning  | Registry updates and semantic version control                                 | 6–8 (simple)    |
 | Documentation & Guides        | User-facing skill instructions                                                | 4–6 (simple)    |
 
-**Phase 5 Total:** 62–91 hrs | $9,300–$13,650
+**Phase 5 Total:** 68–99 hrs | $10,200–$14,850
 
 ---
 
@@ -147,10 +148,10 @@ All estimates follow industry-standard complexity buckets:
 | Phase 2: Multi-Language Runtimes        | 52–78 hrs     | $7,800–$11,700        |
 | Phase 3: Training & Quantization        | 52–78 hrs     | $7,800–$11,700        |
 | Phase 4: Compliance & Provenance        | 54–79 hrs     | $8,100–$11,850        |
-| Phase 5: Interoperability Skills        | 62–91 hrs     | $9,300–$13,650        |
+| Phase 5: Domain Skills                  | 68–99 hrs     | $10,200–$14,850       |
 | Phase 6: Continuous Improvement         | 50–75 hrs     | $7,500–$11,250        |
 | Phase 7: Packaging & Training           | 41–61 hrs     | $6,150–$9,150         |
-| **Total Estimate**                      | **357–530 hrs** | **$53,550–$79,500** |
+| **Total Estimate**                      | **363–538 hrs** | **$54,450–$80,700** |
 
 ---
 
@@ -160,7 +161,7 @@ All estimates follow industry-standard complexity buckets:
 - Multi-language runtime evaluation harness and dashboards
 - Training, distillation, and quantization pipelines
 - Compliance, security, and watermarking utilities
-- HL7, FHIR, cybersecurity, and research toolpacks
+- HL7, FHIR, cybersecurity, research, audit, and consent toolpacks
 - Continuous learning flywheel with regression gates
 - Packaged releases, installer scripts, and training materials
 
