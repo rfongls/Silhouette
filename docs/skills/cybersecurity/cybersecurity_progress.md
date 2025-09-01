@@ -17,25 +17,25 @@
 
 ## Commits / PRs - Organize by date of PR
 - 2025-08-30 
-Finalize phases 0–5 offline pipeline
+- Finalize phases 0–5 offline pipeline
 
 - 2025-08-31
-Kick off Phase 6 runbook scaffolding
-Scaffold phase 6–10 modules
-Add CI test workflow and link Phase 6–10 docs
-Wire pentest gate/playbook/netforensics and add smoke tests
-Add incident templates and auth doc enforcement
-Centralize result writing and pass run directory through pentest wrappers
-Expand phase 6–10 docs and TODOs
-Complete phase 6–10 scaffolds with audit logs, profiles, and flow counts
-Parse PCAPs for packet/flow counts in netforensics
-Add playbook inject scheduling and pentest kill switch
-Document ownership verification and recon enrichment plans
+- Kick off Phase 6 runbook scaffolding
+- Scaffold phase 6–10 modules
+- Add CI test workflow and link Phase 6–10 docs
+- Wire pentest gate/playbook/netforensics and add smoke tests
+- Add incident templates and auth doc enforcement
+- Centralize result writing and pass run directory through pentest wrappers
+- Expand phase 6–10 docs and TODOs
+- Complete phase 6–10 scaffolds with audit logs, profiles, and flow counts
+- Parse PCAPs for packet/flow counts in netforensics
+- Add playbook inject scheduling and pentest kill switch
+- Document ownership verification and recon enrichment plans
 
 - 2025-09-01
-Detail outstanding tasks for phases 6–10 and expand TODOs
-Add gate deny-lists/schedule windows, recon enrichment, and flow indexing
-Finalize Phase 6–10 tasks with ownership checks, Nmap/DAST, and netforensics artifacts
+- Detail outstanding tasks for phases 6–10 and expand TODOs
+- Add gate deny-lists/schedule windows, recon enrichment, and flow indexing
+- Finalize Phase 6–10 tasks with ownership checks, Nmap/DAST, and netforensics artifacts
 
 ## Risks / Notes
 - **Legal/Authorization:** never execute active modules without written authorization + verified scope.
