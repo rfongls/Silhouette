@@ -1,3 +1,5 @@
+"""Audit utilities for FHIR operations."""
+
 from typing import Dict, Any
 import uuid
 import datetime as dt
