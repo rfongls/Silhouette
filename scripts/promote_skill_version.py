@@ -1,9 +1,9 @@
 #!/usr/bin/env python
 """
 Promote a skill to a new version:
-- Copies skills/<name>/<old_version>/ to skills/<name>/<new_version>/
-- Updates skills/<name>/__init__.py to re-export new_version
-- Updates skills/registry.yaml to set version: <new_version> for that skill
+- Copies silhouette_core/skills/<name>/<old_version>/ to silhouette_core/skills/<name>/<new_version>/
+- Updates silhouette_core/skills/<name>/__init__.py to re-export new_version
+- Updates silhouette_core/skills/registry.yaml to set version: <new_version> for that skill
 """
 import argparse
 import pathlib
@@ -18,7 +18,7 @@ def main():
     ap.add_argument("--to_version", required=True, help="e.g., v2")
     args = ap.parse_args()
 
-    skill_dir = pathlib.Path("skills") / args.name
+    skill_dir = pathlib.Path("silhouette_core/skills") / args.name
     src = skill_dir / args.from_version
     dst = skill_dir / args.to_version
     if not src.exists():
@@ -33,7 +33,7 @@ def main():
     initp = skill_dir / "__init__.py"
     initp.write_text(f"from .{args.to_version}.wrapper import tool\n", encoding="utf-8")
 
-    regp = pathlib.Path("skills/registry.yaml")
+    regp = pathlib.Path("silhouette_core/skills/registry.yaml")
     reg = {"skills": []}
     if regp.exists():
         reg = yaml.safe_load(regp.read_text(encoding="utf-8")) or {"skills": []}

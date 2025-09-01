@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 """
 Ingest docs -> chunk -> embed (stub-friendly) -> synthesize a skill wrapper + example + test
-and register it under skills/registry.yaml.
+and register it under silhouette_core/skills/registry.yaml.
 
 Usage:
   python scripts/ingest_skill.py --name textstat --docs docs_src/textstat.md --pattern "textstat.*" \
@@ -78,7 +78,7 @@ def main():
     top = _score_query(chunks, query)
     body = _synthesize_body([c for _, c in top])
 
-    pkg_dir = pathlib.Path("skills") / args.name
+    pkg_dir = pathlib.Path("silhouette_core/skills") / args.name
     mod_path = pkg_dir / "wrapper.py"
     _ensure_pkg(pkg_dir)
     wrapper = TEMPLATE_WRAPPER.format(imports="",
@@ -88,17 +88,17 @@ def main():
     mod_path.write_text(wrapper, encoding="utf-8")
 
     # test
-    test_dir = pathlib.Path("skills") / args.name / "tests"
+    test_dir = pathlib.Path("silhouette_core/skills") / args.name / "tests"
     _ensure_pkg(test_dir)
     sample = json.dumps("hello world")
     test_code = TEMPLATE_TEST.format(name=args.name,
-                                     module=f"skills.{args.name}.wrapper",
+                                     module=f"silhouette_core.skills.{args.name}.wrapper",
                                      entry=args.entry,
                                      sample=sample)
     (test_dir / f"test_{args.name}_smoke.py").write_text(test_code, encoding="utf-8")
 
     # registry append (idempotent best-effort)
-    regp = pathlib.Path("skills/registry.yaml")
+    regp = pathlib.Path("silhouette_core/skills/registry.yaml")
     reg = {"skills": []}
     if regp.exists():
         import yaml
@@ -106,11 +106,11 @@ def main():
     found = False
     for s in reg["skills"]:
         if s.get("name") == args.name:
-            s.update({"module": f"skills.{args.name}.wrapper", "entry": args.entry, "enabled": True, "description": args.desc})
+            s.update({"module": f"silhouette_core.skills.{args.name}.wrapper", "entry": args.entry, "enabled": True, "description": args.desc})
             found = True
             break
     if not found:
-        reg["skills"].append({"name": args.name, "module": f"skills.{args.name}.wrapper", "entry": args.entry, "enabled": True, "description": args.desc})
+        reg["skills"].append({"name": args.name, "module": f"silhouette_core.skills.{args.name}.wrapper", "entry": args.entry, "enabled": True, "description": args.desc})
     import yaml
     regp.write_text(yaml.safe_dump(reg, sort_keys=False), encoding="utf-8")
 
