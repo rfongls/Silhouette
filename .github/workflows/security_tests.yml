@@ -19,6 +19,13 @@ jobs:
           python -m pip install -U pip
           pip install -e .
           pip install click==8.1.7 pytest
+      - name: Prepare offline seeds
+        run: |
+          mkdir -p data/security/seeds/cve data/security/seeds/kev
+          test -f data/security/seeds/cve/cve_seed.json || printf '{ "CVE-0001": {"summary":"Demo CVE for offline tests","severity":5} }\n' > data/security/seeds/cve/cve_seed.json
+          test -f data/security/seeds/kev/kev_seed.json || printf '{ "cves": ["CVE-0001"] }\n' > data/security/seeds/kev/kev_seed.json
+          mkdir -p docs/cyber
+          test -f docs/cyber/scope_example.txt || printf 'example.com\n*.example.com\nsub.example.com\n' > docs/cyber/scope_example.txt
       - name: Run tests (offline)
         run: |
           pytest -q

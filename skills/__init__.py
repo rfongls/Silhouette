@@ -19,3 +19,8 @@ for sub in [
     except ModuleNotFoundError:
         pass
 
+# Lazy-redirect any unknown submodule to the new package
+def __getattr__(name):
+    mod = importlib.import_module(f"{_TARGET}.{name}")
+    sys.modules[f"{__name__}.{name}"] = mod
+    return mod
