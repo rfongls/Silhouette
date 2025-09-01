@@ -1,0 +1,19 @@
+{
+  "model_name_or_path": "codellama/CodeLlama-70b-Instruct-hf",
+  "train_file":            "modules/codex/data/train.jsonl",
+  "validation_file":       "modules/codex/data/valid.jsonl",
+  "output_dir":            "modules/codex/adapter/",
+  "lora_rank":             16,
+  "lora_alpha":            32,
+  "lora_target_modules":   ["q_proj", "v_proj"],
+  "train_batch_size":      4,
+  "eval_batch_size":       4,
+  "num_train_epochs":      3,
+  "learning_rate":         1e-4,
+  "mixed_precision":       "fp16",
+  "logging_steps":         100,
+  "save_steps":            500,
+  "evaluation_strategy":   "steps",
+  "eval_steps":            500,
+  "report_to":             "none"
+}

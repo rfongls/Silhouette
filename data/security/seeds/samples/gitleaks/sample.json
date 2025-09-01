@@ -1,0 +1,1 @@
+{ "findings": [ { "rule": "Generic Credential", "file": "app.conf", "severity": "HIGH" } ] }

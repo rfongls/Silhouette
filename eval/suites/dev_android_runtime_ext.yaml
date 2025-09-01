@@ -1,0 +1,39 @@
+# Silhouette Core — Cross-Language Agent Capability (Android/Gradle)
+# Evaluates agent-generated project structure and Gradle execution in Docker.
+# (Real Android SDK builds can run on self-hosted runners.)
+
+name: dev_android_runtime_ext
+cases:
+  - id: gradle_app_assemble
+    requires_model: true
+    requires_runtime: true
+    runtime: docker
+    image: gradle:8.7-jdk17
+    docker_extra: "-e GRADLE_USER_HOME=/gradle -v $GRADLE_CACHE:/gradle"
+    prompt: |
+      Create a minimal Android app project (Kotlin DSL) that assembles debug without SDK downloads (use placeholders).
+      Provide:
+      ```file: settings.gradle.kts
+      ```kts
+      rootProject.name = "HelloAndroid"; include(":app")
+      ```
+      ```file: app/build.gradle.kts
+      ```kts
+      plugins { id("com.android.application"); kotlin("android") version "1.9.24" }
+      android { namespace="com.example.hello"; compileSdk=34
+        defaultConfig { applicationId="com.example.hello"; minSdk=24; targetSdk=34; versionCode=1; versionName="1.0" } }
+      tasks.register("assembleDebug"){ doLast{ println("Assembled") } } // placeholder (no Android SDK)
+      ```
+      ```file: build.gradle.kts
+      ```kts
+      plugins { kotlin("android") version "1.9.24" apply false; id("com.android.application") version "8.6.0" apply false }
+      ```
+    expect_files:
+      - settings.gradle.kts
+      - build.gradle.kts
+      - app/build.gradle.kts
+    commands:
+      - gradle -v
+      - gradle :app:assembleDebug
+    expect_stdout_regex:
+      - "Assembled"

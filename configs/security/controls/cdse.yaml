@@ -1,0 +1,4 @@
+controls:
+  - id: CDSE-1
+    description: Security config baseline
+    evidence: configs/app.conf

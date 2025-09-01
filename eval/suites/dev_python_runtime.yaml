@@ -1,0 +1,28 @@
+name: dev_python_runtime
+cases:
+  - id: fastapi_hello
+    requires_model: true
+    requires_runtime: true
+    runtime: docker
+    image: python:3.11
+    prompt: |
+      Create app/main.py and tests/test_app.py for FastAPI.
+      ```file: app/main.py
+      ```python
+      from fastapi import FastAPI
+      app = FastAPI()
+      @app.get("/")
+      def read_root(): return {"msg":"hello"}
+      ```
+      ```file: tests/test_app.py
+      ```python
+      from fastapi.testclient import TestClient
+      from app.main import app
+      client = TestClient(app)
+      def test_root(): assert client.get("/").json()=={"msg":"hello"}
+      ```
+    expect_files: [app/main.py, tests/test_app.py]
+    commands:
+      - pip install fastapi uvicorn pytest
+      - pytest -q
+    expect_stdout_regex: ["1 passed"]

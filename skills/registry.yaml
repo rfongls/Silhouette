@@ -1,0 +1,89 @@
+skills:
+  - name: http_get_json
+    version: v1
+    entry: tool
+    enabled: true
+    description: "Fetch JSON from an HTTP endpoint with timeout and minimal error shaping."
+
+  - name: research_read_pdf
+    version: v1
+    entry: tool
+    enabled: true
+    description: "Read a PDF and return segmented sections."
+  - name: research_index
+    version: v1
+    entry: tool
+    enabled: true
+    description: "Update the local research index with sections."
+  - name: research_search
+    version: v1
+    entry: tool
+    enabled: true
+    description: "Search the local research index."
+  - name: research_retrieve
+    version: v1
+    entry: tool
+    enabled: true
+    description: "Retrieve top-K passages with doc/section IDs."
+  - name: research_cite
+    version: v1
+    entry: tool
+    enabled: true
+    description: "Format [n] citations from passage IDs."
+  - name: cyber_nmap_scan
+    version: v1
+    entry: tool
+    enabled: true
+    description: "Run an authorized Nmap scan (TCP/1000) on targets in scope file."
+  - name: cyber_zap_baseline
+    version: v1
+    entry: tool
+    enabled: true
+    description: "Run OWASP ZAP baseline scan against in-scope web target."
+  - name: cyber_trivy_scan
+    version: v1
+    entry: tool
+    enabled: true
+    description: "Scan a container image or directory for vulnerabilities (Trivy)."
+  - name: cyber_checkov_scan
+    version: v1
+    entry: tool
+    enabled: true
+    description: "Scan IaC (Terraform/CloudFormation/K8s) using Checkov."
+  - name: cyber_cis_audit
+    version: v1
+    entry: tool
+    enabled: true
+    description: "Run basic CIS-style local host checks (non-invasive)."
+  - name: cyber_vuln_lookup
+    version: v1
+    entry: tool
+    enabled: true
+    description: "Lookup CVE details from local NVD/OSV cache (offline)."
+
+  # RAG-to-Skill entries will be appended here by scripts/ingest_skill.py
+  - name: cyber_checklist_cdse
+    version: v1
+    entry: tool
+    enabled: true
+    description: "Return CDSE/NIST checklist items by domain."
+  - name: cyber_reference_cdse
+    version: v1
+    entry: tool
+    enabled: true
+    description: "Lookup CDSE/NIST reference sections and return citations."
+  - name: cyber_control_mapper
+    version: v1
+    entry: tool
+    enabled: true
+    description: "Map scan findings to CDSE/NIST control families."
+  - name: cyber_task_orchestrator
+    version: v1
+    entry: tool
+    enabled: true
+    description: "Perform orchestrated tasks (e.g., baseline web assessment) and write a cited report."
+  - name: cyber_report_writer
+    version: v1
+    entry: tool
+    enabled: true
+    description: "Compile Markdown report with findings, mapped controls, and references."

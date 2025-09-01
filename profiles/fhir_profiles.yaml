@@ -1,0 +1,8 @@
+active: "USCore-R4"
+profiles:
+  USCore-R4:
+    bundle_type: "collection"
+    obs_profile: "http://hl7.org/fhir/us/core/StructureDefinition/us-core-observation-lab"
+    patient_profile: "http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient"
+  PAS-R4:
+    prior_auth: "http://hl7.org/fhir/us/davinci-pas/StructureDefinition/profile-priorauthorization"

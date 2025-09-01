@@ -1,0 +1,10 @@
+controls:
+  - id: CIS-1
+    description: Ensure app config present
+    evidence: configs/app.conf
+  - id: CIS-2
+    description: Ensure app log present
+    evidence: logs/app.log
+  - id: CIS-3
+    description: Require missing file for test coverage
+    evidence: configs/missing.conf
