@@ -57,7 +57,7 @@ Legend: **Implement** (what to build) • **Test** (how to verify) • **DoD** (
 ## Phase 6 — Incident Response Playbooks & Tabletop
 - **Implement:**
   - Draft runbooks for ransomware, credential compromise, and PII exposure. ✅
-  - Build tabletop inject library and schedule planner.
+  - Build tabletop inject library and schedule planner. ✅
   - Define communication plan and contact tree templates. ✅
   - Scaffold stub module `skills/cyber_ir_playbook`. ✅
  - **Test:** render playbook pack; check section completeness.
@@ -70,7 +70,8 @@ Legend: **Implement** (what to build) • **Test** (how to verify) • **DoD** (
   - Enforce submission of **auth doc** (`--auth-doc`). ✅
   - Require **scope file** detailing allowed targets. ✅
   - Ownership verification via DNS TXT, HTTP well-known, or allowlist entries.
-  - Global kill-switch, deny-lists, throttles, schedule windows.
+  - Global kill-switch. ✅
+  - Deny-lists, throttles, schedule windows.
   - Audit log recording for all gate decisions. ✅
   - Scaffold stub module `skills/cyber_pentest_gate`. ✅
 - **Test:** any `security pentest *` without gates → exit; with gates → run.

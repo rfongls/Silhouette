@@ -16,7 +16,7 @@ This document describes the **Phase 6–10** scaffolds for the Cybersecurity Ski
 
 **Skill:** `skills/cyber_ir_playbook.v1.wrapper:tool`
 
-**Status:** basic playbooks with communication plan
+**Status:** playbooks with communication plan and inject schedule
 
 **CLI:**
 
@@ -34,10 +34,10 @@ Supported incidents: `ransomware`, `credential`, `pii` (falls back to generic).
 
 **Outputs:**
 
-* `<run>/active/ir_playbook.json` with incident-specific steps, communication plan, and contacts.
+* `<run>/active/ir_playbook.json` with incident-specific steps, communication plan, contacts, injects, and schedule.
 
 **Next Steps:**
-- Flesh out tabletop inject library and scheduling.
+- Expand inject scenarios and integrate scheduling with tabletop exercises.
 
 ---
 
@@ -45,7 +45,7 @@ Supported incidents: `ransomware`, `credential`, `pii` (falls back to generic).
 
 **Skill:** `skills/cyber_pentest_gate.v1.wrapper:tool`
 
-**Status:** scaffold with audit logging
+**Status:** scaffold with audit logging and global kill switch
 
 **CLI:**
 

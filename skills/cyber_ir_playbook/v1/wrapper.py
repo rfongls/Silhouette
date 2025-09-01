@@ -53,12 +53,26 @@ def tool(payload: str) -> str:
         "pr",
         "it_ops",
     ]
-
+    inject_library = {
+        "ransomware": ["ransom_note", "encrypted_files"],
+        "credential": ["phishing_email", "vpn_login"],
+        "pii": ["lost_laptop", "db_dump"],
+    }
+    injects = inject_library.get(incident, ["generic_alert"])
+    schedule = [
+        {
+            "minute": idx * 15,
+            "inject": inj,
+        }
+        for idx, inj in enumerate(injects)
+    ]
     playbook = {
         "incident": incident,
         "steps": steps,
         "communication_plan": plan,
         "contacts": contacts,
+        "injects": injects,
+        "schedule": schedule,
     }
     path = write_result("ir_playbook", playbook, run_dir=out_dir)
     return json.dumps({"ok": True, "result": path})
