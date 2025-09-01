@@ -5,7 +5,7 @@ cases:
     requires_runtime: true
     prompt: |
       Produce **two files** using the file fence convention:
-      1) file: app/main.py -> Program that imports skills.http_get_json.wrapper.tool and prints the length of the JSON keys from https://httpbin.org/json
+      1) file: app/main.py -> Program that imports silhouette_core.skills.http_get_json.wrapper.tool and prints the length of the JSON keys from https://httpbin.org/json
       2) file: tests/test_app.py -> pytest test that asserts program import works.
       Use code fences with exact file paths.
     expect_files:

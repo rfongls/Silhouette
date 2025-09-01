@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 from pydantic import BaseModel
-from skills.hl7_drafter import draft_message, send_message
+from silhouette_core.skills.hl7_drafter import draft_message, send_message
 
 router = APIRouter()
 

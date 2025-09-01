@@ -1,6 +1,6 @@
 from __future__ import annotations
 from typing import Dict, Any
-from skills.hl7_drafter import draft_message
+from silhouette_core.skills.hl7_drafter import draft_message
 from interfaces.hl7.mllp_client import send
 
 

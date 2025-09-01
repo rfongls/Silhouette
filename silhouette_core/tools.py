@@ -30,7 +30,7 @@ class ToolRegistry:
         except Exception as e:
             return f"[tool:{name}] error: {e}"
 
-    def load_skills_from_registry(self, path: str = "skills/registry.yaml") -> None:
+    def load_skills_from_registry(self, path: str = "silhouette_core/skills/registry.yaml") -> None:
         p = pathlib.Path(path)
         if not p.exists():
             return
@@ -44,9 +44,9 @@ class ToolRegistry:
             mod_path = skill.get("module")
             if not mod_path:
                 if version:
-                    mod_path = f"skills.{name}.{version}.wrapper"
+                    mod_path = f"silhouette_core.skills.{name}.{version}.wrapper"
                 else:
-                    mod_path = f"skills.{name}.wrapper"
+                    mod_path = f"silhouette_core.skills.{name}.wrapper"
 
             if not (mod_path and name):
                 continue

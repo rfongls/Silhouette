@@ -5,7 +5,7 @@ LLM Orchestrator Smoke Test
 Uses an OpenAI-compatible endpoint (vLLM/Ollama) to:
   1) Ask the model to send an HL7 message (natural language)
   2) Model calls the draft_and_send tool (OpenAI Tools API) OR emits a JSON tool call
-  3) We execute the tool locally (skills.hl7_drafter.draft_and_send)
+  3) We execute the tool locally (silhouette_core.skills.hl7_drafter.draft_and_send)
   4) We send the tool result back to the model for a short summary
 Prints the ACK and exits 0 on AA, 1 otherwise.
 
@@ -31,7 +31,7 @@ from typing import Any, Dict, List
 
 import requests
 
-from skills.hl7_drafter import draft_and_send  # our local tool
+from silhouette_core.skills.hl7_drafter import draft_and_send  # our local tool
 
 DEFAULT_BASE = os.getenv("OPENAI_API_BASE", "http://localhost:8000/v1")
 DEFAULT_KEY = os.getenv("OPENAI_API_KEY", "not-needed-for-local")
