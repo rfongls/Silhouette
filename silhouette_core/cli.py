@@ -4,7 +4,53 @@ import pathlib
 import sys
 from pathlib import Path
 
-import click
+try:
+    import click  # full UX if present
+except Exception:
+    click = None
+
+if click is None:
+    def _security_argparse_main():
+        import argparse, json
+        from silhouette_core.skills.cyber_pentest_gate.v1.wrapper import tool as gate_tool
+        from silhouette_core.skills.cyber_recon_scan.v1.wrapper import tool as recon_tool
+        from silhouette_core.skills.cyber_netforensics.v1.wrapper import tool as netf_tool
+        from silhouette_core.skills.cyber_ir_playbook.v1.wrapper import tool as play_tool
+
+        p = argparse.ArgumentParser(prog="silhouette security (fallback)")
+        sub = p.add_subparsers(dest="cmd", required=True)
+
+        spg = sub.add_parser("gate")
+        spg.add_argument("--target", required=True)
+        spg.add_argument("--scope-file", required=True)
+        spg.add_argument("--auth-doc", required=True)
+        spg.add_argument("--out", dest="out_dir")
+
+        spr = sub.add_parser("recon")
+        spr.add_argument("--target", required=True)
+        spr.add_argument("--scope-file", required=True)
+        spr.add_argument("--profile", choices=["safe","version","full"], default="safe")
+        spr.add_argument("--out", dest="out_dir")
+
+        spn = sub.add_parser("netforensics")
+        spn.add_argument("--pcap", required=True)
+        spn.add_argument("--out", dest="out_dir")
+
+        spp = sub.add_parser("playbook")
+        spp.add_argument("--incident", default="ransomware")
+        spp.add_argument("--out", dest="out_dir")
+
+        args = p.parse_args()
+        payload = json.dumps(vars(args))
+        if args.cmd == "gate":        print(gate_tool(payload))
+        elif args.cmd == "recon":     print(recon_tool(payload))
+        elif args.cmd == "netforensics": print(netf_tool(payload))
+        elif args.cmd == "playbook":  print(play_tool(payload))
+
+    if __name__ == "__main__":
+        _security_argparse_main()
+    raise SystemExit
+
 import yaml
 
 from . import __version__
@@ -12,7 +58,7 @@ from .analysis import hotpaths as analysis_hotpaths
 from .analysis import service as analysis_service
 from .analysis import suggest_tests as analysis_suggest_tests
 from .analysis import summarize_ci as analysis_summarize_ci
-from skills.cybersecurity.cli import cli as security_cli
+from silhouette_core.skills.cybersecurity.cli import cli as security_cli
 from .impact.impact_set import compute_impact
 from .patch.pr_body import compose_pr_body
 from .patch.propose import propose_patch as propose_patch_fn
