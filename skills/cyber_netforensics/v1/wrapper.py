@@ -50,7 +50,6 @@ def _analyze_pcap(pcap_path: Path) -> tuple[int, Counter[tuple[bytes, bytes, int
             flows[(src_ip, dst_ip, src_port, dst_port, proto)] += 1
     return packets, flows
 
-
 def _extract_artifacts(pcap_path: Path, run_dir: Path) -> list[str]:
     if not pcap_path.exists():
         return []
