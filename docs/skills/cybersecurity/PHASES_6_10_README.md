@@ -16,7 +16,7 @@ This document describes the **Phase 6–10** scaffolds for the Cybersecurity Ski
 
 **Skill:** `skills/cyber_ir_playbook.v1.wrapper:tool`
 
-**Status:** scaffold
+**Status:** scaffold with templates
 
 **CLI:**
 
@@ -30,10 +30,12 @@ python -m silhouette_core.cli security --ack-authorized pentest playbook --incid
 {"incident":"ransomware","out_dir":"<run>"}
 ```
 
+Supported incidents: `ransomware`, `credential`, `pii` (falls back to generic).
+
 **Outputs:**
 
-* `<run>/active/ir_playbook.json` with a minimal step list.
-* 
+* `<run>/active/ir_playbook.json` with incident-specific steps.
+
 ---
 
 ## Phase 7 — Pentest Gates (Authorization & Scope)
@@ -57,7 +59,7 @@ python -m silhouette_core.cli security --ack-authorized pentest gate \
 {"target":"example.com","scope_file":"docs/cyber/scope_example.txt","auth_doc":"auth.pdf","out_dir":"<run>"}
 ```
 
-**Behavior:** Denies if target not in scope or missing `auth_doc`.
+**Behavior:** Denies if target not in scope or missing/invalid `auth_doc`.
 
 **Outputs:**
 

@@ -9,8 +9,8 @@
 - Phase 3 — Controls Mapping: ☑
 - Phase 4 — Defensive Scanners: ☑
 - Phase 5 — Risk Scoring & Reporting: ☑
-- Phase 6 — IR Playbooks & Tabletop: ☐ (scaffolded)
-- Phase 7 — Pentest Gates (Auth/Scope/Verification): ☐ (scaffolded)
+- Phase 6 — IR Playbooks & Tabletop: ◐ (templates)
+- Phase 7 — Pentest Gates (Auth/Scope/Verification): ◐ (auth check)
 - Phase 8 — Recon & Active Testing (Nmap/DAST/API): ☐ (scaffolded)
 - Phase 9 — Network Forensics Toolkit: ☐ (scaffolded)
 - Phase 10 — Extensions (Cloud / SOAR / AI): ☐ (scaffolded)
