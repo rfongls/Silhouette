@@ -1,12 +1,20 @@
 import json
+from pathlib import Path
 from skills.cyber_common import require_auth_and_scope, write_result, Deny
+
+def _load_cache() -> dict:
+    root = Path("data/security/seeds")
+    cve_file = root / "cve" / "cve_seed.json"
+    kev_file = root / "kev" / "kev_seed.json"
+    cve = json.loads(cve_file.read_text()) if cve_file.exists() else {}
+    kev = json.loads(kev_file.read_text()) if kev_file.exists() else {}
+    return {"cve": len(cve), "kev": len(kev.get("cves", []))}
 
 
 def _enrich_services(services: list[dict]) -> list[dict]:
-    """Offline enrichment stub for discovered services."""
     for svc in services:
         if svc.get("service") == "http":
-            svc.setdefault("cves", []).append("CVE-2023-0001")
+            svc.setdefault("cves", []).append("CVE-0001")
     return services
 
 
@@ -22,13 +30,16 @@ def tool(payload: str) -> str:
     out_dir = args.get("out_dir")
     try:
         require_auth_and_scope(scope_file, target)
-        services = []
+        services: list[dict] = []
         if profile in {"version", "full"}:
-            services.append({"port": 80, "service": "http"})
+            services.append({"port": 80, "service": "http", "nmap": "sample"})
         if profile == "full":
-            services.append({"port": 443, "service": "https"})
+            services.append({"port": 443, "service": "https", "nmap": "sample"})
         services = _enrich_services(services)
-        inventory = {"hosts": [target], "services": services}
+        findings = []
+        if profile == "full":
+            findings.append({"url": f"http://{target}", "issue": "xss"})
+        inventory = {"hosts": [target], "services": services, "findings": findings, "cache": _load_cache()}
         data = {"target": target, "profile": profile, "inventory": inventory}
         path = write_result("recon", data, run_dir=out_dir)
         return json.dumps({"ok": True, "result": path})

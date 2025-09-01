@@ -66,6 +66,18 @@ def tool(payload: str) -> str:
         }
         for idx, inj in enumerate(injects)
     ]
+    drill = [
+        {
+            "team": team,
+            "inject": inj,
+        }
+        for team, inj in zip(["red", "blue", "white"] * len(injects), injects)
+    ]
+    after_action = [
+        "what_went_well",
+        "what_to_improve",
+        "follow_up_actions",
+    ]
     playbook = {
         "incident": incident,
         "steps": steps,
@@ -73,6 +85,8 @@ def tool(payload: str) -> str:
         "contacts": contacts,
         "injects": injects,
         "schedule": schedule,
+        "drill": drill,
+        "after_action": after_action,
     }
     path = write_result("ir_playbook", playbook, run_dir=out_dir)
     return json.dumps({"ok": True, "result": path})

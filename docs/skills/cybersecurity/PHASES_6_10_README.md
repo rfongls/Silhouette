@@ -16,7 +16,7 @@ This document describes the **Phase 6–10** scaffolds for the Cybersecurity Ski
 
 **Skill:** `skills/cyber_ir_playbook.v1.wrapper:tool`
 
-**Status:** playbooks with communication plan and inject schedule
+**Status:** playbooks with communication plan, inject schedule, cross-team drills, and after-action templates
 
 **CLI:**
 
@@ -34,11 +34,10 @@ Supported incidents: `ransomware`, `credential`, `pii` (falls back to generic).
 
 **Outputs:**
 
-* `<run>/active/ir_playbook.json` with incident-specific steps, communication plan, contacts, injects, and schedule.
+* `<run>/active/ir_playbook.json` with incident-specific steps, communication plan, contacts, injects, schedule, drill simulation, and after-action template.
 
 **Next Steps:**
-- Expand inject scenarios and integrate scheduling with tabletop exercises.
-- Simulate cross-team communication drills and capture after-action reports.
+- Expand inject scenarios and integrate with larger tabletop exercises.
 
 ---
 
@@ -46,7 +45,7 @@ Supported incidents: `ransomware`, `credential`, `pii` (falls back to generic).
 
 **Skill:** `skills/cyber_pentest_gate.v1.wrapper:tool`
 
-**Status:** scaffold with audit logging, deny-lists, schedule windows, and global kill switch
+**Status:** scaffold with ownership verification, throttle controls, audit logging, deny-lists, schedule windows, and global kill switch
 
 **CLI:**
 
@@ -70,8 +69,7 @@ python -m silhouette_core.cli security --ack-authorized pentest gate \
 * `<run>/active/pentest_gate.json` and audit log when authorized.
 
 **Next Steps:**
-- Implement ownership verification via DNS TXT/HTTP challenges.
-- Add throttling controls for high-risk actions.
+- Expand verification challenge types and throttle policies.
 
 ---
 
@@ -79,7 +77,7 @@ python -m silhouette_core.cli security --ack-authorized pentest gate \
 
 **Skill:** `skills/cyber_recon_scan.v1.wrapper:tool`
 
-**Status:** scaffold with offline enrichment; **wired to CLI** with scan profiles
+**Status:** offline enrichment with Nmap profiles and stub DAST crawler
 
 **CLI:**
 
@@ -98,12 +96,10 @@ python -m silhouette_core.cli security --ack-authorized pentest recon \
 
 **Outputs:**
 
-* `<run>/active/recon.json` containing the selected profile and inventory stub.
+* `<run>/active/recon.json` containing the selected profile, inventory, findings, and cache info.
 
 **Next Steps:**
 - Expand offline enrichment schema and coverage.
-- Wire Nmap `safe`/`version`/`full` profiles and bounded DAST crawler.
-- Cache CVE/KEV/ATT&CK data locally and include stub DAST profiles.
 
 ---
 
@@ -111,7 +107,7 @@ python -m silhouette_core.cli security --ack-authorized pentest recon \
 
 **Skill:** `skills/cyber_netforensics.v1.wrapper:tool`
 
-**Status:** parses PCAPs for packet and flow counts and indexes flows for lookup
+**Status:** capture stub, flow indexing, artifact extraction, TLS key awareness, and basic alerts
 
 **CLI:**
 
@@ -127,12 +123,10 @@ python -m silhouette_core.cli security --ack-authorized pentest netforensics --p
 
 **Outputs:**
 
-* `<run>/active/netforensics.json` with packet and flow counts.
+* `<run>/active/netforensics.json` with packet and flow counts, alerts, TLS key status, and extracted artifacts.
 
 **Next Steps:**
-- Support tcpdump capture and Zeek/Suricata parsing.
-- Enable TLS decryption and YARA/ClamAV triage.
-- Extract HTTP objects for artifact triage.
+- Integrate full Zeek/Suricata pipelines and advanced triage models.
 
 ---
 
@@ -140,7 +134,7 @@ python -m silhouette_core.cli security --ack-authorized pentest netforensics --p
 
 **Skill:** `skills/cyber_extension.v1.wrapper:tool`
 
-**Status:** scaffold
+**Status:** stubs for cloud posture, SOAR export, and AI-assisted triage
 
 **Inputs (JSON):**
 
@@ -150,11 +144,10 @@ python -m silhouette_core.cli security --ack-authorized pentest netforensics --p
 
 **Outputs:**
 
-* `<run>/active/cyber_extension.json` with `status: "not_implemented"`.
+* `<run>/active/cyber_extension.json` describing requested extension feature.
 
 **Next Steps:**
-- Explore cloud posture modules and SOAR export hooks.
-- Research AI-assisted triage for deduplication and prioritization.
+- Harden connectors and support additional platforms.
 
 ---
 

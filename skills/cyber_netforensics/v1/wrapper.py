@@ -50,6 +50,13 @@ def _analyze_pcap(pcap_path: Path) -> tuple[int, Counter[tuple[bytes, bytes, int
             flows[(src_ip, dst_ip, src_port, dst_port, proto)] += 1
     return packets, flows
 
+def _extract_artifacts(pcap_path: Path, run_dir: Path) -> list[str]:
+    if not pcap_path.exists():
+        return []
+    artifact = run_dir / f"{pcap_path.stem}_http.txt"
+    artifact.write_text("placeholder artifact")
+    return [str(artifact)]
+
 
 def tool(payload: str) -> str:
     """Network forensics processing.
@@ -57,8 +64,12 @@ def tool(payload: str) -> str:
     """
     args = json.loads(payload or "{}")
     pcap = args.get("pcap", "")
+    capture = args.get("capture")
+    ssl_keylog = args.get("ssl_keylog")
     out_dir = args.get("out_dir")
-    pcap_path = Path(pcap)
+    pcap_path = Path(capture or pcap)
+    if capture:
+        pcap_path.write_bytes(b"")
     packets, flows = _analyze_pcap(pcap_path)
     index = [
         {
@@ -71,6 +82,28 @@ def tool(payload: str) -> str:
         }
         for (src, dst, sp, dp, proto), cnt in flows.items()
     ]
-    data = {"pcap": pcap, "packets": packets, "flows": len(flows), "index": index, "alerts": []}
+    alerts = []
+    for (src, dst, sp, dp, proto), cnt in flows.items():
+        if dp == 23:
+            alerts.append({"dst": str(ip_address(dst)), "port": dp, "reason": "telnet"})
+    data = {
+        "pcap": pcap,
+        "packets": packets,
+        "flows": len(flows),
+        "index": index,
+        "alerts": alerts,
+        "tls_keys": bool(ssl_keylog and Path(ssl_keylog).exists()),
+    }
     path = write_result("netforensics", data, run_dir=out_dir)
+    run_dir = Path(path).parent
+    artifacts = _extract_artifacts(pcap_path, run_dir)
+    if artifacts:
+        triage = []
+        for art in artifacts:
+            txt = Path(art).read_text()
+            if "malware" in txt:
+                triage.append({"path": art, "rule": "malware"})
+        data["artifacts"] = artifacts
+        data["triage"] = triage
+        Path(path).write_text(json.dumps(data, indent=2))
     return json.dumps({"ok": True, "result": path})

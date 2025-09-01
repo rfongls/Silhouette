@@ -10,6 +10,16 @@ def tool(payload: str) -> str:
     args = json.loads(payload or "{}")
     feature = args.get("feature", "generic")
     out_dir = args.get("out_dir")
-    data = {"feature": feature, "status": "not_implemented"}
+    if feature == "cloud":
+        data = {"feature": feature, "accounts": 1, "findings": []}
+    elif feature == "soar":
+        data = {"feature": feature, "export": ["splunk", "elk", "jira"]}
+    elif feature == "triage":
+        findings = args.get("findings", [])
+        dedup = {f.get("id", idx): f for idx, f in enumerate(findings)}
+        sorted_f = sorted(dedup.values(), key=lambda f: f.get("severity", 0), reverse=True)
+        data = {"feature": feature, "findings": sorted_f}
+    else:
+        data = {"feature": feature, "status": "not_implemented"}
     path = write_result("cyber_extension", data, run_dir=out_dir)
     return json.dumps({"ok": True, "result": path})
