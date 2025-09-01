@@ -29,6 +29,7 @@
 - 2025-09-24 — Add playbook inject scheduling and pentest kill switch
 - 2025-09-25 — Document ownership verification and recon enrichment plans
 - 2025-09-26 — Detail outstanding tasks for phases 6–10 and expand TODOs
+- 2025-09-27 — Add gate deny-lists/schedule windows, recon enrichment, and flow indexing
 
 ## Risks / Notes
 - **Legal/Authorization:** never execute active modules without written authorization + verified scope.

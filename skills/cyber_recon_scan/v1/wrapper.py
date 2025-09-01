@@ -2,6 +2,14 @@ import json
 from skills.cyber_common import require_auth_and_scope, write_result, Deny
 
 
+def _enrich_services(services: list[dict]) -> list[dict]:
+    """Offline enrichment stub for discovered services."""
+    for svc in services:
+        if svc.get("service") == "http":
+            svc.setdefault("cves", []).append("CVE-2023-0001")
+    return services
+
+
 def tool(payload: str) -> str:
     """Perform placeholder recon on the target.
 
@@ -19,6 +27,7 @@ def tool(payload: str) -> str:
             services.append({"port": 80, "service": "http"})
         if profile == "full":
             services.append({"port": 443, "service": "https"})
+        services = _enrich_services(services)
         inventory = {"hosts": [target], "services": services}
         data = {"target": target, "profile": profile, "inventory": inventory}
         path = write_result("recon", data, run_dir=out_dir)

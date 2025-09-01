@@ -72,10 +72,11 @@ Legend: **Implement** (what to build) • **Test** (how to verify) • **DoD** (
   - Require **scope file** detailing allowed targets. ✅
   - Ownership verification via DNS TXT, HTTP well-known, or static allowlist entries.
   - Global kill-switch. ✅
-  - Deny-lists, throttles, schedule windows for high-risk actions.
+  - Deny-lists and schedule windows for high-risk actions. ✅
+  - Throttles for high-risk actions.
   - Audit log recording for all gate decisions. ✅
   - Scaffold stub module `skills/cyber_pentest_gate`. ✅
-  - Track gate decision history with user and timestamp.
+  - Track gate decision history with user and timestamp. ✅
 - **Test:** any `security pentest *` without gates → exit; with gates → run.
 - **DoD:** gates enforced and audited.
 
@@ -87,7 +88,7 @@ Legend: **Implement** (what to build) • **Test** (how to verify) • **DoD** (
   - **Recon profiles:** `safe`/`version`/`full` with rate limits. ✅
   - **Nmap:** profiles `safe`/`version`/`full` (last requires risk ack) with offline script results.
   - **DAST/API:** bounded crawler/fuzzer with excludes, auth support, 429/5xx backoff.
-  - **NEW:** Normalize findings via schema + enrich with CVE cache, KEV list, MITRE ATT&CK mapping (all offline-first with seeded datasets).
+  - Normalize findings via schema + enrich with CVE cache, KEV list, MITRE ATT&CK mapping (offline seeds). ✅
   - Cache CVE/KEV/ATT&CK data locally; ship stub DAST profiles.
   - Scaffold stub module `skills/cyber_recon_scan`. ✅
 - **Test:** scans on lab scope respect rate limits; produce inventory & enriched findings.
@@ -104,7 +105,8 @@ Legend: **Implement** (what to build) • **Test** (how to verify) • **DoD** (
   - **Triage:** YARA/ClamAV on extracted files; anomaly stats (offline z-score models).
   - **Flow counts** from PCAPs (packet/flow analysis). ✅
   - Scaffold stub module `skills/cyber_netforensics`. ✅
-  - Index flows and extracted artifacts for quick lookup.
+  - Index flows for quick lookup. ✅
+  - Extract artifacts for quick lookup.
 - **Test:** seeded PCAPs produce flows, alerts, decrypted sessions (when keys provided), triage hits.
 - **DoD:** end-to-end pipeline reproducible offline.
 

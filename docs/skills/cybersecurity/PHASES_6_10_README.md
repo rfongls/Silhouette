@@ -46,7 +46,7 @@ Supported incidents: `ransomware`, `credential`, `pii` (falls back to generic).
 
 **Skill:** `skills/cyber_pentest_gate.v1.wrapper:tool`
 
-**Status:** scaffold with audit logging and global kill switch
+**Status:** scaffold with audit logging, deny-lists, schedule windows, and global kill switch
 
 **CLI:**
 
@@ -71,8 +71,7 @@ python -m silhouette_core.cli security --ack-authorized pentest gate \
 
 **Next Steps:**
 - Implement ownership verification via DNS TXT/HTTP challenges.
-- Add deny-lists and schedule windows for restricted runs.
-- Record gate decisions with user, timestamp, and reason in audit log.
+- Add throttling controls for high-risk actions.
 
 ---
 
@@ -80,7 +79,7 @@ python -m silhouette_core.cli security --ack-authorized pentest gate \
 
 **Skill:** `skills/cyber_recon_scan.v1.wrapper:tool`
 
-**Status:** scaffold; **wired to CLI** with scan profiles
+**Status:** scaffold with offline enrichment; **wired to CLI** with scan profiles
 
 **CLI:**
 
@@ -102,7 +101,7 @@ python -m silhouette_core.cli security --ack-authorized pentest recon \
 * `<run>/active/recon.json` containing the selected profile and inventory stub.
 
 **Next Steps:**
-- Normalize and enrich findings offline.
+- Expand offline enrichment schema and coverage.
 - Wire Nmap `safe`/`version`/`full` profiles and bounded DAST crawler.
 - Cache CVE/KEV/ATT&CK data locally and include stub DAST profiles.
 
@@ -112,7 +111,7 @@ python -m silhouette_core.cli security --ack-authorized pentest recon \
 
 **Skill:** `skills/cyber_netforensics.v1.wrapper:tool`
 
-**Status:** parses PCAPs for packet and flow counts
+**Status:** parses PCAPs for packet and flow counts and indexes flows for lookup
 
 **CLI:**
 
@@ -133,7 +132,7 @@ python -m silhouette_core.cli security --ack-authorized pentest netforensics --p
 **Next Steps:**
 - Support tcpdump capture and Zeek/Suricata parsing.
 - Enable TLS decryption and YARA/ClamAV triage.
-- Extract HTTP objects and index flows for quick lookup.
+- Extract HTTP objects for artifact triage.
 
 ---
 
