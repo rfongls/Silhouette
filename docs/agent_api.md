@@ -5,13 +5,13 @@ core loop reads a task, decides on a tool, executes it, then emits a result.
 
 ## Tool Registry
 
-Tools are loaded from `skills/registry.yaml`. Each entry points to a versioned
+Tools are loaded from `silhouette_core/skills/registry.yaml`. Each entry points to a versioned
 skill (`name@vN`) that exposes a callable. The registry is loaded at startup and
 made available through the `ToolRegistry`.
 
 ```yaml
-# skills/registry.yaml
-math@v1: skills/math.py
+# silhouette_core/skills/registry.yaml
+math@v1: silhouette_core/skills/math.py
 ```
 
 ## Using a Tool
@@ -30,5 +30,5 @@ payload, and returns a JSON response:
 {"type": "result", "payload": {"value": 4}}
 ```
 
-New skills dropped into `skills/registry.yaml` are auto-loaded on the next
+New skills dropped into `silhouette_core/skills/registry.yaml` are auto-loaded on the next
 run, allowing the agent to grow capabilities over time.

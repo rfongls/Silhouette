@@ -104,7 +104,7 @@ def factorial(n: int) -> int:
 
 Skills extend the agent.
 
-Registry: `skills/registry.yaml`
+Registry: `silhouette_core/skills/registry.yaml`
 
 ```yaml
 - name: http_get_json
