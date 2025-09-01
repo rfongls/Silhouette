@@ -39,6 +39,10 @@ Supported incidents: `ransomware`, `credential`, `pii` (falls back to generic).
 **Next Steps:**
 - Flesh out tabletop inject library and scheduling.
 
+**Next Steps:**
+- Flesh out tabletop inject library and scheduling.
+- Add communication plan templates and contact tree.
+
 ---
 
 ## Phase 7 — Pentest Gates (Authorization & Scope)
@@ -71,6 +75,10 @@ python -m silhouette_core.cli security --ack-authorized pentest gate \
 **Next Steps:**
 - Implement ownership verification via DNS TXT/HTTP.
 
+**Next Steps:**
+- Implement ownership verification via DNS TXT/HTTP.
+- Record audit logs for gate decisions.
+
 ---
 
 ## Phase 8 — Recon & Active Testing (Safe Profiles)
@@ -101,6 +109,10 @@ python -m silhouette_core.cli security --ack-authorized pentest recon \
 **Next Steps:**
 - Normalize and enrich findings offline.
 
+**Next Steps:**
+- Add scan profiles (`safe`, `version`, `full`) with rate limits.
+- Normalize and enrich findings offline.
+
 ---
 
 ## Phase 9 — Network Forensics Toolkit
@@ -124,6 +136,10 @@ python -m silhouette_core.cli security --ack-authorized pentest netforensics --p
 **Outputs:**
 
 * `<run>/active/netforensics.json` with flow counts.
+
+**Next Steps:**
+- Support tcpdump capture and Zeek/Suricata parsing.
+- Enable TLS decryption and YARA/ClamAV triage.
 
 **Next Steps:**
 - Support tcpdump capture and Zeek/Suricata parsing.
