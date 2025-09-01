@@ -1,6 +1,6 @@
 import json
 from pathlib import Path
-from skills.cybersecurity.normalize.normalizer import normalize_generic
+from silhouette_core.skills.cybersecurity.normalize.normalizer import normalize_generic
 
 
 def test_normalizer_keys():

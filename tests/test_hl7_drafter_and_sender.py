@@ -2,7 +2,7 @@ import asyncio
 
 import pytest
 
-from skills.hl7_drafter import draft_message, send_message
+from silhouette_core.skills.hl7_drafter import draft_message, send_message
 
 
 async def _echo_server(reader, writer):
