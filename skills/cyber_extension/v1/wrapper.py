@@ -21,5 +21,10 @@ def tool(payload: str) -> str:
         data = {"feature": feature, "findings": sorted_f}
     else:
         data = {"feature": feature, "status": "not_implemented"}
+    from datetime import datetime, timezone
+    data.update({
+        "schema": "extension.v1",
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    })
     path = write_result("cyber_extension", data, run_dir=out_dir)
     return json.dumps({"ok": True, "result": path})
