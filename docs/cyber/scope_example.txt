@@ -1,7 +1,6 @@
-# Example scope file for pentest/recon scaffolds (domains)
 # exact domain
 example.com
 # wildcard subdomains allowed
 *.example.com
-# add IPs/CIDRs in future phases
-
+# explicit subdomain used in tests
+sub.example.com
