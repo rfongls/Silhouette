@@ -6,7 +6,59 @@
 
 Legend: **Implement** (what to build) • **Test** (how to verify) • **DoD** (Definition of Done)
 
-**Completed:** Phases 0–5 (policy through reporting) delivered in offline-first baseline. CI test workflow and Phase 6–10 docs linked. Unified run directory for pentest scaffolds and added smoke tests for gate, playbook, and netforensics. The roadmap below tracks upcoming work for phases 6–10.
+## Phase 0 — Policy & Scaffold ✅
+
+* **Implement:** repo layout (`skills/cybersecurity/`), policy banner, global `--ack-authorized` gate.
+* **Test:** invoking any active command without the flag exits with guidance.
+* **DoD:** safety gate enforced in all active subcommands.
+
+---
+
+## Phase 1 — CLI Surface & Skill Manifest ✅
+
+* **Implement:** CLI group `security` with subcommands (`evidence`, `map-controls`, `scan`, `report`, `pentest`, `assess`, `pcap`, `ids`).
+* **Test:** `python -m silhouette_core.cli security -h` shows commands; each supports `--dry-run`.
+* **DoD:** CLI parses; dry-run writes stubs.
+
+---
+
+## Phase 2 — Evidence Capture (Defensive) ✅
+
+* **Implement:** collect authorized artifacts (logs/configs/IaC/cloud posture) with PII redaction; bundle + hash.
+* **Test:** run against sample dirs; verify redaction and checksums.
+* **DoD:** `security evidence --source <path>` writes bundles + evidence pack zip.
+
+---
+
+## Phase 3 — Controls Mapping (Multi-Framework) ✅
+
+* **Implement:** YAML maps under `configs/security/controls/*.yaml`; produce coverage matrix (JSON/HTML/CSV).
+* **Test:** seeded evidence triggers expected controls; missing evidence marked.
+* **DoD:** `security map-controls --framework cis_v8` emits coverage artifacts.
+
+---
+
+## Phase 4 — Defensive Scanners (Read-only Wrappers) ✅
+
+* **Implement:** wrappers for Trivy, Checkov, Grype, tfsec, kics, lynis, gitleaks, pip-audit, npm-audit.
+* **Test:** run on seeded samples; ensure NO external scanning by default.
+* **DoD:** `security scan --tool <scanner>` emits SARIF/JSON locally.
+
+---
+
+## Phase 5 — Risk Scoring & Reporting ✅
+
+* **Implement:** severity counts, CVSS/OWASP scoring, CVE/KEV enrichment, HTML/MD reporting.
+* **Test:** seeded findings yield stable scorecards; evidence links work.
+* **DoD:** `security report --format html --offline` writes report pack.
+
+---
+
+## Phase 6 — Incident Response Playbooks & Tabletop
+
+* **Implement:** runbooks (ransomware/credential/PII), tabletop injects, comms plan, scaffold `skills/cyber_ir_playbook`.
+* **Test:** render playbook pack; check section completeness.
+* **DoD:** `security --ack-authorized pentest playbook --incident ransomware` outputs checklist.
 
 ---
 

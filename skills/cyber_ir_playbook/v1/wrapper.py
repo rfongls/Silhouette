@@ -10,7 +10,6 @@ def tool(payload: str) -> str:
     args = json.loads(payload or "{}")
     incident = args.get("incident", "generic")
     out_dir = args.get("out_dir")
-
     templates = {
         "ransomware": [
             "identify",
