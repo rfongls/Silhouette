@@ -10,9 +10,9 @@ resources:
   - { hl7_path: "PID.7",      fhir_resource: "Patient",   fhir_path: "birthDate", transform: "toDate" }
 
   # ---------- Encounter ----------
-  # Some fhir.resources builds model Encounter.class as a LIST; map into a list explicitly.
-  - { hl7_path: "PV1.2",      fhir_resource: "Encounter", fhir_path: "class[].code" }
-  - { hl7_path: "PV1.2",      fhir_resource: "Encounter", fhir_path: "class[].system",
+  # PV1-2 -> Encounter.class coding
+  - { hl7_path: "PV1.2",      fhir_resource: "Encounter", fhir_path: "class.code" }
+  - { hl7_path: "PV1.2",      fhir_resource: "Encounter", fhir_path: "class.system",
       transform: "literal:http://terminology.hl7.org/CodeSystem/v3-ActCode" }
   - { hl7_path: "PV1.19.1",   fhir_resource: "Encounter", fhir_path: "identifier[0].value" }
   - { hl7_path: "PV1.44",     fhir_resource: "Encounter", fhir_path: "period.start", transform: "toDate" }
