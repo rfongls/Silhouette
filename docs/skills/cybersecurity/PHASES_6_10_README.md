@@ -107,7 +107,7 @@ python -m silhouette_core.cli security --ack-authorized pentest recon \
 
 **Skill:** `skills/cyber_netforensics.v1.wrapper:tool`
 
-**Status:** scaffold with basic flow count
+**Status:** parses PCAPs for packet and flow counts
 
 **CLI:**
 
@@ -123,7 +123,7 @@ python -m silhouette_core.cli security --ack-authorized pentest netforensics --p
 
 **Outputs:**
 
-* `<run>/active/netforensics.json` with flow counts.
+* `<run>/active/netforensics.json` with packet and flow counts.
 
 **Next Steps:**
 - Support tcpdump capture and Zeek/Suricata parsing.

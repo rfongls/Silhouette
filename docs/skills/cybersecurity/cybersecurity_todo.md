@@ -98,7 +98,7 @@ Legend: **Implement** (what to build) • **Test** (how to verify) • **DoD** (
   - **IDS:** Zeek/Suricata normalize to CSV/Parquet.
   - **TLS decrypt:** SSLKEYLOGFILE support; limitations documented.
   - **Triage:** YARA/ClamAV on extracted files; anomaly stats (offline z-score models).
-  - **Flow counts** from PCAPs. ✅
+  - **Flow counts** from PCAPs (packet/flow analysis). ✅
   - Scaffold stub module `skills/cyber_netforensics`. ✅
 - **Test:** seeded PCAPs produce flows, alerts, decrypted sessions (when keys provided), triage hits.
 - **DoD:** end-to-end pipeline reproducible offline.
