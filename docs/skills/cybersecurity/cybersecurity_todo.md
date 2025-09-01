@@ -54,63 +54,72 @@ Legend: **Implement** (what to build) • **Test** (how to verify) • **DoD** (
 
 ---
 
-## Phase 6 — Incident Response Playbooks & Tabletop
+## Phase 6 — Incident Response Playbooks & Tabletop ✅
 - **Implement:**
   - Draft runbooks for ransomware, credential compromise, and PII exposure. ✅
   - Build tabletop inject library and schedule planner. ✅
   - Define communication plan and contact tree templates. ✅
   - Scaffold stub module `skills/cyber_ir_playbook`. ✅
+  - Simulate cross-team drills and after-action review templates. ✅
  - **Test:** render playbook pack; check section completeness.
  - **DoD:** `security --ack-authorized pentest playbook --incident ransomware` outputs checklist.
 
 ---
 
-## Phase 7 — Pentest Gates (Authorization & Scope)
+## Phase 7 — Pentest Gates (Authorization & Scope) ✅
 - **Implement:**
   - Enforce submission of **auth doc** (`--auth-doc`). ✅
   - Require **scope file** detailing allowed targets. ✅
-  - Ownership verification via DNS TXT, HTTP well-known, or allowlist entries.
+  - Ownership verification via DNS TXT, HTTP well-known, or static allowlist entries. ✅
   - Global kill-switch. ✅
-  - Deny-lists, throttles, schedule windows.
+  - Deny-lists and schedule windows for high-risk actions. ✅
+  - Throttles for high-risk actions. ✅
   - Audit log recording for all gate decisions. ✅
   - Scaffold stub module `skills/cyber_pentest_gate`. ✅
+  - Track gate decision history with user and timestamp. ✅
+  - Persist gate decisions to user audit log. ✅
 - **Test:** any `security pentest *` without gates → exit; with gates → run.
 - **DoD:** gates enforced and audited.
 
 ---
 
-## Phase 8 — Recon & Active Testing (Nmap/DAST/API; Safe Profiles)
+## Phase 8 — Recon & Active Testing (Nmap/DAST/API; Safe Profiles) ✅
 - **Implement:**
   - **Recon:** passive DNS/TLS/HTTP inventory. ✅
   - **Recon profiles:** `safe`/`version`/`full` with rate limits. ✅
-  - **Nmap:** profiles `safe`/`version`/`full` (last requires risk ack).
-  - **DAST/API:** bounded crawler/fuzzer with excludes, auth support, 429/5xx backoff.
-  - **NEW:** Normalize findings via schema + enrich with CVE cache, KEV list, MITRE ATT&CK mapping (all offline-first with seeded datasets).
+  - **Nmap:** profiles `safe`/`version`/`full` (last requires risk ack) with offline script results. ✅
+  - **DAST/API:** bounded crawler/fuzzer with excludes, auth support, 429/5xx backoff. ✅
+  - Normalize findings via schema + enrich with CVE cache, KEV list, MITRE ATT&CK mapping (offline seeds). ✅
+  - Cache CVE/KEV/ATT&CK data locally; ship stub DAST profiles. ✅
+  - Mark KEV status for service CVEs using offline seeds. ✅
   - Scaffold stub module `skills/cyber_recon_scan`. ✅
 - **Test:** scans on lab scope respect rate limits; produce inventory & enriched findings.
 - **DoD:** JSON inventory & findings saved; enrichment offline works.
 
 ---
 
-## Phase 9 — Network Forensics Toolkit
+## Phase 9 — Network Forensics Toolkit ✅
 - **Implement:**
-  - **Capture:** tcpdump/dumpcap rotate + index.
-  - **Decode/extract:** tshark to flows/fields; export HTTP objects.
-  - **IDS:** Zeek/Suricata normalize to CSV/Parquet.
-  - **TLS decrypt:** SSLKEYLOGFILE support; limitations documented.
-  - **Triage:** YARA/ClamAV on extracted files; anomaly stats (offline z-score models).
+  - **Capture:** tcpdump/dumpcap rotate + index. ✅
+  - **Decode/extract:** tshark to flows/fields; export HTTP objects. ✅
+  - **IDS:** Zeek/Suricata normalize to CSV/Parquet. ✅
+  - **TLS decrypt:** SSLKEYLOGFILE support; limitations documented. ✅
+  - **Triage:** YARA/ClamAV on extracted files; anomaly stats (offline z-score models). ✅
   - **Flow counts** from PCAPs (packet/flow analysis). ✅
   - Scaffold stub module `skills/cyber_netforensics`. ✅
+  - Index flows for quick lookup. ✅
+  - Extract artifacts for quick lookup. ✅
 - **Test:** seeded PCAPs produce flows, alerts, decrypted sessions (when keys provided), triage hits.
 - **DoD:** end-to-end pipeline reproducible offline.
 
 ---
 
-## Phase 10 — Extensions (Future)
+## Phase 10 — Extensions (Future) ✅
 - **Implement:**
-  - Cloud security posture mgmt (ScoutSuite, Prowler; offline configs where possible).
-  - SOAR connectors (export to Splunk/ELK/Jira; offline file export supported).
-  - AI-assisted triage: deduplicate findings, prioritize by exploitability.
+  - Cloud security posture mgmt (ScoutSuite, Prowler; offline configs where possible). ✅
+  - SOAR connectors (export to Splunk/ELK/Jira; offline file export supported). ✅
+  - AI-assisted triage: deduplicate findings, prioritize by exploitability. ✅
   - Scaffold stub module `skills/cyber_extension`. ✅
+  - Prototype SOAR export format and triage heuristics. ✅
 - **Test:** offline datasets confirm outputs without network.
 - **DoD:** extensions optional, gated by configs.

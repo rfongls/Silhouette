@@ -82,8 +82,8 @@ The end state (Phase 10) is a **production-ready agent system** that can:
 * **Offline-first mode** – deterministic stub generation when models are unavailable. See [Offline Mode](docs/Offline_Mode.md).
 * **Training adapters** – SFT + KD wrappers (student models distilled from teacher traces). See [Training](docs/Training.md) and [Knowledge Distillation](docs/Knowledge_Distillation.md).
 * **Research Toolpack (offline)** – read PDF → index (SQLite FTS5) → search/retrieve → cite [n]. Requires citations for research prompts.
-* **Cybersecurity Toolpack** – authorized scans & audits — Nmap (host/top-1000), OWASP ZAP baseline, Trivy (image/fs), Checkov (IaC), CIS local checks, CVE lookup; scope-guarded & containerized.
-* **Cybersecurity Reference Pack** – CDSE/NIST checklists and references mapped to findings, plus task orchestration that produces cited assessment reports.
+* **Cybersecurity Toolpack** – authorized scans & audits — Nmap (host/top-1000), OWASP ZAP baseline, Trivy (image/fs), Checkov (IaC), CIS local checks, CVE lookup; scope-guarded & containerized. See [cybersecurity skill docs](docs/skills/cybersecurity/README.md).
+* **Cybersecurity Reference Pack** – CDSE/NIST checklists and references mapped to findings, plus task orchestration that produces cited assessment reports. See [cybersecurity skill docs](docs/skills/cybersecurity/README.md).
 * **Interoperability Toolkit** – HL7 v2, C-CDA, and X12 translators with mock connectors, validators, and end-to-end tests. See [HL7 skill docs](docs/skills/hl7/).
 * **Data Flywheel v2** – runtime traces auto-promoted to curated datasets by lane.
 * **Compliance** – SPDX license scan, redaction rules, configurable thresholds. See [Security](docs/Security.md).
@@ -92,6 +92,10 @@ The end state (Phase 10) is a **production-ready agent system** that can:
 * **Self-replication** – export profiles, distill knowledge, quantize models, package clones. See [Knowledge Distillation](docs/Knowledge_Distillation.md), [Quantization](docs/Quantization.md), and [Package Clone](docs/Package_Clone.md).
 * **Release governance** – structured release pipeline with attached compliance and provenance artifacts.
 * **Customer licensing** – issue per-customer license files and embed IDs into WATERMARK.json. See [Security](docs/Security.md).
+
+### Cybersecurity at a glance
+
+Offline-first defensive scans and gated pentest scaffolds covering incident playbooks, authorization gates, recon profiling, network forensics, and extension stubs. See [docs/skills/cybersecurity/](docs/skills/cybersecurity/README.md).
 
 ### Interoperability at a glance
 
