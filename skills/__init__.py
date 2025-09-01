@@ -1,6 +1,6 @@
 """
-Compat shim so legacy imports like `from skills.xyz import ...`
-resolve to `silhouette_core.skills.xyz` after the refactor.
+Compat shim to redirect legacy `skills` package imports to
+`silhouette_core.skills` after the refactor.
 """
 import importlib, sys
 

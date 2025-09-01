@@ -31,7 +31,7 @@ from typing import Any, Dict, List
 
 import requests
 
-from skills.hl7_drafter import draft_and_send  # our local tool
+from silhouette_core.skills.hl7_drafter import draft_and_send  # our local tool
 
 DEFAULT_BASE = os.getenv("OPENAI_API_BASE", "http://localhost:8000/v1")
 DEFAULT_KEY = os.getenv("OPENAI_API_KEY", "not-needed-for-local")

@@ -3,7 +3,7 @@
 Validate clinical payloads end-to-end using bundled validators and profiles.
 
 ```python
-from skills.interoperability import InteropSkill
+from silhouette_core.skills.interoperability import InteropSkill
 
 skill = InteropSkill()
 result = skill.validate(payload, "hl7")
