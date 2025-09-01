@@ -93,11 +93,12 @@ def pentest_group(ctx):
 @pentest_group.command('recon')
 @click.option('--target', required=True, help='Target hostname/domain (must be in scope)')
 @click.option('--scope-file', default='docs/cyber/scope_example.txt', show_default=True, help='Scope file path')
+@click.option('--profile', default='safe', type=click.Choice(['safe','version','full']), show_default=True)
 @click.option('--dry-run', is_flag=True)
 @click.pass_context
-def pentest_recon(ctx, target, scope_file, dry_run):
+def pentest_recon(ctx, target, scope_file, profile, dry_run):
     """Scaffold: call recon tool wrapper behind the pentest gate."""
-    run_dir = _record(ctx, 'pentest.recon', {'target': target, 'scope_file': scope_file, 'dry_run': dry_run})
+    run_dir = _record(ctx, 'pentest.recon', {'target': target, 'scope_file': scope_file, 'profile': profile, 'dry_run': dry_run})
     if dry_run:
         click.echo(str(run_dir))
         return
@@ -107,6 +108,7 @@ def pentest_recon(ctx, target, scope_file, dry_run):
         payload = json.dumps({
             "target": target,
             "scope_file": scope_file,
+            "profile": profile,
             "out_dir": str(run_dir),
         })
         result = json.loads(recon_tool(payload))
