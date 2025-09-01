@@ -8,7 +8,7 @@ from fastapi import APIRouter, Form, Request
 from fastapi.responses import HTMLResponse
 from starlette.templating import Jinja2Templates
 
-from skills.hl7_drafter import draft_message, send_message
+from silhouette_core.skills.hl7_drafter import draft_message, send_message
 
 router = APIRouter()
 templates = Jinja2Templates(directory="templates")
