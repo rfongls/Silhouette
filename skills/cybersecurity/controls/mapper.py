@@ -1,6 +1,7 @@
 import json
 from pathlib import Path
 import yaml
+import csv
 
 
 def map_controls(framework: str, evidence_dir: Path, run_dir: Path) -> None:
@@ -19,7 +20,8 @@ def map_controls(framework: str, evidence_dir: Path, run_dir: Path) -> None:
 
     controls_dir = run_dir / 'controls'
     controls_dir.mkdir(exist_ok=True, parents=True)
-    (controls_dir / 'coverage.json').write_text(json.dumps({'controls': coverage}, indent=2))
+    payload = {'controls': coverage}
+    (controls_dir / 'coverage.json').write_text(json.dumps(payload, indent=2))
 
     # simple HTML
     rows = '\n'.join(
@@ -28,3 +30,16 @@ def map_controls(framework: str, evidence_dir: Path, run_dir: Path) -> None:
     )
     html = f"<html><body><table><tr><th>ID</th><th>Description</th><th>Status</th></tr>{rows}</table></body></html>"
     (controls_dir / 'coverage.html').write_text(html)
+
+    # CSV export
+    with (controls_dir / 'coverage.csv').open('w', newline='') as f:
+        w = csv.DictWriter(f, fieldnames=['id', 'description', 'status', 'evidence'])
+        w.writeheader()
+        evidence_lookup = {c['id']: c.get('evidence', '') for c in controls}
+        for c in coverage:
+            w.writerow({
+                'id': c['id'],
+                'description': c['description'],
+                'status': c['status'],
+                'evidence': evidence_lookup.get(c['id'], '')
+            })

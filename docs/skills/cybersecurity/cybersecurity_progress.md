@@ -16,7 +16,7 @@
 - Phase 10 — Extensions (Cloud / SOAR / AI): ☐
 
 ## Commits / PRs
-- _Add entries here as you merge (SHA, date, phase)._
+- 2025-08-31 — Finalize phases 0–5 offline pipeline
 
 ## Risks / Notes
 - **Legal/Authorization:** never execute active modules without written authorization + verified scope.

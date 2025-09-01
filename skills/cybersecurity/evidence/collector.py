@@ -45,15 +45,16 @@ def collect_evidence(source: Path, run_dir: Path) -> Path:
 
     runio = RunIO()
     # checksums and manifest
-    entries = []
-    checksums = []
+    entries: list[dict] = []
+    checksums: list[dict] = []
     patterns = _load_redact_rules(Path('configs/security/redact_rules.yaml'))
     for file in originals.rglob('*'):
         if file.is_file():
             rel = file.relative_to(originals).as_posix()
             checksum = runio.sha256sum(file)
-            entries.append({'file': rel})
-            checksums.append({'file': rel, 'sha256': checksum})
+            stat = file.stat()
+            entries.append({'file': rel, 'size': stat.st_size, 'mtime': int(stat.st_mtime)})
+            checksums.append({'file': rel, 'sha256': checksum, 'size': stat.st_size, 'mtime': int(stat.st_mtime)})
             text = file.read_text(errors='ignore')
             red_text = _redact_text(text, patterns)
             out_file = redacted / rel
@@ -65,11 +66,11 @@ def collect_evidence(source: Path, run_dir: Path) -> Path:
     manifest_path.write_text(json.dumps({'files': entries}, indent=2))
     checksums_path = evidence_dir / 'checksums.csv'
     with checksums_path.open('w', newline='') as f:
-        writer = csv.DictWriter(f, fieldnames=['file', 'sha256'])
+        writer = csv.DictWriter(f, fieldnames=['file', 'sha256', 'size', 'mtime'])
         writer.writeheader()
         writer.writerows(checksums)
 
-    # initial evidence pack
+    # initial evidence pack (privacy: redacted only + metadata + outputs)
     build_evidence_pack(run_dir)
     return evidence_dir
 
@@ -80,20 +81,18 @@ def build_evidence_pack(run_dir: Path) -> Path:
     pack_dir.mkdir(parents=True, exist_ok=True)
     pack_path = pack_dir / 'pack.zip'
     with zipfile.ZipFile(pack_path, 'w', zipfile.ZIP_DEFLATED) as z:
-        for src, arcbase in [
-            (evidence_dir / 'originals', 'evidence/originals'),
-            (evidence_dir / 'redacted', 'evidence/redacted'),
-        ]:
-            if src.exists():
-                for f in src.rglob('*'):
-                    if f.is_file():
-                        z.write(f, f"{arcbase}/{f.relative_to(src)}")
+        # Privacy: include ONLY redacted evidence + metadata
+        red = evidence_dir / 'redacted'
+        if red.exists():
+            for f in red.rglob('*'):
+                if f.is_file():
+                    z.write(f, f"evidence/redacted/{f.relative_to(red)}")
         for name in ['manifest.json', 'checksums.csv']:
             p = evidence_dir / name
             if p.exists():
                 z.write(p, f"evidence/{name}")
         controls_dir = run_dir / 'controls'
-        for name in ['coverage.json', 'coverage.html']:
+        for name in ['coverage.json', 'coverage.html', 'coverage.csv']:
             p = controls_dir / name
             if p.exists():
                 z.write(p, f"controls/{name}")

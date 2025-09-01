@@ -119,6 +119,7 @@ def pentest_dast(ctx, dry_run):
 def pentest_api(ctx, dry_run):
     run_dir = _record(ctx, 'pentest.api', {'dry_run': dry_run})
     click.echo(str(run_dir))
+
 # placeholders for other subcommands and stubs
 @cli.command('assess')
 @click.option('--dry-run', is_flag=True)
@@ -126,12 +127,14 @@ def pentest_api(ctx, dry_run):
 def assess_cmd(ctx, dry_run):
     run_dir = _record(ctx, 'assess', {'dry_run': dry_run})
     click.echo(str(run_dir))
+
 @cli.command('capture')
 @click.option('--dry-run', is_flag=True)
 @click.pass_context
 def capture_cmd(ctx, dry_run):
     run_dir = _record(ctx, 'capture', {'dry_run': dry_run})
     click.echo(str(run_dir))
+
 @cli.command('pcap')
 @click.option('--dry-run', is_flag=True)
 @click.pass_context

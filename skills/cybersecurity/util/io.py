@@ -16,7 +16,7 @@ class RunIO:
         if (self.out_root / 'run.json').exists():
             self._run_dir = self.out_root
             return self._run_dir
-        ts = dt.datetime.utcnow().replace(microsecond=0).isoformat()
+        ts = dt.datetime.utcnow().strftime("%Y%m%dT%H%M%SZ")
         run_dir = self.out_root / ts
         run_dir.mkdir(parents=True, exist_ok=True)
         self._run_dir = run_dir

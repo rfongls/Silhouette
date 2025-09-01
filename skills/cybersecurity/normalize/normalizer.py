@@ -60,6 +60,95 @@ def normalize_generic(tool: str, raw: Dict[str, Any]) -> List[Dict[str, Any]]:
                 'identifiers': [vid] if vid else [],
                 'recommended_action': '',
             })
+    elif tool == 'tfsec':
+        for r in raw.get('results', []):
+            findings.append({
+                'tool': tool,
+                'target': r.get('location', ''),
+                'title': r.get('rule_id', ''),
+                'description': '',
+                'severity': SEVERITY_MAP.get(r.get('severity', '').upper(), 'info'),
+                'category': 'iac/misconfig',
+                'location': r.get('resource', ''),
+                'evidence': {},
+                'identifiers': [r.get('rule_id')],
+                'recommended_action': '',
+            })
+    elif tool == 'kics':
+        for q in raw.get('queries', []):
+            files = q.get('files', []) or [{}]
+            f = files[0]
+            findings.append({
+                'tool': tool,
+                'target': f.get('fileName', ''),
+                'title': q.get('id', ''),
+                'description': q.get('issue', ''),
+                'severity': SEVERITY_MAP.get(q.get('severity', '').upper(), 'info'),
+                'category': 'iac/misconfig',
+                'location': f.get('fileName', ''),
+                'evidence': {},
+                'identifiers': [q.get('id')],
+                'recommended_action': '',
+            })
+    elif tool == 'lynis':
+        for w in raw.get('warnings', []):
+            findings.append({
+                'tool': tool,
+                'target': '',
+                'title': w.get('id', ''),
+                'description': w.get('description', ''),
+                'severity': SEVERITY_MAP.get(w.get('severity', '').upper(), 'info'),
+                'category': 'host/baseline',
+                'location': '',
+                'evidence': {},
+                'identifiers': [w.get('id')],
+                'recommended_action': '',
+            })
+    elif tool == 'gitleaks':
+        for f in raw.get('findings', []):
+            findings.append({
+                'tool': tool,
+                'target': f.get('file', ''),
+                'title': f.get('rule', ''),
+                'description': '',
+                'severity': SEVERITY_MAP.get(f.get('severity', '').upper(), 'info'),
+                'category': 'secrets',
+                'location': f.get('file', ''),
+                'evidence': {},
+                'identifiers': [],
+                'recommended_action': '',
+            })
+    elif tool == 'pip_audit':
+        for d in raw.get('dependencies', []):
+            for v in d.get('vulns', []) or []:
+                findings.append({
+                    'tool': tool,
+                    'target': d.get('name', ''),
+                    'title': v.get('id', ''),
+                    'description': '',
+                    'severity': SEVERITY_MAP.get(v.get('severity', '').upper(), 'info'),
+                    'category': 'sca',
+                    'location': d.get('version', ''),
+                    'evidence': {},
+                    'identifiers': [v.get('id')],
+                    'recommended_action': '',
+                })
+    elif tool == 'npm_audit':
+        for a in raw.get('advisories', []):
+            ids = a.get('cves') or []
+            sev = a.get('severity', '').upper()
+            findings.append({
+                'tool': tool,
+                'target': a.get('module_name', ''),
+                'title': ids[0] if ids else a.get('module_name', ''),
+                'description': '',
+                'severity': SEVERITY_MAP.get(sev, 'info'),
+                'category': 'sca',
+                'location': '',
+                'evidence': {},
+                'identifiers': ids,
+                'recommended_action': '',
+            })
     else:
         findings.append({'tool': tool, 'target': '', 'title': 'stub', 'description': '', 'severity': 'info', 'category': '', 'location': '', 'evidence': {}, 'identifiers': [], 'recommended_action': ''})
     return findings

@@ -17,7 +17,14 @@ jobs:
       - run: pip install -e .
       - run: |
           python -m silhouette_core.cli security evidence --source docs/fixtures/security_sample --dry-run
-          python -m silhouette_core.cli security scan --tool trivy --target docs/fixtures/app --use-seed
+          python -m silhouette_core.cli security scan --tool trivy       --target docs/fixtures/app   --use-seed
+          python -m silhouette_core.cli security scan --tool checkov     --target docs/fixtures/infra --use-seed
+          python -m silhouette_core.cli security scan --tool grype       --target docs/fixtures/app   --use-seed
+          python -m silhouette_core.cli security scan --tool tfsec       --target docs/fixtures/infra --use-seed
+          python -m silhouette_core.cli security scan --tool kics        --target docs/fixtures/infra --use-seed
+          python -m silhouette_core.cli security scan --tool gitleaks    --target docs/fixtures/security_sample --use-seed
+          python -m silhouette_core.cli security scan --tool pip_audit   --target docs/fixtures/app   --use-seed
+          python -m silhouette_core.cli security scan --tool npm_audit   --target docs/fixtures/app   --use-seed
           latest=$(ls -d out/security/2* | tail -n1)
           python -m silhouette_core.cli security map-controls --framework cis_v8 --evidence $latest/evidence
           python -m silhouette_core.cli security report --format html --in $latest --offline

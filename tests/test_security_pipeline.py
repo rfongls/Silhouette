@@ -1,5 +1,4 @@
 import json
-import json
 import subprocess
 import sys
 import zipfile
@@ -26,6 +25,8 @@ def test_pipeline(tmp_path):
     coverage = json.loads((run_dir / 'controls' / 'coverage.json').read_text())
     statuses = {c['id']: c['status'] for c in coverage['controls']}
     assert statuses['CIS-1'] == 'met'
+    assert statuses['CIS-3'] == 'missing'
+    assert (run_dir / 'controls' / 'coverage.csv').exists()
 
     # scan
     run(['security', '--out', str(run_dir), 'scan', '--tool', 'trivy', '--target', 'docs/fixtures/app', '--use-seed'])
@@ -42,3 +43,4 @@ def test_pipeline(tmp_path):
         names = z.namelist()
         assert 'controls/coverage.json' in names
         assert 'scans/grype/normalized.json' in names
+        assert 'controls/coverage.csv' in names
