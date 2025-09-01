@@ -54,7 +54,7 @@ Legend: **Implement** (what to build) • **Test** (how to verify) • **DoD** (
 
 ---
 
-## Phase 6 — Incident Response Playbooks & Tabletop
+## Phase 6 — Incident Response Playbooks & Tabletop ✅
 - **Implement:**
   - Draft runbooks for ransomware, credential compromise, and PII exposure. ✅
   - Build tabletop inject library and schedule planner. ✅
@@ -66,7 +66,7 @@ Legend: **Implement** (what to build) • **Test** (how to verify) • **DoD** (
 
 ---
 
-## Phase 7 — Pentest Gates (Authorization & Scope)
+## Phase 7 — Pentest Gates (Authorization & Scope) ✅
 - **Implement:**
   - Enforce submission of **auth doc** (`--auth-doc`). ✅
   - Require **scope file** detailing allowed targets. ✅
@@ -83,7 +83,7 @@ Legend: **Implement** (what to build) • **Test** (how to verify) • **DoD** (
 
 ---
 
-## Phase 8 — Recon & Active Testing (Nmap/DAST/API; Safe Profiles)
+## Phase 8 — Recon & Active Testing (Nmap/DAST/API; Safe Profiles) ✅
 - **Implement:**
   - **Recon:** passive DNS/TLS/HTTP inventory. ✅
   - **Recon profiles:** `safe`/`version`/`full` with rate limits. ✅
@@ -98,7 +98,7 @@ Legend: **Implement** (what to build) • **Test** (how to verify) • **DoD** (
 
 ---
 
-## Phase 9 — Network Forensics Toolkit
+## Phase 9 — Network Forensics Toolkit ✅
 - **Implement:**
   - **Capture:** tcpdump/dumpcap rotate + index. ✅
   - **Decode/extract:** tshark to flows/fields; export HTTP objects. ✅
@@ -114,7 +114,7 @@ Legend: **Implement** (what to build) • **Test** (how to verify) • **DoD** (
 
 ---
 
-## Phase 10 — Extensions (Future)
+## Phase 10 — Extensions (Future) ✅
 - **Implement:**
   - Cloud security posture mgmt (ScoutSuite, Prowler; offline configs where possible). ✅
   - SOAR connectors (export to Splunk/ELK/Jira; offline file export supported). ✅

@@ -1,6 +1,6 @@
 # Cybersecurity Skill — Progress Log
 
-**Current Phase:** 6–10 — Refinement and Validation
+**Current Phase:** 6–10 — Completed
 
 ## Phase Status
 - Phase 0 — Policy & Scaffold: ☑
@@ -40,6 +40,7 @@
 — Add gate deny-lists/schedule windows, recon enrichment, and flow indexing
 — Finalize Phase 6–10 tasks with ownership checks, Nmap/DAST, and netforensics artifacts
 — Persist pentest gate audit history and flag KEV CVEs during recon
+— Mark phases 6–10 complete
 
 ## Risks / Notes
 - **Legal/Authorization:** never execute active modules without written authorization + verified scope.
