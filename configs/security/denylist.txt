@@ -1,4 +1,0 @@
-127.0.0.0/8
-0.0.0.0/0
-localhost
-metadata.google.internal

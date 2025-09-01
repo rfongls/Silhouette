@@ -1,9 +1,0 @@
-edge:
-  max_workers: 1
-  throttle_interval: 0.2
-mid-tier:
-  max_workers: 2
-  throttle_interval: 0.1
-core:
-  max_workers: 4
-  throttle_interval: 0.0

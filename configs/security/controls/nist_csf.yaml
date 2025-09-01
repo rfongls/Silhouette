@@ -1,7 +1,0 @@
-controls:
-  - id: ID.AM-1
-    description: Asset inventory maintained
-    evidence: configs/app.conf
-  - id: PR.PT-1
-    description: Audit logs maintained
-    evidence: logs/app.log

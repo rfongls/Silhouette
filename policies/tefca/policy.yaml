@@ -1,9 +1,0 @@
-purpose_of_use:
-  allowed: ["TREATMENT", "PAYMENT", "OPERATIONS"]
-consent:
-  default_opt_in: true
-  require_patient_ack: true
-retention_days: 365
-audit:
-  emit_fhir_auditevent: true
-  record_disclosures: true

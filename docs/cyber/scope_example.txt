@@ -1,6 +1,0 @@
-# exact domain
-example.com
-# wildcard subdomains allowed
-*.example.com
-# explicit subdomain used in tests
-sub.example.com

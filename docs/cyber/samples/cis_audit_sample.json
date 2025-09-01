@@ -1,7 +1,0 @@
-{
-  "results": {
-    "ssh_permit_root_login": "no",
-    "passwd_root_maxdays": "90",
-    "world_writable_etc_sample": ["/etc/example"]
-  }
-}

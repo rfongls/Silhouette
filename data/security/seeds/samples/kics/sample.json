@@ -1,1 +1,0 @@
-{ "queries": [ { "id": "KICS-1", "severity": "INFO", "files": [ { "fileName": "main.tf" } ], "issue": "Sample issue" } ] }

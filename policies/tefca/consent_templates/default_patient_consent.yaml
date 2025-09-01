@@ -1,9 +1,0 @@
-policy_id: "TEFCA-DEFAULT"
-status: "active"
-scope: "patient"
-provisions:
-  - type: "permit"
-    actors: ["QHIN", "Participant", "Subparticipant"]
-    purpose_of_use: ["TREATMENT", "OPERATIONS"]
-    data_classes: ["CCD", "FHIR-USCore", "Claims"]
-expires_in_days: 365

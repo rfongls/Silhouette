@@ -1,5 +1,0 @@
-name: cyber_taskflows
-cases:
-  - id: web_baseline_dry
-    prompt: "use:cyber_task_orchestrator {\"task\":\"web_baseline\",\"target\":\"https://in-scope.example\",\"scope_file\":\"docs/cyber/scope_example.txt\",\"dry_run\":true}"
-    expect_contains: ["report_", "artifacts/cyber/reports"]

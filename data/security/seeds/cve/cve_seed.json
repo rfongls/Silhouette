@@ -1,6 +1,0 @@
-{
-  "CVE-0001": {
-    "summary": "Demo CVE for offline tests",
-    "severity": 5
-  }
-}
