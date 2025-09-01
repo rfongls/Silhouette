@@ -80,9 +80,18 @@ def _run_dir(out_root: str = "out/security") -> Path:
     return run
 
 
-def write_result(name: str, data: dict, out_root: str = "out/security") -> str:
-    """Write a JSON result for a skill into out/security/<ts>/active/<name>.json"""
-    run = _run_dir(out_root)
+def write_result(
+    name: str,
+    data: dict,
+    out_root: str = "out/security",
+    run_dir: str | Path | None = None,
+) -> str:
+    """
+    Write a JSON result for a skill.
+    If ``run_dir`` is provided, results are written under ``<run_dir>/active``.
+    Otherwise a new timestamped directory is created under ``out_root``.
+    """
+    run = Path(run_dir) if run_dir else _run_dir(out_root)
     active = run / "active"
     active.mkdir(parents=True, exist_ok=True)
     path = active / f"{name}.json"
