@@ -19,6 +19,8 @@
 - 2025-08-31 — Finalize phases 0–5 offline pipeline
 - 2025-09-15 — Kick off Phase 6 runbook scaffolding
 - 2025-09-16 — Scaffold phase 6–10 modules
+- 2025-09-17 — Add CI test workflow and link Phase 6–10 docs
+- 2025-09-18 — Wire pentest gate/playbook/netforensics and add smoke tests
 
 ## Risks / Notes
 - **Legal/Authorization:** never execute active modules without written authorization + verified scope.

@@ -6,7 +6,7 @@
 
 Legend: **Implement** (what to build) • **Test** (how to verify) • **DoD** (Definition of Done)
 
-**Completed:** Phases 0–5 (policy through reporting) delivered in offline-first baseline. The roadmap below tracks upcoming work for phases 6–10.
+**Completed:** Phases 0–5 (policy through reporting) delivered in offline-first baseline. CI test workflow and Phase 6–10 docs linked. Unified run directory for pentest scaffolds and added smoke tests for gate, playbook, and netforensics. The roadmap below tracks upcoming work for phases 6–10.
 
 ---
 

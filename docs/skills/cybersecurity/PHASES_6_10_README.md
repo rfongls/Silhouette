@@ -18,23 +18,22 @@ This document describes the **Phase 6–10** scaffolds for the Cybersecurity Ski
 
 **Status:** scaffold
 
+**CLI:**
+
+```bash
+python -m silhouette_core.cli security --ack-authorized pentest playbook --incident ransomware
+```
+
 **Inputs (JSON):**
 
 ```json
-{"incident":"ransomware","out_dir":"out/security/2025..."}
+{"incident":"ransomware","out_dir":"<run>"}
 ```
 
 **Outputs:**
 
 * `<run>/active/ir_playbook.json` with a minimal step list.
-
-**CLI (future idea):**
-
-```bash
-# Example CLI (to be added later):
-# python -m silhouette_core.cli security playbook --incident ransomware
-```
-
+* 
 ---
 
 ## Phase 7 — Pentest Gates (Authorization & Scope)
@@ -42,6 +41,15 @@ This document describes the **Phase 6–10** scaffolds for the Cybersecurity Ski
 **Skill:** `skills/cyber_pentest_gate.v1.wrapper:tool`
 
 **Status:** scaffold
+
+**CLI:**
+
+```bash
+python -m silhouette_core.cli security --ack-authorized pentest gate \
+  --target sub.example.com \
+  --scope-file docs/cyber/scope_example.txt \
+  --auth-doc auth.pdf
+```
 
 **Inputs (JSON):**
 
@@ -88,6 +96,12 @@ python -m silhouette_core.cli security --ack-authorized pentest recon \
 **Skill:** `skills/cyber_netforensics.v1.wrapper:tool`
 
 **Status:** scaffold
+
+**CLI:**
+
+```bash
+python -m silhouette_core.cli security --ack-authorized pentest netforensics --pcap sample.pcap
+```
 
 **Inputs (JSON):**
 
