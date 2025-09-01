@@ -60,6 +60,7 @@ Legend: **Implement** (what to build) • **Test** (how to verify) • **DoD** (
   - Build tabletop inject library and schedule planner. ✅
   - Define communication plan and contact tree templates. ✅
   - Scaffold stub module `skills/cyber_ir_playbook`. ✅
+  - Simulate cross-team drills and after-action review templates.
  - **Test:** render playbook pack; check section completeness.
  - **DoD:** `security --ack-authorized pentest playbook --incident ransomware` outputs checklist.
 
@@ -69,11 +70,12 @@ Legend: **Implement** (what to build) • **Test** (how to verify) • **DoD** (
 - **Implement:**
   - Enforce submission of **auth doc** (`--auth-doc`). ✅
   - Require **scope file** detailing allowed targets. ✅
-  - Ownership verification via DNS TXT, HTTP well-known, or allowlist entries.
+  - Ownership verification via DNS TXT, HTTP well-known, or static allowlist entries.
   - Global kill-switch. ✅
-  - Deny-lists, throttles, schedule windows.
+  - Deny-lists, throttles, schedule windows for high-risk actions.
   - Audit log recording for all gate decisions. ✅
   - Scaffold stub module `skills/cyber_pentest_gate`. ✅
+  - Track gate decision history with user and timestamp.
 - **Test:** any `security pentest *` without gates → exit; with gates → run.
 - **DoD:** gates enforced and audited.
 
@@ -83,9 +85,10 @@ Legend: **Implement** (what to build) • **Test** (how to verify) • **DoD** (
 - **Implement:**
   - **Recon:** passive DNS/TLS/HTTP inventory. ✅
   - **Recon profiles:** `safe`/`version`/`full` with rate limits. ✅
-  - **Nmap:** profiles `safe`/`version`/`full` (last requires risk ack).
+  - **Nmap:** profiles `safe`/`version`/`full` (last requires risk ack) with offline script results.
   - **DAST/API:** bounded crawler/fuzzer with excludes, auth support, 429/5xx backoff.
   - **NEW:** Normalize findings via schema + enrich with CVE cache, KEV list, MITRE ATT&CK mapping (all offline-first with seeded datasets).
+  - Cache CVE/KEV/ATT&CK data locally; ship stub DAST profiles.
   - Scaffold stub module `skills/cyber_recon_scan`. ✅
 - **Test:** scans on lab scope respect rate limits; produce inventory & enriched findings.
 - **DoD:** JSON inventory & findings saved; enrichment offline works.
@@ -101,6 +104,7 @@ Legend: **Implement** (what to build) • **Test** (how to verify) • **DoD** (
   - **Triage:** YARA/ClamAV on extracted files; anomaly stats (offline z-score models).
   - **Flow counts** from PCAPs (packet/flow analysis). ✅
   - Scaffold stub module `skills/cyber_netforensics`. ✅
+  - Index flows and extracted artifacts for quick lookup.
 - **Test:** seeded PCAPs produce flows, alerts, decrypted sessions (when keys provided), triage hits.
 - **DoD:** end-to-end pipeline reproducible offline.
 
@@ -112,5 +116,6 @@ Legend: **Implement** (what to build) • **Test** (how to verify) • **DoD** (
   - SOAR connectors (export to Splunk/ELK/Jira; offline file export supported).
   - AI-assisted triage: deduplicate findings, prioritize by exploitability.
   - Scaffold stub module `skills/cyber_extension`. ✅
+  - Prototype SOAR export format and triage heuristics.
 - **Test:** offline datasets confirm outputs without network.
 - **DoD:** extensions optional, gated by configs.

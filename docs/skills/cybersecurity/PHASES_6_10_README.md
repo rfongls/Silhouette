@@ -38,6 +38,7 @@ Supported incidents: `ransomware`, `credential`, `pii` (falls back to generic).
 
 **Next Steps:**
 - Expand inject scenarios and integrate scheduling with tabletop exercises.
+- Simulate cross-team communication drills and capture after-action reports.
 
 ---
 
@@ -69,7 +70,9 @@ python -m silhouette_core.cli security --ack-authorized pentest gate \
 * `<run>/active/pentest_gate.json` and audit log when authorized.
 
 **Next Steps:**
-- Implement ownership verification via DNS TXT/HTTP.
+- Implement ownership verification via DNS TXT/HTTP challenges.
+- Add deny-lists and schedule windows for restricted runs.
+- Record gate decisions with user, timestamp, and reason in audit log.
 
 ---
 
@@ -100,6 +103,8 @@ python -m silhouette_core.cli security --ack-authorized pentest recon \
 
 **Next Steps:**
 - Normalize and enrich findings offline.
+- Wire Nmap `safe`/`version`/`full` profiles and bounded DAST crawler.
+- Cache CVE/KEV/ATT&CK data locally and include stub DAST profiles.
 
 ---
 
@@ -128,6 +133,7 @@ python -m silhouette_core.cli security --ack-authorized pentest netforensics --p
 **Next Steps:**
 - Support tcpdump capture and Zeek/Suricata parsing.
 - Enable TLS decryption and YARA/ClamAV triage.
+- Extract HTTP objects and index flows for quick lookup.
 
 ---
 
@@ -149,6 +155,7 @@ python -m silhouette_core.cli security --ack-authorized pentest netforensics --p
 
 **Next Steps:**
 - Explore cloud posture modules and SOAR export hooks.
+- Research AI-assisted triage for deduplication and prioritization.
 
 ---
 
