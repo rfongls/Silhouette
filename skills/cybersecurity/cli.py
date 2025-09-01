@@ -1,8 +1,6 @@
 from pathlib import Path
 import datetime as dt
-
 import click
-
 from .util.gates import require_ack_authorized, POLICY_BANNER_PATH
 from .util.io import RunIO
 from .evidence.collector import collect_evidence, build_evidence_pack
@@ -122,7 +120,6 @@ def pentest_api(ctx, dry_run):
     run_dir = _record(ctx, 'pentest.api', {'dry_run': dry_run})
     click.echo(str(run_dir))
 
-
 # placeholders for other subcommands and stubs
 @cli.command('assess')
 @click.option('--dry-run', is_flag=True)
@@ -131,14 +128,12 @@ def assess_cmd(ctx, dry_run):
     run_dir = _record(ctx, 'assess', {'dry_run': dry_run})
     click.echo(str(run_dir))
 
-
 @cli.command('capture')
 @click.option('--dry-run', is_flag=True)
 @click.pass_context
 def capture_cmd(ctx, dry_run):
     run_dir = _record(ctx, 'capture', {'dry_run': dry_run})
     click.echo(str(run_dir))
-
 
 @cli.command('pcap')
 @click.option('--dry-run', is_flag=True)

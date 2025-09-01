@@ -1,6 +1,5 @@
 import json
 from pathlib import Path
-
 from skills.cybersecurity.normalize.normalizer import normalize_generic
 
 
