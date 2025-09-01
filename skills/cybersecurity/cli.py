@@ -9,7 +9,12 @@ from .controls.mapper import map_controls
 from .scan import dispatch_scan
 from .report.writer import write_report
 
-banner = POLICY_BANNER_PATH.read_text().strip() if POLICY_BANNER_PATH.exists() else "Authorized use only"
+_policy_text = (
+    POLICY_BANNER_PATH.read_text().strip()
+    if POLICY_BANNER_PATH.exists()
+    else "Authorized use only"
+)
+banner = f"Cybersecurity utilities. {_policy_text}"
 
 
 @click.group(help=banner, context_settings={"help_option_names": ["-h","--help"]})
@@ -34,13 +39,20 @@ def _record(ctx, cmd_name: str, args: dict):
 
 
 @cli.command('evidence')
-@click.option('--source', required=True, type=click.Path(exists=True))
+@click.option('--source', type=click.Path(exists=True))
 @click.option('--dry-run', is_flag=True)
 @click.pass_context
 def evidence_cmd(ctx, source, dry_run):
     run_dir = _record(ctx, 'evidence', {'source': source, 'dry_run': dry_run})
-    if not dry_run:
-        collect_evidence(Path(source), run_dir)
+    if dry_run:
+        out_root = Path(ctx.obj['out'])
+        out_root.mkdir(parents=True, exist_ok=True)
+        (out_root / 'evidence_stub.txt').write_text('dry run')
+        click.echo(str(run_dir))
+        return
+    if not source:
+        raise click.ClickException('Missing option --source')
+    collect_evidence(Path(source), run_dir)
     click.echo(str(run_dir))
 
 
