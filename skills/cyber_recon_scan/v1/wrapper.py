@@ -18,6 +18,28 @@ def _enrich_services(services: list[dict]) -> list[dict]:
     return services
 
 
+def _load_cache() -> dict:
+    root = Path("data/security/seeds")
+    cve_file = root / "cve" / "cve_seed.json"
+    kev_file = root / "kev" / "kev_seed.json"
+    cve = json.loads(cve_file.read_text()) if cve_file.exists() else {}
+    kev = json.loads(kev_file.read_text()) if kev_file.exists() else {}
+    return {"cve": cve, "kev": set(kev.get("cves", []))}
+
+
+def _enrich_services(services: list[dict], cache: dict) -> list[dict]:
+    for svc in services:
+        if svc.get("service") == "http":
+            svc.setdefault("cves", ["CVE-0001"])
+        details = []
+        for cve in svc.get("cves", []):
+            meta = cache["cve"].get(cve, {})
+            details.append({"id": cve, "kev": cve in cache["kev"], **meta})
+        if details:
+            svc["cves"] = details
+    return services
+
+
 def tool(payload: str) -> str:
     """Perform placeholder recon on the target.
 
@@ -35,11 +57,13 @@ def tool(payload: str) -> str:
             services.append({"port": 80, "service": "http", "nmap": "sample"})
         if profile == "full":
             services.append({"port": 443, "service": "https", "nmap": "sample"})
-        services = _enrich_services(services)
+        cache = _load_cache()
+        services = _enrich_services(services, cache)
         findings = []
         if profile == "full":
             findings.append({"url": f"http://{target}", "issue": "xss"})
-        inventory = {"hosts": [target], "services": services, "findings": findings, "cache": _load_cache()}
+        cache_counts = {"cve": len(cache["cve"]), "kev": len(cache["kev"])}
+        inventory = {"hosts": [target], "services": services, "findings": findings, "cache": cache_counts}
         data = {"target": target, "profile": profile, "inventory": inventory}
         path = write_result("recon", data, run_dir=out_dir)
         return json.dumps({"ok": True, "result": path})

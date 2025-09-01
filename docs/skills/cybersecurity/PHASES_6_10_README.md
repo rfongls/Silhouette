@@ -45,7 +45,7 @@ Supported incidents: `ransomware`, `credential`, `pii` (falls back to generic).
 
 **Skill:** `skills/cyber_pentest_gate.v1.wrapper:tool`
 
-**Status:** scaffold with ownership verification, throttle controls, audit logging, deny-lists, schedule windows, and global kill switch
+**Status:** scaffold with ownership verification, throttle controls, audit logging, deny-lists, schedule windows, global kill switch, and persistent decision history
 
 **CLI:**
 
@@ -77,7 +77,7 @@ python -m silhouette_core.cli security --ack-authorized pentest gate \
 
 **Skill:** `skills/cyber_recon_scan.v1.wrapper:tool`
 
-**Status:** offline enrichment with Nmap profiles and stub DAST crawler
+**Status:** offline enrichment with Nmap profiles, stub DAST crawler, and CVE/KEV vulnerability flags
 
 **CLI:**
 

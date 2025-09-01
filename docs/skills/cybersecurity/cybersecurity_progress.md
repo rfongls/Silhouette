@@ -15,7 +15,7 @@
 - Phase 9 — Network Forensics Toolkit: ☑
 - Phase 10 — Extensions (Cloud / SOAR / AI): ☑
 
-## Commits / PRs - Organize by date of PR
+## Commits / PRs
 ### 2025-08-30 
 - Finalize phases 0–5 offline pipeline
 
@@ -36,6 +36,10 @@
 - Detail outstanding tasks for phases 6–10 and expand TODOs
 - Add gate deny-lists/schedule windows, recon enrichment, and flow indexing
 - Finalize Phase 6–10 tasks with ownership checks, Nmap/DAST, and netforensics artifacts
+— Detail outstanding tasks for phases 6–10 and expand TODOs
+— Add gate deny-lists/schedule windows, recon enrichment, and flow indexing
+— Finalize Phase 6–10 tasks with ownership checks, Nmap/DAST, and netforensics artifacts
+— Persist pentest gate audit history and flag KEV CVEs during recon
 
 ## Risks / Notes
 - **Legal/Authorization:** never execute active modules without written authorization + verified scope.

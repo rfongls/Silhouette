@@ -77,6 +77,7 @@ Legend: **Implement** (what to build) • **Test** (how to verify) • **DoD** (
   - Audit log recording for all gate decisions. ✅
   - Scaffold stub module `skills/cyber_pentest_gate`. ✅
   - Track gate decision history with user and timestamp. ✅
+  - Persist gate decisions to user audit log. ✅
 - **Test:** any `security pentest *` without gates → exit; with gates → run.
 - **DoD:** gates enforced and audited.
 
@@ -90,6 +91,7 @@ Legend: **Implement** (what to build) • **Test** (how to verify) • **DoD** (
   - **DAST/API:** bounded crawler/fuzzer with excludes, auth support, 429/5xx backoff. ✅
   - Normalize findings via schema + enrich with CVE cache, KEV list, MITRE ATT&CK mapping (offline seeds). ✅
   - Cache CVE/KEV/ATT&CK data locally; ship stub DAST profiles. ✅
+  - Mark KEV status for service CVEs using offline seeds. ✅
   - Scaffold stub module `skills/cyber_recon_scan`. ✅
 - **Test:** scans on lab scope respect rate limits; produce inventory & enriched findings.
 - **DoD:** JSON inventory & findings saved; enrichment offline works.
