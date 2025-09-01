@@ -108,7 +108,14 @@ def tool(payload: str) -> str:
             findings.append({"url": f"http://{target}", "issue": "xss"})
         cache_counts = {"cve": len(cache["cve"]), "kev": len(cache["kev"])}
         inventory = {"hosts": [target], "services": services, "findings": findings, "cache": cache_counts}
-        data = {"target": target, "profile": profile, "inventory": inventory}
+        from datetime import datetime, timezone
+        data = {
+            "schema": "recon.v1",
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "target": target,
+            "profile": profile,
+            "inventory": inventory,
+        }
         path = write_result("recon", data, run_dir=out_dir)
         return json.dumps({"ok": True, "result": path})
     except Deny as e:
