@@ -2,7 +2,6 @@ import json
 from pathlib import Path
 from skills.cyber_common import require_auth_and_scope, write_result, Deny
 
-
 def _load_cache() -> dict:
     root = Path("data/security/seeds")
     cve_file = root / "cve" / "cve_seed.json"
