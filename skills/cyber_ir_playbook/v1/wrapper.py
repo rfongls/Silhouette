@@ -42,6 +42,23 @@ def tool(payload: str) -> str:
         "lessons_learned",
     ])
 
-    playbook = {"incident": incident, "steps": steps}
+    plan = [
+        "notify_executives",
+        "coordinate_pr",
+        "update_stakeholders",
+    ]
+    contacts = [
+        "ir_lead",
+        "legal",
+        "pr",
+        "it_ops",
+    ]
+
+    playbook = {
+        "incident": incident,
+        "steps": steps,
+        "communication_plan": plan,
+        "contacts": contacts,
+    }
     path = write_result("ir_playbook", playbook, run_dir=out_dir)
     return json.dumps({"ok": True, "result": path})

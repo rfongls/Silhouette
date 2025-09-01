@@ -1,4 +1,5 @@
 import json
+from pathlib import Path
 from skills.cyber_common import write_result
 
 
@@ -9,6 +10,8 @@ def tool(payload: str) -> str:
     args = json.loads(payload or "{}")
     pcap = args.get("pcap", "")
     out_dir = args.get("out_dir")
-    data = {"pcap": pcap, "flows": 0, "alerts": []}
+    pcap_path = Path(pcap)
+    flows = pcap_path.stat().st_size if pcap_path.exists() else 0
+    data = {"pcap": pcap, "flows": flows, "alerts": []}
     path = write_result("netforensics", data, run_dir=out_dir)
     return json.dumps({"ok": True, "result": path})

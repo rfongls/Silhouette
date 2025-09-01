@@ -58,7 +58,7 @@ Legend: **Implement** (what to build) • **Test** (how to verify) • **DoD** (
 - **Implement:**
   - Draft runbooks for ransomware, credential compromise, and PII exposure. ✅
   - Build tabletop inject library and schedule planner.
-  - Define communication plan and contact tree templates.
+  - Define communication plan and contact tree templates. ✅
   - Scaffold stub module `skills/cyber_ir_playbook`. ✅
  - **Test:** render playbook pack; check section completeness.
  - **DoD:** `security --ack-authorized pentest playbook --incident ransomware` outputs checklist.
@@ -71,7 +71,7 @@ Legend: **Implement** (what to build) • **Test** (how to verify) • **DoD** (
   - Require **scope file** detailing allowed targets. ✅
   - Ownership verification via DNS TXT, HTTP well-known, or allowlist entries.
   - Global kill-switch, deny-lists, throttles, schedule windows.
-  - Audit log recording for all gate decisions.
+  - Audit log recording for all gate decisions. ✅
   - Scaffold stub module `skills/cyber_pentest_gate`. ✅
 - **Test:** any `security pentest *` without gates → exit; with gates → run.
 - **DoD:** gates enforced and audited.
@@ -80,7 +80,8 @@ Legend: **Implement** (what to build) • **Test** (how to verify) • **DoD** (
 
 ## Phase 8 — Recon & Active Testing (Nmap/DAST/API; Safe Profiles)
 - **Implement:**
-  - **Recon:** passive DNS/TLS/HTTP inventory.
+  - **Recon:** passive DNS/TLS/HTTP inventory. ✅
+  - **Recon profiles:** `safe`/`version`/`full` with rate limits. ✅
   - **Nmap:** profiles `safe`/`version`/`full` (last requires risk ack).
   - **DAST/API:** bounded crawler/fuzzer with excludes, auth support, 429/5xx backoff.
   - **NEW:** Normalize findings via schema + enrich with CVE cache, KEV list, MITRE ATT&CK mapping (all offline-first with seeded datasets).
@@ -97,6 +98,7 @@ Legend: **Implement** (what to build) • **Test** (how to verify) • **DoD** (
   - **IDS:** Zeek/Suricata normalize to CSV/Parquet.
   - **TLS decrypt:** SSLKEYLOGFILE support; limitations documented.
   - **Triage:** YARA/ClamAV on extracted files; anomaly stats (offline z-score models).
+  - **Flow counts** from PCAPs. ✅
   - Scaffold stub module `skills/cyber_netforensics`. ✅
 - **Test:** seeded PCAPs produce flows, alerts, decrypted sessions (when keys provided), triage hits.
 - **DoD:** end-to-end pipeline reproducible offline.
