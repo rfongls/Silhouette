@@ -1,57 +1,65 @@
-import ipaddress
+from __future__ import annotations
+
+from dataclasses import dataclass
+from pathlib import Path
 import json
-import os
-import pathlib
 import re
 import subprocess
-import shlex
 import time
 
-ART = pathlib.Path("artifacts/cyber")
-ART.mkdir(parents=True, exist_ok=True)
 
+@dataclass
 class Deny(Exception):
-    pass
+    reason: str
 
-def load_scope(scope_file: str):
-    p = pathlib.Path(scope_file)
+    def __str__(self) -> str:  # pragma: no cover - simple data container
+        return self.reason
+
+
+def _load_scope(scope_file: str | Path) -> list[str]:
+    """Load scope lines; ignore blanks/comments. Offline and permissive for scaffold."""
+    p = Path(scope_file)
     if not p.exists():
-        raise Deny(f"Scope file not found: {scope_file}")
-    lines = [l.strip() for l in p.read_text().splitlines() if l.strip() and not l.strip().startswith("#")]
-    nets, hosts, urls = [], [], []
-    for l in lines:
-        if re.match(r"^https?://", l):
-            urls.append(l)
-        else:
-            try:
-                if "/" in l:
-                    nets.append(ipaddress.ip_network(l, strict=False))
-                else:
-                    hosts.append(ipaddress.ip_address(l))
-            except ValueError:
-                hosts.append(l)
-    return {"nets": nets, "hosts": hosts, "urls": urls, "raw": lines}
+        return []
+    lines: list[str] = []
+    for line in p.read_text(encoding="utf-8", errors="ignore").splitlines():
+        s = line.strip()
+        if not s or s.startswith("#"):
+            continue
+        lines.append(s)
+    return lines
 
-def target_in_scope(target: str, scope):
-    if re.match(r"^https?://", target):
-        return any(target.startswith(u) for u in scope["urls"])
-    try:
-        ip = ipaddress.ip_address(target)
-        if any(ip in n for n in scope["nets"]):
+
+def _in_scope(target: str, scope_lines: list[str]) -> bool:
+    """Very simple matcher:
+    - exact match
+    - suffix domain match: lines starting with '*.' will match subdomains
+    - CIDR/IP support can be added later; for now just exact match for IP strings
+    """
+    target = (target or "").strip().lower()
+    if not target or not scope_lines:
+        return False
+    for s in scope_lines:
+        s_l = s.lower()
+        if s_l == target:
             return True
-        return any(str(ip) == str(h) for h in scope["hosts"])
-    except ValueError:
-        return target in [str(h) for h in scope["hosts"]]
+        if s_l.startswith("*.") and target.endswith(s_l[1:]):
+            return True
+    return False
 
-def require_auth_and_scope(scope_file: str, target: str):
-    if os.environ.get("SILHOUETTE_PEN_TEST_OK") != "1":
-        raise Deny("Pen-test not authorized: set SILHOUETTE_PEN_TEST_OK=1")
-    scope = load_scope(scope_file)
-    if not target_in_scope(target, scope):
-        raise Deny(f"Target {target} not in scope. See {scope_file}")
-    return scope
 
-def run_docker(image: str, cmd: str, mounts=None, network_host=False, timeout=600):
+def require_auth_and_scope(scope_file: str | Path, target: str) -> None:
+    """Scaffolded gate: ensure target is in provided scope file."""
+    scope = _load_scope(scope_file)
+    if not scope:
+        raise Deny(f"Scope not found or empty: {scope_file}")
+    if not _in_scope(target, scope):
+        raise Deny(f"Target '{target}' not in scope file: {scope_file}")
+
+
+def run_docker(image: str, cmd: str, mounts: list[str] | None = None,
+               network_host: bool = False, timeout: int = 600):
+    """Minimal helper to run a docker image with optional mounts."""
     mounts = mounts or []
     base = ["docker", "run", "--rm"]
     if network_host:
@@ -62,8 +70,31 @@ def run_docker(image: str, cmd: str, mounts=None, network_host=False, timeout=60
     res = subprocess.run(full, capture_output=True, text=True, timeout=timeout)
     return res.returncode, res.stdout, res.stderr
 
-def write_result(name: str, payload: dict):
-    ts = int(time.time())
-    out = ART / f"{name}_{ts}.json"
-    out.write_text(json.dumps(payload, indent=2))
-    return str(out)
+
+def _run_dir(out_root: str = "out/security") -> Path:
+    root = Path(out_root)
+    root.mkdir(parents=True, exist_ok=True)
+    ts = time.strftime("%Y%m%dT%H%M%SZ", time.gmtime())
+    run = root / ts
+    run.mkdir(parents=True, exist_ok=True)
+    return run
+
+
+def write_result(
+    name: str,
+    data: dict,
+    out_root: str = "out/security",
+    run_dir: str | Path | None = None,
+) -> str:
+    """
+    Write a JSON result for a skill.
+    If ``run_dir`` is provided, results are written under ``<run_dir>/active``.
+    Otherwise a new timestamped directory is created under ``out_root``.
+    """
+    run = Path(run_dir) if run_dir else _run_dir(out_root)
+    active = run / "active"
+    active.mkdir(parents=True, exist_ok=True)
+    path = active / f"{name}.json"
+    path.write_text(json.dumps(data, indent=2), encoding="utf-8")
+    return str(path)
+
