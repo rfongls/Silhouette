@@ -36,6 +36,10 @@ Supported incidents: `ransomware`, `credential`, `pii` (falls back to generic).
 
 * `<run>/active/ir_playbook.json` with incident-specific steps.
 
+**Next Steps:**
+- Flesh out tabletop inject library and scheduling.
+- Add communication plan templates and contact tree.
+
 ---
 
 ## Phase 7 — Pentest Gates (Authorization & Scope)
@@ -65,6 +69,10 @@ python -m silhouette_core.cli security --ack-authorized pentest gate \
 
 * `<run>/active/pentest_gate.json` when authorized.
 
+**Next Steps:**
+- Implement ownership verification via DNS TXT/HTTP.
+- Record audit logs for gate decisions.
+
 ---
 
 ## Phase 8 — Recon & Active Testing (Safe Profiles)
@@ -91,6 +99,10 @@ python -m silhouette_core.cli security --ack-authorized pentest recon \
 
 * `<run>/active/recon.json` containing an inventory stub.
 
+**Next Steps:**
+- Add scan profiles (`safe`, `version`, `full`) with rate limits.
+- Normalize and enrich findings offline.
+
 ---
 
 ## Phase 9 — Network Forensics Toolkit
@@ -115,6 +127,10 @@ python -m silhouette_core.cli security --ack-authorized pentest netforensics --p
 
 * `<run>/active/netforensics.json` with placeholder fields.
 
+**Next Steps:**
+- Support tcpdump capture and Zeek/Suricata parsing.
+- Enable TLS decryption and YARA/ClamAV triage.
+
 ---
 
 ## Phase 10 — Extensions (Future)
@@ -132,6 +148,9 @@ python -m silhouette_core.cli security --ack-authorized pentest netforensics --p
 **Outputs:**
 
 * `<run>/active/cyber_extension.json` with `status: "not_implemented"`.
+
+**Next Steps:**
+- Explore cloud posture modules and SOAR export hooks.
 
 ---
 

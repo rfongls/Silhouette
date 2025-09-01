@@ -9,11 +9,11 @@
 - Phase 3 — Controls Mapping: ☑
 - Phase 4 — Defensive Scanners: ☑
 - Phase 5 — Risk Scoring & Reporting: ☑
-- Phase 6 — IR Playbooks & Tabletop: ◐ (templates)
-- Phase 7 — Pentest Gates (Auth/Scope/Verification): ◐ (auth check)
-- Phase 8 — Recon & Active Testing (Nmap/DAST/API): ◐ (recon wired)
-- Phase 9 — Network Forensics Toolkit: ◐ (scaffolded)
-- Phase 10 — Extensions (Cloud / SOAR / AI): ◐ (scaffolded)
+- Phase 6 — IR Playbooks & Tabletop: ◐ (templates + roadmap)
+- Phase 7 — Pentest Gates (Auth/Scope/Verification): ◐ (scope + auth enforced)
+- Phase 8 — Recon & Active Testing (Nmap/DAST/API): ◐ (recon wired, nmap pending)
+- Phase 9 — Network Forensics Toolkit: ◐ (scaffolded; pcap parser pending)
+- Phase 10 — Extensions (Cloud / SOAR / AI): ◐ (scaffolded; backlog)
 
 ## Commits / PRs
 - 2025-08-31 — Finalize phases 0–5 offline pipeline
@@ -23,6 +23,7 @@
 - 2025-09-18 — Wire pentest gate/playbook/netforensics and add smoke tests
 - 2025-09-19 — Add incident templates and auth doc enforcement
 - 2025-09-20 — Centralize result writing and pass run directory through pentest wrappers
+- 2025-09-21 — Expand phase 6–10 docs and TODOs
 
 ## Risks / Notes
 - **Legal/Authorization:** never execute active modules without written authorization + verified scope.
