@@ -76,7 +76,7 @@ The end state (Phase 10) is a **production-ready agent system** that can:
 
 * **Alignment-first agent loop** – persona DSL config (`persona.dsl`), deny rules, self-check. See [Agents](docs/Agents.md).
 * **Memory & context** – logs interactions, replays into structured memory JSONL.
-* **Skills system** – dynamic tool registry (`skills/registry.yaml`), versioned (`name@vN`). See [Skills](docs/Skills.md).
+* **Skills system** – dynamic tool registry (`silhouette_core/skills/registry.yaml`), versioned (`name@vN`). See [Skills](docs/Skills.md).
 * **Runtime evals** – cross-language build/test inside Docker (Java, .NET, Android, Web, Python, C++). See [Eval](docs/Eval.md).
 * **Linters** – Python (ruff, black), Web/JS (eslint), C++ (clang-tidy optional).
 * **Offline-first mode** – deterministic stub generation when models are unavailable. See [Offline Mode](docs/Offline_Mode.md).

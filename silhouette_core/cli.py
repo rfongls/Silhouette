@@ -12,7 +12,7 @@ from .analysis import hotpaths as analysis_hotpaths
 from .analysis import service as analysis_service
 from .analysis import suggest_tests as analysis_suggest_tests
 from .analysis import summarize_ci as analysis_summarize_ci
-from skills.cybersecurity.cli import cli as security_cli
+from silhouette_core.skills.cybersecurity.cli import cli as security_cli
 from .impact.impact_set import compute_impact
 from .patch.pr_body import compose_pr_body
 from .patch.propose import propose_patch as propose_patch_fn

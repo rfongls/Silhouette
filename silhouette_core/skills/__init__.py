@@ -1,1 +1,1 @@
-"""Core skills used by CLI."""
+"""Silhouette Core skills."""
