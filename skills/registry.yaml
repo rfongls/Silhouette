@@ -61,6 +61,36 @@ skills:
     enabled: true
     description: "Lookup CVE details from local NVD/OSV cache (offline)."
 
+  - name: cyber_pentest_gate
+    version: v1
+    entry: tool
+    enabled: true
+    description: "Validate authorization and scope before running pentest activity."
+
+  - name: cyber_recon_scan
+    version: v1
+    entry: tool
+    enabled: true
+    description: "Perform placeholder recon and service inventory."
+
+  - name: cyber_netforensics
+    version: v1
+    entry: tool
+    enabled: true
+    description: "Analyze network captures and extract artifacts."
+
+  - name: cyber_ir_playbook
+    version: v1
+    entry: tool
+    enabled: true
+    description: "Build a minimal incident response playbook for the incident."
+
+  - name: cyber_extension
+    version: v1
+    entry: tool
+    enabled: true
+    description: "Placeholder for future cybersecurity extensions."
+
   # RAG-to-Skill entries will be appended here by scripts/ingest_skill.py
   - name: cyber_checklist_cdse
     version: v1
