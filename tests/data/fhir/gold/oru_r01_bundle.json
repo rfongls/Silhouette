@@ -1,0 +1,226 @@
+{
+  "resourceType": "Bundle",
+  "type": "transaction",
+  "entry": [
+    {
+      "fullUrl": "urn:uuid:593eab13-42d3-583b-9167-a0d8684fcc2f",
+      "resource": {
+        "resourceType": "Patient",
+        "meta": {
+          "profile": [
+            "http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient"
+          ]
+        },
+        "identifier": [
+          {
+            "value": "123456",
+            "type": {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/v2-0203",
+                  "code": "MR"
+                }
+              ]
+            },
+            "system": "urn:id:ACME"
+          }
+        ],
+        "name": [
+          {
+            "family": "DOE",
+            "given": [
+              "JOHN"
+            ]
+          }
+        ],
+        "birthDate": "1980-01-01",
+        "gender": "male",
+        "id": "593eab13-42d3-583b-9167-a0d8684fcc2f"
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Patient?identifier=urn:id:ACME|123456"
+      }
+    },
+    {
+      "fullUrl": "urn:uuid:f0823654-a3f2-5bc2-9acd-a06bce85e6d9",
+      "resource": {
+        "resourceType": "DiagnosticReport",
+        "meta": {
+          "profile": [
+            "http://hl7.org/fhir/us/core/StructureDefinition/us-core-diagnosticreport-lab"
+          ]
+        },
+        "status": "unknown",
+        "code": {
+          "coding": [
+            {
+              "code": "718-7",
+              "display": "HEMOGLOBIN",
+              "system": "http://loinc.org"
+            }
+          ]
+        },
+        "id": "f0823654-a3f2-5bc2-9acd-a06bce85e6d9",
+        "result": [
+          {
+            "reference": "urn:uuid:d0a24ecf-a124-5fb2-8668-52d17ceeaab4"
+          }
+        ]
+      },
+      "request": {
+        "method": "POST",
+        "url": "DiagnosticReport"
+      }
+    },
+    {
+      "fullUrl": "urn:uuid:d0a24ecf-a124-5fb2-8668-52d17ceeaab4",
+      "resource": {
+        "resourceType": "Observation",
+        "meta": {
+          "profile": [
+            "http://hl7.org/fhir/us/core/StructureDefinition/us-core-observation-lab"
+          ]
+        },
+        "category": [
+          {
+            "coding": [
+              {
+                "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+                "code": "laboratory"
+              }
+            ]
+          }
+        ],
+        "code": {
+          "coding": [
+            {
+              "code": "718-7",
+              "display": "HEMOGLOBIN",
+              "system": "http://loinc.org"
+            }
+          ]
+        },
+        "valueQuantity": {
+          "value": 13.6,
+          "system": "http://unitsofmeasure.org",
+          "unit": "g/dL",
+          "code": "g/dL"
+        },
+        "status": "final",
+        "id": "d0a24ecf-a124-5fb2-8668-52d17ceeaab4"
+      },
+      "request": {
+        "method": "POST",
+        "url": "Observation"
+      }
+    },
+    {
+      "fullUrl": "urn:uuid:b8b24a57-53c5-59a7-9978-eeb06b583fa7",
+      "resource": {
+        "resourceType": "Specimen",
+        "meta": {
+          "profile": [
+            "http://hl7.org/fhir/StructureDefinition/Specimen"
+          ]
+        },
+        "id": "b8b24a57-53c5-59a7-9978-eeb06b583fa7"
+      },
+      "request": {
+        "method": "POST",
+        "url": "Specimen"
+      }
+    },
+    {
+      "fullUrl": "urn:uuid:54ec0dd4-3e06-5cbd-aa4c-edb5c5c593a5",
+      "resource": {
+        "resourceType": "Device",
+        "id": "54ec0dd4-3e06-5cbd-aa4c-edb5c5c593a5",
+        "status": "active",
+        "deviceName": [
+          {
+            "name": "Silhouette Translator",
+            "type": "user-friendly-name"
+          }
+        ],
+        "type": {
+          "coding": [
+            {
+              "system": "http://terminology.hl7.org/CodeSystem/device-kind",
+              "code": "transmitter"
+            }
+          ]
+        }
+      },
+      "request": {
+        "method": "POST",
+        "url": "Device"
+      }
+    },
+    {
+      "fullUrl": "urn:uuid:3ef0ae1b-fca5-5b81-b7c2-699f8543ced5",
+      "resource": {
+        "resourceType": "Provenance",
+        "recorded": "IGNORE",
+        "agent": [
+          {
+            "type": {
+              "text": "Silhouette HL7\u2192FHIR"
+            },
+            "who": {
+              "reference": "Device/silhouette-translator"
+            }
+          }
+        ],
+        "target": [
+          {
+            "reference": "urn:uuid:593eab13-42d3-583b-9167-a0d8684fcc2f"
+          },
+          {
+            "reference": "urn:uuid:f0823654-a3f2-5bc2-9acd-a06bce85e6d9"
+          },
+          {
+            "reference": "urn:uuid:d0a24ecf-a124-5fb2-8668-52d17ceeaab4"
+          },
+          {
+            "reference": "urn:uuid:b8b24a57-53c5-59a7-9978-eeb06b583fa7"
+          },
+          {
+            "reference": "urn:uuid:54ec0dd4-3e06-5cbd-aa4c-edb5c5c593a5"
+          }
+        ],
+        "entity": [
+          {
+            "role": "source",
+            "what": {
+              "identifier": {
+                "system": "urn:silhouette:message",
+                "value": "7d01ee31-b791-51db-bead-f9214b731063"
+              }
+            }
+          },
+          {
+            "role": "derivation",
+            "what": {
+              "identifier": {
+                "system": "urn:silhouette:qa",
+                "value": "{\"errors\": 0, \"warnings\": 0}"
+              }
+            }
+          }
+        ],
+        "meta": {
+          "profile": [
+            "http://hl7.org/fhir/StructureDefinition/Provenance"
+          ]
+        },
+        "id": "3ef0ae1b-fca5-5b81-b7c2-699f8543ced5"
+      },
+      "request": {
+        "method": "POST",
+        "url": "Provenance"
+      }
+    }
+  ],
+  "id": "7d01ee31-b791-51db-bead-f9214b731063"
+}

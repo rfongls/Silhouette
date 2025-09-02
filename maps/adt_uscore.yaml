@@ -1,0 +1,45 @@
+messageTypes:
+  - "ADT^A01"
+
+resourcePlan:
+  - resource: Patient
+    profile: "http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient"
+    rules:
+      # PID-3 full CX -> Identifier object
+      - hl7_path: "PID.3[0]"
+        fhir_path: "identifier[]"
+        transform: "pid3_to_identifiers"
+
+      # PID-5 full XPN -> HumanName {family, given}
+      - hl7_path: "PID.5[0]"
+        fhir_path: "name[]"
+        transform: "name_family_given"
+
+      - hl7_path: "PID.8"
+        fhir_path: "gender"
+        transform: "sex_to_gender"
+
+      - hl7_path: "PID.7"
+        fhir_path: "birthDate"
+        transform: "ts_to_date"
+
+  - resource: Encounter
+    profile: "http://hl7.org/fhir/us/core/StructureDefinition/us-core-encounter"
+    rules:
+      # PV1-2 -> Encounter.class (object with system+code)
+      - hl7_path: "PV1.2"
+        fhir_path: "class"
+        transform: "pv1_class_to_code"
+
+      - hl7_path: "PV1.44"
+        fhir_path: "period.start"
+        transform: "ts_to_date"
+
+      - hl7_path: "PV1.45"
+        fhir_path: "period.end"
+        transform: "ts_to_date"
+
+      # Minimal, safe default status (you can refine later)
+      - hl7_path: "-"
+        fhir_path: "status"
+        transform: "default_encounter_status"

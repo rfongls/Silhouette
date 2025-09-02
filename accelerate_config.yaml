@@ -1,0 +1,4 @@
+compute_environment: MULTI_GPU
+distributed_type: MULTI_GPU
+num_processes: 4
+mixed_precision: fp16

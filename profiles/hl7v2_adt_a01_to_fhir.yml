@@ -1,0 +1,24 @@
+profile: "USCore-R4"
+trigger_events: ["ADT^A01"]
+
+resources:
+  # ---------- Patient ----------
+  - { hl7_path: "PID.3[0].1", fhir_resource: "Patient",   fhir_path: "identifier[0].value", required: true }
+  - { hl7_path: "PID.5[0].1", fhir_resource: "Patient",   fhir_path: "name[0].family" }
+  - { hl7_path: "PID.5[0].2", fhir_resource: "Patient",   fhir_path: "name[0].given[]" }
+  - { hl7_path: "PID.8",      fhir_resource: "Patient",   fhir_path: "gender" }
+  - { hl7_path: "PID.7",      fhir_resource: "Patient",   fhir_path: "birthDate", transform: "toDate" }
+
+  # ---------- Encounter ----------
+  # PV1-2 -> Encounter.class coding
+  - { hl7_path: "PV1.2",      fhir_resource: "Encounter", fhir_path: "class.code" }
+  - { hl7_path: "PV1.2",      fhir_resource: "Encounter", fhir_path: "class.system",
+      transform: "literal:http://terminology.hl7.org/CodeSystem/v3-ActCode" }
+  - { hl7_path: "PV1.19.1",   fhir_resource: "Encounter", fhir_path: "identifier[0].value" }
+  - { hl7_path: "PV1.44",     fhir_resource: "Encounter", fhir_path: "period.start", transform: "toDate" }
+  - { hl7_path: "PV1.45",     fhir_resource: "Encounter", fhir_path: "period.end",   transform: "toDate" }
+  # set a safe default status (you can refine later)
+  - { hl7_path: "MSH.7",      fhir_resource: "Encounter", fhir_path: "status",       transform: "literal:finished" }
+
+bundle_links:
+  - { subject: "Encounter", target: "Patient", path: "subject.reference", format: "Patient/{id}" }

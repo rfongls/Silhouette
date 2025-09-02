@@ -1,0 +1,7 @@
+patterns:
+  - name: email
+    regex: '[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}'
+  - name: ssn
+    regex: '\b\d{3}-\d{2}-\d{4}\b'
+  - name: date
+    regex: '\b\d{4}-\d{2}-\d{2}\b'

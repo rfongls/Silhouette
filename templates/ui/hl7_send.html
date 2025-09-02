@@ -1,0 +1,89 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>HL7 Draft & Send</title>
+  <style>
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; margin: 24px; }
+    .row { display: flex; gap: 16px; flex-wrap: wrap; }
+    label { font-weight: 600; display:block; margin: 8px 0 4px; }
+    select, input[type=text], input[type=number], textarea { width: 100%; padding:8px; box-sizing: border-box; }
+    textarea { height: 240px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+    .col { flex: 1 1 320px; min-width: 320px; }
+    .btns { display: flex; gap: 12px; margin-top: 12px; flex-wrap: wrap; }
+    button { padding: 10px 16px; cursor: pointer; }
+    pre { background:#f6f8fa; padding:12px; border-radius:8px; overflow:auto; }
+    .error { background: #ffecec; color: #b00020; padding: 10px; border-radius: 6px; margin-top: 10px; }
+  </style>
+</head>
+<body>
+  <h1>HL7 Draft & Send (MLLP)</h1>
+  <form method="post" action="/ui/hl7">
+    <div class="row">
+      <div class="col">
+        <label for="message_type">Message Type</label>
+        <select id="message_type" name="message_type" required>
+          {% for mt in message_types %}
+            <option value="{{ mt }}" {% if selected_type == mt %}selected{% endif %}>{{ mt }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col">
+        <label for="host">Host</label>
+        <input id="host" name="host" type="text" placeholder="127.0.0.1"
+               value="{{ selected_host or '127.0.0.1' }}">
+        <small>Or choose from <strong>config/hosts.yaml</strong>:</small>
+        <div>
+          <select onchange="
+            const [h,p]=this.value.split(':');
+            if(h){document.getElementById('host').value=h;}
+            if(p){document.getElementById('port').value=p;}
+          ">
+            <option value="">-- targets --</option>
+            {% for name, tgt in targets.items() %}
+              <option value="{{ tgt.host }}:{{ tgt.port }}">{{ name }} ({{ tgt.host }}:{{ tgt.port }})</option>
+            {% endfor %}
+          </select>
+        </div>
+      </div>
+      <div class="col">
+        <label for="port">Port</label>
+        <input id="port" name="port" type="number" placeholder="2575"
+               value="{{ selected_port or 2575 }}">
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="col" style="flex: 1 1 100%;">
+        <label for="json_data">Message Data (JSON for template)</label>
+        <textarea id="json_data" name="json_data" placeholder='{"patient_id":"123456","cvx_code":"208"}'>{{ json_data or '' }}</textarea>
+        <div class="btns">
+          <button id="load_example_btn">Load Example for Selected Type</button>
+        </div>
+        <small>
+          Presets load from <code>/static/hl7_ui.js</code>. Edit values as needed before Draft/Send.
+        </small>
+      </div>
+    </div>
+
+    <div class="btns">
+      <button type="submit" name="action" value="draft">Draft Only</button>
+      <button type="submit" name="action" value="draft_send">Draft & Send</button>
+    </div>
+  </form>
+
+  {% if error %}
+    <div class="error">Error: {{ error }}</div>
+  {% endif %}
+
+  {% if result and result.message %}
+    <h2>Drafted HL7</h2>
+    <pre>{{ result.message | e }}</pre>
+  {% endif %}
+  {% if result and result.ack %}
+    <h2>ACK</h2>
+    <pre>{{ result.ack | e }}</pre>
+  {% endif %}
+  <script src="/static/hl7_ui.js"></script>
+</body>
+</html>

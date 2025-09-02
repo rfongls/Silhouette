@@ -1,0 +1,15 @@
+{
+  "name": "Silhouette Core",
+  "version": "0.2",
+  "phases": ["CLI Bootstrapping", "Memory + Intent Parsing", "Tone & Personality Inference", "Web + Local Interface"],
+  "capabilities": [
+    "DSL Alignment Loader",
+    "Module Plug-in System",
+    "Conversation Logging",
+    "Persistent Memory",
+    "Intent Detection",
+    "Tone/Emotion Analysis",
+    "Web UI Interface",
+    "Offline/Resilient Mode"
+  ]
+}
