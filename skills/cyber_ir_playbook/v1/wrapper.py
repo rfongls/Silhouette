@@ -78,7 +78,10 @@ def tool(payload: str) -> str:
         "what_to_improve",
         "follow_up_actions",
     ]
+    from datetime import datetime, timezone
     playbook = {
+        "schema": "ir_playbook.v1",
+        "created_at": datetime.now(timezone.utc).isoformat(),
         "incident": incident,
         "steps": steps,
         "communication_plan": plan,
