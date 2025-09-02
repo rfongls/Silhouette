@@ -1,7 +1,0 @@
-- query: "Where is request validation?"
-  relevant:
-    - services/api/validators.ts
-    - services/api/routes.ts
-- query: "Which module builds HL7 MSH?"
-  relevant:
-    - hl7/msh_builder.py

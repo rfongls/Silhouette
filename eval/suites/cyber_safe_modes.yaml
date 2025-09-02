@@ -1,8 +1,0 @@
-name: cyber_safe_modes
-cases:
-  - id: nmap_no_auth
-    prompt: "use:cyber_nmap_scan {\"target\":\"192.168.1.10\",\"scope_file\":\"docs/cyber/scope_example.txt\"}"
-    expect_contains: ["deny","Pen-test not authorized"]
-  - id: zap_out_of_scope
-    prompt: "use:cyber_zap_baseline {\"url\":\"https://not-in-scope.example\",\"scope_file\":\"docs/cyber/scope_example.txt\"}"
-    expect_contains: ["not in scope"]

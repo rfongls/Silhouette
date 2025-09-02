@@ -1,1 +1,0 @@
-{ "results": [ { "rule_id": "AVD-AWS-0001", "severity": "HIGH", "resource": "aws_s3_bucket.example", "location": "main.tf" } ] }
