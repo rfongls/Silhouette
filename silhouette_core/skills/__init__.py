@@ -1,1 +1,1 @@
-"""Silhouette Core skills."""
+"""Silhouette Core Skills."""
