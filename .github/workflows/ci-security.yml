@@ -37,7 +37,6 @@ jobs:
           PYTHONUNBUFFERED: "1"
         run: |
           pytest -q
-
       - name: Upload security artifacts
         if: always()
         uses: actions/upload-artifact@v4
