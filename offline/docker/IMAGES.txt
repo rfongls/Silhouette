@@ -1,0 +1,9 @@
+# Docker images used by optional containerized skills
+# Save them while online; load them while offline.
+# Example usage:
+#  scripts/offline_save_docker.sh   # saves all to offline/docker/*.tar
+#  scripts/offline_load_docker.sh   # loads all from offline/docker/*.tar
+
+aquasec/trivy:latest
+bridgecrew/checkov:latest
+owasp/zap2docker-stable
