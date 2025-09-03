@@ -30,4 +30,4 @@ jobs:
         env:
           PYTHONUNBUFFERED: "1"
         run: |
-          pytest -q tests/test_security_pentest.py
+          pytest -q
