@@ -2,12 +2,9 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-
 from fastapi import APIRouter, UploadFile, File, Form, Query, Request
 from fastapi.responses import PlainTextResponse, StreamingResponse, HTMLResponse
 from starlette.templating import Jinja2Templates
-
-
 from skills.cyber_pentest_gate.v1.wrapper import tool as gate_tool
 from skills.cyber_recon_scan.v1.wrapper import tool as recon_tool
 from skills.cyber_netforensics.v1.wrapper import tool as net_tool
@@ -128,9 +125,8 @@ async def recon_bulk_stream(
             except Exception as e:
                 yield f"data: {json.dumps({'event':'error','index':idx,'target':tgt,'error':str(e)})}\n\n"
         yield "data: {\"event\":\"done\"}\n\n"
-
     return StreamingResponse(event_gen(), media_type="text/event-stream")
-
+    return StreamingResponse(event_gen(), media_type="text/event-stream")
 
 @router.post("/security/netforensics")
 async def netforensics(
