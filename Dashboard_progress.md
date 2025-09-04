@@ -9,7 +9,7 @@
 - Phase 3 — History Explorer: ☑
 - Phase 4 — Seeds & Safety Editors: ☑
 - Phase 5 — Theming & Template Integration: ☑
-- Phase 6 — Advanced UX (Optional): △
+- Phase 6 — Advanced UX (Optional): ☑
 
 ## Phase 0 — Bootstrapping
 **Planned:** App skeleton, static mount, base layout, run instructions.  
@@ -48,8 +48,8 @@
 
 ## Phase 6 — Advanced UX (Optional)
 **Planned:** Log streaming, bulk runs, summaries, concurrency tests
-**Done:** Added SSE endpoint for streaming recon results, bulk recon streaming, and HTML summaries for security and interop tools with inline JSON previews.
-**Notes:** Concurrency tests still pending.
+**Done:** Added SSE endpoint for streaming recon results, bulk recon streaming, and HTML summaries for security and interop tools with inline JSON previews, vendored full HTMX, and a concurrency smoke test.
+**Notes:** Streaming sequence verified for multi-target recon.
 
 ## Commits / Milestones
 - 2025-09-__ — Phase 0 app shell created

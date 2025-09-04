@@ -86,3 +86,4 @@ async def validate_fhir(
         {"request": {}, "result": result},
         media_type="text/html",
     )
+
