@@ -48,8 +48,8 @@
 
 ## Phase 6 — Advanced UX (Optional)
 **Planned:** Log streaming, bulk runs, summaries, concurrency tests
-**Done:** Added SSE endpoint for streaming recon results.
-**Notes:** UI wiring for streaming left for later.
+**Done:** Added SSE endpoint for streaming recon results and inline JSON previews on history pages.
+**Notes:** Bulk run queue and additional summaries still pending.
 
 ## Commits / Milestones
 - 2025-09-__ — Phase 0 app shell created

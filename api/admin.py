@@ -12,7 +12,7 @@ def _backup(path: Path) -> None:
     if path.exists():
         backup = path.with_suffix(path.suffix + ".bak")
         backup.write_text(path.read_text(encoding="utf-8"), encoding="utf-8")
-
+        
 def _ensure_parent(path: Path) -> None:
     try:
         path.parent.mkdir(parents=True, exist_ok=True)

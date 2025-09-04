@@ -4,7 +4,12 @@
 <div class="card">
   <ul>
   {% for item in items %}
-    <li><a href="/ui/security/history/view?path={{ item }}">{{ item }}</a></li>
+    <li>
+      <details>
+        <summary>{{ item }}</summary>
+        <pre hx-get="/ui/security/history/view?path={{ item | urlencode }}" hx-trigger="revealed"></pre>
+      </details>
+    </li>
   {% else %}
     <li>No runs</li>
   {% endfor %}
