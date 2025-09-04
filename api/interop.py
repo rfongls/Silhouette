@@ -1,14 +1,11 @@
 from __future__ import annotations
-
 import json
 import subprocess
 from pathlib import Path
 from typing import List
-
 from fastapi import APIRouter, UploadFile, File, Form, Request
 from fastapi.responses import PlainTextResponse, HTMLResponse
 from starlette.templating import Jinja2Templates
-
 from skills.hl7_drafter import draft_message, send_message
 
 router = APIRouter()
