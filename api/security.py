@@ -1,14 +1,10 @@
 from __future__ import annotations
-
 import json
 from pathlib import Path
 import anyio
-
 from fastapi import APIRouter, UploadFile, File, Form, Query, Request
 from fastapi.responses import PlainTextResponse, StreamingResponse, HTMLResponse
 from starlette.templating import Jinja2Templates
-
-
 from skills.cyber_pentest_gate.v1.wrapper import tool as gate_tool
 from skills.cyber_recon_scan.v1.wrapper import tool as recon_tool
 from skills.cyber_netforensics.v1.wrapper import tool as net_tool
@@ -132,7 +128,24 @@ async def recon_bulk_stream(
         yield "data: {\"event\":\"done\"}\n\n"
 
     return StreamingResponse(event_gen(), media_type="text/event-stream")
-
+  
+    async def event_gen():
+        yield f"data: {json.dumps({'event':'start','count':len(target_list)})}\n\n"
+        for idx, tgt in enumerate(target_list, 1):
+            payload = {
+                "target": tgt,
+                "scope_file": scope_file,
+                "profile": profile,
+                "out_dir": out_dir,
+            }
+            try:
+                res = recon_tool(json.dumps(payload))
+                yield f"data: {json.dumps({'event':'item','index':idx,'target':tgt,'result':json.loads(res)})}\n\n"
+            except Exception as e:
+                yield f"data: {json.dumps({'event':'error','index':idx,'target':tgt,'error':str(e)})}\n\n"
+        yield "data: {\"event\":\"done\"}\n\n"
+    return StreamingResponse(event_gen(), media_type="text/event-stream")
+    return StreamingResponse(event_gen(), media_type="text/event-stream")
 
 @router.post("/security/netforensics")
 async def netforensics(
