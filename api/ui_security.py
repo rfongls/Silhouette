@@ -19,13 +19,18 @@ async def dashboard(request: Request):
 async def history(request: Request):
     root = Path("out/security")
     files = sorted(root.glob("*/active/*.json"), reverse=True)
-    items = [str(p) for p in files]
+    items = [p.as_posix() for p in files]
     return templates.TemplateResponse("security/history.html", {"request": request, "items": items})
 
 
 @router.get("/ui/security/history/view")
 async def history_view(path: str):
+    base = Path("out").resolve()
     p = Path(path)
-    if not p.exists():
+    try:
+        target = p.resolve()
+    except FileNotFoundError:
         raise HTTPException(404)
-    return PlainTextResponse(p.read_text(encoding="utf-8"), media_type="application/json")
+    if not target.is_file() or not str(target).startswith(str(base)):
+        raise HTTPException(404)
+    return PlainTextResponse(target.read_text(encoding="utf-8"), media_type="application/json")

@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import List
 
 from fastapi import APIRouter, UploadFile, File, Form
+from fastapi.responses import PlainTextResponse
 from pydantic import BaseModel
 
 from skills.hl7_drafter import draft_message, send_message
@@ -25,8 +26,8 @@ async def interop_hl7_send(req: HL7Request):
     data = req.json_data or {}
     message = draft_message(req.message_type, data)
     ack = await send_message(req.host, req.port, message)
-    return {"message": message, "ack": ack}
-
+    result = {"message": message, "ack": ack}
+    return PlainTextResponse(json.dumps(result, indent=2), media_type="application/json")
 
 def _run_cli(args: List[str]) -> dict:
     proc = subprocess.run(
@@ -59,7 +60,7 @@ async def translate(
         args.append("--validate")
     result = _run_cli(args)
     result["out"] = out_dir
-    return result
+    return PlainTextResponse(json.dumps(result, indent=2), media_type="application/json")
 
 
 @router.post("/interop/validate")
@@ -76,4 +77,4 @@ async def validate_fhir(
     args = ["fhir", "validate", "--in-dir", str(in_dir)]
     result = _run_cli(args)
     result["out"] = out_dir
-    return result
+    return PlainTextResponse(json.dumps(result, indent=2), media_type="application/json")

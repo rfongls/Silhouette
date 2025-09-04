@@ -4,8 +4,8 @@
 
 ## Phase Status
 - Phase 0 — Bootstrapping (App shell): ☑
-- Phase 1 — Cybersecurity Dashboard (MVP): ☑
-- Phase 2 — Interoperability Dashboard (HL7/FHIR): ☑
+- Phase 1 — Cybersecurity Dashboard (MVP): ☑ ([/ui/security/dashboard](/ui/security/dashboard))
+- Phase 2 — Interoperability Dashboard (HL7/FHIR): ☑ ([/ui/interop/dashboard](/ui/interop/dashboard))
 - Phase 3 — History Explorer: ☑
 - Phase 4 — Seeds & Safety Editors: ☐
 - Phase 5 — Theming & Template Integration: ☐

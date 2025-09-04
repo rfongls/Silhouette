@@ -4,6 +4,8 @@ import json
 from pathlib import Path
 
 from fastapi import APIRouter, UploadFile, File, Form
+from fastapi.responses import PlainTextResponse
+
 
 from skills.cyber_pentest_gate.v1.wrapper import tool as gate_tool
 from skills.cyber_recon_scan.v1.wrapper import tool as recon_tool
@@ -38,8 +40,8 @@ async def gate(
         "out_dir": out_dir,
     }
     res = gate_tool(json.dumps(payload))
-    return json.loads(res)
-
+    data = json.loads(res)
+    return PlainTextResponse(json.dumps(data, indent=2), media_type="application/json")
 
 @router.post("/security/recon")
 async def recon(
@@ -55,7 +57,8 @@ async def recon(
         "out_dir": out_dir,
     }
     res = recon_tool(json.dumps(payload))
-    return json.loads(res)
+    data = json.loads(res)
+    return PlainTextResponse(json.dumps(data, indent=2), media_type="application/json")
 
 
 @router.post("/security/netforensics")
@@ -67,7 +70,8 @@ async def netforensics(
     pcap_path = _save_upload(out_path, pcap)
     payload = {"pcap": str(pcap_path), "out_dir": out_dir}
     res = net_tool(json.dumps(payload))
-    return json.loads(res)
+    data = json.loads(res)
+    return PlainTextResponse(json.dumps(data, indent=2), media_type="application/json")
 
 
 @router.post("/security/ir")
@@ -77,4 +81,5 @@ async def ir(
 ):
     payload = {"incident": incident, "out_dir": out_dir}
     res = ir_tool(json.dumps(payload))
-    return json.loads(res)
+    data = json.loads(res)
+    return PlainTextResponse(json.dumps(data, indent=2), media_type="application/json")
