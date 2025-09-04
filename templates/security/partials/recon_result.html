@@ -1,0 +1,36 @@
+{% set obj = payload %}
+{% set inv = obj.get('inventory', {}) %}
+<div>
+  <h4>Recon Summary ({{ obj.get('profile') }})</h4>
+  <table border="1" cellpadding="6" cellspacing="0">
+    <thead>
+      <tr><th>Host</th><th>Port</th><th>Service</th><th>KEV</th><th>CVEs</th></tr>
+    </thead>
+    <tbody>
+    {% for svc in inv.get('services', []) %}
+      <tr>
+        <td>{{ inv.get('hosts', ['?'])[0] }}</td>
+        <td>{{ svc.get('port') }}</td>
+        <td>{{ svc.get('service') }}</td>
+        <td>
+          {% if svc.get('cves') %}
+            {% if svc.get('cves')|selectattr('kev')|list|length > 0 %}✅{% else %}–{% endif %}
+          {% else %}–{% endif %}
+        </td>
+        <td>
+          {% if svc.get('cves') %}
+            {% for c in svc.get('cves') %}
+              <span>{{ c.get('id') }}{% if c.get('kev') %}★{% endif %}</span>{% if not loop.last %}, {% endif %}
+            {% endfor %}
+          {% else %}–{% endif %}
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  <details>
+    <summary>Raw JSON</summary>
+    <pre>{{ obj | tojson(indent=2) }}</pre>
+  </details>
+</div>
+

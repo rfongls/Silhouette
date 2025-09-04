@@ -1,0 +1,16 @@
+<div>
+  {% set obj = payload %}
+  <h4>Gate Decision</h4>
+  {% if obj.ok %}
+    <p><strong>Allowed</strong> — result: <code>{{ obj.result }}</code></p>
+  {% elif obj.deny %}
+    <p><strong>Denied</strong> — reason: <code>{{ obj.deny }}</code></p>
+  {% else %}
+    <p><strong>Response</strong> received.</p>
+  {% endif %}
+  <details>
+    <summary>Raw JSON</summary>
+    <pre>{{ obj | tojson(indent=2) }}</pre>
+  </details>
+</div>
+
