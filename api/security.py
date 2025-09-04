@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-
 from fastapi import APIRouter, UploadFile, File, Form, Query
 from fastapi.responses import PlainTextResponse, StreamingResponse
 
@@ -59,7 +58,6 @@ async def recon(
     res = recon_tool(json.dumps(payload))
     data = json.loads(res)
     return PlainTextResponse(json.dumps(data, indent=2), media_type="application/json")
-
 
 @router.get("/security/recon-stream")
 async def recon_stream(
