@@ -1,5 +1,4 @@
 from __future__ import annotations
-
 import json, os
 from pathlib import Path
 
@@ -13,8 +12,7 @@ def _backup(path: Path) -> None:
     if path.exists():
         backup = path.with_suffix(path.suffix + ".bak")
         backup.write_text(path.read_text(encoding="utf-8"), encoding="utf-8")
-
-
+        
 def _ensure_parent(path: Path) -> None:
     try:
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -38,11 +36,9 @@ async def save_seeds(
     cve_path = Path("data/security/seeds/cve/cve_seed.json")
     kev_path = Path("data/security/seeds/kev/kev_seed.json")
     scope_path = Path("docs/cyber/scope_example.txt")
-
     _ensure_parent(cve_path)
     _ensure_parent(kev_path)
     _ensure_parent(scope_path)
-
     _backup(cve_path)
     cve_path.write_text(cve_json, encoding="utf-8")
     _backup(kev_path)
