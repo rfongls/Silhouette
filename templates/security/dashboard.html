@@ -1,52 +1,92 @@
 {% extends "layout.html" %}
 {% block content %}
 <h2>Security Dashboard</h2>
-<div class="card">
-  <h3>Gate</h3>
-  <form hx-post="/security/gate" hx-target="#gate-result" hx-swap="innerHTML" enctype="multipart/form-data">
-    <input type="text" name="target" placeholder="target" />
-    <input type="text" name="scope_file" value="docs/cyber/scope_example.txt" />
-    <input type="file" name="auth_doc" />
-    <input type="text" name="out_dir" value="out/security/ui" />
-    <button type="submit">Run</button>
-  </form>
-  <pre id="gate-result"></pre>
-</div>
-<div class="card">
-  <h3>Recon</h3>
-  <form hx-post="/security/recon" hx-target="#recon-result" hx-swap="innerHTML">
-    <input type="text" name="target" placeholder="target" />
-    <input type="text" name="scope_file" value="docs/cyber/scope_example.txt" />
-    <select name="profile">
-      <option value="safe">safe</option>
-      <option value="version">version</option>
-      <option value="full">full</option>
-    </select>
-    <input type="text" name="out_dir" value="out/security/ui" />
-    <button type="submit">Run</button>
-  </form>
-  <pre id="recon-result"></pre>
-</div>
-<div class="card">
-  <h3>Netforensics</h3>
-  <form hx-post="/security/netforensics" hx-target="#net-result" hx-swap="innerHTML" enctype="multipart/form-data">
-    <input type="file" name="pcap" />
-    <input type="text" name="out_dir" value="out/security/ui" />
-    <button type="submit">Run</button>
-  </form>
-  <pre id="net-result"></pre>
-</div>
-<div class="card">
-  <h3>IR Playbook</h3>
-  <form hx-post="/security/ir" hx-target="#ir-result" hx-swap="innerHTML">
-    <select name="incident">
-      <option value="ransomware">ransomware</option>
-      <option value="credential">credential</option>
-      <option value="pii">pii</option>
-    </select>
-    <input type="text" name="out_dir" value="out/security/ui" />
-    <button type="submit">Run</button>
-  </form>
-  <pre id="ir-result"></pre>
+<div class="grid">
+  <div class="card">
+    <h3>Gate</h3>
+    <form hx-post="/security/gate" hx-target="#gate-result" hx-swap="innerHTML" enctype="multipart/form-data">
+      <input type="text" name="target" placeholder="target" />
+      <input type="text" name="scope_file" value="docs/cyber/scope_example.txt" />
+      <input type="file" name="auth_doc" />
+      <input type="text" name="out_dir" value="out/security/ui" />
+      <button type="submit">Run</button>
+    </form>
+    <div id="gate-result" class="result"></div>
+  </div>
+  <div class="card">
+    <h3>Recon</h3>
+    <form hx-post="/security/recon" hx-target="#recon-result" hx-swap="innerHTML">
+      <input type="text" name="target" placeholder="target" />
+      <input type="text" name="scope_file" value="docs/cyber/scope_example.txt" />
+      <select name="profile">
+        <option value="safe">safe</option>
+        <option value="version">version</option>
+        <option value="full">full</option>
+      </select>
+      <input type="text" name="out_dir" value="out/security/ui" />
+      <button type="submit">Run</button>
+      <button type="button" onclick="
+        (function(){
+          const out = document.getElementById('recon-stream');
+          out.textContent = 'Starting stream...';
+          const form = this.closest('form');
+          const data = new FormData(form);
+          const query = new URLSearchParams(Array.from(data.entries())).toString();
+          const es = new EventSource('/security/recon-stream?' + query);
+          es.onmessage = (e) => { out.textContent += (out.textContent ? '\n' : '') + e.data; };
+          es.onerror = () => { out.textContent += '\n[stream closed]'; es.close(); };
+        })();
+      ">Stream Recon</button>
+    </form>
+    <div id="recon-result" class="result"></div>
+    <pre id="recon-stream" class="result"></pre>
+  </div>
+  <div class="card">
+    <h3>Netforensics</h3>
+    <form hx-post="/security/netforensics" hx-target="#net-result" hx-swap="innerHTML" enctype="multipart/form-data">
+      <input type="file" name="pcap" />
+      <input type="text" name="out_dir" value="out/security/ui" />
+      <button type="submit">Run</button>
+    </form>
+    <div id="net-result" class="result"></div>
+  </div>
+  <div class="card">
+    <h3>IR Playbook</h3>
+    <form hx-post="/security/ir" hx-target="#ir-result" hx-swap="innerHTML">
+      <select name="incident">
+        <option value="ransomware">ransomware</option>
+        <option value="credential">credential</option>
+        <option value="pii">pii</option>
+      </select>
+      <input type="text" name="out_dir" value="out/security/ui" />
+      <button type="submit">Run</button>
+    </form>
+    <div id="ir-result" class="result"></div>
+  </div>
+
+  <div class="card">
+    <h3>Bulk Recon</h3>
+    <form id="bulk-form">
+      <label>Targets (one per line)</label>
+      <textarea name="targets" rows="6" placeholder="sub1.example.com&#10;sub2.example.com"></textarea>
+      <input type="text" name="scope_file" value="docs/cyber/scope_example.txt" />
+      <select name="profile">
+        <option value="safe">safe</option>
+        <option value="version">version</option>
+        <option value="full">full</option>
+      </select>
+      <input type="text" name="out_dir" value="out/security/ui" />
+      <button type="button" onclick="
+        (function(){
+          const form = document.getElementById('bulk-form');
+          const out = document.getElementById('bulk-stream');
+          const query = new URLSearchParams(new FormData(form)).toString();
+          const es = new EventSource('/security/recon-bulk-stream?' + query);
+          es.onmessage = (e)=>{ out.textContent += (out.textContent? '\n':'') + e.data; };
+          es.onerror = ()=>{ out.textContent += '\n[stream closed]'; es.close(); };
+        })();">Stream Bulk</button>
+    </form>
+    <pre id="bulk-stream" class="result"></pre>
+  </div>
 </div>
 {% endblock %}

@@ -5,29 +5,36 @@ import subprocess
 from pathlib import Path
 from typing import List
 
-from fastapi import APIRouter, UploadFile, File, Form
-from fastapi.responses import PlainTextResponse
-from pydantic import BaseModel
+from fastapi import APIRouter, UploadFile, File, Form, Request
+from fastapi.responses import PlainTextResponse, HTMLResponse
+from starlette.templating import Jinja2Templates
 
 from skills.hl7_drafter import draft_message, send_message
 
 router = APIRouter()
-
-
-class HL7Request(BaseModel):
-    message_type: str
-    json_data: dict | None = None
-    host: str
-    port: int
+templates = Jinja2Templates(directory="templates")
 
 
 @router.post("/interop/hl7/draft-send")
-async def interop_hl7_send(req: HL7Request):
-    data = req.json_data or {}
-    message = draft_message(req.message_type, data)
-    ack = await send_message(req.host, req.port, message)
-    result = {"message": message, "ack": ack}
-    return PlainTextResponse(json.dumps(result, indent=2), media_type="application/json")
+async def interop_hl7_send(
+    message_type: str = Form(...),
+    json_data: str = Form("{}"),
+    host: str = Form(...),
+    port: int = Form(...),
+):
+    try:
+        data = json.loads(json_data) if json_data.strip() else {}
+    except json.JSONDecodeError as e:
+        return PlainTextResponse(
+            json.dumps({"ok": False, "error": f"Invalid JSON for json_data: {e}"}, indent=2),
+            media_type="application/json",
+        )
+    message = draft_message(message_type, data)
+    ack = await send_message(host, port, message)
+    return PlainTextResponse(
+        json.dumps({"message": message, "ack": ack}, indent=2),
+        media_type="application/json",
+    )
 
 def _run_cli(args: List[str]) -> dict:
     proc = subprocess.run(
@@ -44,6 +51,7 @@ def _run_cli(args: List[str]) -> dict:
 
 @router.post("/interop/translate")
 async def translate(
+    request: Request,
     hl7_file: UploadFile = File(...),
     bundle: str = Form("transaction"),
     validate: bool = Form(False),
@@ -60,11 +68,16 @@ async def translate(
         args.append("--validate")
     result = _run_cli(args)
     result["out"] = out_dir
-    return PlainTextResponse(json.dumps(result, indent=2), media_type="application/json")
+    return templates.TemplateResponse(
+        "interop/partials/translate_result.html",
+        {"request": request, "result": result},
+        media_type="text/html",
+    )
 
 
 @router.post("/interop/validate")
 async def validate_fhir(
+    request: Request,
     fhir_files: List[UploadFile] = File(...),
     out_dir: str = Form("out/interop/ui"),
 ):
@@ -77,4 +90,8 @@ async def validate_fhir(
     args = ["fhir", "validate", "--in-dir", str(in_dir)]
     result = _run_cli(args)
     result["out"] = out_dir
-    return PlainTextResponse(json.dumps(result, indent=2), media_type="application/json")
+    return templates.TemplateResponse(
+        "interop/partials/validate_result.html",
+        {"request": request, "result": result},
+        media_type="text/html",
+    )
