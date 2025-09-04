@@ -34,3 +34,4 @@ async def history_view(path: str):
     if not target.is_file() or not str(target).startswith(str(base)):
         raise HTTPException(404)
     return PlainTextResponse(target.read_text(encoding="utf-8"), media_type="application/json")
+

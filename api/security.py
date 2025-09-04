@@ -6,6 +6,7 @@ from pathlib import Path
 from fastapi import APIRouter, UploadFile, File, Form
 from fastapi.responses import PlainTextResponse
 
+
 from skills.cyber_pentest_gate.v1.wrapper import tool as gate_tool
 from skills.cyber_recon_scan.v1.wrapper import tool as recon_tool
 from skills.cyber_netforensics.v1.wrapper import tool as net_tool
@@ -41,7 +42,6 @@ async def gate(
     res = gate_tool(json.dumps(payload))
     data = json.loads(res)
     return PlainTextResponse(json.dumps(data, indent=2), media_type="application/json")
-
 
 @router.post("/security/recon")
 async def recon(

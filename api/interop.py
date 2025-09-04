@@ -29,7 +29,6 @@ async def interop_hl7_send(req: HL7Request):
     result = {"message": message, "ack": ack}
     return PlainTextResponse(json.dumps(result, indent=2), media_type="application/json")
 
-
 def _run_cli(args: List[str]) -> dict:
     proc = subprocess.run(
         ["python", "-m", "silhouette_core.cli", *args],
