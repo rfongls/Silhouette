@@ -1,0 +1,19 @@
+{% set pb = payload %}
+<div>
+  <h4>IR Playbook — {{ pb.get('incident','?') }}</h4>
+  {% if pb.get('steps') %}
+    <ol>
+    {% for s in pb.get('steps') %}
+      <li>{{ s.replace('_',' ') }}</li>
+    {% endfor %}
+    </ol>
+  {% endif %}
+  {% if pb.get('schedule') %}
+    <p><em>Inject Schedule:</em> {{ pb.get('schedule')|length }} items</p>
+  {% endif %}
+  <details>
+    <summary>Raw JSON</summary>
+    <pre>{{ pb | tojson(indent=2) }}</pre>
+  </details>
+</div>
+

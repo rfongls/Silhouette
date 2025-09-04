@@ -1,11 +1,18 @@
 {% extends "layout.html" %}
 {% block content %}
 <h2>Security History</h2>
-<ul>
-{% for item in items %}
-  <li><a href="/ui/security/history/view?path={{ item }}">{{ item }}</a></li>
-{% else %}
-  <li>No runs</li>
-{% endfor %}
-</ul>
+<div class="card">
+  <ul>
+  {% for item in items %}
+    <li>
+      <details>
+        <summary>{{ item }}</summary>
+        <pre hx-get="/ui/security/history/view?path={{ item | urlencode }}" hx-trigger="revealed"></pre>
+      </details>
+    </li>
+  {% else %}
+    <li>No runs</li>
+  {% endfor %}
+  </ul>
+</div>
 {% endblock %}

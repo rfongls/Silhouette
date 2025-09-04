@@ -1,0 +1,24 @@
+{% set r = result %}
+<div>
+  <h4>Validate Result</h4>
+  <p>
+    Return Code: <strong>{{ r.get('rc') }}</strong>
+    {% if r.get('rc') == 0 %} — <span style="color:green">OK</span>{% else %} — <span style="color:#b00">Error</span>{% endif %}
+  </p>
+  {% if r.get('out') %}
+    <p>Checked folder: <code>{{ r.get('out') }}/uploads</code></p>
+  {% endif %}
+  {% if r.get('stderr') %}
+    <details>
+      <summary>stderr</summary>
+      <pre>{{ r.get('stderr') }}</pre>
+    </details>
+  {% endif %}
+  {% if r.get('stdout') %}
+    <details>
+      <summary>stdout</summary>
+      <pre>{{ r.get('stdout') }}</pre>
+    </details>
+  {% endif %}
+</div>
+
