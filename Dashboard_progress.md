@@ -3,38 +3,38 @@
 **Current Target:** Ship FastAPI + Jinja2 + HTMX UI with modular dashboards (Security, Interop, Admin), fully offline.
 
 ## Phase Status
-- Phase 0 — Bootstrapping (App shell): ☐
-- Phase 1 — Cybersecurity Dashboard (MVP): ☐
-- Phase 2 — Interoperability Dashboard (HL7/FHIR): ☐
-- Phase 3 — History Explorer: ☐
+- Phase 0 — Bootstrapping (App shell): ☑
+- Phase 1 — Cybersecurity Dashboard (MVP): ☑
+- Phase 2 — Interoperability Dashboard (HL7/FHIR): ☑
+- Phase 3 — History Explorer: ☑
 - Phase 4 — Seeds & Safety Editors: ☐
 - Phase 5 — Theming & Template Integration: ☐
 - Phase 6 — Advanced UX (Optional): ☐
 
 ## Phase 0 — Bootstrapping
 **Planned:** App skeleton, static mount, base layout, run instructions.  
-**Done:** _(codex: fill in)_  
-**Notes:** _(codex: fill in)_
+**Done:** FastAPI app with static files and base layout template.  
+**Notes:** Runs offline; root endpoint returns `{ "ok": true }`.
 
 ## Phase 1 — Cybersecurity Dashboard (MVP)
 **Planned:**
 - `/ui/security/dashboard` renders 4 cards
 - `/security/{gate|recon|netforensics|ir}` JSON endpoints
 - Results written to `out/security/ui/active/`
-**Done:** _(codex: fill in)_  
-**Notes:** _(codex: fill in)_
+**Done:** Dashboard and endpoints implemented with HTMX forms and file upload handling.  
+**Notes:** Writes artifacts under `out/security/ui/`.
 
 ## Phase 2 — Interoperability Dashboard (HL7/FHIR)
 **Planned:**
 - `/ui/interop/dashboard` (HL7 draft/send, Translate, Validate)
 - Implement function calls or CLI fallback
-**Done:** _(codex: fill in)_  
-**Notes:** _(codex: fill in)_
+**Done:** Added draft-send, translate, and validate endpoints with CLI fallback and HTMX UI.  
+**Notes:** Outputs stored under `out/interop/ui/`.
 
 ## Phase 3 — History Explorer
 **Planned:** `/ui/security/history`, `/ui/interop/history` list `out/<toolpack>/*/active/*.json`  
-**Done:** _(codex: fill in)_  
-**Notes:** _(codex: fill in)_
+**Done:** History views list JSON artifacts with links for download.  
+**Notes:** Simple listing; no prettifiers yet.
 
 ## Phase 4 — Seeds & Safety Editors
 **Planned:** `/ui/security/seeds`, `/ui/security/safety` edit seeds, scope, and env toggles  
