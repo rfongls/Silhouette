@@ -2,12 +2,9 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-
 from fastapi import APIRouter, UploadFile, File, Form, Query
 from fastapi.responses import PlainTextResponse, StreamingResponse, HTMLResponse
 from starlette.templating import Jinja2Templates
-
-
 from skills.cyber_pentest_gate.v1.wrapper import tool as gate_tool
 from skills.cyber_recon_scan.v1.wrapper import tool as recon_tool
 from skills.cyber_netforensics.v1.wrapper import tool as net_tool
@@ -126,6 +123,51 @@ async def recon_bulk_stream(
             except Exception as e:
                 yield f"data: {json.dumps({'event':'error','index':idx,'target':tgt,'error':str(e)})}\n\n"
         yield "data: {\"event\":\"done\"}\n\n"
+
+    return StreamingResponse(event_gen(), media_type="text/event-stream")
+
+@router.get("/security/recon-stream")
+async def recon_stream(
+    target: str = Query(...),
+    scope_file: str = Query("docs/cyber/scope_example.txt"),
+    profile: str = Query("safe"),
+    out_dir: str = Query("out/security/ui"),
+):
+    """SSE stream (GET) to support EventSource() in the UI."""
+
+    async def event_gen():
+        yield "data: started\n\n"
+        payload = {
+            "target": target,
+            "scope_file": scope_file,
+            "profile": profile,
+            "out_dir": out_dir,
+        }
+        res = recon_tool(json.dumps(payload))
+        yield f"data: {res}\n\n"
+
+    return StreamingResponse(event_gen(), media_type="text/event-stream")
+
+
+@router.get("/security/recon-stream")
+async def recon_stream(
+    target: str = Query(...),
+    scope_file: str = Query("docs/cyber/scope_example.txt"),
+    profile: str = Query("safe"),
+    out_dir: str = Query("out/security/ui"),
+):
+    """SSE stream (GET) to support EventSource() in the UI."""
+
+    async def event_gen():
+        yield "data: started\n\n"
+        payload = {
+            "target": target,
+            "scope_file": scope_file,
+            "profile": profile,
+            "out_dir": out_dir,
+        }
+        res = recon_tool(json.dumps(payload))
+        yield f"data: {res}\n\n"
 
     return StreamingResponse(event_gen(), media_type="text/event-stream")
 
