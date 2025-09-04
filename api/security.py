@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 
 from fastapi import APIRouter, UploadFile, File, Form
-from fastapi.responses import PlainTextResponse
+from fastapi.responses import PlainTextResponse, StreamingResponse
 
 
 from skills.cyber_pentest_gate.v1.wrapper import tool as gate_tool
@@ -59,6 +59,27 @@ async def recon(
     res = recon_tool(json.dumps(payload))
     data = json.loads(res)
     return PlainTextResponse(json.dumps(data, indent=2), media_type="application/json")
+
+
+@router.post("/security/recon-stream")
+async def recon_stream(
+    target: str = Form(...),
+    scope_file: str = Form("docs/cyber/scope_example.txt"),
+    profile: str = Form("safe"),
+    out_dir: str = Form("out/security/ui"),
+):
+    async def event_gen():
+        yield "data: started\n\n"
+        payload = {
+            "target": target,
+            "scope_file": scope_file,
+            "profile": profile,
+            "out_dir": out_dir,
+        }
+        res = recon_tool(json.dumps(payload))
+        yield f"data: {res}\n\n"
+
+    return StreamingResponse(event_gen(), media_type="text/event-stream")
 
 
 @router.post("/security/netforensics")

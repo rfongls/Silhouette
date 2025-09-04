@@ -1,11 +1,13 @@
 {% extends "layout.html" %}
 {% block content %}
 <h2>Interop History</h2>
-<ul>
-{% for item in items %}
-  <li><a href="/ui/interop/history/view?path={{ item }}">{{ item }}</a></li>
-{% else %}
-  <li>No runs</li>
-{% endfor %}
-</ul>
+<div class="card">
+  <ul>
+  {% for item in items %}
+    <li><a href="/ui/interop/history/view?path={{ item }}">{{ item }}</a></li>
+  {% else %}
+    <li>No runs</li>
+  {% endfor %}
+  </ul>
+</div>
 {% endblock %}
