@@ -48,8 +48,8 @@
 
 ## Phase 6 — Advanced UX (Optional)
 **Planned:** Log streaming, bulk runs, summaries, concurrency tests
-**Done:** Added SSE endpoint for streaming recon results, bulk recon streaming, and HTML summaries for security and interop tools with inline JSON previews, vendored full HTMX, and a concurrency smoke test.
-**Notes:** Streaming sequence verified for multi-target recon.
+**Done:** Added SSE endpoint for streaming recon results, bulk recon streaming, and HTML summaries for security and interop tools with inline JSON previews, vendored full HTMX, a concurrency smoke test, and non-blocking thread offloads for recon scans.
+**Notes:** Streaming sequence verified for multi-target recon; history viewers now restrict paths under `out/`.
 
 ## Commits / Milestones
 - 2025-09-__ — Phase 0 app shell created

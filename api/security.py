@@ -1,7 +1,7 @@
 from __future__ import annotations
-
 import json
 from pathlib import Path
+import anyio
 from fastapi import APIRouter, UploadFile, File, Form, Query, Request
 from fastapi.responses import PlainTextResponse, StreamingResponse, HTMLResponse
 from starlette.templating import Jinja2Templates
@@ -91,7 +91,8 @@ async def recon_stream(
             "profile": profile,
             "out_dir": out_dir,
         }
-        res = recon_tool(json.dumps(payload))
+        # Offload synchronous work so we don't block the event loop
+        res = await anyio.to_thread.run_sync(lambda: recon_tool(json.dumps(payload)))
         yield f"data: {res}\n\n"
 
     return StreamingResponse(event_gen(), media_type="text/event-stream")
@@ -110,6 +111,24 @@ async def recon_bulk_stream(
     """
     target_list = [t.strip() for t in targets.splitlines() if t.strip()]
 
+    async def event_gen():
+        yield f"data: {json.dumps({'event':'start','count':len(target_list)})}\n\n"
+        for idx, tgt in enumerate(target_list, 1):
+            payload = {
+                "target": tgt,
+                "scope_file": scope_file,
+                "profile": profile,
+                "out_dir": out_dir,
+            }
+            try:
+                res = await anyio.to_thread.run_sync(lambda: recon_tool(json.dumps(payload)))
+                yield f"data: {json.dumps({'event':'item','index':idx,'target':tgt,'result':json.loads(res)})}\n\n"
+            except Exception as e:
+                yield f"data: {json.dumps({'event':'error','index':idx,'target':tgt,'error':str(e)})}\n\n"
+        yield "data: {\"event\":\"done\"}\n\n"
+
+    return StreamingResponse(event_gen(), media_type="text/event-stream")
+  
     async def event_gen():
         yield f"data: {json.dumps({'event':'start','count':len(target_list)})}\n\n"
         for idx, tgt in enumerate(target_list, 1):

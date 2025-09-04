@@ -25,6 +25,7 @@ async def history(request: Request):
 
 @router.get("/ui/security/history/view")
 async def history_view(path: str):
+    # Safely resolve path under ./out/
     base = Path("out").resolve()
     p = Path(path)
     try:
