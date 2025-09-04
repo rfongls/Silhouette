@@ -35,6 +35,7 @@ For more details see [docs/ops/agent_setup.md](docs/ops/agent_setup.md).
 ### One-click
 - **Windows**: double-click `scripts/run_ui.bat`
 - **macOS**: double-click `scripts/run_ui.command` (first time only, you may need to run `chmod +x scripts/run_ui.command`)
+- **Linux**: double-click `scripts/run_ui.sh` in your file manager (or run `bash scripts/run_ui.sh`). First time only: `chmod +x scripts/run_ui.sh`
 
 These will:
 1) Create `.venv` (if missing)
@@ -44,13 +45,13 @@ These will:
    - http://localhost:8000/ui/interop/dashboard
 
 ### Manual
-
 Launch the dashboards locally:
 
 ```bash
 uvicorn main:app --reload
 ```
 
+> Tip: If you want `/` to land on the UI, apply the small `RedirectResponse` tweak shown earlier.
 Then visit:
 
 - http://localhost:8000/ui/security/dashboard
