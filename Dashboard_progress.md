@@ -7,9 +7,9 @@
 - Phase 1 — Cybersecurity Dashboard (MVP): ☑ ([/ui/security/dashboard](/ui/security/dashboard))
 - Phase 2 — Interoperability Dashboard (HL7/FHIR): ☑ ([/ui/interop/dashboard](/ui/interop/dashboard))
 - Phase 3 — History Explorer: ☑
-- Phase 4 — Seeds & Safety Editors: ☐
-- Phase 5 — Theming & Template Integration: ☐
-- Phase 6 — Advanced UX (Optional): ☐
+- Phase 4 — Seeds & Safety Editors: ☑
+- Phase 5 — Theming & Template Integration: ☑
+- Phase 6 — Advanced UX (Optional): ☑
 
 ## Phase 0 — Bootstrapping
 **Planned:** App skeleton, static mount, base layout, run instructions.  
@@ -37,19 +37,19 @@
 **Notes:** Simple listing; no prettifiers yet.
 
 ## Phase 4 — Seeds & Safety Editors
-**Planned:** `/ui/security/seeds`, `/ui/security/safety` edit seeds, scope, and env toggles  
-**Done:** _(codex: fill in)_  
-**Notes:** _(codex: fill in)_
+**Planned:** `/ui/security/seeds`, `/ui/security/safety` edit seeds, scope, and env toggles
+**Done:** Seeds and safety editors added with backup + validation save endpoints.
+**Notes:** Writes to `data/security/seeds/...` and `config/security.env`.
 
 ## Phase 5 — Theming & Template Integration
-**Planned:** Replace CSS/markup to match house theme  
-**Done:** _(codex: fill in)_  
-**Notes:** _(codex: fill in)_
+**Planned:** Replace CSS/markup to match house theme
+**Done:** Base theme applied across layout, dashboards, and history pages.
+**Notes:** Uses grid cards and offline CSS.
 
 ## Phase 6 — Advanced UX (Optional)
-**Planned:** Log streaming, bulk runs, summaries, concurrency tests  
-**Done:** _(codex: fill in)_  
-**Notes:** _(codex: fill in)_
+**Planned:** Log streaming, bulk runs, summaries, concurrency tests
+**Done:** Added SSE endpoint for streaming recon results, bulk recon streaming, and HTML summaries for security and interop tools with inline JSON previews, vendored full HTMX, a concurrency smoke test, and non-blocking thread offloads for recon scans.
+**Notes:** Streaming sequence verified for multi-target recon; history viewers now restrict paths under `out/`; added one-click launch scripts for Windows and macOS.
 
 ## Commits / Milestones
 - 2025-09-__ — Phase 0 app shell created
