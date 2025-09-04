@@ -1,11 +1,9 @@
 from __future__ import annotations
-
 import json
 import subprocess
 from pathlib import Path
 from typing import List
-
-from fastapi import APIRouter, UploadFile, File, Form
+from fastapi import APIRouter, UploadFile, File, Form, Request
 from fastapi.responses import PlainTextResponse, HTMLResponse
 from starlette.templating import Jinja2Templates
 from skills.hl7_drafter import draft_message, send_message
@@ -24,10 +22,16 @@ async def interop_hl7_send(
     try:
         data = json.loads(json_data) if json_data.strip() else {}
     except json.JSONDecodeError as e:
-        return {"ok": False, "error": f"Invalid JSON for json_data: {e}"}
+        return PlainTextResponse(
+            json.dumps({"ok": False, "error": f"Invalid JSON for json_data: {e}"}, indent=2),
+            media_type="application/json",
+        )
     message = draft_message(message_type, data)
     ack = await send_message(host, port, message)
-    return {"message": message, "ack": ack}
+    return PlainTextResponse(
+        json.dumps({"message": message, "ack": ack}, indent=2),
+        media_type="application/json",
+    )
 
 def _run_cli(args: List[str]) -> dict:
     proc = subprocess.run(
@@ -44,6 +48,7 @@ def _run_cli(args: List[str]) -> dict:
 
 @router.post("/interop/translate")
 async def translate(
+    request: Request,
     hl7_file: UploadFile = File(...),
     bundle: str = Form("transaction"),
     validate: bool = Form(False),
@@ -62,13 +67,14 @@ async def translate(
     result["out"] = out_dir
     return templates.TemplateResponse(
         "interop/partials/translate_result.html",
-        {"request": {}, "result": result},
+        {"request": request, "result": result},
         media_type="text/html",
     )
 
 
 @router.post("/interop/validate")
 async def validate_fhir(
+    request: Request,
     fhir_files: List[UploadFile] = File(...),
     out_dir: str = Form("out/interop/ui"),
 ):
@@ -83,7 +89,6 @@ async def validate_fhir(
     result["out"] = out_dir
     return templates.TemplateResponse(
         "interop/partials/validate_result.html",
-        {"request": {}, "result": result},
+        {"request": request, "result": result},
         media_type="text/html",
     )
-

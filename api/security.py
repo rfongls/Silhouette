@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from fastapi import APIRouter, UploadFile, File, Form, Query
+from fastapi import APIRouter, UploadFile, File, Form, Query, Request
 from fastapi.responses import PlainTextResponse, StreamingResponse, HTMLResponse
 from starlette.templating import Jinja2Templates
 from skills.cyber_pentest_gate.v1.wrapper import tool as gate_tool
@@ -25,6 +25,7 @@ def _save_upload(out_dir: Path, up: UploadFile) -> Path:
 
 @router.post("/security/gate")
 async def gate(
+    request: Request,
     target: str = Form(...),
     scope_file: str = Form("docs/cyber/scope_example.txt"),
     auth_doc: UploadFile = File(...),
@@ -43,12 +44,13 @@ async def gate(
     # Render a compact summary + raw JSON
     return templates.TemplateResponse(
         "security/partials/gate_result.html",
-        {"request": {}, "payload": data},
+        {"request": request, "payload": data},
         media_type="text/html",
     )
 
 @router.post("/security/recon")
 async def recon(
+    request: Request,
     target: str = Form(...),
     scope_file: str = Form("docs/cyber/scope_example.txt"),
     profile: str = Form("safe"),
@@ -65,7 +67,7 @@ async def recon(
     return templates.TemplateResponse(
         "security/partials/recon_result.html",
         {
-            "request": {},
+            "request": request,
             "payload": data,
         },
         media_type="text/html",
@@ -123,11 +125,12 @@ async def recon_bulk_stream(
             except Exception as e:
                 yield f"data: {json.dumps({'event':'error','index':idx,'target':tgt,'error':str(e)})}\n\n"
         yield "data: {\"event\":\"done\"}\n\n"
-
+    return StreamingResponse(event_gen(), media_type="text/event-stream")
     return StreamingResponse(event_gen(), media_type="text/event-stream")
 
 @router.post("/security/netforensics")
 async def netforensics(
+    request: Request,
     pcap: UploadFile = File(...),
     out_dir: str = Form("out/security/ui"),
 ):
@@ -139,7 +142,7 @@ async def netforensics(
     return templates.TemplateResponse(
         "security/partials/net_result.html",
         {
-            "request": {},
+            "request": request,
             "payload": data,
         },
         media_type="text/html",
@@ -148,6 +151,7 @@ async def netforensics(
 
 @router.post("/security/ir")
 async def ir(
+    request: Request,
     incident: str = Form(...),
     out_dir: str = Form("out/security/ui"),
 ):
@@ -156,6 +160,6 @@ async def ir(
     data = json.loads(res)
     return templates.TemplateResponse(
         "security/partials/ir_result.html",
-        {"request": {}, "payload": data},
+        {"request": request, "payload": data},
         media_type="text/html",
     )
