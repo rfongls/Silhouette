@@ -1,0 +1,38 @@
+{% extends "layout.html" %}
+{% block content %}
+<h2>Interoperability Dashboard</h2>
+<div class="card">
+  <h3>Draft & Send</h3>
+  <form hx-post="/interop/hl7/draft-send" hx-target="#draft-result" hx-swap="innerHTML">
+    <input type="text" name="message_type" placeholder="VXU^V04" />
+    <textarea name="json_data" placeholder="{}"></textarea>
+    <input type="text" name="host" placeholder="127.0.0.1" />
+    <input type="number" name="port" placeholder="2575" />
+    <button type="submit">Send</button>
+  </form>
+  <pre id="draft-result"></pre>
+</div>
+<div class="card">
+  <h3>Translate</h3>
+  <form hx-post="/interop/translate" hx-target="#translate-result" hx-swap="innerHTML" enctype="multipart/form-data">
+    <input type="file" name="hl7_file" />
+    <select name="bundle">
+      <option value="transaction">transaction</option>
+      <option value="collection">collection</option>
+    </select>
+    <label><input type="checkbox" name="validate" value="true" />validate</label>
+    <input type="text" name="out_dir" value="out/interop/ui" />
+    <button type="submit">Translate</button>
+  </form>
+  <pre id="translate-result"></pre>
+</div>
+<div class="card">
+  <h3>Validate</h3>
+  <form hx-post="/interop/validate" hx-target="#validate-result" hx-swap="innerHTML" enctype="multipart/form-data">
+    <input type="file" name="fhir_files" multiple />
+    <input type="text" name="out_dir" value="out/interop/ui" />
+    <button type="submit">Validate</button>
+  </form>
+  <pre id="validate-result"></pre>
+</div>
+{% endblock %}
