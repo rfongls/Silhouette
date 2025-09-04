@@ -52,7 +52,6 @@ uvicorn main:app --reload
 ```
 
 > Tip: If you want `/` to land on the UI, apply the small `RedirectResponse` tweak shown earlier.
-
 Then visit:
 
 - http://localhost:8000/ui/security/dashboard
