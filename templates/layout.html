@@ -9,7 +9,15 @@
 <body>
   <header>
     <h1>Silhouette Dashboard</h1>
+    <nav>
+      <a href="/ui/security/dashboard">Security</a> ·
+      <a href="/ui/interop/dashboard">Interoperability</a> ·
+      <a href="/ui/security/seeds">Seeds</a> ·
+      <a href="/ui/security/safety">Safety</a>
+    </nav>
   </header>
-  {% block content %}{% endblock %}
+  <main>
+    {% block content %}{% endblock %}
+  </main>
 </body>
 </html>

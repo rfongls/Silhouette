@@ -1,0 +1,22 @@
+{% extends "layout.html" %}
+{% block content %}
+<h2>Seeds Editor</h2>
+<form hx-post="/admin/seeds/save" hx-target="#seed-result" hx-swap="innerHTML">
+  <div class="grid">
+    <div class="card">
+      <h3>CVE Seed</h3>
+      <textarea name="cve_json" rows="10">{{ cve }}</textarea>
+    </div>
+    <div class="card">
+      <h3>KEV Seed</h3>
+      <textarea name="kev_json" rows="10">{{ kev }}</textarea>
+    </div>
+    <div class="card">
+      <h3>Scope Example</h3>
+      <textarea name="scope_text" rows="10">{{ scope }}</textarea>
+    </div>
+  </div>
+  <button type="submit">Save</button>
+</form>
+<pre id="seed-result"></pre>
+{% endblock %}
