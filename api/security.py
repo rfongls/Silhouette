@@ -2,8 +2,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-
-from fastapi import APIRouter, UploadFile, File, Form
+from fastapi import APIRouter, UploadFile, File, Form, Query
 from fastapi.responses import PlainTextResponse, StreamingResponse
 
 
@@ -60,14 +59,15 @@ async def recon(
     data = json.loads(res)
     return PlainTextResponse(json.dumps(data, indent=2), media_type="application/json")
 
-
-@router.post("/security/recon-stream")
+@router.get("/security/recon-stream")
 async def recon_stream(
-    target: str = Form(...),
-    scope_file: str = Form("docs/cyber/scope_example.txt"),
-    profile: str = Form("safe"),
-    out_dir: str = Form("out/security/ui"),
+    target: str = Query(...),
+    scope_file: str = Query("docs/cyber/scope_example.txt"),
+    profile: str = Query("safe"),
+    out_dir: str = Query("out/security/ui"),
 ):
+    """SSE stream (GET) to support EventSource() in the UI."""
+
     async def event_gen():
         yield "data: started\n\n"
         payload = {
