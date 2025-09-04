@@ -25,8 +25,21 @@
       </select>
       <input type="text" name="out_dir" value="out/security/ui" />
       <button type="submit">Run</button>
+      <button type="button" onclick="
+        (function(){
+          const out = document.getElementById('recon-stream');
+          out.textContent = 'Starting stream...';
+          const form = this.closest('form');
+          const data = new FormData(form);
+          const query = new URLSearchParams(Array.from(data.entries())).toString();
+          const es = new EventSource('/security/recon-stream?' + query);
+          es.onmessage = (e) => { out.textContent += (out.textContent ? '\n' : '') + e.data; };
+          es.onerror = () => { out.textContent += '\n[stream closed]'; es.close(); };
+        })();
+      ">Stream Recon</button>
     </form>
     <pre id="recon-result"></pre>
+    <pre id="recon-stream"></pre>
   </div>
   <div class="card">
     <h3>Netforensics</h3>
