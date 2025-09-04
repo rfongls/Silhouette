@@ -1,0 +1,24 @@
+{% set r = result %}
+<div>
+  <h4>Translate Result</h4>
+  <p>
+    Return Code: <strong>{{ r.get('rc') }}</strong>
+    {% if r.get('rc') == 0 %} — <span style="color:green">OK</span>{% else %} — <span style="color:#b00">Error</span>{% endif %}
+  </p>
+  {% if r.get('out') %}
+    <p>Output folder: <code>{{ r.get('out') }}</code></p>
+  {% endif %}
+  {% if r.get('stderr') %}
+    <details>
+      <summary>stderr</summary>
+      <pre>{{ r.get('stderr') }}</pre>
+    </details>
+  {% endif %}
+  {% if r.get('stdout') %}
+    <details>
+      <summary>stdout</summary>
+      <pre>{{ r.get('stdout') }}</pre>
+    </details>
+  {% endif %}
+</div>
+
