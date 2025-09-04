@@ -1,0 +1,17 @@
+{% extends "layout.html" %}
+{% block content %}
+<h2>Safety Editor</h2>
+<form hx-post="/admin/safety/save" hx-target="#safety-result" hx-swap="innerHTML">
+  <div class="card">
+    <label>CYBER_KILL_SWITCH <input type="checkbox" name="CYBER_KILL_SWITCH" value="true" {% if env.get('CYBER_KILL_SWITCH','false') == 'true' %}checked{% endif %}></label>
+    <label>CYBER_DENY_LIST <input type="text" name="CYBER_DENY_LIST" value="{{ env.get('CYBER_DENY_LIST','') }}"></label>
+    <label>CYBER_PENTEST_WINDOW <input type="text" name="CYBER_PENTEST_WINDOW" value="{{ env.get('CYBER_PENTEST_WINDOW','') }}"></label>
+    <label>CYBER_THROTTLE_SECONDS <input type="number" name="CYBER_THROTTLE_SECONDS" value="{{ env.get('CYBER_THROTTLE_SECONDS','') }}"></label>
+    <label>CYBER_ALLOWLIST <input type="text" name="CYBER_ALLOWLIST" value="{{ env.get('CYBER_ALLOWLIST','') }}"></label>
+    <label>CYBER_DNS_DIR <input type="text" name="CYBER_DNS_DIR" value="{{ env.get('CYBER_DNS_DIR','') }}"></label>
+    <label>CYBER_HTTP_DIR <input type="text" name="CYBER_HTTP_DIR" value="{{ env.get('CYBER_HTTP_DIR','') }}"></label>
+  </div>
+  <button type="submit">Save</button>
+</form>
+<pre id="safety-result"></pre>
+{% endblock %}
