@@ -1,0 +1,52 @@
+{% extends "layout.html" %}
+{% block content %}
+<h2>Security Dashboard</h2>
+<div class="card">
+  <h3>Gate</h3>
+  <form hx-post="/security/gate" hx-target="#gate-result" hx-swap="innerHTML" enctype="multipart/form-data">
+    <input type="text" name="target" placeholder="target" />
+    <input type="text" name="scope_file" value="docs/cyber/scope_example.txt" />
+    <input type="file" name="auth_doc" />
+    <input type="text" name="out_dir" value="out/security/ui" />
+    <button type="submit">Run</button>
+  </form>
+  <pre id="gate-result"></pre>
+</div>
+<div class="card">
+  <h3>Recon</h3>
+  <form hx-post="/security/recon" hx-target="#recon-result" hx-swap="innerHTML">
+    <input type="text" name="target" placeholder="target" />
+    <input type="text" name="scope_file" value="docs/cyber/scope_example.txt" />
+    <select name="profile">
+      <option value="safe">safe</option>
+      <option value="version">version</option>
+      <option value="full">full</option>
+    </select>
+    <input type="text" name="out_dir" value="out/security/ui" />
+    <button type="submit">Run</button>
+  </form>
+  <pre id="recon-result"></pre>
+</div>
+<div class="card">
+  <h3>Netforensics</h3>
+  <form hx-post="/security/netforensics" hx-target="#net-result" hx-swap="innerHTML" enctype="multipart/form-data">
+    <input type="file" name="pcap" />
+    <input type="text" name="out_dir" value="out/security/ui" />
+    <button type="submit">Run</button>
+  </form>
+  <pre id="net-result"></pre>
+</div>
+<div class="card">
+  <h3>IR Playbook</h3>
+  <form hx-post="/security/ir" hx-target="#ir-result" hx-swap="innerHTML">
+    <select name="incident">
+      <option value="ransomware">ransomware</option>
+      <option value="credential">credential</option>
+      <option value="pii">pii</option>
+    </select>
+    <input type="text" name="out_dir" value="out/security/ui" />
+    <button type="submit">Run</button>
+  </form>
+  <pre id="ir-result"></pre>
+</div>
+{% endblock %}
