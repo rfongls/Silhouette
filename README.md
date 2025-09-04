@@ -31,6 +31,21 @@ python setup.py --skill fhir --with-hapi --yes
 
 For more details see [docs/ops/agent_setup.md](docs/ops/agent_setup.md).
 
+## 🖥️ UI Quickstart
+
+Launch the dashboards locally:
+
+```bash
+uvicorn main:app --reload
+```
+
+Then visit:
+
+- http://localhost:8000/ui/security/dashboard
+- http://localhost:8000/ui/interop/dashboard
+- http://localhost:8000/ui/security/seeds
+- http://localhost:8000/ui/security/safety
+
 ## 🌐 Vision
 
 Silhouette Core is a **general, self-hostable agent system**. It is designed to:

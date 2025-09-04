@@ -1,0 +1,30 @@
+{% set obj = payload %}
+<div>
+  <h4>Netforensics Summary</h4>
+  <p>Packets: <strong>{{ obj.get('packets',0) }}</strong> · Flows: <strong>{{ obj.get('flows',0) }}</strong></p>
+  {% if obj.get('alerts') %}
+    <h5>Alerts</h5>
+    <ul>
+    {% for a in obj.get('alerts', []) %}
+      <li>{{ a.get('reason') }} to {{ a.get('dst') }}:{{ a.get('port') }}</li>
+    {% endfor %}
+    </ul>
+  {% endif %}
+  {% if obj.get('index') %}
+    <h5>Top flows (first 10)</h5>
+    <table border="1" cellpadding="6" cellspacing="0">
+      <thead><tr><th>Src</th><th>Dst</th><th>SP</th><th>DP</th><th>P</th><th>Count</th></tr></thead>
+      <tbody>
+      {% for f in obj.get('index', [])[:10] %}
+        <tr>
+          <td>{{ f.get('src') }}</td><td>{{ f.get('dst') }}</td>
+          <td>{{ f.get('src_port') }}</td><td>{{ f.get('dst_port') }}</td>
+          <td>{{ f.get('proto') }}</td><td>{{ f.get('count') }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  {% endif %}
+  <details><summary>Raw JSON</summary><pre>{{ obj | tojson(indent=2) }}</pre></details>
+</div>
+
