@@ -128,6 +128,8 @@ async def recon_bulk_stream(
         yield "data: {\"event\":\"done\"}\n\n"
 
     return StreamingResponse(event_gen(), media_type="text/event-stream")
+
+    return StreamingResponse(event_gen(), media_type="text/event-stream")
   
     async def event_gen():
         yield f"data: {json.dumps({'event':'start','count':len(target_list)})}\n\n"
