@@ -1,7 +1,20 @@
 {% extends "layout.html" %}
 {% block content %}
 <h2>Interoperability Dashboard</h2>
+<div hx-get="/interop/summary" hx-trigger="load, every 10s" hx-target="#interop-kpi-wrap" hx-swap="innerHTML"></div>
+<div id="interop-kpi-wrap"></div>
 <div class="grid">
+  <div class="card">
+    <h3>Quick Start</h3>
+    <p class="muted">One-click pipeline: Draft example HL7 → FHIR Translate → Validate. No listener required.</p>
+    <form hx-post="/interop/quickstart" hx-target="#pipeline-result" hx-swap="innerHTML">
+      <select name="trigger"><option>VXU_V04</option><option>ADT_A01</option><option>ORU_R01</option></select>
+      <button type="submit">Run Pipeline</button>
+      <button type="button" hx-post="/interop/demo/seed" hx-target="#pipeline-demo" hx-swap="innerHTML">Load Demo</button>
+    </form>
+    <div id="pipeline-demo" class="muted"></div>
+    <div id="pipeline-result" class="result"></div>
+  </div>
   <div class="card">
     <h3>Draft &amp; Send HL7</h3>
     <p class="muted">Create a standards-conformant HL7 message for a given trigger and send via MLLP. Pick a sample below to auto-fill valid content.</p>
@@ -11,15 +24,14 @@
       <textarea name="json_data" id="hl7-json" rows="14" placeholder="{}"></textarea>
       <div style="display:flex; gap:.5rem; align-items:center; margin:.25rem 0 .75rem;">
         <label for="hl7-ex">Example:</label>
-        <select id="hl7-ex" onchange="import('/static/js/examples.js').then(m=>m.loadExample(this,'#hl7-json'));">
-          <option value="">— choose —</option>
-          <option value="/static/examples/hl7/ADT_A01_min.json">ADT_A01 — Admit/Visit Start</option>
-          <option value="/static/examples/hl7/ADT_A03_min.json">ADT_A03 — Discharge</option>
-          <option value="/static/examples/hl7/ORM_O01_min.json">ORM_O01 — General Order</option>
-          <option value="/static/examples/hl7/ORU_R01_lab.json">ORU_R01 — Lab Result (LOINC)</option>
-          <option value="/static/examples/hl7/VXU_V04_min.json">VXU_V04 — Immunization Update</option>
+        <select id="hl7-ex" onchange="import('/static/js/examples.js').then(m=>m.loadExample(this,'#hl7-json'));"><option value="">— choose —</option>
+          <option value="/static/examples/hl7/json/ADT_A01_min.json">ADT_A01 — Admit/Visit Start</option>
+          <option value="/static/examples/hl7/json/ADT_A03_min.json">ADT_A03 — Discharge</option>
+          <option value="/static/examples/hl7/json/ORM_O01_min.json">ORM_O01 — General Order</option>
+          <option value="/static/examples/hl7/json/ORU_R01_lab.json">ORU_R01 — Lab Result (LOINC)</option>
+          <option value="/static/examples/hl7/json/VXU_V04_min.json">VXU_V04 — Immunization Update</option>
         </select>
-        <small>These meet minimal segment requirements for each trigger.</small>
+        <a href="/static/examples/hl7/samples/ADT_A01.hl7" download>Download ADT_A01.hl7</a>
       </div>
       <input type="text" name="host" placeholder="127.0.0.1" value="127.0.0.1" />
       <input type="number" name="port" placeholder="2575" value="2575" />
@@ -40,6 +52,7 @@
       <input type="text" name="out_dir" value="out/interop/ui" />
       <button type="submit">Translate</button>
     </form>
+    <p class="muted">No file handy? Download a sample: <a href="/static/examples/hl7/samples/ORU_R01.hl7" download>ORU_R01.hl7</a> · <a href="/static/examples/hl7/samples/VXU_V04.hl7" download>VXU_V04.hl7</a></p>
     <div id="translate-result" class="result"></div>
   </div>
   <div class="card">
@@ -50,6 +63,7 @@
       <input type="text" name="out_dir" value="out/interop/ui" />
       <button type="submit">Validate</button>
     </form>
+    <p class="muted">Sample bundle: <a href="/static/examples/fhir/bundle.json" download>FHIR Bundle</a></p>
     <div id="validate-result" class="result"></div>
   </div>
 </div>

@@ -1,0 +1,7 @@
+{
+  "profile": "safe",
+  "inventory": {
+    "hosts": ["example.com"],
+    "services": [{"port": 80, "service": "http", "cves": [{"id": "CVE-2021-1234", "cvss": 5.0}]}]
+  }
+}

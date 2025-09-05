@@ -1,0 +1,24 @@
+{% set data = payload %}
+{% if kpi %}
+<div id="kpi-wrap" hx-swap-oob="true">
+  {% include "security/summary.html" %}
+</div>
+{% endif %}
+<div>
+  <h4>Baseline (Gate ➜ Recon)</h4>
+  <p>Gate: {% if data.get('gate_ok') %}<span class="pill ok">Allowed</span>{% else %}<span class="pill danger">Denied/Unknown</span>{% endif %}</p>
+  {% set inv = data.get('recon', {}).get('inventory', {}) %}
+  {% if inv.get('services') %}
+    <table class="table">
+      <thead><tr><th>Port</th><th>Service</th><th>CVEs</th></tr></thead>
+      <tbody>
+        {% for s in inv.get('services') %}
+          <tr><td>{{ s.get('port') }}</td><td>{{ s.get('service') }}</td><td>{{ (s.get('cves') or [])|length }}</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p class="muted">No services discovered.</p>
+  {% endif %}
+  <details><summary>Raw JSON</summary><pre>{{ data | tojson(indent=2) }}</pre></details>
+</div>

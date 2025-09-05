@@ -1,0 +1,8 @@
+{% if kpi %}<div id="interop-kpi-wrap" hx-swap-oob="true">{% include "interop/summary.html" %}</div>{% endif %}
+<div>
+  <h4>Draft &amp; Send Result</h4>
+  {% if payload.ack is defined %}
+    <p>ACK: {% if payload.ack_ok %}<span class="pill ok">AA</span>{% else %}<span class="pill danger">Error</span>{% endif %}</p>
+  {% endif %}
+  <details><summary>Raw JSON</summary><pre>{{ payload | tojson(indent=2) }}</pre></details>
+</div>

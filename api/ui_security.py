@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+import json
 
 from fastapi import APIRouter, Request, HTTPException
 from fastapi.responses import HTMLResponse, PlainTextResponse
@@ -20,7 +21,20 @@ async def history(request: Request):
     root = Path("out/security")
     files = sorted(root.glob("*/active/*.json"), reverse=True)
     items = [p.as_posix() for p in files]
-    return templates.TemplateResponse("security/history.html", {"request": request, "items": items})
+    idx_path = Path("out/security/ui/index.json")
+    try:
+        idx = json.loads(idx_path.read_text(encoding="utf-8"))
+        if not isinstance(idx, list):
+            idx = []
+    except Exception:
+        idx = []
+    last = idx[-24:]
+    def series(key):
+        vals = [pt.get(key,0) for pt in last]
+        mx = max(vals or [1])
+        return [int((v/mx)*24) if mx>0 else 0 for v in vals]
+    trends = {"recon_cves": series("recon_cves"), "net_alerts": series("net_alerts")}
+    return templates.TemplateResponse("security/history.html", {"request": request, "items": items, "trends": trends})
 
 
 @router.get("/ui/security/history/view")

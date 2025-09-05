@@ -1,0 +1,11 @@
+{% if kpi %}<div id="interop-kpi-wrap" hx-swap-oob="true">{% include "interop/summary.html" %}</div>{% endif %}
+<div>
+  <h4>Quickstart Pipeline — {{ trigger }}</h4>
+  <p class="muted">HL7 saved: <code>{{ hl7_path }}</code></p>
+  <h5>Translate</h5>
+  <p>rc: {{ translate.rc }}</p>
+  <details><summary>stdout/stderr</summary><pre>{{ translate.stdout }}\n----\n{{ translate.stderr }}</pre></details>
+  <h5>Validate</h5>
+  <p>rc: {{ validate.rc }}</p>
+  <details><summary>stdout/stderr</summary><pre>{{ validate.stdout }}\n----\n{{ validate.stderr }}</pre></details>
+</div>

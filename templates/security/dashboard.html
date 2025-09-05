@@ -1,7 +1,25 @@
 {% extends "layout.html" %}
 {% block content %}
 <h2>Security Dashboard</h2>
+<div hx-get="/security/summary" hx-trigger="load, every 10s" hx-target="#kpi-wrap" hx-swap="innerHTML"></div>
+<div id="kpi-wrap"></div>
 <div class="grid">
+  <div class="card">
+    <h3>Quick Start</h3>
+    <p class="muted">Use <strong>Baseline</strong> to get an immediate snapshot (Gate ➜ Recon-safe) or <strong>Load Demo</strong> for offline sample results.</p>
+    <form hx-post="/security/baseline" hx-target="#baseline-result" hx-swap="innerHTML">
+      <input type="text" name="target" placeholder="example.com" />
+      <input type="text" name="scope_file" value="docs/cyber/scope_example.txt" />
+      <input type="hidden" name="profile" value="safe" />
+      <input type="hidden" name="out_dir" value="out/security/ui" />
+      <div style="display:flex; gap:.5rem; flex-wrap:wrap; margin:.25rem 0;">
+        <button type="submit">Run Baseline</button>
+        <button type="button" hx-post="/security/demo/seed" hx-target="#baseline-demo-msg" hx-swap="innerHTML">Load Demo</button>
+      </div>
+    </form>
+    <div id="baseline-demo-msg" class="muted"></div>
+    <div id="baseline-result" class="result"></div>
+  </div>
   <div class="card">
     <h3>Gate</h3>
     <p class="muted">Access control pre-check. Confirms target is in scope and properly authorized before any active action.</p>
@@ -68,7 +86,6 @@
     </form>
     <div id="ir-result" class="result"></div>
   </div>
-
   <div class="card">
     <h3>Bulk Recon</h3>
     <form id="bulk-form">

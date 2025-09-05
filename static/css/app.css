@@ -3,8 +3,23 @@ header { background: #333; color: #fff; padding: 1rem; }
 main { padding: 1rem; }
 .grid { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(250px,1fr)); }
 .card { background: #fff; border-radius: 6px; padding: 1rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+.kpis { display:grid; grid-template-columns: repeat(auto-fit,minmax(180px,1fr)); gap:1rem; margin: 0 0 1rem; }
+.kpi { background:#fff; border-radius:8px; padding:0.75rem 1rem; box-shadow:0 1px 3px rgba(0,0,0,.08); }
+.kpi h4 { margin:.25rem 0 .35rem; font-size:0.9rem; color:#333; }
+.kpi .value { font-size:1.6rem; font-weight:700; }
+.kpi small { color:#666; display:block; }
+.table { width:100%; border-collapse: collapse; }
+.table th, .table td { border:1px solid #e6e6e6; padding:.5rem .6rem; text-align:left; }
+.pill { display:inline-block; padding:.1rem .45rem; border-radius:999px; font-size:.8rem; background:#eee; }
+.pill.ok { background:#e7f7ec; color:#137a2a; }
+.pill.warn { background:#fff4e5; color:#915b06; }
+.pill.danger { background:#fde8e8; color:#a12b2b; }
 button { background: #0069d9; color: #fff; border: none; padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer; }
 input, textarea, select { width: 100%; margin: 0.25rem 0; padding: 0.5rem; }
 .result { margin-top: 0.5rem; white-space: pre-wrap; background: #f0f0f0; padding: 0.5rem; border-radius: 4px; border: 1px solid #ddd; overflow-x: auto; }
-
 .muted { color: #555; font-size: 0.95rem; }
+/* simple sparklines + progress bars */
+.bars { display:flex; gap:.3rem; align-items:flex-end; height:28px; }
+.bars span { width:8px; background:#cfe2ff; display:block; }
+.bar { background:#eee; height:10px; border-radius:6px; overflow:hidden; }
+.bar > span { display:block; height:100%; background:#0069d9; width:0%; transition:width .4s ease; }
