@@ -5,7 +5,6 @@ from starlette.templating import Jinja2Templates
 from main import app
 import api.interop as interop
 
-
 def test_interop_summary_and_index(monkeypatch, tmp_path):
     repo_templates = Path(__file__).resolve().parents[1] / "templates"
     monkeypatch.chdir(tmp_path)
