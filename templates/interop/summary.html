@@ -1,0 +1,17 @@
+<div class="kpis" id="interop-kpi">
+  <div class="kpi">
+    <h4>Send (ACK)</h4>
+    <div class="value">{{ kpi.send.ok }}/{{ kpi.send.count }}</div>
+    <small>last: {% if kpi.send.last_ok is none %}—{% elif kpi.send.last_ok %}<span class="pill ok">OK</span>{% else %}<span class="pill danger">Fail</span>{% endif %}</small>
+  </div>
+  <div class="kpi">
+    <h4>Translate</h4>
+    <div class="value">{{ kpi.translate.ok }}</div>
+    <small>fail {{ kpi.translate.fail }}</small>
+  </div>
+  <div class="kpi">
+    <h4>Validate</h4>
+    <div class="value">{{ kpi.validate.ok }}</div>
+    <small>fail {{ kpi.validate.fail }}</small>
+  </div>
+</div>
