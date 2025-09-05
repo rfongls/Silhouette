@@ -1,9 +1,29 @@
 {% extends "layout.html" %}
 {% block content %}
 <h2>Security Dashboard</h2>
+<div hx-get="/security/summary" hx-trigger="load, every 10s" hx-target="#kpi-wrap" hx-swap="innerHTML"></div>
+<div id="kpi-wrap"></div>
 <div class="grid">
   <div class="card">
+    <h3>Quick Start</h3>
+    <p class="muted">Use <strong>Baseline</strong> to get an immediate snapshot (Gate ➜ Recon-safe) or <strong>Load Demo</strong> for offline sample results.</p>
+    <form hx-post="/security/baseline" hx-target="#baseline-result" hx-swap="innerHTML">
+      <input type="text" name="target" placeholder="example.com" />
+      <input type="text" name="scope_file" value="docs/cyber/scope_example.txt" />
+      <input type="hidden" name="profile" value="safe" />
+      <input type="hidden" name="out_dir" value="out/security/ui" />
+      <div style="display:flex; gap:.5rem; flex-wrap:wrap; margin:.25rem 0;">
+        <button type="submit">Run Baseline</button>
+        <button type="button" hx-post="/security/demo/seed" hx-target="#baseline-demo-msg" hx-swap="innerHTML">Load Demo</button>
+      </div>
+    </form>
+    <div id="baseline-demo-msg" class="muted"></div>
+    <div id="baseline-result" class="result"></div>
+  </div>
+  <div class="card">
     <h3>Gate</h3>
+    <p class="muted">Access control pre-check. Confirms target is in scope and properly authorized before any active action.</p>
+    <ul class="muted"><li><strong>Target</strong>: Host/IP (e.g., example.com)</li><li><strong>Scope file</strong>: Allowed targets list</li><li><strong>Authorization Doc</strong>: Upload signed approval</li></ul>
     <form hx-post="/security/gate" hx-target="#gate-result" hx-swap="innerHTML" enctype="multipart/form-data">
       <input type="text" name="target" placeholder="target" />
       <input type="text" name="scope_file" value="docs/cyber/scope_example.txt" />
@@ -15,8 +35,9 @@
   </div>
   <div class="card">
     <h3>Recon</h3>
+    <p class="muted">Discovery scan (profiles: <code>safe</code>, <code>version</code>, <code>full</code>). Use stream to watch progress live.</p>
     <form hx-post="/security/recon" hx-target="#recon-result" hx-swap="innerHTML">
-      <input type="text" name="target" placeholder="target" />
+      <input type="text" name="target" placeholder="example.com" />
       <input type="text" name="scope_file" value="docs/cyber/scope_example.txt" />
       <select name="profile">
         <option value="safe">safe</option>
@@ -43,6 +64,7 @@
   </div>
   <div class="card">
     <h3>Netforensics</h3>
+    <p class="muted">Upload a <code>.pcap</code>. The summary shows packet/flow counts and alerts; full JSON available under “Raw JSON”.</p>
     <form hx-post="/security/netforensics" hx-target="#net-result" hx-swap="innerHTML" enctype="multipart/form-data">
       <input type="file" name="pcap" />
       <input type="text" name="out_dir" value="out/security/ui" />
@@ -52,6 +74,7 @@
   </div>
   <div class="card">
     <h3>IR Playbook</h3>
+    <p class="muted">Choose a scenario to generate steps and schedule stubs (e.g., ransomware, credential, PII).</p>
     <form hx-post="/security/ir" hx-target="#ir-result" hx-swap="innerHTML">
       <select name="incident">
         <option value="ransomware">ransomware</option>
@@ -63,7 +86,6 @@
     </form>
     <div id="ir-result" class="result"></div>
   </div>
-
   <div class="card">
     <h3>Bulk Recon</h3>
     <form id="bulk-form">

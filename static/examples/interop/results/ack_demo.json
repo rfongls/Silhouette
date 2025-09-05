@@ -1,0 +1,5 @@
+{
+  "message_type": "ADT_A01",
+  "ack": "MSH|^~\\&|DST|DST|SIL|CORE|...\\rMSA|AA|123",
+  "ack_ok": true
+}

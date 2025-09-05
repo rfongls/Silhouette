@@ -2,6 +2,18 @@
 {% block content %}
 <h2>Security History</h2>
 <div class="card">
+  <h3>Trends (last 24 runs)</h3>
+  <div class="muted">CVEs</div>
+  <div class="bars">
+    {% for h in trends.recon_cves %}<span style="height: {{ 4 + h }}px"></span>{% endfor %}
+  </div>
+  <div class="muted" style="margin-top:.5rem;">Net Alerts</div>
+  <div class="bars">
+    {% for h in trends.net_alerts %}<span style="height: {{ 4 + h }}px"></span>{% endfor %}
+  </div>
+</div>
+
+<div class="card">
   <ul>
   {% for item in items %}
     <li>

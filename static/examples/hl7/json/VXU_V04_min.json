@@ -1,0 +1,29 @@
+{
+  "sending_app": "SIL",
+  "sending_facility": "CORE",
+  "receiving_app": "IIS",
+  "receiving_facility": "STATE",
+  "message_datetime": "20250901T110000",
+  "control_id": "VXU-0001",
+  "version": "2.5.1",
+  "patient": {
+    "id": "246810",
+    "id_assigning_authority": "MR",
+    "name": { "family": "Lee", "given": "Alex" },
+    "dob": "20120115",
+    "sex": "U",
+    "address": { "line1": "456 Oak St", "city": "Denver", "state": "CO", "zip": "80203" }
+  },
+  "immunizations": [
+    {
+      "admin_datetime": "20250801T103000",
+      "vaccine": { "cvx": "207", "text": "COVID-19 mRNA, LNP-S" },
+      "administered_amount": "0.5",
+      "administered_units": "mL",
+      "lot": "ABC123",
+      "manufacturer": { "mvx": "MOD" },
+      "site": "LA",
+      "route": "IM"
+    }
+  ]
+}

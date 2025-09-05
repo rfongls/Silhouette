@@ -1,0 +1,31 @@
+{
+  "sending_app": "LIS",
+  "sending_facility": "CORE",
+  "receiving_app": "DST",
+  "receiving_facility": "EHR",
+  "message_datetime": "20250901T100000",
+  "control_id": "ORU-0001",
+  "version": "2.5",
+  "patient": {
+    "id": "789012",
+    "id_assigning_authority": "MR",
+    "name": { "family": "Smith", "given": "Jane" },
+    "dob": "19900303",
+    "sex": "F"
+  },
+  "order": {
+    "placer_order_number": "PO123",
+    "filler_order_number": "FO456",
+    "universal_service_id": { "code": "718-7", "text": "Hemoglobin [Mass/Vol] in Blood", "coding_system": "LN" },
+    "observation_datetime": "20250901T101500"
+  },
+  "observations": [
+    {
+      "id": { "code": "718-7", "text": "Hemoglobin", "coding_system": "LN" },
+      "value": "13.5",
+      "units": "g/dL",
+      "result_status": "F",
+      "reference_range": "13.0-17.0"
+    }
+  ]
+}
