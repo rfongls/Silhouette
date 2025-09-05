@@ -55,7 +55,7 @@
           const query = new URLSearchParams(Array.from(data.entries())).toString();
           const es = new EventSource('/security/recon-stream?' + query);
           es.onmessage = (e) => { out.textContent += (out.textContent ? '\n' : '') + e.data; };
-          es.onerror = () => { out.textContent += '\n[stream closed]'; es.close(); };
+          es.onerror = () => { out.textContent += '\n[stream closed]'; es.close(); htmx.ajax('GET','/security/summary',{target:'#kpi-wrap',swap:'innerHTML'}); };
         })();
       ">Stream Recon</button>
     </form>
@@ -105,7 +105,7 @@
           const query = new URLSearchParams(new FormData(form)).toString();
           const es = new EventSource('/security/recon-bulk-stream?' + query);
           es.onmessage = (e)=>{ out.textContent += (out.textContent? '\n':'') + e.data; };
-          es.onerror = ()=>{ out.textContent += '\n[stream closed]'; es.close(); };
+          es.onerror = ()=>{ out.textContent += '\n[stream closed]'; es.close(); htmx.ajax('GET','/security/summary',{target:'#kpi-wrap',swap:'innerHTML'}); };
         })();">Stream Bulk</button>
     </form>
     <pre id="bulk-stream" class="result"></pre>

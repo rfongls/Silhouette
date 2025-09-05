@@ -6,7 +6,7 @@ import time
 import shutil
 from pathlib import Path
 from typing import List
-
+import re
 from fastapi import APIRouter, UploadFile, File, Form, Request
 from fastapi.responses import PlainTextResponse, HTMLResponse
 from starlette.templating import Jinja2Templates
@@ -21,6 +21,7 @@ INDEX_PATH = UI_OUT / "index.json"
 
 
 def _write_artifact(kind: str, data: dict) -> Path:
+    data = {"kind": kind, **data}
     p = UI_OUT / kind / "active" / f"{int(time.time())}.json"
     p.parent.mkdir(parents=True, exist_ok=True)
     p.write_text(json.dumps(data, indent=2), encoding="utf-8")
@@ -47,11 +48,12 @@ async def interop_hl7_send(
         )
     message = draft_message(message_type, data)
     ack = await send_message(host, port, message)
+    msa_aa = bool(re.search(r"(^|\\r|\\n)MSA\\|AA(\\||$)", ack or ""))
     payload = {
         "message_type": message_type,
         "message": message,
         "ack": ack,
-        "ack_ok": ("MSA|AA" in (ack or "") or '"AA"' in (ack or "")),
+        "ack_ok": msa_aa,
     }
     _write_artifact("send", payload)
     return templates.TemplateResponse(
@@ -139,17 +141,29 @@ def _compute_kpis() -> dict:
             if k["send"]["last_ok"] is None:
                 k["send"]["last_ok"] = ok
         elif "stdout" in o and "stderr" in o and "rc" in o:
+            kind = o.get("kind")
             ok = int(o.get("rc", 1)) == 0
-            if "translate" in str(p.parent.parent):
+            if kind == "translate":
                 if ok:
                     k["translate"]["ok"] += 1
                 else:
                     k["translate"]["fail"] += 1
-            else:
+            elif kind == "validate":
                 if ok:
                     k["validate"]["ok"] += 1
                 else:
                     k["validate"]["fail"] += 1
+            else:
+                if "translate" in str(p.parent.parent):
+                    if ok:
+                        k["translate"]["ok"] += 1
+                    else:
+                        k["translate"]["fail"] += 1
+                else:
+                    if ok:
+                        k["validate"]["ok"] += 1
+                    else:
+                        k["validate"]["fail"] += 1
     INDEX_PATH.parent.mkdir(parents=True, exist_ok=True)
     try:
         idx = json.loads(INDEX_PATH.read_text(encoding="utf-8"))
