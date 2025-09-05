@@ -1,0 +1,22 @@
+{
+  "sending_app": "SIL",
+  "sending_facility": "CORE",
+  "receiving_app": "DST",
+  "receiving_facility": "DST",
+  "message_datetime": "20250901T170000",
+  "control_id": "A03-0001",
+  "version": "2.5",
+  "patient": {
+    "id": "123456",
+    "id_assigning_authority": "MR",
+    "name": { "family": "Doe", "given": "John" },
+    "dob": "19800101",
+    "sex": "M"
+  },
+  "visit": {
+    "patient_class": "O",
+    "visit_number": "V12345",
+    "discharge_datetime": "20250901T165500",
+    "discharge_disposition": "01"
+  }
+}

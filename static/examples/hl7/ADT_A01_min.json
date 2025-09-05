@@ -1,0 +1,23 @@
+{
+  "sending_app": "SIL",
+  "sending_facility": "CORE",
+  "receiving_app": "DST",
+  "receiving_facility": "DST",
+  "message_datetime": "20250901T120000",
+  "control_id": "A01-0001",
+  "version": "2.5",
+  "patient": {
+    "id": "123456",
+    "id_assigning_authority": "MR",
+    "name": { "family": "Doe", "given": "John" },
+    "dob": "19800101",
+    "sex": "M",
+    "address": { "line1": "123 Main St", "city": "Denver", "state": "CO", "zip": "80202" }
+  },
+  "visit": {
+    "patient_class": "O",
+    "admit_datetime": "20250901T120000",
+    "visit_number": "V12345",
+    "location": { "point_of_care": "ED", "facility": "CORE" }
+  }
+}

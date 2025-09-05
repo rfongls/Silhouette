@@ -1,0 +1,24 @@
+{
+  "sending_app": "SIL",
+  "sending_facility": "CORE",
+  "receiving_app": "DST",
+  "receiving_facility": "LIS",
+  "message_datetime": "20250901T090000",
+  "control_id": "ORM-0001",
+  "version": "2.5",
+  "patient": {
+    "id": "789012",
+    "id_assigning_authority": "MR",
+    "name": { "family": "Smith", "given": "Jane" },
+    "dob": "19900303",
+    "sex": "F"
+  },
+  "order": {
+    "placer_order_number": "PO123",
+    "filler_order_number": "FO456",
+    "order_control": "NW",
+    "universal_service_id": { "code": "BMP", "text": "Basic Metabolic Panel", "coding_system": "L" },
+    "ordering_provider": { "id": "1111", "family": "House", "given": "Gregory" },
+    "observation_datetime": "20250901T093000"
+  }
+}

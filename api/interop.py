@@ -7,7 +7,6 @@ import shutil
 from pathlib import Path
 from typing import List
 import re
-
 from fastapi import APIRouter, UploadFile, File, Form, Request
 from fastapi.responses import PlainTextResponse, HTMLResponse
 from starlette.templating import Jinja2Templates
