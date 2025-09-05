@@ -48,7 +48,7 @@ async def interop_hl7_send(
         )
     message = draft_message(message_type, data)
     ack = await send_message(host, port, message)
-    msa_aa = bool(re.search(r"(^|\\r|\\n)MSA\\|AA(\\||$)", ack or ""))
+    msa_aa = bool(re.search(r'(^|\r|\\r|\n)MSA\|AA(\||$)', ack or ""))
     payload = {
         "message_type": message_type,
         "message": message,
@@ -133,7 +133,7 @@ def _compute_kpis() -> dict:
     }
     for p in files:
         o = json.loads(p.read_text(encoding="utf-8"))
-        if "ack" in o or "ack_ok" in o:
+        if o.get("kind") == "send" or "ack" in o or "ack_ok" in o:
             k["send"]["count"] += 1
             ok = bool(o.get("ack_ok"))
             if ok:

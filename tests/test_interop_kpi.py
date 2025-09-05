@@ -1,20 +1,31 @@
 import json
+from pathlib import Path
 from fastapi.testclient import TestClient
+from starlette.templating import Jinja2Templates
 from main import app
 import api.interop as interop
 
+def test_interop_summary_and_index(monkeypatch, tmp_path):
+    repo_templates = Path(__file__).resolve().parents[1] / "templates"
+    monkeypatch.chdir(tmp_path)
+    interop.templates = Jinja2Templates(directory=str(repo_templates))
+    # seed artifacts
+    (tmp_path / "out/interop/ui/send/active").mkdir(parents=True)
+    (tmp_path / "out/interop/ui/translate/active").mkdir(parents=True)
+    (tmp_path / "out/interop/ui/validate/active").mkdir(parents=True)
+    (tmp_path / "out/interop/ui/send/active/1.json").write_text(
+        json.dumps({"kind": "send", "ack": "MSH\rMSA|AA|X", "ack_ok": True})
+    )
+    (tmp_path / "out/interop/ui/translate/active/2.json").write_text(
+        json.dumps({"kind": "translate", "rc": 0, "stdout": "", "stderr": ""})
+    )
+    (tmp_path / "out/interop/ui/validate/active/3.json").write_text(
+        json.dumps({"kind": "validate", "rc": 0, "stdout": "", "stderr": ""})
+    )
 
-def test_interop_summary_oob(monkeypatch, tmp_path):
-    monkeypatch.setattr(interop, "OUT_ROOT", tmp_path / 'out/interop')
-    monkeypatch.setattr(interop, "UI_OUT", tmp_path / 'out/interop/ui')
-    monkeypatch.setattr(interop, "INDEX_PATH", tmp_path / 'out/interop/ui/index.json')
     c = TestClient(app)
-    tdir = interop.UI_OUT / 'translate/active'
-    vdir = interop.UI_OUT / 'validate/active'
-    tdir.mkdir(parents=True)
-    vdir.mkdir(parents=True)
-    tdir.joinpath('1.json').write_text(json.dumps({'kind':'translate','rc':0,'stdout':'','stderr':''}))
-    vdir.joinpath('2.json').write_text(json.dumps({'kind':'validate','rc':0,'stdout':'','stderr':''}))
-    r = c.get('/interop/summary')
+    r = c.get("/interop/summary")
     assert r.status_code == 200
-    assert 'Translate' in r.text and 'Validate' in r.text
+    t = r.text
+    assert "Send (ACK)" in t and "Translate" in t and "Validate" in t
+    assert (tmp_path / "out/interop/ui/index.json").exists()
