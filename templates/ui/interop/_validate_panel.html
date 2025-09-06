@@ -1,0 +1,16 @@
+<section class="card">
+  <h3>Validate (Profile)</h3>
+  <form id="val-form"
+        hx-post="/api/interop/validate"
+        hx-encoding="json"
+        hx-trigger="submit"
+        hx-target="#val-output"
+        hx-swap="innerHTML">
+    <textarea class="input grow" name="text" rows="8" placeholder="Paste HL7…"></textarea>
+    <div class="row gap mt">
+      <input class="input" type="text" name="profile" placeholder="profile name (optional)"/>
+      <button class="btn">Validate</button>
+    </div>
+  </form>
+  <div id="val-output" class="mt"></div>
+</section>
