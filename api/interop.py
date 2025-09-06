@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import json, subprocess, time, shutil, re
+import json, subprocess, time, re
 from pathlib import Path
 from typing import List, Optional, Dict, Any
 import threading
