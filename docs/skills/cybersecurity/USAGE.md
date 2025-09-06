@@ -2,6 +2,17 @@
 
 > **TL;DR**: keep it authorized, scoped, and slow by default.
 
+## UI Quick Start (Baseline)
+- Open **Security Dashboard → Quick Start**
+- Enter a target (e.g., `example.com`) and click **Run Baseline**
+- The baseline runs **Gate ➜ Recon (safe)** and shows a readable table
+- KPIs update instantly (Gate, Recon, Severities, Netforensics)
+- Use **Load Demo** to populate KPIs offline if no target is available
+
+## KPIs & History
+- KPI bar summarizes recent artifacts under `out/security/**/active/`
+- Trend points are persisted to `out/security/ui/index.json` and shown as sparklines on **Security → History**
+
 ## 1) Authorization & Scope
 
 - Always require **written authorization** (PDF) from the asset owner. Pass its path as `auth_doc`.

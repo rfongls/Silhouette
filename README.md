@@ -32,6 +32,7 @@ python setup.py --skill fhir --with-hapi --yes
 For more details see [docs/ops/agent_setup.md](docs/ops/agent_setup.md).
 
 ## 🖥️ UI Quickstart
+
 ### One-click
 - **Windows**: double-click `scripts/run_ui.bat`
 - **macOS**: double-click `scripts/run_ui.command` (first time only, you may need to run `chmod +x scripts/run_ui.command`)
@@ -50,6 +51,39 @@ Launch the dashboards locally:
 ```bash
 uvicorn main:app --reload
 ```
+
+### What you’ll see (plug-and-play)
+Both dashboards open with **KPI bars** and **Quick Start** so a new user can click → run → see insights immediately.
+
+**Security Dashboard**
+- **KPI bar**: Gate allowed/total, Recon services/hosts/ports + CVEs/KEV + severity buckets, Netforensics alerts/packets
+- **Quick Start — Baseline**: one-click **Gate ➜ Recon (safe)** with a readable summary table
+- **Load Demo**: copies offline sample results into `out/security/ui/demo/active` so KPIs populate without a real target
+
+**Interoperability Dashboard**
+- **KPI bar**: Send (ACK pass/fail), Translate OK/Fail, Validate OK/Fail
+- **Quick Start — Pipeline**: Draft example HL7 ➜ FHIR Translate ➜ Validate (no external listener required)
+- **Load Demo**: seeds Interop KPIs with example results
+
+**Where artifacts go**
+- Security: `out/security/**/active/*.json`
+- Interop: `out/interop/**/active/*.json`
+
+**Examples**
+- HL7 (downloadable): `static/examples/hl7/samples/*.hl7`
+- HL7 (drafter JSON): `static/examples/hl7/json/*.json`
+- FHIR bundle: `static/examples/fhir/bundle.json`
+- Interop demo results: `static/examples/interop/results/*.json`
+- Security demo results: `static/examples/cyber/results/*.json`
+
+> KPIs auto-refresh every 10s; actions also push small **out-of-band** fragments that refresh KPIs instantly.
+
+### Quick smoke tests (fast)
+After the code changes, run:
+```bash
+pytest -q tests/test_interop_kpi.py tests/test_security_kpi.py
+```
+These seed tiny dummy artifacts, hit the summary endpoints, and confirm `index.json` trend files are written.
 
 > Tip: If you want `/` to land on the UI, apply the small `RedirectResponse` tweak shown earlier.
 Then visit:

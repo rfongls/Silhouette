@@ -3,6 +3,13 @@
 All notable changes to this project will be documented here.
 
 ## [Unreleased]
+- PR-XX: **Plug-and-Play Dashboards**
+  - Security & Interop dashboards now ship **KPI bars**, **Quick Start** actions, and **demo data**.
+  - **OOB KPI refresh**: action responses inject small fragments so KPIs update instantly.
+  - **Severity buckets** derived from CVSS when available.
+  - Persist lightweight trend indices to `out/**/ui/index.json` for **History** sparklines.
+  - **Example libraries**: HL7 samples (`.hl7` + drafter JSON), Interop & Security demo results, and a FHIR bundle.
+  - **Smoke tests**: verify KPI summaries render and index files are written.
 - PR-24: Packaging & CLI UX – pip package, unified `silhouette` CLI, distribution artifacts.
 - PR-25: Edge targets – INT8/ONNX/GGUF exports and edge latency probe.
 - PR-26: Release playbook & provenance artifacts – CI GitHub release workflow with scoreboard, gate summary, watermark.
