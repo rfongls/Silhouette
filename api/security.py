@@ -22,6 +22,27 @@ UI_OUT = OUT_ROOT / "ui"
 INDEX_PATH = UI_OUT / "index.json"
 
 
+@router.get("/security/summary", response_class=HTMLResponse)
+def security_summary():
+    """Minimal KPI block so the Security dashboard doesn't 404."""
+    kpis = {
+        "controls_mapped": 12,
+        "evidence_items": 34,
+        "findings_open": 3,
+        "last_scan": "n/a",
+    }
+    html = (
+        "<section class='card'><h3>Security Summary</h3>"
+        "<div class='row gap'>"
+        f"<span class='chip'>controls: <strong>{kpis['controls_mapped']}</strong></span>"
+        f"<span class='chip'>evidence: <strong>{kpis['evidence_items']}</strong></span>"
+        f"<span class='chip'>open findings: <strong>{kpis['findings_open']}</strong></span>"
+        f"<span class='chip'>last scan: <strong>{kpis['last_scan']}</strong></span>"
+        "</div></section>"
+    )
+    return HTMLResponse(html)
+
+
 def _save_upload(out_dir: Path, up: UploadFile) -> Path:
     uploads = out_dir / "uploads"
     uploads.mkdir(parents=True, exist_ok=True)

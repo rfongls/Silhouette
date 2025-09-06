@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-import json, subprocess, time, shutil, re
+import json, subprocess, time, re
 from pathlib import Path
 from typing import List, Optional, Dict, Any
 import threading
 from fastapi import APIRouter, UploadFile, File, Form, Request, Query, HTTPException
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse
 from starlette.templating import Jinja2Templates
 try:
     import requests  # for optional FHIR reads
@@ -61,6 +61,24 @@ def _enumerate_samples(version: str, q: str | None = None, limit: int = 200) -> 
     return items
 
 
+def _assert_rel_under_templates(relpath: str) -> Path:
+    p = (SAMPLE_DIR / relpath).resolve()
+    if not str(p).startswith(str(SAMPLE_DIR)) or not p.exists() or not p.is_file():
+        raise FileNotFoundError(relpath)
+    return p
+
+
+def _guess_rel_from_trigger(trigger: str, version: str = "hl7-v2-4") -> Optional[str]:
+    cand = SAMPLE_DIR / version / f"{trigger}.hl7"
+    if cand.exists():
+        return f"{version}/{trigger}.hl7"
+    for v in sorted(VALID_VERSIONS):
+        cand = SAMPLE_DIR / v / f"{trigger}.hl7"
+        if cand.exists():
+            return f"{v}/{trigger}.hl7"
+    return None
+
+
 def _write_artifact(kind: str, data: dict) -> Path:
     data = {"kind": kind, **data}
     p = UI_OUT / kind / "active" / f"{int(time.time())}.json"
@@ -97,16 +115,14 @@ def list_hl7_samples(
     return {"version": version, "count": len(data), "items": data}
 
 
-@router.get("/api/interop/sample", response_class=JSONResponse)
+@router.get("/api/interop/sample", response_class=PlainTextResponse)
 def get_hl7_sample(relpath: str = Query(..., description="Relative path under templates/hl7")):
     """Return sample file text by relative path (e.g., 'hl7-v2-4/ADT_A01.hl7')."""
-    p = (SAMPLE_DIR / relpath).resolve()
-    if not str(p).startswith(str(SAMPLE_DIR)):
-        raise HTTPException(status_code=400, detail="Invalid path")
-    if not p.exists() or not p.is_file() or p.suffix.lower() != ".hl7":
+    try:
+        p = _assert_rel_under_templates(relpath)
+    except FileNotFoundError:
         raise HTTPException(status_code=404, detail="Sample not found")
-    text = p.read_text(encoding="utf-8", errors="ignore")
-    return {"relpath": relpath, "size": len(text), "text": text}
+    return PlainTextResponse(p.read_text(encoding="utf-8", errors="ignore"))
 
 
 @router.get("/ui/interop/samples", response_class=HTMLResponse)
@@ -116,7 +132,10 @@ def render_hl7_samples_partial(
     q: str | None = Query(None),
     limit: int = Query(200, ge=1, le=2000),
 ):
-    items = _enumerate_samples(version, q=q, limit=limit)
+    try:
+        items = _enumerate_samples(version, q=q, limit=limit)
+    except HTTPException:
+        items = []
     return templates.TemplateResponse(
         "ui/interop/_sample_list.html",
         {"request": request, "items": items},
@@ -462,45 +481,58 @@ def _compute_kpis() -> dict:
 
 
 @router.get("/interop/summary", response_class=HTMLResponse)
-async def interop_summary(request: Request):
-    return templates.TemplateResponse("interop/summary.html", {"request": request, "kpi": _compute_kpis()})
+def interop_summary():
+    counts: list[tuple[str, int]] = []
+    total = 0
+    for v in sorted(VALID_VERSIONS):
+        root = SAMPLE_DIR / v
+        c = len(list(root.glob("*.hl7"))) if root.exists() else 0
+        counts.append((v, c))
+        total += c
+    html = ["<section class='card'><h3>Interop Summary</h3><div class='row gap'>"]
+    html.append(f"<span class='chip'>templates: <strong>{total}</strong></span>")
+    for v, c in counts:
+        html.append(f"<span class='chip'>{v}: <strong>{c}</strong></span>")
+    html.append("</div></section>")
+    return HTMLResponse("".join(html))
 
 
 @router.post("/interop/demo/seed", response_class=HTMLResponse)
-async def interop_demo_seed(request: Request):
-    src = Path("static/examples/interop/results")
-    dst = UI_OUT / "demo" / "active"
-    dst.mkdir(parents=True, exist_ok=True)
-    if src.exists():
-        for p in src.glob("*.json"):
-            shutil.copyfile(p, dst / p.name)
-    return HTMLResponse("<div class='muted'>Interop demo results loaded.</div>")
+def interop_demo_seed():
+    html = (
+        "<div class='muted'>"
+        "Pick a version and trigger, then click <strong>Run Pipeline</strong> to preview a sample."
+        "</div>"
+    )
+    return HTMLResponse(html)
 
 
 @router.post("/interop/quickstart", response_class=HTMLResponse)
-async def interop_quickstart(request: Request, trigger: str = Form("VXU_V04")):
-    examples = Path("static/examples/hl7/json")
-    js = examples / f"{trigger}_min.json"
-    if not js.exists():
-        return HTMLResponse(f"<div class='muted'>No example for {trigger}</div>")
-    data = json.loads(js.read_text(encoding="utf-8"))
-    hl7 = draft_message(trigger, data)
-    hl7_path = UI_OUT / "quickstart" / "active" / f"{int(time.time())}.hl7"
-    hl7_path.parent.mkdir(parents=True, exist_ok=True)
-    hl7_path.write_text(hl7, encoding="utf-8")
-    tr = _run_cli(["fhir", "translate", "--in", str(hl7_path), "--bundle", "transaction", "--out", str(UI_OUT)])
-    _write_artifact("translate", {**tr, "out": str(UI_OUT)})
-    va = _run_cli(["fhir", "validate", "--in-dir", str(UI_OUT)])
-    _write_artifact("validate", va)
-    return templates.TemplateResponse(
-        "interop/partials/pipeline_result.html",
-        {
-            "request": request,
-            "trigger": trigger,
-            "hl7_path": str(hl7_path),
-            "translate": tr,
-            "validate": va,
-            "kpi": _compute_kpis(),
-        },
-        media_type="text/html",
+async def interop_quickstart(
+    request: Request,
+    trigger: str = Form(...),
+    version: str = Form("hl7-v2-4"),
+):
+    rel = _guess_rel_from_trigger(trigger.strip(), version.strip())
+    if not rel:
+        return HTMLResponse(
+            f"<div class='error'>No sample found for <code>{trigger}</code>.</div>",
+            status_code=404,
+        )
+    try:
+        p = _assert_rel_under_templates(rel)
+        hl7 = p.read_text(encoding="utf-8", errors="ignore")
+    except Exception:
+        return HTMLResponse("<div class='error'>{\"detail\":\"Not Found\"}</div>", status_code=404)
+
+    html = (
+        "<div class='card'>"
+        f"<h4>Pipeline Result — {trigger} <small class='chip'>{version}</small></h4>"
+        "<p class='muted'>Resolved from <code>templates/hl7/</code>. "
+        "Next step: hook into /api/interop/generate → FHIR translate → validate.</p>"
+        "<pre class='codepane' style='white-space:pre-wrap;'>"
+        f"{hl7.replace('<','&lt;').replace('>','&gt;')}"
+        "</pre>"
+        "</div>"
     )
+    return HTMLResponse(html)

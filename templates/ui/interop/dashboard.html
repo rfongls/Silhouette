@@ -1,4 +1,7 @@
 {% extends "layout.html" %}
+{% block extra_head %}
+<link rel="stylesheet" href="/static/css/interop_extras.css" />
+{% endblock %}
 {% block content %}
 <h2>Interoperability Dashboard</h2>
 <div hx-get="/interop/summary" hx-trigger="load, every 10s" hx-target="#interop-kpi-wrap" hx-swap="innerHTML"></div>
@@ -44,15 +47,33 @@
       </div>
     </div>
   </section>
+
+  {% include "ui/interop/_generate_panel.html" %}
+  {% include "ui/interop/_deid_panel.html" %}
+  {% include "ui/interop/_validate_panel.html" %}
+  {% include "ui/interop/_mllp_panel.html" %}
+
   <div class="card">
     <h3>Quick Start</h3>
     <p class="muted">One-click pipeline: Draft example HL7 → FHIR Translate → Validate. No listener required.</p>
-    <form action="/interop/quickstart" method="post" hx-post="/interop/quickstart" hx-target="#pipeline-result" hx-swap="innerHTML">
-      <select name="trigger">
-        {% for t in (triggers or ['VXU_V04','ADT_A01','ORU_R01']) %}
-          <option>{{ t }}</option>
-        {% endfor %}
-      </select>
+    <form action="/interop/quickstart" method="post"
+          hx-post="/interop/quickstart"
+          hx-target="#pipeline-result"
+          hx-swap="innerHTML">
+      <div class="row gap">
+        <label class="label">Version</label>
+        <select name="version" class="input">
+          <option value="hl7-v2-3">HL7 v2.3</option>
+          <option value="hl7-v2-4" selected>HL7 v2.4</option>
+          <option value="hl7-v2-5">HL7 v2.5</option>
+        </select>
+        <label class="label">Trigger</label>
+        <select name="trigger" class="input">
+          {% for t in (triggers or ['VXU_V04','ADT_A01','ORU_R01']) %}
+            <option>{{ t }}</option>
+          {% endfor %}
+        </select>
+      </div>
       <button type="submit">Run Pipeline</button>
       <button type="button" hx-post="/interop/demo/seed" hx-target="#pipeline-demo" hx-swap="innerHTML">Load Demo</button>
     </form>
