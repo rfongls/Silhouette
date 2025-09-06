@@ -6,6 +6,7 @@ import zipfile
 from io import BytesIO
 from pathlib import Path
 from typing import Literal, Optional
+import re
 
 from fastapi import APIRouter, Body, HTTPException
 from fastapi.responses import JSONResponse, PlainTextResponse, StreamingResponse
@@ -115,8 +116,13 @@ def api_validate(text: str = Body(..., embed=True), profile: Optional[str] = Bod
 def api_mllp_send(
     host: str = Body(...),
     port: int = Body(...),
-    messages: list[str] = Body(..., embed=True),
+    messages: list[str] | str = Body(..., embed=True),
     timeout: float = Body(5.0),
 ):
+    if isinstance(messages, str):
+        chunks = re.split(r"\r?\n\s*\r?\n", messages)
+        messages = [m.strip() for m in chunks if m.strip()]
+        if not messages:
+            raise HTTPException(status_code=400, detail="No messages parsed from input string")
     acks = send_mllp_batch(host, port, messages, timeout=timeout)
     return JSONResponse({"sent": len(messages), "acks": acks})
