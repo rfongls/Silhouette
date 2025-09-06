@@ -1,15 +1,17 @@
 from __future__ import annotations
 
-import json
-import subprocess
-import time
-import shutil
+import json, subprocess, time, shutil, re
 from pathlib import Path
-from typing import List
-import re
+from typing import List, Optional, Dict, Any
+import threading
+
 from fastapi import APIRouter, UploadFile, File, Form, Request
-from fastapi.responses import PlainTextResponse, HTMLResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 from starlette.templating import Jinja2Templates
+try:
+    import requests  # for optional FHIR reads
+except Exception:  # pragma: no cover - optional dependency
+    requests = None
 
 from skills.hl7_drafter import draft_message, send_message
 
@@ -26,6 +28,23 @@ def _write_artifact(kind: str, data: dict) -> Path:
     p.parent.mkdir(parents=True, exist_ok=True)
     p.write_text(json.dumps(data, indent=2), encoding="utf-8")
     return p
+
+
+# ---------- Helpers ----------
+def _find_newest_fhir_dir(base: Path) -> Optional[Path]:
+    """Find the newest directory under base that contains FHIR json/ndjson files."""
+    candidates = []
+    for p in base.rglob("*"):
+        if p.is_file() and p.suffix.lower() in {".json", ".ndjson"}:
+            candidates.append(p.parent)
+    return max(set(candidates), key=lambda d: d.stat().st_mtime) if candidates else None
+
+
+def _safe_json(o: Any) -> Any:
+    try:
+        return json.loads(o) if isinstance(o, str) else o
+    except Exception:
+        return {"ok": False, "error": "invalid json"}
 
 
 @router.post("/interop/hl7/draft-send")
@@ -118,6 +137,190 @@ async def validate_fhir(
     return templates.TemplateResponse(
         "interop/partials/validate_result.html",
         {"request": request, "result": result, "kpi": _compute_kpis()},
+        media_type="text/html",
+    )
+
+
+# ---------- New: Send batch ----------
+@router.post("/interop/hl7/send-batch", response_class=HTMLResponse)
+async def interop_hl7_send_batch(
+    request: Request,
+    hl7_files: List[UploadFile] = File(...),
+    host: str = Form(...),
+    port: int = Form(...),
+):
+    results = []
+    for up in hl7_files:
+        msg = up.file.read().decode("utf-8", errors="ignore")
+        ack = await send_message(host, port, msg)
+        ok = bool(re.search(r'(^|\r|\\r|\n)MSA\|AA(\||$)', ack or ""))
+        results.append({"name": up.filename, "ack_ok": ok})
+    _write_artifact("send", {"batch": results})
+    return templates.TemplateResponse(
+        "interop/partials/draft_result.html",
+        {"request": request, "payload": {"batch": results}, "kpi": _compute_kpis()},
+        media_type="text/html",
+    )
+
+
+# ---------- New: Translate batch (+ optional chained validate) ----------
+@router.post("/interop/translate-batch", response_class=HTMLResponse)
+async def interop_translate_batch(
+    request: Request,
+    hl7_files: List[UploadFile] = File(...),
+    bundle: str = Form("transaction"),
+    out_dir: str = Form("out/interop/ui"),
+    validate_after: bool = Form(False),
+):
+    uploads = Path(out_dir) / "uploads"
+    uploads.mkdir(parents=True, exist_ok=True)
+    written = []
+    for up in hl7_files:
+        dest = uploads / up.filename
+        dest.write_bytes(up.file.read())
+        written.append(dest)
+    for p in written:
+        tr = _run_cli(["fhir", "translate", "--in", str(p), "--bundle", bundle, "--out", out_dir])
+        _write_artifact("translate", {**tr, "file": p.name, "out": out_dir})
+    val_res = None
+    if validate_after:
+        target_dir = _find_newest_fhir_dir(Path(out_dir)) or Path(out_dir)
+        val_res = _run_cli(["fhir", "validate", "--in-dir", str(target_dir)])
+        _write_artifact("validate", val_res)
+    return templates.TemplateResponse(
+        "interop/partials/pipeline_result.html",
+        {
+            "request": request,
+            "trigger": "BATCH",
+            "hl7_path": str(uploads),
+            "translate": {"rc": 0, "stdout": f'Translated {len(written)} files', "stderr": ""},
+            "validate": val_res or {"rc": 0, "stdout": "", "stderr": ""},
+            "kpi": _compute_kpis(),
+        },
+        media_type="text/html",
+    )
+
+
+# ---------- New: Validate latest translate output ----------
+@router.post("/interop/validate-last", response_class=HTMLResponse)
+async def interop_validate_last(request: Request, out_dir: str = Form("out/interop/ui")):
+    target_dir = _find_newest_fhir_dir(Path(out_dir))
+    if not target_dir:
+        return HTMLResponse("<div class='muted'>No recent FHIR outputs found to validate.</div>")
+    res = _run_cli(["fhir", "validate", "--in-dir", str(target_dir)])
+    _write_artifact("validate", res)
+    return templates.TemplateResponse(
+        "interop/partials/validate_result.html",
+        {"request": request, "result": res, "kpi": _compute_kpis()},
+        media_type="text/html",
+    )
+
+
+# ---------- New: Simple HL7 analyze (segment counts) ----------
+@router.post("/interop/hl7/analyze", response_class=HTMLResponse)
+async def interop_hl7_analyze(
+    request: Request,
+    hl7_files: List[UploadFile] = File(...),
+):
+    sums: Dict[str, int] = {}
+    for up in hl7_files:
+        txt = up.file.read().decode("utf-8", errors="ignore")
+        for line in txt.replace("\r", "\n").splitlines():
+            if not line.strip():
+                continue
+            seg = line.split("|", 1)[0].strip()
+            if 2 <= len(seg) <= 3 and seg.isalpha():
+                sums[seg] = sums.get(seg, 0) + 1
+    payload = {"segments": sums, "files": len(hl7_files)}
+    _write_artifact("analyze", payload)
+    return templates.TemplateResponse(
+        "interop/partials/draft_result.html",
+        {"request": request, "payload": payload, "kpi": _compute_kpis()},
+        media_type="text/html",
+    )
+
+
+# ---------- New: Minimal directory watcher ----------
+_WATCH_TASK: Optional[threading.Thread] = None
+_WATCH_STOP = threading.Event()
+_WATCH_CFG: Dict[str, str] = {}
+
+
+def _watch_loop(in_dir: Path, out_dir: Path, bundle: str, validate_after: bool, poll_s: float = 2.0):
+    in_dir.mkdir(parents=True, exist_ok=True)
+    while not _WATCH_STOP.is_set():
+        for p in sorted(in_dir.glob("*.hl7")):
+            try:
+                tr = _run_cli(["fhir", "translate", "--in", str(p), "--bundle", bundle, "--out", str(out_dir)])
+                _write_artifact("translate", {**tr, "file": p.name, "out": str(out_dir)})
+                if validate_after:
+                    target = _find_newest_fhir_dir(out_dir) or out_dir
+                    va = _run_cli(["fhir", "validate", "--in-dir", str(target)])
+                    _write_artifact("validate", va)
+                p.rename(p.with_suffix(".done"))
+            except Exception as e:  # pragma: no cover - best effort
+                _write_artifact("translate", {"rc": 1, "stderr": str(e), "file": p.name})
+        _WATCH_STOP.wait(poll_s)
+
+
+@router.post("/interop/watch/start")
+async def interop_watch_start(
+    in_dir: str = Form("in/hl7"),
+    out_dir: str = Form("out/interop/watch"),
+    bundle: str = Form("transaction"),
+    validate_after: bool = Form(False),
+):
+    global _WATCH_TASK, _WATCH_CFG
+    if _WATCH_TASK and _WATCH_TASK.is_alive():
+        return JSONResponse({"ok": False, "error": "watcher already running", "cfg": _WATCH_CFG})
+    _WATCH_STOP.clear()
+    _WATCH_CFG = {
+        "in_dir": in_dir,
+        "out_dir": out_dir,
+        "bundle": bundle,
+        "validate_after": bool(validate_after),
+    }
+    t = threading.Thread(
+        target=_watch_loop,
+        args=(Path(in_dir), Path(out_dir), bundle, bool(validate_after)),
+        daemon=True,
+    )
+    _WATCH_TASK = t
+    t.start()
+    return JSONResponse({"ok": True, "cfg": _WATCH_CFG})
+
+
+@router.post("/interop/watch/stop")
+async def interop_watch_stop():
+    _WATCH_STOP.set()
+    return JSONResponse({"ok": True})
+
+
+@router.get("/interop/watch/status")
+async def interop_watch_status():
+    running = bool(_WATCH_TASK and _WATCH_TASK.is_alive())
+    return JSONResponse({"running": running, "cfg": _WATCH_CFG})
+
+
+# ---------- New: Minimal FHIR-read helper ----------
+@router.post("/interop/fhir/read", response_class=HTMLResponse)
+async def interop_fhir_read(
+    request: Request,
+    base: str = Form(...),
+    resource: str = Form(...),
+    token: str = Form(""),
+):
+    if not requests:
+        return HTMLResponse("<div class='muted'>requests not installed; cannot read from FHIR API.</div>")
+    headers = {"Accept": "application/fhir+json"}
+    if token.strip():
+        headers["Authorization"] = f"Bearer {token.strip()}"
+    url = f"{base.rstrip('/')}/{resource.lstrip('/')}"
+    r = requests.get(url, headers=headers, timeout=20)
+    payload = {"status": r.status_code, "body": _safe_json(r.text)}
+    return templates.TemplateResponse(
+        "interop/partials/draft_result.html",
+        {"request": request, "payload": payload, "kpi": _compute_kpis()},
         media_type="text/html",
     )
 

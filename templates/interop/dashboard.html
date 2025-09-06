@@ -7,18 +7,33 @@
   <div class="card">
     <h3>Quick Start</h3>
     <p class="muted">One-click pipeline: Draft example HL7 → FHIR Translate → Validate. No listener required.</p>
-    <form hx-post="/interop/quickstart" hx-target="#pipeline-result" hx-swap="innerHTML">
-      <select name="trigger"><option>VXU_V04</option><option>ADT_A01</option><option>ORU_R01</option></select>
+    <form action="/interop/quickstart" method="post" hx-post="/interop/quickstart" hx-target="#pipeline-result" hx-swap="innerHTML">
+      <select name="trigger">
+        {% for t in (triggers or ['VXU_V04','ADT_A01','ORU_R01']) %}
+          <option>{{ t }}</option>
+        {% endfor %}
+      </select>
       <button type="submit">Run Pipeline</button>
       <button type="button" hx-post="/interop/demo/seed" hx-target="#pipeline-demo" hx-swap="innerHTML">Load Demo</button>
     </form>
     <div id="pipeline-demo" class="muted"></div>
     <div id="pipeline-result" class="result"></div>
   </div>
+
+  <div class="card">
+    <h3>Analyze HL7</h3>
+    <p class="muted">Quick segment summary for uploaded HL7 file(s).</p>
+    <form action="/interop/hl7/analyze" method="post" hx-post="/interop/hl7/analyze" hx-target="#draft-result" hx-swap="innerHTML" enctype="multipart/form-data">
+      <input type="file" name="hl7_files" multiple />
+      <button type="submit">Analyze</button>
+    </form>
+    <div id="draft-result" class="result"></div>
+  </div>
+
   <div class="card">
     <h3>Draft &amp; Send HL7</h3>
     <p class="muted">Create a standards-conformant HL7 message for a given trigger and send via MLLP. Pick a sample below to auto-fill valid content.</p>
-    <form hx-post="/interop/hl7/draft-send" hx-target="#draft-result" hx-swap="innerHTML">
+    <form action="/interop/hl7/draft-send" method="post" hx-post="/interop/hl7/draft-send" hx-target="#draft-result" hx-swap="innerHTML">
       <input type="text" name="message_type" placeholder="ADT_A01" value="ADT_A01" />
       <label>JSON Data <small>(Click an Example below)</small></label>
       <textarea name="json_data" id="hl7-json" rows="14" placeholder="{}"></textarea>
@@ -37,12 +52,22 @@
       <input type="number" name="port" placeholder="2575" value="2575" />
       <button type="submit">Send</button>
     </form>
+    <details>
+      <summary>Send a whole folder</summary>
+      <form action="/interop/hl7/send-batch" method="post" hx-post="/interop/hl7/send-batch" hx-target="#draft-result" hx-swap="innerHTML" enctype="multipart/form-data">
+        <input type="file" name="hl7_files" webkitdirectory directory multiple />
+        <input type="text" name="host" value="127.0.0.1" />
+        <input type="number" name="port" value="2575" />
+        <button type="submit">Send Folder</button>
+      </form>
+    </details>
     <div id="draft-result" class="result"></div>
   </div>
+
   <div class="card">
     <h3>Translate</h3>
     <p class="muted">Convert HL7 v2 ➜ FHIR. Upload a .hl7 file; choose bundle mode. Optionally validate against the configured IGs.</p>
-    <form hx-post="/interop/translate" hx-target="#translate-result" hx-swap="innerHTML" enctype="multipart/form-data">
+    <form action="/interop/translate" method="post" hx-post="/interop/translate" hx-target="#translate-result" hx-swap="innerHTML" enctype="multipart/form-data">
       <input type="file" name="hl7_file" />
       <select name="bundle">
         <option value="transaction">transaction</option>
@@ -52,19 +77,64 @@
       <input type="text" name="out_dir" value="out/interop/ui" />
       <button type="submit">Translate</button>
     </form>
+    <details>
+      <summary>Translate a whole folder</summary>
+      <form action="/interop/translate-batch" method="post" hx-post="/interop/translate-batch" hx-target="#translate-result" hx-swap="innerHTML" enctype="multipart/form-data">
+        <input type="file" name="hl7_files" webkitdirectory directory multiple />
+        <select name="bundle">
+          <option value="transaction">transaction</option>
+          <option value="collection">collection</option>
+        </select>
+        <label><input type="checkbox" name="validate_after" value="true" /> Validate after translate</label>
+        <input type="text" name="out_dir" value="out/interop/ui" />
+        <button type="submit">Translate Folder</button>
+      </form>
+    </details>
     <p class="muted">No file handy? Download a sample: <a href="/static/examples/hl7/samples/ORU_R01.hl7" download>ORU_R01.hl7</a> · <a href="/static/examples/hl7/samples/VXU_V04.hl7" download>VXU_V04.hl7</a></p>
     <div id="translate-result" class="result"></div>
   </div>
+
   <div class="card">
     <h3>Validate</h3>
     <p class="muted">Upload one or more FHIR resources to validate. Results show rc/stdout/stderr from the validator.</p>
-    <form hx-post="/interop/validate" hx-target="#validate-result" hx-swap="innerHTML" enctype="multipart/form-data">
+    <form action="/interop/validate" method="post" hx-post="/interop/validate" hx-target="#validate-result" hx-swap="innerHTML" enctype="multipart/form-data">
       <input type="file" name="fhir_files" multiple />
       <input type="text" name="out_dir" value="out/interop/ui" />
       <button type="submit">Validate</button>
     </form>
+    <div style="margin:.5rem 0;">
+      <button type="button" hx-post="/interop/validate-last" hx-target="#validate-result" hx-swap="innerHTML">Validate Last Translate Output</button>
+    </div>
     <p class="muted">Sample bundle: <a href="/static/examples/fhir/bundle.json" download>FHIR Bundle</a></p>
     <div id="validate-result" class="result"></div>
   </div>
+
+  <div class="card">
+    <h3>Directory Watcher</h3>
+    <p class="muted">Auto-translate new .hl7 files that appear in a directory (optional validate).</p>
+    <form action="/interop/watch/start" method="post" hx-post="/interop/watch/start" hx-target="#watch-status" hx-swap="innerHTML">
+      <input type="text" name="in_dir" value="in/hl7" />
+      <input type="text" name="out_dir" value="out/interop/watch" />
+      <select name="bundle"><option>transaction</option><option>collection</option></select>
+      <label><input type="checkbox" name="validate_after" value="true" /> Validate after translate</label>
+      <button type="submit">Start Watcher</button>
+      <button type="button" hx-post="/interop/watch/stop" hx-target="#watch-status" hx-swap="innerHTML">Stop</button>
+      <button type="button" hx-get="/interop/watch/status" hx-target="#watch-status" hx-swap="innerHTML">Status</button>
+    </form>
+    <div id="watch-status" class="result"></div>
+  </div>
+
+  <div class="card">
+    <h3>FHIR API (Read)</h3>
+    <p class="muted">Test reading a resource from a FHIR API (GET). Provide base URL and resource like <code>Patient/123</code>.</p>
+    <form action="/interop/fhir/read" method="post" hx-post="/interop/fhir/read" hx-target="#fhir-read" hx-swap="innerHTML">
+      <input type="text" name="base" placeholder="https://fhir.example.org/fhir" />
+      <input type="text" name="resource" placeholder="Patient/123" />
+      <input type="password" name="token" placeholder="Bearer token (optional)" />
+      <button type="submit">Read</button>
+    </form>
+    <div id="fhir-read" class="result"></div>
+  </div>
 </div>
 {% endblock %}
+
