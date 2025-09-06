@@ -22,7 +22,8 @@ Config/Seeds: `config/security.env`, `data/security/seeds/**`
    Draft HL7 ➜ Translate ➜ Validate (no listener required)
 2) **KPIs** update instantly: Send(ACK), Translate OK/Fail, Validate OK/Fail
 3) **Draft & Send** — choose an **Example** to auto-fill valid JSON; or download a sample `.hl7`
-4) **Translate / Validate** — upload files and view structured results
+4) **Sample Finder** — browse versioned HL7 samples, preview, and insert into forms
+5) **Translate / Validate** — upload files and view structured results
 
 Artifacts: `out/interop/**/active/*.json`
 Examples: `static/examples/hl7/…`, `static/examples/interop/results/…`, `static/examples/fhir/bundle.json`

@@ -4,6 +4,46 @@
 <div hx-get="/interop/summary" hx-trigger="load, every 10s" hx-target="#interop-kpi-wrap" hx-swap="innerHTML"></div>
 <div id="interop-kpi-wrap"></div>
 <div class="grid">
+  <section class="card">
+    <h3>HL7 Sample Finder</h3>
+    <form id="sample-search" class="row gap"
+          hx-get="/ui/interop/samples"
+          hx-target="#sample-results"
+          hx-swap="innerHTML"
+          hx-trigger="keyup changed delay:250ms, change from:#sample-version">
+      <label for="sample-version" class="label">Version</label>
+      <select id="sample-version" name="version" class="input">
+        <option value="hl7-v2-3">HL7 v2.3</option>
+        <option value="hl7-v2-4" selected>HL7 v2.4</option>
+        <option value="hl7-v2-5">HL7 v2.5</option>
+      </select>
+
+      <input id="sample-q" class="input grow" type="text" name="q"
+             placeholder="Type to search (e.g., ADT_A01, ORU_R01)"/>
+    </form>
+
+    <div id="sample-results"
+         hx-get="/ui/interop/samples"
+         hx-vals='{"version":"hl7-v2-4"}'
+         hx-trigger="load"
+         hx-target="this"
+         hx-swap="innerHTML">
+      <!-- results will render here -->
+    </div>
+
+    <div class="grid2 mt">
+      <div>
+        <h4>Preview</h4>
+        <pre id="sample-preview" class="codepane muted">Select a sample…</pre>
+      </div>
+      <div>
+        <h4>Insert</h4>
+        <div id="sample-inject" class="muted">
+          Choose “Insert” to load the sample text into this panel (wire to your textarea/editor if desired).
+        </div>
+      </div>
+    </div>
+  </section>
   <div class="card">
     <h3>Quick Start</h3>
     <p class="muted">One-click pipeline: Draft example HL7 → FHIR Translate → Validate. No listener required.</p>

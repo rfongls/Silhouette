@@ -23,3 +23,22 @@ input, textarea, select { width: 100%; margin: 0.25rem 0; padding: 0.5rem; }
 .bars span { width:8px; background:#cfe2ff; display:block; }
 .bar { background:#eee; height:10px; border-radius:6px; overflow:hidden; }
 .bar > span { display:block; height:100%; background:#0069d9; width:0%; transition:width .4s ease; }
+
+/* HL7 Sample Finder utility classes */
+.row.gap { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+.input { padding:6px 8px; border:1px solid #ddd; border-radius:8px; min-width:10rem; width:auto; }
+.input.grow { flex:1 1 auto; }
+.grid2 { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+.mt { margin-top:12px; }
+.sample-row { display:grid; grid-template-columns:1fr auto; row-gap:2px; column-gap:8px; padding:8px; border-bottom:1px dashed #eee; }
+.sample-title { font-size:.95rem; }
+.sample-actions { display:flex; gap:6px; align-items:start; }
+.sample-meta { grid-column:1 / -1; font-size:.85rem; display:flex; gap:10px; align-items:center; }
+.btn { padding:4px 8px; border-radius:8px; border:1px solid #ccc; background:#f8f8f8; cursor:pointer; }
+.btn:hover { background:#f1f1f1; }
+.btn.btn-xs { font-size:.8rem; padding:3px 6px; }
+.mono { font-family:ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace; }
+.label { font-size:.85rem; color:#444; }
+.chip { display:inline-block; padding:1px 6px; border-radius:999px; font-size:.7rem; margin-left:.25rem; }
+.chip-version { background:#f2ecff; border:1px solid #e1d6ff; color:#5b35c6; }
+.codepane { border:1px solid #eee; border-radius:8px; padding:8px; min-height:160px; background:#fafafa; overflow:auto; }

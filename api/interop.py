@@ -4,7 +4,7 @@ import json, subprocess, time, shutil, re
 from pathlib import Path
 from typing import List, Optional, Dict, Any
 import threading
-from fastapi import APIRouter, UploadFile, File, Form, Request
+from fastapi import APIRouter, UploadFile, File, Form, Request, Query, HTTPException
 from fastapi.responses import HTMLResponse, JSONResponse
 from starlette.templating import Jinja2Templates
 try:
@@ -19,6 +19,46 @@ templates = Jinja2Templates(directory="templates")
 OUT_ROOT = Path("out/interop")
 UI_OUT = OUT_ROOT / "ui"
 INDEX_PATH = UI_OUT / "index.json"
+
+
+# -------- HL7 Sample Indexing (templates/hl7/*) ----------
+SAMPLE_DIR = (Path(__file__).resolve().parent.parent / "templates" / "hl7").resolve()
+VALID_VERSIONS = {"hl7-v2-3", "hl7-v2-4", "hl7-v2-5"}
+
+
+def _safe_sample_dir(version: str) -> Path:
+    if version not in VALID_VERSIONS:
+        raise HTTPException(status_code=400, detail=f"Unknown version '{version}'")
+    p = (SAMPLE_DIR / version).resolve()
+    if not str(p).startswith(str(SAMPLE_DIR)):
+        # Path traversal protection
+        raise HTTPException(status_code=400, detail="Invalid path")
+    if not p.exists():
+        raise HTTPException(status_code=404, detail=f"Version folder not found: {version}")
+    return p
+
+
+def _enumerate_samples(version: str, q: str | None = None, limit: int = 200) -> list[dict[str, str]]:
+    """Return a list of {version, trigger, filename, relpath} dicts filtered by q."""
+    base = _safe_sample_dir(version)
+    items: list[dict[str, str]] = []
+    qnorm = (q or "").strip().lower()
+    for f in sorted(base.rglob("*.hl7")):
+        rel = f.relative_to(SAMPLE_DIR).as_posix()
+        trigger = f.stem
+        if qnorm:
+            hay = f"{trigger} {rel}".lower()
+            if qnorm not in hay:
+                continue
+        items.append({
+            "version": version,
+            "trigger": trigger,
+            "filename": f.name,
+            "relpath": rel,
+        })
+        if len(items) >= limit:
+            break
+    return items
 
 
 def _write_artifact(kind: str, data: dict) -> Path:
@@ -44,6 +84,43 @@ def _safe_json(o: Any) -> Any:
         return json.loads(o) if isinstance(o, str) else o
     except Exception:
         return {"ok": False, "error": "invalid json"}
+
+
+@router.get("/api/interop/samples", response_class=JSONResponse)
+def list_hl7_samples(
+    version: str = Query("hl7-v2-4", description="One of hl7-v2-3|hl7-v2-4|hl7-v2-5"),
+    q: str | None = Query(None, description="Search text for trigger/file"),
+    limit: int = Query(200, ge=1, le=2000),
+):
+    """JSON list of sample entries for the UI to render."""
+    data = _enumerate_samples(version, q=q, limit=limit)
+    return {"version": version, "count": len(data), "items": data}
+
+
+@router.get("/api/interop/sample", response_class=JSONResponse)
+def get_hl7_sample(relpath: str = Query(..., description="Relative path under templates/hl7")):
+    """Return sample file text by relative path (e.g., 'hl7-v2-4/ADT_A01.hl7')."""
+    p = (SAMPLE_DIR / relpath).resolve()
+    if not str(p).startswith(str(SAMPLE_DIR)):
+        raise HTTPException(status_code=400, detail="Invalid path")
+    if not p.exists() or not p.is_file() or p.suffix.lower() != ".hl7":
+        raise HTTPException(status_code=404, detail="Sample not found")
+    text = p.read_text(encoding="utf-8", errors="ignore")
+    return {"relpath": relpath, "size": len(text), "text": text}
+
+
+@router.get("/ui/interop/samples", response_class=HTMLResponse)
+def render_hl7_samples_partial(
+    request: Request,
+    version: str = Query("hl7-v2-4"),
+    q: str | None = Query(None),
+    limit: int = Query(200, ge=1, le=2000),
+):
+    items = _enumerate_samples(version, q=q, limit=limit)
+    return templates.TemplateResponse(
+        "ui/interop/_sample_list.html",
+        {"request": request, "items": items},
+    )
 
 
 @router.post("/interop/hl7/draft-send")
