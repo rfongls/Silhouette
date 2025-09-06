@@ -1,4 +1,7 @@
 {% extends "layout.html" %}
+{% block extra_head %}
+<link rel="stylesheet" href="/static/css/interop_extras.css" />
+{% endblock %}
 {% block content %}
 <h2>Interoperability Dashboard</h2>
 <div hx-get="/interop/summary" hx-trigger="load, every 10s" hx-target="#interop-kpi-wrap" hx-swap="innerHTML"></div>
@@ -44,6 +47,12 @@
       </div>
     </div>
   </section>
+
+  {% include "ui/interop/_generate_panel.html" %}
+  {% include "ui/interop/_deid_panel.html" %}
+  {% include "ui/interop/_validate_panel.html" %}
+  {% include "ui/interop/_mllp_panel.html" %}
+
   <div class="card">
     <h3>Quick Start</h3>
     <p class="muted">One-click pipeline: Draft example HL7 → FHIR Translate → Validate. No listener required.</p>
