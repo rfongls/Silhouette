@@ -1,0 +1,46 @@
+<div class="kpis" id="kpi-summary">
+  <div class="kpi">
+    <h4>Gate</h4>
+    <div class="value">{{ kpi.gate.allowed }}/{{ kpi.gate.total }}</div>
+    <small>allowed / total {% if kpi.gate.last is not none %}· last: <span class="pill {% if kpi.gate.last=='Allowed' %}ok{% else %}danger{% endif %}">{{ kpi.gate.last }}</span>{% endif %}</small>
+  </div>
+  <div class="kpi">
+    <h4>Recon</h4>
+    <div class="value">{{ kpi.recon.services }}</div>
+    <small>hosts {{ kpi.recon.hosts }} · ports {{ kpi.recon.ports }}</small>
+    <div class="bar" style="margin-top:.4rem;"><span style="width: {{ [kpi.recon.cves|int,1]|max |float / (kpi.recon.cves+5)|float * 100 }}%"></span></div>
+    <small>CVEs {{ kpi.recon.cves }} · KEV {{ kpi.recon.kev }}</small>
+  </div>
+  <div class="kpi">
+    <h4>Severities</h4>
+    <div class="value">{{ kpi.recon.sev.Critical + kpi.recon.sev.High }}</div>
+    <small>Critical {{ kpi.recon.sev.Critical }} · High {{ kpi.recon.sev.High }} · Med {{ kpi.recon.sev.Medium }} · Low {{ kpi.recon.sev.Low }}</small>
+  </div>
+  <div class="kpi">
+    <h4>Netforensics</h4>
+    <div class="value">{{ kpi.net.alerts }}</div>
+    <small>alert(s) · packets {{ kpi.net.packets }}</small>
+  </div>
+</div>
+{% if last_recon %}
+<div class="card">
+  <h3>Last Recon Snapshot ({{ last_recon.get('profile','?') }})</h3>
+  <p class="muted">Targets: {{ (last_recon.get('inventory',{}).get('hosts') or [])|join(', ') }}</p>
+  <table class="table">
+    <thead><tr><th>Port</th><th>Service</th><th>CVEs</th><th>KEV?</th></tr></thead>
+    <tbody>
+      {% for svc in (last_recon.get('inventory',{}).get('services') or [])[:12] %}
+        <tr>
+          <td>{{ svc.get('port') }}</td>
+          <td>{{ svc.get('service') }}</td>
+          <td>{{ (svc.get('cves') or []) | length }}</td>
+          <td>{% if (svc.get('cves') or []) | selectattr('kev') | list | length > 0 %}<span class="pill warn">flagged</span>{% else %}—{% endif %}</td>
+        </tr>
+      {% endfor %}
+      {% if (last_recon.get('inventory',{}).get('services') or [])|length == 0 %}
+        <tr><td colspan="4" class="muted">No services found.</td></tr>
+      {% endif %}
+    </tbody>
+  </table>
+</div>
+{% endif %}

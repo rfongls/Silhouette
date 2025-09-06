@@ -1,3 +1,4 @@
+{% if kpi %}<div id="kpi-wrap" hx-swap-oob="true">{% include "security/summary.html" %}</div>{% endif %}
 {% set pb = payload %}
 <div>
   <h4>IR Playbook — {{ pb.get('incident','?') }}</h4>

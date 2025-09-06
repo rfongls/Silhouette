@@ -1,0 +1,4 @@
+{
+  "incident": "ransomware",
+  "steps": ["isolate", "notify"]
+}
