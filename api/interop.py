@@ -13,6 +13,12 @@ except Exception:  # pragma: no cover - optional dependency
     requests = None
 
 from skills.hl7_drafter import draft_message, send_message
+from silhouette_core.interop.hl7_mutate import (
+    enrich_clinical_fields,
+    ensure_unique_fields,
+)
+from silhouette_core.interop.deid import deidentify_message
+from silhouette_core.interop.validate_workbook import validate_message
 
 router = APIRouter()
 templates = Jinja2Templates(directory="templates")
@@ -512,8 +518,20 @@ async def interop_quickstart(
     request: Request,
     trigger: str = Form(...),
     version: str = Form("hl7-v2-4"),
+    seed: str = Form("1337"),
+    ensure_unique: str = Form("true"),
+    include_clinical: str = Form("true"),
+    deidentify: str = Form("false"),
 ):
-    rel = _guess_rel_from_trigger(trigger.strip(), version.strip())
+    """
+    Demo pipeline:
+      1) Generate one HL7 message from templates with deterministic seed
+      2) Translate HL7 ➜ FHIR using silhouette CLI if available
+      3) Validate HL7 (placeholder workbook)
+      4) Render 3-column HTML result (HL7, FHIR, Validation)
+    """
+    version = (version or "hl7-v2-4").strip()
+    rel = _guess_rel_from_trigger(trigger.strip(), version)
     if not rel:
         return HTMLResponse(
             f"<div class='error'>No sample found for <code>{trigger}</code>.</div>",
@@ -521,18 +539,129 @@ async def interop_quickstart(
         )
     try:
         p = _assert_rel_under_templates(rel)
-        hl7 = p.read_text(encoding="utf-8", errors="ignore")
+        template_text = p.read_text(encoding="utf-8", errors="ignore")
     except Exception:
         return HTMLResponse("<div class='error'>{\"detail\":\"Not Found\"}</div>", status_code=404)
 
+    try:
+        base_seed = int(seed)
+    except Exception:
+        base_seed = 1337
+
+    msg = template_text
+    if ensure_unique.lower() in ("1", "true", "yes", "on"):
+        msg = ensure_unique_fields(msg, index=0, seed=base_seed)
+    if include_clinical.lower() in ("1", "true", "yes", "on"):
+        msg = enrich_clinical_fields(msg, seed=base_seed)
+    if deidentify.lower() in ("1", "true", "yes", "on"):
+        msg = deidentify_message(msg, seed=base_seed)
+
+    fhir_json, translate_note = _hl7_to_fhir_via_cli(msg)
+    val = validate_message(msg, profile=None)
+    val_html = _render_validation(val)
+
     html = (
-        "<div class='card'>"
-        f"<h4>Pipeline Result — {trigger} <small class='chip'>{version}</small></h4>"
-        "<p class='muted'>Resolved from <code>templates/hl7/</code>. "
-        "Next step: hook into /api/interop/generate → FHIR translate → validate.</p>"
+        "<div class='grid' style='grid-template-columns: 1fr 1fr 1fr; gap:12px;'>"
+        "<section class='card'>"
+        f"<h4>HL7 — {trigger} <small class='chip'>{version}</small></h4>"
         "<pre class='codepane' style='white-space:pre-wrap;'>"
-        f"{hl7.replace('<','&lt;').replace('>','&gt;')}"
+        f"{_esc(msg)}"
         "</pre>"
+        "</section>"
+        "<section class='card'>"
+        "<h4>FHIR (Preview)</h4>"
+        f"<div class='muted' style='margin-bottom:6px;'>{_esc(translate_note)}</div>"
+        "<pre class='codepane' style='white-space:pre-wrap;'>"
+        f"{_esc(fhir_json)}"
+        "</pre>"
+        "</section>"
+        "<section class='card'>"
+        "<h4>Validation</h4>"
+        f"{val_html}"
+        "</section>"
         "</div>"
     )
     return HTMLResponse(html)
+
+
+# -------------------- helpers for quickstart pipeline --------------------
+
+
+def _which(cmd: str) -> Optional[str]:
+    return shutil.which(cmd)
+
+
+def _hl7_to_fhir_via_cli(hl7_text: str) -> tuple[str, str]:
+    """Translate HL7 to FHIR using silhouette CLI if available."""
+    exe = _which("silhouette")
+    if not exe:
+        stub = {
+            "note": "silhouette CLI not found on PATH; showing stub JSON"
+        }
+        return json.dumps(stub, indent=2), "CLI not found — returned stub."
+
+    map_path = "maps/adt_uscore.yaml"
+    args = [
+        exe,
+        "fhir",
+        "translate",
+        "--in",
+        "-",
+        "--map",
+        map_path,
+        "--out",
+        "-",
+        "--message-mode",
+    ]
+    try:
+        proc = subprocess.run(
+            args,
+            input=hl7_text.encode("utf-8"),
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            timeout=20,
+        )
+        if proc.returncode != 0:
+            note = f"CLI failed (exit {proc.returncode}). Showing stderr."
+            out = (proc.stderr or b"").decode("utf-8", "ignore")
+            return out, note
+        out = (proc.stdout or b"").decode("utf-8", "ignore")
+        try:
+            parsed = json.loads(out)
+            out = json.dumps(parsed, indent=2)
+        except Exception:
+            pass
+        return out, f"Translated with CLI map: {map_path}"
+    except subprocess.TimeoutExpired:
+        return json.dumps({"error": "translation timeout"}, indent=2), "CLI timeout."
+    except FileNotFoundError:
+        return json.dumps({"error": "silhouette not found"}, indent=2), "CLI not found."
+    except Exception as e:
+        return json.dumps({"error": f"unexpected: {e}"}, indent=2), "CLI error."
+
+
+def _esc(s: str) -> str:
+    return s.replace("<", "&lt;").replace(">", "&gt;")
+
+
+def _render_validation(result: Dict[str, Any]) -> str:
+    ok = bool(result.get("ok"))
+    errs = result.get("errors") or []
+    warns = result.get("warnings") or []
+    badge = (
+        "<span class='chip' style='background:#e6ffe6;border:1px solid #b2e5b2;'>OK</span>"
+        if ok
+        else "<span class='chip' style='background:#ffecec;border:1px solid #f5b1b1;'>FAIL</span>"
+    )
+    parts = [f"<div>Result: {badge}</div>"]
+    if errs:
+        parts.append("<div class='mt'><strong>Errors</strong><ul>")
+        for e in errs:
+            parts.append(f"<li>{_esc(str(e))}</li>")
+        parts.append("</ul></div>")
+    if warns:
+        parts.append("<div class='mt'><strong>Warnings</strong><ul class='muted'>")
+        for w in warns:
+            parts.append(f"<li>{_esc(str(w))}</li>")
+        parts.append("</ul></div>")
+    return "".join(parts)

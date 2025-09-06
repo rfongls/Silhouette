@@ -22,3 +22,10 @@ curl -s http://localhost:8000/api/interop/mllp/send \
 
 The echo server returns one ACK per frame and includes the inbound `MSH-10` value in `MSA-2`.
 
+### Quick Start (Generate → FHIR → Validate)
+
+- Choose **Version** and **Trigger**, set an optional **seed**, and toggles for **Unique IDs**, **Enrich clinical**, **De-identify**.
+- Click **Run Pipeline** to render a 3-column result:
+  - Left: generated HL7
+  - Middle: FHIR result (via Silhouette CLI if installed; otherwise a stub with a clear note)
+  - Right: Validation summary

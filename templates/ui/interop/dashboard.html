@@ -74,6 +74,12 @@
           {% endfor %}
         </select>
       </div>
+      <div class="row gap mt">
+        <input class="input" type="number" name="seed" value="1337" title="seed (deterministic)" />
+        <label><input type="checkbox" name="ensure_unique" checked /> Unique IDs</label>
+        <label><input type="checkbox" name="include_clinical" checked /> Enrich clinical</label>
+        <label><input type="checkbox" name="deidentify" /> De-identify</label>
+      </div>
       <button type="submit">Run Pipeline</button>
       <button type="button" hx-post="/interop/demo/seed" hx-target="#pipeline-demo" hx-swap="innerHTML">Load Demo</button>
     </form>
