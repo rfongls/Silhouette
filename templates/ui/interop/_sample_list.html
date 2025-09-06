@@ -15,7 +15,7 @@
         title="Preview">
         Preview
       </button>
-      <button 
+      <button
         class="btn btn-xs"
         hx-get="/api/interop/sample"
         hx-params="*"
@@ -25,6 +25,13 @@
         hx-vals='{"relpath":"{{ it.relpath }}"}'
         title="Insert">
         Insert
+      </button>
+      <button
+        class="btn btn-xs"
+        type="button"
+        onclick="document.querySelector('#gen-form [name=template_relpath]').value='{{ it.relpath }}';document.querySelector('#gen-version').value='{{ it.version }}';"
+        title="Use in Generator">
+        Use
       </button>
     </div>
     <div class="sample-meta">

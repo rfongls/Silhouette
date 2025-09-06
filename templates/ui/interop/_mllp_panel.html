@@ -1,0 +1,17 @@
+<section class="card">
+  <h3>Transport — MLLP</h3>
+  <form id="mllp-form"
+        hx-post="/api/interop/mllp/send"
+        hx-encoding="json"
+        hx-trigger="submit"
+        hx-target="#mllp-output"
+        hx-swap="innerHTML">
+    <div class="row gap">
+      <input class="input" name="host" placeholder="localhost" value="127.0.0.1"/>
+      <input class="input" name="port" type="number" value="2575"/>
+    </div>
+    <textarea class="input grow mt" name="messages" rows="6" placeholder="One or more HL7 messages separated by blank lines"></textarea>
+    <button class="btn mt">Send</button>
+  </form>
+  <pre id="mllp-output" class="codepane mt">ACKs will appear here…</pre>
+</section>

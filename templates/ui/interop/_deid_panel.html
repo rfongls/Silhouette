@@ -1,0 +1,16 @@
+<section class="card">
+  <h3>De-Identify</h3>
+  <form id="deid-form"
+        hx-post="/api/interop/deidentify"
+        hx-encoding="json"
+        hx-trigger="submit"
+        hx-target="#deid-output"
+        hx-swap="innerHTML">
+    <textarea class="input grow" name="text" rows="8" placeholder="Paste HL7 here..."></textarea>
+    <div class="row gap mt">
+      <input class="input" type="number" name="seed" placeholder="seed (optional)"/>
+      <button class="btn">De-Identify</button>
+    </div>
+  </form>
+  <pre id="deid-output" class="codepane mt">Output will appear here…</pre>
+</section>
