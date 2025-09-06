@@ -13,6 +13,18 @@ Open **Interoperability Dashboard → Quick Start**:
 - **HL7 (drafter JSON)**: `static/examples/hl7/json/*.json`
   Use the **Example** picker in “Draft & Send HL7” to auto-fill valid content.
 - **FHIR bundle**: `static/examples/fhir/bundle.json`
+ 
+## Batch & Watch
+- **Send batch**: upload a folder of `.hl7` to MLLP.
+- **Translate batch**: upload a folder; optional **Validate after**.
+- **Validate Last Translate Output**: validate the most recent translate output.
+- **Directory watcher**: start a background loop to watch `in/hl7` and translate (optional validate) to `out/interop/watch`.
+
+## HL7 Analyze
+Upload `.hl7` to get quick segment counts (MSH/PID/OBR/OBX/etc.) and sanity-check structure.
+
+## FHIR API (Read)
+Provide a base URL and resource path (e.g., `Patient/123`) and an optional Bearer token to fetch a resource for inspection.
 
 ## 1) Draft & Send HL7
 ```python
