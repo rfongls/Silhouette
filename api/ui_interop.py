@@ -12,7 +12,15 @@ templates = Jinja2Templates(directory="templates")
 
 @router.get("/ui/interop/dashboard", response_class=HTMLResponse)
 async def dashboard(request: Request):
-    return templates.TemplateResponse("interop/dashboard.html", {"request": request})
+    tmpl_dir = Path("templates/hl7")
+    triggers = []
+    if tmpl_dir.exists():
+        for p in tmpl_dir.glob("*.hl7.j2"):
+            name = p.stem
+            if "_" in name:
+                triggers.append(name)
+    triggers = sorted(set(triggers)) or ["ADT_A01", "ORU_R01", "VXU_V04"]
+    return templates.TemplateResponse("interop/dashboard.html", {"request": request, "triggers": triggers})
 
 
 @router.get("/ui/interop/history", response_class=HTMLResponse)
