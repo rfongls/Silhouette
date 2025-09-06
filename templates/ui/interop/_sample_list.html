@@ -1,0 +1,37 @@
+{% for it in items %}
+  <div class="sample-row">
+    <div class="sample-title">
+      <strong>{{ it.trigger }}</strong> <small class="chip chip-version">{{ it.version }}</small>
+    </div>
+    <div class="sample-actions">
+      <button 
+        class="btn btn-xs"
+        hx-get="/api/interop/sample"
+        hx-params="*"
+        hx-target="#sample-preview"
+        hx-swap="innerHTML"
+        hx-trigger="click"
+        hx-vals='{"relpath":"{{ it.relpath }}"}'
+        title="Preview">
+        Preview
+      </button>
+      <button 
+        class="btn btn-xs"
+        hx-get="/api/interop/sample"
+        hx-params="*"
+        hx-target="#sample-inject"
+        hx-swap="innerHTML"
+        hx-trigger="click"
+        hx-vals='{"relpath":"{{ it.relpath }}"}'
+        title="Insert">
+        Insert
+      </button>
+    </div>
+    <div class="sample-meta">
+      <code class="mono">{{ it.filename }}</code>
+      <span class="muted">{{ it.relpath }}</span>
+    </div>
+  </div>
+{% else %}
+  <div class="muted">No samples found.</div>
+{% endfor %}

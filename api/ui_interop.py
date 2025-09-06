@@ -20,7 +20,7 @@ async def dashboard(request: Request):
             if "_" in name:
                 triggers.append(name)
     triggers = sorted(set(triggers)) or ["ADT_A01", "ORU_R01", "VXU_V04"]
-    return templates.TemplateResponse("interop/dashboard.html", {"request": request, "triggers": triggers})
+    return templates.TemplateResponse("ui/interop/dashboard.html", {"request": request, "triggers": triggers})
 
 
 @router.get("/ui/interop/history", response_class=HTMLResponse)
