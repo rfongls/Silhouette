@@ -20,5 +20,35 @@
   <main>
     {% block content %}{% endblock %}
   </main>
+  <script>
+  // --- Minimal KPI refresher (no-HTMX fallback) ---
+  (function(){
+    function refreshKPI(sel, url){
+      var el = document.querySelector(sel);
+      if (!el) return;
+      try {
+        fetch(url, { cache: "no-cache" })
+          .then(function(r){ return r.text(); })
+          .then(function(html){ el.innerHTML = html; })
+          .catch(function(){ /* silent */ });
+      } catch(e) { /* silent */ }
+    }
+    // Expose globally so partials can call it after actions
+    window.refreshKPI = refreshKPI;
+
+    document.addEventListener('DOMContentLoaded', function(){
+      // Interop KPI
+      if (document.querySelector('#interop-kpi-wrap')) {
+        refreshKPI('#interop-kpi-wrap','/interop/summary');
+        setInterval(function(){ refreshKPI('#interop-kpi-wrap','/interop/summary'); }, 10000);
+      }
+      // Security KPI
+      if (document.querySelector('#kpi-wrap')) {
+        refreshKPI('#kpi-wrap','/security/summary');
+        setInterval(function(){ refreshKPI('#kpi-wrap','/security/summary'); }, 10000);
+      }
+    });
+  })();
+  </script>
 </body>
 </html>
