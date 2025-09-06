@@ -29,3 +29,5 @@ The echo server returns one ACK per frame and includes the inbound `MSH-10` valu
   - Left: generated HL7
   - Middle: FHIR result (via Silhouette CLI if installed; otherwise a stub with a clear note)
   - Right: Validation summary
+  - 
+Templates should exist under templates/hl7/<version> for the triggers you select.
