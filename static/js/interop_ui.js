@@ -52,6 +52,7 @@
       fillDatalist("qs");
       fillDatalist("ds");
       fillDatalist("gen");
+      fillDatalist("pipe");
     } catch {}
   }
   function getPrimaryVersion() {
@@ -126,12 +127,14 @@
     fillDatalist("qs");
     fillDatalist("ds");
     fillDatalist("gen");
+    fillDatalist("pipe");
 
     // refresh datalists after HTMX replaces the trigger <select>s
     document.body.addEventListener("htmx:afterSwap", (e) => {
       if (e && e.target && e.target.id === "qs-trigger") fillDatalist("qs");
       if (e && e.target && e.target.id === "ds-trigger-select") fillDatalist("ds");
       if (e && e.target && e.target.id === "gen-trigger-select") fillDatalist("gen");
+      if (e && e.target && e.target.id === "pipe-trigger-select") fillDatalist("pipe");
     });
 
     const genSel = q("gen-trigger-select");

@@ -1,5 +1,5 @@
 from __future__ import annotations
-import json, subprocess, time, shutil, re, io, csv
+import json, subprocess, time, shutil, re, io, csv, datetime, textwrap
 from pathlib import Path
 from typing import List, Optional, Dict, Any
 import threading
@@ -18,6 +18,7 @@ from silhouette_core.interop.hl7_mutate import (
 )
 from silhouette_core.interop.deid import deidentify_message
 from silhouette_core.interop.validate_workbook import validate_message
+from .interop_gen import generate_messages
 
 router = APIRouter()
 templates = Jinja2Templates(directory="templates")
@@ -880,3 +881,138 @@ def _render_validation(result: Dict[str, Any]) -> str:
             parts.append(f"<li>{_esc(str(w))}</li>")
         parts.append("</ul></div>")
     return "".join(parts)
+
+
+# -------- Pipeline helpers --------
+
+def _now_tag() -> str:
+    return datetime.datetime.utcnow().strftime("%Y%m%d-%H%M%S")
+
+def _write_file(dir_: Path, name: str, data: str | bytes, binary=False) -> Path:
+    dir_.mkdir(parents=True, exist_ok=True)
+    p = dir_ / name
+    mode = "wb" if binary else "w"
+    enc = None if binary else "utf-8"
+    with p.open(mode, encoding=enc) as fh:
+        fh.write(data)
+    return p
+
+def _translate_hl7_to_fhir_cli(hl7_text: str, out_dir: Path) -> dict:
+    """Best-effort HL7→FHIR via CLI. Falls back gracefully if CLI isn't available."""
+    tmp_in = out_dir / "input.hl7"
+    _write_file(out_dir, "input.hl7", hl7_text)
+    cmd = ["silhouette", "fhir", "translate", "--in", str(tmp_in), "--out", str(out_dir), "--message-mode", "--dry-run"]
+    try:
+        cp = subprocess.run(cmd, capture_output=True, text=True, check=False)
+        _write_file(out_dir, "translate.stdout.txt", cp.stdout or "")
+        _write_file(out_dir, "translate.stderr.txt", cp.stderr or "")
+        ok = cp.returncode == 0
+        fhir_paths = list(out_dir.glob("*.ndjson")) + list(out_dir.glob("*.json"))
+        if fhir_paths:
+            return {"ok": ok, "paths": [p.as_posix() for p in fhir_paths], "stdout": cp.stdout, "stderr": cp.stderr}
+        if cp.stdout.strip():
+            _write_file(out_dir, "translated.bundle.json", cp.stdout)
+            return {"ok": ok, "paths": [(out_dir / "translated.bundle.json").as_posix()], "stdout": cp.stdout, "stderr": cp.stderr}
+        return {"ok": ok, "paths": [], "stdout": cp.stdout, "stderr": cp.stderr}
+    except FileNotFoundError:
+        return {"ok": False, "paths": [], "stdout": "", "stderr": "silhouette CLI not found; install or adjust PATH"}
+
+def _post_fhir(paths: list[Path], url: str) -> tuple[bool, list[str]]:
+    if not requests:
+        return False, ["requests not available in this environment"]
+    results = []
+    ok = True
+    for p in paths:
+        data = p.read_text(encoding="utf-8", errors="ignore")
+        try:
+            r = requests.post(url, data=data, headers={"Content-Type": "application/fhir+json"})
+            results.append(f"{p.name} → {r.status_code}")
+            ok = ok and (200 <= r.status_code < 300)
+        except Exception as e:
+            results.append(f"{p.name} → ERROR {e}")
+            ok = False
+    return ok, results
+
+def _render_pipeline_result(hl7_txt: str, val: dict, trans: dict, post_res: dict | None, artifacts: Path) -> HTMLResponse:
+    errs = "".join(f"<li>{_esc(e)}</li>" for e in val.get("errors", []))
+    warns = "".join(f"<li>{_esc(w)}</li>" for w in val.get("warnings", []))
+    fhir_list = "".join(
+        f"<li><a href='/ui/interop/history/view?path={_esc(p)}' target='_blank'>{_esc(Path(p).name)}</a></li>"
+        for p in trans.get("paths", [])
+    )
+    post_blk = ""
+    if post_res is not None:
+        post_items = "".join(f"<li>{_esc(x)}</li>" for x in (post_res.get("lines") or []))
+        post_badge = "<span class='chip'>OK</span>" if post_res.get("ok") else "<span class='chip'>Failed</span>"
+        post_blk = f"<div class='mt'><strong>Send FHIR</strong> {post_badge}<ul>{post_items or '<li>None</li>'}</ul></div>"
+    html = f"""
+    <div class='card'>
+      <h3>Pipeline Result</h3>
+      <div class='mt'><strong>Input HL7</strong></div>
+      <pre class='codepane'>{_esc(hl7_txt[:15000])}</pre>
+      <div class='mt'><strong>Analyze</strong> {"<span class='chip'>OK</span>" if val.get("ok") else "<span class='chip'>Issues</span>"}
+        <div class='grid2'>
+          <div><em>Errors</em><ul>{errs or '<li>None</li>'}</ul></div>
+          <div><em>Warnings</em><ul class='muted'>{warns or '<li>None</li>'}</ul></div>
+        </div>
+      </div>
+      <div class='mt'><strong>Translate (HL7→FHIR)</strong> {"<span class='chip'>OK</span>" if trans.get("ok") else "<span class='chip'>Issues</span>"}
+        <ul>{fhir_list or '<li>No emitted files (see translate.stderr.txt)</li>'}</ul>
+      </div>
+      {post_blk}
+      <div class='mt muted'>Artifacts: <code>{_esc(artifacts.as_posix())}</code></div>
+    </div>
+    """
+    return HTMLResponse(textwrap.dedent(html))
+
+@router.post("/api/interop/pipeline/run", response_class=HTMLResponse)
+def run_pipeline(
+    version: str = Form("hl7-v2-4"),
+    trigger: str | None = Form(None),
+    template_relpath: str | None = Form(None),
+    text: str | None = Form(None),
+    seed: int | None = Form(None),
+    ensure_unique: bool = Form(True),
+    include_clinical: bool = Form(False),
+    deidentify: bool = Form(False),
+    post_fhir: bool = Form(False),
+    fhir_endpoint: str | None = Form(None),
+):
+    if version not in VALID_VERSIONS:
+        raise HTTPException(400, f"Unknown version '{version}'")
+    if not text:
+        body = {
+            "version": version,
+            "template_relpath": template_relpath,
+            "trigger": trigger,
+            "count": 1,
+            "seed": seed,
+            "ensure_unique": ensure_unique,
+            "include_clinical": include_clinical,
+            "deidentify": deidentify,
+            "output_format": "single",
+        }
+        resp = generate_messages(body)
+        text = resp.body.decode("utf-8") if hasattr(resp, "body") else str(resp)
+    if not text or not text.strip():
+        raise HTTPException(400, "No HL7 content to process")
+
+    run_dir = OUT_ROOT / "pipeline" / _now_tag()
+    _write_file(run_dir, "input.hl7", text)
+
+    val = validate_message(text, profile=None)
+    _write_file(run_dir, "validate.json", json.dumps(val, indent=2))
+
+    trans = _translate_hl7_to_fhir_cli(text, run_dir)
+    _write_file(run_dir, "translate.meta.json", json.dumps({"ok": trans.get("ok"), "paths": trans.get("paths")}, indent=2))
+
+    post_result = None
+    if post_fhir and trans.get("paths"):
+        paths = [Path(p) for p in trans["paths"]]
+        if fhir_endpoint:
+            ok, lines = _post_fhir(paths, fhir_endpoint)
+            post_result = {"ok": ok, "lines": lines}
+        else:
+            post_result = {"ok": False, "lines": ["No endpoint specified (dummy server disabled in this build)."]}
+
+    return _render_pipeline_result(text, val, trans, post_result, run_dir)
