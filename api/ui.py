@@ -5,13 +5,50 @@ from pathlib import Path
 
 import yaml
 from fastapi import APIRouter, Form, Request
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 from starlette.templating import Jinja2Templates
 
 from skills.hl7_drafter import draft_message, send_message
 
 router = APIRouter()
 templates = Jinja2Templates(directory="templates")
+
+
+@router.get("/", include_in_schema=False)
+def root():
+    # Default entry → Reports Home
+    return RedirectResponse("/ui/home", status_code=307)
+
+
+@router.get("/ui/home", response_class=HTMLResponse)
+def ui_home(request: Request):
+    """
+    Reports Home — high-level KPIs and recent activity.
+    Uses HTMX to pull skill-specific summaries.
+    """
+    return templates.TemplateResponse("ui/home_reports.html", {"request": request})
+
+
+@router.get("/ui/skills", response_class=HTMLResponse)
+def ui_skills_index(request: Request):
+    """
+    Skills Index — navigate to skill dashboards (Interop, Security, etc.).
+    """
+    skills = [
+        {
+            "name": "Interoperability",
+            "href": "/ui/interop/dashboard",
+            "desc": "Generate/de-ID/validate HL7, translate to FHIR, and transport via MLLP.",
+        },
+        {
+            "name": "Security",
+            "href": "/ui/security/dashboard",
+            "desc": "Run security tools, capture evidence, and review findings.",
+        },
+    ]
+    return templates.TemplateResponse(
+        "ui/skills_index.html", {"request": request, "skills": skills}
+    )
 
 def _load_targets():
     p = Path("config/hosts.yaml")
