@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import json, subprocess, time, shutil, re
+import json, subprocess, time, re
 from pathlib import Path
 from typing import List, Optional, Dict, Any
 import threading
@@ -659,7 +659,6 @@ def _hl7_to_fhir_via_cli(hl7_text: str, trigger: str = '') -> tuple[str, str]:
         return json.dumps({'error':'silhouette not found'},indent=2), 'CLI not found.'
     except Exception as e:
         return json.dumps({'error': f'unexpected: {e}'}, indent=2), 'CLI error.'
-
 
 def _esc(s: str) -> str:
     return s.replace("<", "&lt;").replace(">", "&gt;")

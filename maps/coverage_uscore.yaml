@@ -1,0 +1,40 @@
+messageTypes:
+  # Financial and billing triggers that may include IN1/IN2 insurance segments
+  - "DFT^P03"
+  - "DFT^P05"
+  - "DFT^P11"
+  - "BAR^P01"
+  - "BAR^P02"
+  - "BAR^P05"
+  - "BAR^P06"
+  - "BAR^P10"
+
+# This mapping creates a Coverage resource from IN1 segments.  It maps the
+# insurance identifier (IN1-2) and assigns the system from IN1-3 when
+# present.  The subscriber and beneficiary references point to the
+# patient via PID-3.  A default status of "active" is set only when
+# an IN1-2 value exists.  If no IN1 segment is present, these rules
+# produce no output and the Coverage resource is omitted.
+resourcePlan:
+  - resource: Coverage
+    profile: "http://hl7.org/fhir/us/core/StructureDefinition/us-core-coverage"
+    rules:
+      # IN1-2: Insurance policy number / identifier value
+      - hl7_path: "IN1.2"
+        fhir_path: "identifier[0].value"
+      # IN1-3: Insurance company ID; use as identifier.system
+      - hl7_path: "IN1.3"
+        fhir_path: "identifier[0].system"
+      # Link to the patient as beneficiary
+      - hl7_path: "PID.3"
+        fhir_path: "beneficiary.identifier"
+        transform: "cx_to_identifier"
+      # Also link subscriber (often the patient) by identifier
+      - hl7_path: "PID.3"
+        fhir_path: "subscriber.identifier"
+        transform: "cx_to_identifier"
+      # Set status only if IN1-2 exists; transform will only be applied when
+      # a value is provided.
+      - hl7_path: "IN1.2"
+        fhir_path: "status"
+        transform: "default_coverage_status"

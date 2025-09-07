@@ -1,0 +1,42 @@
+messageTypes:
+  # Additional medical document management events beyond T02
+  - "MDM^T01"
+  - "MDM^T03"
+  - "MDM^T04"
+  - "MDM^T05"
+  - "MDM^T06"
+  - "MDM^T07"
+  - "MDM^T08"
+  - "MDM^T09"
+  - "MDM^T10"
+  - "MDM^T11"
+#
+# These MDM trigger events carry document-related content similar to T02.
+# We reuse the same DocumentReference/Binary mapping used for T02.
+resourcePlan:
+  - resource: DocumentReference
+    rules:
+      - hl7_path: "-"
+        fhir_path: "status"
+        transform: "default_documentreference_status"
+      - hl7_path: "PID.3"
+        fhir_path: "subject.identifier"
+        transform: "cx_to_identifier"
+      - hl7_path: "TXA.2"
+        fhir_path: "type"
+        transform: "obx_cwe_to_codeableconcept"
+      - hl7_path: "TXA.6"
+        fhir_path: "date"
+        transform: "ts_to_datetime"
+      - hl7_path: "OBX.5"
+        fhir_path: "content[0].attachment.data"
+      - hl7_path: "-"
+        fhir_path: "content[0].attachment.contentType"
+        transform: "default_binary_content_type"
+  - resource: Binary
+    rules:
+      - hl7_path: "-"
+        fhir_path: "contentType"
+        transform: "default_binary_content_type"
+      - hl7_path: "OBX.5"
+        fhir_path: "data"
