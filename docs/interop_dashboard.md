@@ -52,3 +52,7 @@ Quick Start automatically selects a mapping file under `/maps/` based on the tri
 | COVERAGE | `maps/coverage_uscore.yaml` |
 
 Wildcards like `OMX_*`, `ORX_*`, or `RESEARCH_*` resolve to their family map. To change defaults, edit `MAP_INDEX` in `api/interop.py`.
+
+### Trigger Descriptions
+
+Trigger dropdowns and the sample finder show human-readable descriptions loaded from `templates/hl7/trigger-events-v2.csv`. Use the **Trigger Descriptions** panel on the dashboard to edit entries inline or [download the CSV template](/interop/triggers/csv) for bulk updates.

@@ -52,7 +52,12 @@
   {% include "ui/interop/_deid_panel.html" %}
   {% include "ui/interop/_validate_panel.html" %}
   {% include "ui/interop/_mllp_panel.html" %}
-
+  
+  <div class="card">
+    <h3>Trigger Descriptions</h3>
+    <a class="btn btn-xs" href="/interop/triggers/csv">Download CSV</a>
+    <div id="trigger-admin" class="mt" hx-get="/ui/interop/trigger-admin" hx-trigger="load" hx-target="this" hx-swap="innerHTML"></div>
+  </div>
   <div class="card">
     <h3>Quick Start</h3>
     <p class="muted">One-click pipeline: Draft example HL7 → FHIR Translate → Validate. No listener required.</p>

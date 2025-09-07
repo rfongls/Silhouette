@@ -1,6 +1,5 @@
 from __future__ import annotations
-
-import json, subprocess, time, shutil, re, io
+import json, subprocess, time, shutil, re, io, csv
 from pathlib import Path
 from typing import List, Optional, Dict, Any
 import threading
@@ -30,22 +29,48 @@ INDEX_PATH = UI_OUT / "index.json"
 # -------- HL7 Sample Indexing (templates/hl7/*) ----------
 SAMPLE_DIR = (Path(__file__).resolve().parent.parent / "templates" / "hl7").resolve()
 VALID_VERSIONS = {"hl7-v2-3", "hl7-v2-4", "hl7-v2-5"}
-# Human-friendly trigger descriptions (extend as needed)
-TRIGGER_DESCRIPTIONS: Dict[str, str] = {
-    "ADT_A01": "Admit/Visit Start",
-    "ADT_A03": "Discharge",
-    "ADT_A08": "Update Patient Info",
-    "ADT_A28": "Add Person",
-    "ADT_A31": "Update Person",
-    "ORM_O01": "General Order",
-    "ORU_R01": "Observation Result (LOINC)",
-    "RDE_O11": "Pharmacy/Treatment Encoded Order",
-    "VXU_V04": "Immunization Update",
-    "MDM_T02": "Document/Media update",
-    "SIU_S12": "Schedule Notification",
-    "DFT_P03": "Detailed Financial Transaction",
-    "BAR_P01": "Billing Account",
-}
+
+# ---- Trigger Description Library (CSV) ----
+TRIGGER_CSV_PATH = SAMPLE_DIR / "trigger-events-v2.csv"
+_TRIG_CACHE: Dict[str, Any] = {"mtime": None, "map": {}}
+
+
+def _load_trigger_descriptions() -> Dict[str, str]:
+    """Load trigger descriptions from CSV once, cached by mtime."""
+    path = TRIGGER_CSV_PATH
+    try:
+        stat = path.stat()
+    except Exception:
+        return _TRIG_CACHE.get("map", {})
+    if _TRIG_CACHE["mtime"] == stat.st_mtime:
+        return _TRIG_CACHE["map"]
+
+    mapping: Dict[str, str] = {}
+    try:
+        with path.open("r", encoding="utf-8", errors="ignore") as fh:
+            rdr = csv.DictReader(fh)
+            cols = {c.lower(): c for c in rdr.fieldnames or []}
+            code_col = None
+            for cand in ("trigger", "event", "message", "code", "hl7_event", "hl7_trigger"):
+                if cand in cols:
+                    code_col = cols[cand]
+                    break
+            def_col = cols.get("definition") or cols.get("description")
+            if code_col and def_col:
+                for row in rdr:
+                    code = (row.get(code_col) or "").strip().upper()
+                    definition = (row.get(def_col) or "").strip()
+                    if code:
+                        mapping[code] = definition
+    except Exception:
+        mapping = {}
+    _TRIG_CACHE["mtime"] = stat.st_mtime
+    _TRIG_CACHE["map"] = mapping
+    return mapping
+
+
+def _describe_trigger(code: str) -> str:
+    return _load_trigger_descriptions().get((code or "").upper(), "")
 
 def _safe_sample_dir(version: str) -> Path:
     if version not in VALID_VERSIONS:
@@ -67,7 +92,6 @@ def _enumerate_samples(version: str, q: str | None = None, limit: int = 200) -> 
     for f in sorted(base.rglob("*.hl7")):
         rel = f.relative_to(SAMPLE_DIR).as_posix()
         trigger = f.stem
-        desc = TRIGGER_DESCRIPTIONS.get(trigger, "")
         if qnorm:
             hay = f"{trigger} {rel} {desc}".lower()
             if qnorm not in hay:
@@ -180,6 +204,43 @@ def render_trigger_options(
         {"request": request, "items": items},
     )
 
+@router.get("/interop/triggers/csv")
+def download_trigger_csv():
+    """Download the trigger description CSV (template created if missing)."""
+    path = TRIGGER_CSV_PATH
+    if not path.exists():
+        # create minimal template
+        path.parent.mkdir(parents=True, exist_ok=True)
+        with path.open("w", encoding="utf-8", newline="") as fh:
+            fh.write("Trigger,Definition\n")
+    return StreamingResponse(path.open("rb"), media_type="text/csv",
+                              headers={"Content-Disposition": "attachment; filename=trigger-events-v2.csv"})
+
+
+@router.get("/ui/interop/trigger-admin", response_class=HTMLResponse)
+def trigger_admin_panel(request: Request):
+    mapping = _load_trigger_descriptions()
+    items = [{"trigger": k, "description": v} for k, v in sorted(mapping.items())]
+    return templates.TemplateResponse("ui/interop/_trigger_admin.html", {"request": request, "items": items})
+
+
+def _save_trigger_descriptions(mapping: Dict[str, str]) -> None:
+    TRIGGER_CSV_PATH.parent.mkdir(parents=True, exist_ok=True)
+    with TRIGGER_CSV_PATH.open("w", encoding="utf-8", newline="") as fh:
+        writer = csv.writer(fh)
+        writer.writerow(["Trigger", "Definition"])
+        for k in sorted(mapping.keys()):
+            writer.writerow([k, mapping[k]])
+    # invalidate cache
+    _TRIG_CACHE["mtime"] = None
+
+
+@router.post("/interop/triggers/set")
+def set_trigger_description(trigger: str = Form(...), description: str = Form("")):
+    mapping = _load_trigger_descriptions().copy()
+    mapping[trigger.upper()] = description.strip()
+    _save_trigger_descriptions(mapping)
+    return JSONResponse({"ok": True})
 
 @router.post("/interop/hl7/draft-send")
 async def interop_hl7_send(
