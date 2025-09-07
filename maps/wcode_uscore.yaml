@@ -1,0 +1,18 @@
+messageTypes:
+  # Waveform and special observation events (W codes)
+  - "ORU^W01"
+  - "QRF^W02"
+resourcePlan:
+  # DiagnosticReport summarises waveform observations
+  - resource: DiagnosticReport
+    rules:
+      - hl7Field: PID.3
+        fhirPath: subject.identifier
+      - hl7Field: ""
+        fhirPath: status
+        transform: default_dr_status
+  # Observation stores the actual waveform data
+  - resource: Observation
+    rules:
+      - hl7Field: PID.3
+        fhirPath: subject.identifier
