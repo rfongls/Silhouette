@@ -29,5 +29,27 @@ The echo server returns one ACK per frame and includes the inbound `MSH-10` valu
   - Left: generated HL7
   - Middle: FHIR result (via Silhouette CLI if installed; otherwise a stub with a clear note)
   - Right: Validation summary
-  - 
+
 Templates should exist under templates/hl7/<version> for the triggers you select.
+
+### Map Selection (Trigger → Map)
+
+Quick Start automatically selects a mapping file under `/maps/` based on the trigger. Examples:
+
+| Trigger  | Map file |
+|----------|--------------------------------|
+| ADT_A01  | `maps/adt_uscore.yaml` |
+| ADT_A08  | `maps/adt_update_uscore.yaml` |
+| ADT_A31  | `maps/adt_merge_uscore.yaml` |
+| ORM_O01  | `maps/orm_uscore.yaml` |
+| ORU_R01  | `maps/oru_uscore.yaml` |
+| RDE_O11  | `maps/rde_uscore.yaml` |
+| VXU_V04  | `maps/vxu_uscore.yaml` |
+| MDM_T02  | `maps/mdm_uscore.yaml` |
+| SIU_S12  | `maps/siu_uscore.yaml` |
+| DFT_P03  | `maps/dft_uscore.yaml` |
+| BAR_P01  | `maps/bar_uscore.yaml` |
+| COVERAGE | `maps/coverage_uscore.yaml` |
+
+Wildcards like `OMX_*`, `ORX_*`, or `RESEARCH_*` resolve to their family map. To change defaults, edit `MAP_INDEX` in `api/interop.py`.
+

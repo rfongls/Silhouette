@@ -556,7 +556,7 @@ async def interop_quickstart(
     if deidentify.lower() in ("1", "true", "yes", "on"):
         msg = deidentify_message(msg, seed=base_seed)
 
-    fhir_json, translate_note = _hl7_to_fhir_via_cli(msg)
+    fhir_json, translate_note = _hl7_to_fhir_via_cli(msg, trigger=trigger)
     val = validate_message(msg, profile=None)
     val_html = _render_validation(val)
 
@@ -587,58 +587,78 @@ async def interop_quickstart(
 # -------------------- helpers for quickstart pipeline --------------------
 
 
+# -------------------- helpers for quickstart pipeline --------------------
+
 def _which(cmd: str) -> Optional[str]:
     return shutil.which(cmd)
 
+# Trigger → Map selection
+MAP_INDEX: Dict[str, str] = {
+    # Admissions / ADT family
+    "ADT_A01": "maps/adt_uscore.yaml",
+    "ADT_A04": "maps/adt_uscore.yaml",
+    "ADT_A08": "maps/adt_update_uscore.yaml",
+    "ADT_A28": "maps/adt_others_uscore.yaml",
+    "ADT_A31": "maps/adt_merge_uscore.yaml",
+    # Orders / results
+    "ORM_O01": "maps/orm_uscore.yaml",
+    "ORU_R01": "maps/oru_uscore.yaml",
+    "OMX_*": "maps/omx_uscore.yaml",
+    "ORX_*": "maps/orx_uscore.yaml",
+    # Medications
+    "RDE_O11": "maps/rde_uscore.yaml",
+    # Immunizations
+    "VXU_V04": "maps/vxu_uscore.yaml",
+    # Master file / documents
+    "MDM_T02": "maps/mdm_uscore.yaml",
+    # Scheduling
+    "SIU_S12": "maps/siu_uscore.yaml",
+    # Billing / coverage
+    "DFT_P03": "maps/dft_uscore.yaml",
+    "BAR_P01": "maps/bar_uscore.yaml",
+    "COVERAGE": "maps/coverage_uscore.yaml",
+    # Research / additional resources
+    "RESEARCH_*": "maps/research_uscore.yaml",
+    # Misc fallback
+    "MISC_*": "maps/misc_noresource_uscore.yaml",
+}
 
-def _hl7_to_fhir_via_cli(hl7_text: str) -> tuple[str, str]:
-    """Translate HL7 to FHIR using silhouette CLI if available."""
-    exe = _which("silhouette")
+def _pick_map_for_trigger(trigger: str) -> str:
+    t=(trigger or '').upper()
+    if t in MAP_INDEX:
+        return MAP_INDEX[t]
+    for key,val in MAP_INDEX.items():
+        if key.endswith('*') and t.startswith(key[:-1]):
+            return val
+    return 'maps/adt_uscore.yaml'
+
+def _hl7_to_fhir_via_cli(hl7_text: str, trigger: str = '') -> tuple[str, str]:
+    """Translate HL7 to FHIR using silhouette CLI if available, selecting map by trigger."""
+    exe=_which('silhouette')
+    map_path=_pick_map_for_trigger(trigger)
     if not exe:
-        stub = {
-            "note": "silhouette CLI not found on PATH; showing stub JSON"
-        }
-        return json.dumps(stub, indent=2), "CLI not found — returned stub."
-
-    map_path = "maps/adt_uscore.yaml"
-    args = [
-        exe,
-        "fhir",
-        "translate",
-        "--in",
-        "-",
-        "--map",
-        map_path,
-        "--out",
-        "-",
-        "--message-mode",
-    ]
+        stub={"note": f"silhouette CLI not found on PATH; showing stub JSON. Intended map: {map_path}"}
+        return json.dumps(stub, indent=2), f"CLI not found — would use: {map_path}"
+    args=[exe,'fhir','translate','--in','-','--map',map_path,'--out','-','--message-mode']
     try:
-        proc = subprocess.run(
-            args,
-            input=hl7_text.encode("utf-8"),
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            timeout=20,
-        )
-        if proc.returncode != 0:
-            note = f"CLI failed (exit {proc.returncode}). Showing stderr."
-            out = (proc.stderr or b"").decode("utf-8", "ignore")
-            return out, note
-        out = (proc.stdout or b"").decode("utf-8", "ignore")
+        proc=subprocess.run(args,input=hl7_text.encode('utf-8'),stdout=subprocess.PIPE,stderr=subprocess.PIPE,timeout=20)
+        if proc.returncode!=0:
+            note=f"CLI failed (exit {proc.returncode}). Showing stderr."
+            out=(proc.stderr or b'').decode('utf-8','ignore')
+            return out,note
+        out=(proc.stdout or b'').decode('utf-8','ignore')
         try:
-            parsed = json.loads(out)
-            out = json.dumps(parsed, indent=2)
+            parsed=json.loads(out)
+            out=json.dumps(parsed,indent=2)
         except Exception:
             pass
-        return out, f"Translated with CLI map: {map_path}"
+        return out,f"Translated with CLI map: {map_path}"
     except subprocess.TimeoutExpired:
-        return json.dumps({"error": "translation timeout"}, indent=2), "CLI timeout."
+        return json.dumps({'error':'translation timeout'},indent=2), 'CLI timeout.'
     except FileNotFoundError:
-        return json.dumps({"error": "silhouette not found"}, indent=2), "CLI not found."
+        return json.dumps({'error':'silhouette not found'},indent=2), 'CLI not found.'
     except Exception as e:
-        return json.dumps({"error": f"unexpected: {e}"}, indent=2), "CLI error."
-
+        return json.dumps({'error': f'unexpected: {e}'}, indent=2), 'CLI error.'
 
 def _esc(s: str) -> str:
     return s.replace("<", "&lt;").replace(">", "&gt;")
