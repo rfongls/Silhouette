@@ -1,0 +1,88 @@
+messageTypes:
+  # Patient account and product experience events (P codes)
+  - "BAR^P01"
+  - "BAR^P02"
+  - "DFT^P03"
+  - "QRY^P04"
+  - "BAR^P05"
+  - "BAR^P06"
+  - "PEX^P07"
+  - "PEX^P08"
+  - "SUR^P09"
+  - "BAR^P10"
+  - "DFT^P11"
+  - "BAR^P12"
+resourcePlan:
+  # Account and charge items manage financial ledger entries
+  - resource: Account
+    rules:
+      - hl7Field: PID.3
+        fhirPath: subject.identifier
+      - hl7Field: ""
+        fhirPath: status
+        transform: default_account_status
+  - resource: ChargeItem
+    rules:
+      - hl7Field: PID.3
+        fhirPath: subject.identifier
+      - hl7Field: ""
+        fhirPath: status
+        transform: default_chargeitem_status
+  - resource: Claim
+    rules:
+      - hl7Field: PID.3
+        fhirPath: patient.identifier
+      - hl7Field: ""
+        fhirPath: status
+        transform: default_claim_status
+  - resource: ClaimResponse
+    rules:
+      - hl7Field: PID.3
+        fhirPath: patient.identifier
+      - hl7Field: ""
+        fhirPath: status
+        transform: default_claimresponse_status
+  - resource: AdverseEvent
+    rules:
+      - hl7Field: PID.3
+        fhirPath: subject.identifier
+      - hl7Field: ""
+        fhirPath: status
+        transform: default_adverseevent_status
+  - resource: DetectedIssue
+    rules:
+      - hl7Field: PID.3
+        fhirPath: patient.identifier
+      - hl7Field: ""
+        fhirPath: status
+        transform: default_detectedissue_status
+  - resource: Condition
+    rules:
+      - hl7Field: DG1.3
+        fhirPath: code
+        transform: dg1_to_codeableconcept
+      - hl7Field: ""
+        fhirPath: clinicalStatus
+        transform: default_condition_clinical_status
+      - hl7Field: ""
+        fhirPath: verificationStatus
+        transform: default_condition_verification_status
+      - hl7Field: PID.3
+        fhirPath: subject.identifier
+  - resource: Procedure
+    rules:
+      - hl7Field: PR1.3
+        fhirPath: code
+        transform: dg1_to_codeableconcept
+      - hl7Field: ""
+        fhirPath: status
+        transform: default_procedure_status
+      - hl7Field: PID.3
+        fhirPath: subject.identifier
+  - resource: CarePlan
+    rules:
+      - hl7Field: PID.3
+        fhirPath: subject.identifier
+      - hl7Field: ""
+        fhirPath: status
+        transform: default_careplan_status

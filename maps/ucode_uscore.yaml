@@ -1,0 +1,74 @@
+messageTypes:
+  # Automated equipment and inventory events (U codes)
+  - "ESU^U01"
+  - "ESR^U02"
+  - "SSU^U03"
+  - "SSR^U04"
+  - "INU^U05"
+  - "INR^U06"
+  - "EAC^U07"
+  - "EAR^U08"
+  - "EAN^U09"
+  - "TCU^U10"
+  - "TCR^U11"
+  - "LSU^U12"
+  - "LSR^U13"
+  - "INR^U14"
+resourcePlan:
+  # Devices and device metrics capture status updates
+  - resource: Device
+    rules:
+      - hl7Field: ""
+        fhirPath: status
+        transform: default_device_status
+  - resource: DeviceMetric
+    rules:
+      - hl7Field: ""
+        fhirPath: status
+        transform: default_devicemetric_status
+  - resource: DeviceDefinition
+    rules:
+      - hl7Field: ""
+        fhirPath: status
+        transform: default_devicedefinition_status
+  # Device requests and usage link devices to patients when applicable
+  - resource: DeviceRequest
+    rules:
+      - hl7Field: PID.3
+        fhirPath: subject.identifier
+      - hl7Field: ""
+        fhirPath: status
+        transform: default_devicerequest_status
+  - resource: DeviceUsage
+    rules:
+      - hl7Field: PID.3
+        fhirPath: subject.identifier
+      - hl7Field: ""
+        fhirPath: status
+        transform: default_deviceusage_status
+  # SupplyRequest and SupplyDelivery handle inventory changes
+  - resource: SupplyRequest
+    rules:
+      - hl7Field: PID.3
+        fhirPath: subject.identifier
+      - hl7Field: ""
+        fhirPath: status
+        transform: default_supplyrequest_status
+  - resource: SupplyDelivery
+    rules:
+      - hl7Field: PID.3
+        fhirPath: subject.identifier
+      - hl7Field: ""
+        fhirPath: status
+        transform: default_supplydelivery_status
+  # Inventory items and reports summarise stock levels
+  - resource: InventoryItem
+    rules:
+      - hl7Field: ""
+        fhirPath: status
+        transform: default_inventoryitem_status
+  - resource: InventoryReport
+    rules:
+      - hl7Field: ""
+        fhirPath: status
+        transform: default_inventoryreport_status
