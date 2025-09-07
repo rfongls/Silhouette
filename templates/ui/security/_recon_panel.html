@@ -1,0 +1,10 @@
+<section class="card" data-feature="recon">
+  <h3>Recon</h3>
+  <form hx-post="/ui/security/recon" hx-target="#recon-out" hx-swap="innerHTML">
+    <div class="row gap">
+      <input class="input grow" name="query" placeholder="domain or IP range" value="example.org"/>
+      <button class="btn">Run</button>
+    </div>
+  </form>
+  <div id="recon-out" class="mt muted">Recon output will appear here…</div>
+</section>

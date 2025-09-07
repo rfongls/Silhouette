@@ -1,0 +1,57 @@
+{% extends "layout.html" %}
+{% block extra_head %}
+<link rel="stylesheet" href="/static/css/interop_extras.css" />
+<script type="module" src="/static/js/interop_ui.js"></script>
+{% endblock %}
+{% block content %}
+<h2>HL7 → FHIR Pipeline</h2>
+<p class="muted">Select or generate HL7, analyze it, translate to FHIR, and optionally POST to an endpoint.</p>
+
+<section class="card">
+  <form id="pipe-form"
+        hx-post="/api/interop/pipeline/run"
+        hx-trigger="submit"
+        hx-target="#pipe-out"
+        hx-swap="innerHTML">
+    <div class="row gap">
+      <label>Version</label>
+      <select name="version" class="input hl7-version-select" id="pipe-version" data-hx-refresh-target="1"
+              hx-get="/ui/interop/triggers"
+              hx-target="#pipe-trigger-select"
+              hx-vals='{"version": document.getElementById("pipe-version").value}'
+              hx-trigger="load, change"
+              onchange="window.InteropUI.fillDatalist('pipe')">
+        <option value="hl7-v2-3">HL7 v2.3</option>
+        <option value="hl7-v2-4" selected>HL7 v2.4</option>
+        <option value="hl7-v2-5">HL7 v2.5</option>
+      </select>
+      <label>Trigger</label>
+      <select class="input" name="trigger" id="pipe-trigger-select"
+              hx-get="/ui/interop/triggers"
+              hx-target="#pipe-trigger-select"
+              hx-vals='{"version": document.getElementById("pipe-version").value}'
+              hx-trigger="load">
+      </select>
+      <input class="input" list="pipe-trigger-datalist" id="pipe-trigger-typed" placeholder="Type trigger" oninput="window.InteropUI.syncTyped('pipe')"/>
+      <datalist id="pipe-trigger-datalist"></datalist>
+      <input class="input" name="template_relpath" placeholder="hl7-v2-4/ADT_A01.hl7" />
+      <input class="input grow" name="text" placeholder="(optional) paste HL7; overrides trigger/relpath"/>
+    </div>
+    <div class="row gap mt">
+      <input class="input" type="number" name="seed" placeholder="seed (optional)"/>
+      <label><input type="checkbox" name="ensure_unique" checked/> Unique IDs</label>
+      <label><input type="checkbox" name="include_clinical"/> Enrich clinical (DG1/AL1)</label>
+      <label><input type="checkbox" name="deidentify"/> De-identify</label>
+    </div>
+    <div class="row gap mt">
+      <label><input type="checkbox" name="post_fhir"/> Send FHIR</label>
+      <input class="input grow" name="fhir_endpoint" placeholder="https://example.org/fhir (Bundle/Resource)"/>
+    </div>
+    <div class="row gap mt">
+      <button class="btn">Run Pipeline</button>
+    </div>
+  </form>
+</section>
+
+<div id="pipe-out" class="mt"></div>
+{% endblock %}
