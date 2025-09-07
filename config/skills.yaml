@@ -1,0 +1,25 @@
+# Skills Registry
+# Toggle dashboards in the UI by editing this file.
+# Each skill should expose a "summary_url" for KPI card on Reports, and a "dashboard" route for its tools.
+skills:
+  - id: interop
+    name: Interoperability
+    desc: Generate/de-ID/validate HL7, translate to FHIR, and transport via MLLP.
+    dashboard: /ui/interop/dashboard
+    summary_url: /interop/summary
+    enabled: true
+
+  - id: security
+    name: Security
+    desc: Run security tools, capture evidence, and review findings.
+    dashboard: /ui/security/dashboard
+    summary_url: /security/summary
+    enabled: true
+
+  # Example future add-on
+  # - id: evidence
+  #   name: Evidence
+  #   desc: Browse and tag collected security evidence.
+  #   dashboard: /ui/evidence/dashboard
+  #   summary_url: /evidence/summary
+  #   enabled: false
