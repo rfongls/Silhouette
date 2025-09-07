@@ -46,7 +46,14 @@ def generate_messages(body: GenerateReq):
         raise HTTPException(400, f"Unknown version '{version}'")
 
     rel = body.get("template_relpath")
+    trig = (body.get("trigger") or "").strip()
     text = body.get("text")
+    if not rel and trig:
+        t = trig.upper()
+        cand = f"{version}/{t}.hl7"
+        p = (TEMPLATES_HL7_DIR / cand).resolve()
+        if p.exists():
+            rel = cand
     if not rel and not text:
         raise HTTPException(400, "Provide template_relpath or text")
     if rel and not rel.startswith(version + "/"):

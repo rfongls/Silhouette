@@ -1,10 +1,12 @@
 // Lightweight UI helpers for Interop dashboard
 // - Manage Features vs Reports view
 // - Populate datalists for trigger typeahead from /api/interop/triggers
+// - Maintain a primary HL7 version shared across panels
 
 (function () {
   const LS_FEATURES = "interop.features.visible";
   const LS_REPORTS = "interop.view.reports";
+  const LS_PRIMARY_VER = "interop.primary.version";
 
   function q(id) { return document.getElementById(id); }
 
@@ -37,9 +39,28 @@
     document.querySelectorAll("[data-feature]").forEach(el => el.hidden = on ? true : el.hidden && false);
   }
 
+  function setPrimaryVersion(v) {
+    try { localStorage.setItem(LS_PRIMARY_VER, v); } catch {}
+    document.querySelectorAll(".hl7-version-select").forEach(sel => {
+      if (sel && sel.value !== v) sel.value = v;
+      if (sel.dataset.hxRefreshTarget) {
+        sel.dispatchEvent(new Event("change", { bubbles: true }));
+      }
+    });
+    // refresh typeaheads
+    try {
+      fillDatalist("qs");
+      fillDatalist("ds");
+      fillDatalist("gen");
+    } catch {}
+  }
+  function getPrimaryVersion() {
+    return localStorage.getItem(LS_PRIMARY_VER) || "hl7-v2-4";
+  }
+
   async function fillDatalist(prefix) {
-    const versionSel = q(prefix + "-version") || q("sample-version");
-    const version = versionSel ? versionSel.value : "hl7-v2-4";
+    const versionSel = q(prefix + "-version") || q("sample-version") || q("gen-version");
+    const version = versionSel ? versionSel.value : getPrimaryVersion();
     try {
       const r = await fetch(`/api/interop/triggers?version=${encodeURIComponent(version)}`, {cache: "no-cache"});
       const data = await r.json();
@@ -61,10 +82,16 @@
     const typed = q(prefix + "-trigger-typed");
     const select = q(prefix + "-trigger") || q(prefix + "-trigger-select");
     if (typed && select && typed.value) {
-      // try to select matching <option>
       const val = typed.value.toUpperCase();
       const opt = Array.from(select.options).find(o => o.value.toUpperCase() === val);
       if (opt) select.value = opt.value;
+    }
+    if (prefix === "gen") {
+      const v = (q("gen-version") || {}).value || getPrimaryVersion();
+      const sel = q("gen-trigger-select");
+      const input = document.querySelector('#gen-form [name="template_relpath"]');
+      const trig = (sel && sel.value) ? sel.value : (typed && typed.value) ? typed.value : "";
+      if (input && trig) input.value = `${v}/${trig}.hl7`;
     }
   }
 
@@ -84,20 +111,38 @@
       applyReportsMode(rep.checked);
       rep.addEventListener("change", () => saveReportsMode(rep.checked));
     }
+    // Global version chip clicks
+    document.body.addEventListener("click", (e) => {
+      const chip = e.target.closest('.chip-version');
+      if (chip && chip.dataset && chip.dataset.version) {
+        setPrimaryVersion(chip.dataset.version);
+      }
+    });
+
+    // Initialize version selects
+    setPrimaryVersion(getPrimaryVersion());
+
     // seed datalists
     fillDatalist("qs");
     fillDatalist("ds");
+    fillDatalist("gen");
 
     // refresh datalists after HTMX replaces the trigger <select>s
     document.body.addEventListener("htmx:afterSwap", (e) => {
       if (e && e.target && e.target.id === "qs-trigger") fillDatalist("qs");
       if (e && e.target && e.target.id === "ds-trigger-select") fillDatalist("ds");
+      if (e && e.target && e.target.id === "gen-trigger-select") fillDatalist("gen");
     });
+
+    const genSel = q("gen-trigger-select");
+    if (genSel) genSel.addEventListener("change", () => syncTyped("gen"));
   });
 
   // expose a tiny API
   window.InteropUI = {
     syncTyped,
-    fillDatalist
+    fillDatalist,
+    setPrimaryVersion,
+    getPrimaryVersion
   };
 })();

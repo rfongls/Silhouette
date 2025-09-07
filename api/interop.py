@@ -192,15 +192,24 @@ def render_hl7_samples_partial(
 
 @router.get("/api/interop/triggers", response_class=JSONResponse)
 def triggers_json(version: str = Query("hl7-v2-4")):
-    """
-    JSON trigger list for datalist typeahead.
-    Returns: [{trigger, description, relpath}]
-    """
+    """JSON trigger list for typeahead; dedup by trigger."""
     try:
         items = _enumerate_samples(version, q=None, limit=5000)
     except HTTPException:
         items = []
-    return {"version": version, "items": items}
+    seen = set()
+    out = []
+    for it in items:
+        trig = it["trigger"].upper()
+        if trig in seen:
+            continue
+        seen.add(trig)
+        out.append({
+            "trigger": trig,
+            "description": it.get("description", ""),
+            "relpath": it.get("relpath", ""),
+        })
+    return {"version": version, "items": out}
 
 
 @router.get("/ui/interop/triggers", response_class=HTMLResponse)
@@ -686,7 +695,9 @@ def interop_summary():
     html = ["<section class='card'><h3>Interop Summary</h3><div class='row gap'>"]
     html.append(f"<span class='chip'>templates: <strong>{total}</strong></span>")
     for v, c in counts:
-        html.append(f"<span class='chip'>{v}: <strong>{c}</strong></span>")
+        html.append(
+            f"<span class='chip chip-version' data-version='{v}' title='Set primary version to {v}'>{v}: <strong>{c}</strong></span>"
+        )
     html.append("</div></section>")
     return HTMLResponse("".join(html))
 

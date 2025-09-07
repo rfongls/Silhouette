@@ -21,7 +21,7 @@
           hx-swap="innerHTML"
           hx-trigger="keyup changed delay:250ms, change from:#sample-version">
       <label for="sample-version" class="label">Version</label>
-      <select id="sample-version" name="version" class="input">
+      <select id="sample-version" name="version" class="input hl7-version-select" data-hx-refresh-target="1">
         <option value="hl7-v2-3">HL7 v2.3</option>
         <option value="hl7-v2-4" selected>HL7 v2.4</option>
         <option value="hl7-v2-5">HL7 v2.5</option>
@@ -73,7 +73,7 @@
           hx-swap="innerHTML">
       <div class="row gap">
         <label class="label">Version</label>
-        <select name="version" class="input" id="qs-version"
+        <select name="version" class="input hl7-version-select" id="qs-version" data-hx-refresh-target="1"
           hx-get="/ui/interop/triggers"
           hx-target="#qs-trigger"
           hx-vals='{"version": this.value}'
