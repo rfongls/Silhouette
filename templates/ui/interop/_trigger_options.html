@@ -1,0 +1,6 @@
+{% for it in items %}
+  <option value="{{ it.trigger }}">
+    {{ it.trigger }}{% if it.description %} — {{ it.description }}{% endif %}
+  </option>
+{% endfor %}
+{% if not items %}<option disabled>(no triggers found)</option>{% endif %}
