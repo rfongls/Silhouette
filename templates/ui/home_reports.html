@@ -6,16 +6,19 @@
 </section>
 
 <section class="grid grid-3">
-  <div class="card">
-    <h3>Interoperability — KPIs</h3>
-    <div hx-get="/interop/summary" hx-trigger="load, every 30s" hx-target="this" hx-swap="innerHTML"></div>
-    <div class="mt"><a class="btn" href="/ui/interop/dashboard">Open Interop Skill</a></div>
-  </div>
-  <div class="card">
-    <h3>Security — KPIs</h3>
-    <div hx-get="/security/summary" hx-trigger="load, every 60s" hx-target="this" hx-swap="innerHTML"></div>
-    <div class="mt"><a class="btn" href="/ui/security/dashboard">Open Security Skill</a></div>
-  </div>
+  {% for s in (skills or []) %}
+    <div class="card">
+      <h3>{{ s.name }} — KPIs</h3>
+      {% if s.summary_url %}
+      <div hx-get="{{ s.summary_url }}" hx-trigger="load, every 45s" hx-target="this" hx-swap="innerHTML"></div>
+      {% else %}
+      <div class="muted">No summary configured.</div>
+      {% endif %}
+      {% if s.dashboard %}
+      <div class="mt"><a class="btn" href="{{ s.dashboard }}">Open {{ s.name }} Skill</a></div>
+      {% endif %}
+    </div>
+  {% endfor %}
   <div class="card">
     <h3>Recent Activity</h3>
     <div class="muted">Recent translate/validate, sends, findings, etc. (wire to your index or logs)</div>

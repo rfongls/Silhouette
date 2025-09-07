@@ -6,12 +6,15 @@
 </section>
 
 <section class="grid grid-3">
-  {% for s in skills %}
-  <a class="card linkcard" href="{{ s.href }}">
-    <h3>{{ s.name }}</h3>
-    <p class="muted">{{ s.desc }}</p>
-    <div class="mt"><span class="chip">Open</span></div>
-  </a>
-  {% endfor %}
+  {% if skills %}
+    {% for s in skills %}
+      <a class="card linkcard" href="{{ s.dashboard }}">
+        <h3>{{ s.name }}</h3>
+        <p class="muted">{{ s.desc }}</p>
+        <div class="mt"><span class="chip">Open</span></div>
+      </a>
+    {% endfor %}
+  {% else %}
+    <div class="muted">No skills are enabled. Edit <code>config/skills.yaml</code>.</div>
 </section>
 {% endblock %}
