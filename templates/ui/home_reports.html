@@ -1,0 +1,35 @@
+{% extends "layout.html" %}
+{% block content %}
+<section class="hero">
+  <h1 class="title">Reports</h1>
+  <p class="subtitle">High-level view across skills</p>
+</section>
+
+<section class="grid grid-3">
+  <div class="card">
+    <h3>Interoperability — KPIs</h3>
+    <div hx-get="/interop/summary" hx-trigger="load, every 30s" hx-target="this" hx-swap="innerHTML"></div>
+    <div class="mt"><a class="btn" href="/ui/interop/dashboard">Open Interop Skill</a></div>
+  </div>
+  <div class="card">
+    <h3>Security — KPIs</h3>
+    <div hx-get="/security/summary" hx-trigger="load, every 60s" hx-target="this" hx-swap="innerHTML"></div>
+    <div class="mt"><a class="btn" href="/ui/security/dashboard">Open Security Skill</a></div>
+  </div>
+  <div class="card">
+    <h3>Recent Activity</h3>
+    <div class="muted">Recent translate/validate, sends, findings, etc. (wire to your index or logs)</div>
+  </div>
+</section>
+
+<section class="grid">
+  <div class="card">
+    <h3>Alerts & Issues</h3>
+    <div class="muted">Validation errors or failed sends appear here.</div>
+  </div>
+  <div class="card">
+    <h3>Trends</h3>
+    <div class="muted">Plug in charts when you’re ready (HTMX/JSON feed or static images).</div>
+  </div>
+</section>
+{% endblock %}
