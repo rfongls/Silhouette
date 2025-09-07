@@ -510,6 +510,24 @@ def default_supplydelivery_status() -> str:
     """Return a default status for SupplyDelivery resources."""
     return "in-progress"
 
+def default_specimen_status() -> str:
+    """Return a default status for Specimen resources.
+
+    Specimens derived from HL7 specimen messages are assumed to be available
+    until they are processed or otherwise disposed.  FHIR does not define
+    a required status element for Specimen, but implementations commonly
+    include a status to reflect availability.
+    """
+    return "available"
+
+def default_device_status() -> str:
+    """Return a default status for Device resources.
+
+    Devices referenced in automated equipment or master file messages are
+    assumed to be active unless explicitly indicated otherwise.
+    """
+    return "active"
+
 # Financial
 def default_claim_status() -> str:
     """Return a default status for Claim resources."""
@@ -539,6 +557,30 @@ def default_paymentreconciliation_status() -> str:
     """Return a default status for PaymentReconciliation resources."""
     return "active"
 
+def default_practitionerrole_status() -> str:
+    """Return a default status for PractitionerRole resources.
+
+    Roles created from personnel update messages are assumed to be active
+    unless explicitly marked inactive.
+    """
+    return "active"
+
+def default_detectedissue_status() -> str:
+    """Return a default status for DetectedIssue resources.
+
+    Detected issues reported from product experience or quality event messages
+    default to a final status to indicate that they are complete assessments.
+    """
+    return "final"
+
+def default_medicationrequest_status() -> str:
+    """Return a default status for MedicationRequest resources.
+
+    Medication requests generated from HL7 pharmacy/treatment order messages are
+    assumed to be active when first created.
+    """
+    return "active"
+
 # Imaging and questionnaires
 def default_imagingstudy_status() -> str:
     """Return a default status for ImagingStudy resources."""
@@ -564,6 +606,147 @@ def default_devicedispense_status() -> str:
 def default_deviceusage_status() -> str:
     """Return a default status for DeviceUsage resources."""
     return "active"
+
+# --- Default statuses for additional FHIR resources added for full HL7 v2.3–v2.5 coverage ---
+#
+def default_appointment_status() -> str:
+    """Return a default status for Appointment resources.
+
+    Appointments created from HL7 v2 scheduling messages are assumed to be
+    booked unless otherwise indicated.
+    """
+    return "booked"
+
+
+def default_appointmentresponse_status() -> str:
+    """Return a default status for AppointmentResponse resources.
+
+    Appointment responses generated in the absence of explicit acknowledgment
+    codes are marked as accepted to indicate a positive response.
+    """
+    return "accepted"
+
+
+def default_schedule_status() -> str:
+    """Return a default status for Schedule resources.
+
+    Schedules are assumed to be active when derived from HL7 v2 messages.
+    """
+    return "active"
+
+
+def default_slot_status() -> str:
+    """Return a default status for Slot resources.
+
+    Newly created slots are considered free by default.
+    """
+    return "free"
+
+
+def default_adverseevent_status() -> str:
+    """Return a default status for AdverseEvent resources.
+
+    When mapping product experience or adverse event reports, default to
+    'completed' to reflect that the event has occurred.
+    """
+    return "completed"
+
+
+def default_devicemetric_status() -> str:
+    """Return a default status for DeviceMetric resources.
+
+    Device metrics derived from equipment status messages are treated as 'on'
+    by default. Valid values include 'on', 'off', 'standby', and
+    'entered-in-error'.
+    """
+    return "on"
+
+
+def default_devicedefinition_status() -> str:
+    """Return a default status for DeviceDefinition resources.
+
+    Device definitions are assumed to be active unless explicitly retired.
+    """
+    return "active"
+
+
+def default_biologicallyderivedproduct_status() -> str:
+    """Return a default status for BiologicallyDerivedProduct resources.
+
+    Blood and tissue products are considered available when first registered.
+    """
+    return "available"
+
+
+def default_plandefinition_status() -> str:
+    """Return a default status for PlanDefinition resources.
+
+    Care pathways and treatment plans derived from HL7 problem/goal messages
+    default to an active status.
+    """
+    return "active"
+
+
+def default_observationdefinition_status() -> str:
+    """Return a default status for ObservationDefinition resources.
+
+    Observation definitions created from master file messages are assumed to be
+    active and available for use.
+    """
+    return "active"
+
+
+def default_chargeitemdefinition_status() -> str:
+    """Return a default status for ChargeItemDefinition resources.
+
+    Charge item definitions imported from master file updates are considered
+    active by default.
+    """
+    return "active"
+
+
+def default_inventoryitem_status() -> str:
+    """Return a default status for InventoryItem resources.
+
+    Inventory items generated from master file notifications are active by
+    default.
+    """
+    return "active"
+
+
+def default_inventoryreport_status() -> str:
+    """Return a default status for InventoryReport resources.
+
+    Inventory reports are initially created in a draft state before approval.
+    """
+    return "draft"
+
+
+def default_communication_status() -> str:
+    """Return a default status for Communication resources.
+
+    Communications derived from collaborative care messages are assumed to be
+    in-progress until completed.
+    """
+    return "in-progress"
+
+
+def default_communicationrequest_status() -> str:
+    """Return a default status for CommunicationRequest resources.
+
+    Communication requests created from referral and collaborative care messages
+    begin in the draft state.
+    """
+    return "draft"
+
+
+def default_servicerequest_status() -> str:
+    """Return a default status for ServiceRequest resources.
+
+    Service requests generated from orders and referrals are marked as draft
+    until they are processed or acknowledged.
+    """
+    return "draft"
 
 
 def dg1_to_codeableconcept(value: str) -> Dict[str, Any]:
