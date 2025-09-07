@@ -1,5 +1,7 @@
 messageTypes:
   # Clinical research management (CRM) and clinical study update (CSU) triggers
+  # All known C-coded events (C01–C12) are included here.  CNQ is handled separately
+  # as a cancellation/query control event.
   - "CRM^C01"
   - "CRM^C02"
   - "CRM^C03"
@@ -9,6 +11,9 @@ messageTypes:
   - "CRM^C07"
   - "CRM^C08"
   - "CSU^C09"
+  - "CSU^C10"
+  - "CSU^C11"
+  - "CSU^C12"
 
 # This mapping covers clinical research events.  The ResearchStudy resource
 # is populated with identifiers derived from the message header (MSH), and
