@@ -1,61 +1,48 @@
 messageTypes:
-  - "ORU^R01"
+  # Merge/link ADT events
+  - "ADT^A30"  # merge patient - internal ID
+  - "ADT^A40"  # merge patient - external ID
+  - "ADT^A41"  # merge account - internal ID
+  - "ADT^A42"  # merge visit - internal ID
+
+# This mapping extends the base ADT resource plan to handle merge events.
+# In addition to Patient, Encounter, Condition, AllergyIntolerance and
+# Procedure resources, it creates a Person resource that links the
+# surviving patient identifier (PID.3) with the prior identifier found in
+# MRG.1.  The Person resource reflects the real-world individual
+# associated with both patient records.  The Person.active flag is set
+# via a transform helper.
 resourcePlan:
+  # Patient resource (same rules as ADT^A01)
   - resource: Patient
     profile: "http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient"
     rules:
-      - hl7_path: "PID.3[*]"
+      - hl7_path: "PID.3[0]"
         fhir_path: "identifier[]"
         transform: "pid3_to_identifiers"
       - hl7_path: "PID.5[0]"
-        fhir_path: "name[0]"
+        fhir_path: "name[]"
         transform: "name_family_given"
-      - hl7_path: "PID.7"
-        fhir_path: "birthDate"
-        transform: "ts_to_date"
       - hl7_path: "PID.8"
         fhir_path: "gender"
         transform: "sex_to_gender"
-  - resource: DiagnosticReport
-    profile: "http://hl7.org/fhir/us/core/StructureDefinition/us-core-diagnosticreport-lab"
+      - hl7_path: "PID.7"
+        fhir_path: "birthDate"
+        transform: "ts_to_date"
+  # Encounter resource (same rules as ADT^A01)
+  - resource: Encounter
+    profile: "http://hl7.org/fhir/us/core/StructureDefinition/us-core-encounter"
     rules:
-      - hl7_path: "-"
-        fhir_path: "status"
-        transform: "default_dr_status"
-      - hl7_path: "OBR.4"
-        fhir_path: "code"
-        transform: "obx_cwe_to_codeableconcept"
-      - hl7_path: "OBR.7"
-        fhir_path: "effectiveDateTime"
-        transform: "ts_to_datetime"
-      - hl7_path: "OBR.25"
-        fhir_path: "status"
-        transform: "obr_status_to_report_status"
-  - resource: Observation
-    profile: "http://hl7.org/fhir/us/core/StructureDefinition/us-core-observation-lab"
-    rules:
-      - hl7_path: "-"
-        fhir_path: "category[0]"
-        transform: "obs_category_laboratory"
-      - hl7_path: "OBX.3"
-        fhir_path: "code"
-        transform: "obx_cwe_to_codeableconcept"
-      - hl7_path: "OBX.2|OBX.5|OBX.6|OBX.3"
-        fhir_path: "value[x]"
-        transform: "obx_value_to_valuex"
-      - hl7_path: "OBX.11"
-        fhir_path: "status"
-        transform: "obx_status_to_obs_status"
-  - resource: Specimen
-    profile: "http://hl7.org/fhir/StructureDefinition/Specimen"
-    rules:
-      - hl7_path: "SPM.2"
-        fhir_path: "id"
-      - hl7_path: "SPM.4"
-        fhir_path: "type"
-        transform: "spm_cwe_to_codeableconcept"
-
-  # Condition resource derived from DG1 segments
+      - hl7_path: "PV1.2"
+        fhir_path: "class"
+        transform: "pv1_class_to_code"
+      - hl7_path: "PV1.44"
+        fhir_path: "period.start"
+        transform: "ts_to_date"
+      - hl7_path: "PV1.45"
+        fhir_path: "period.end"
+        transform: "ts_to_date"
+  # Condition resource (optional, derived from DG1 segments)
   - resource: Condition
     profile: "http://hl7.org/fhir/us/core/StructureDefinition/us-core-condition"
     rules:
@@ -74,8 +61,7 @@ resourcePlan:
       - hl7_path: "-"
         fhir_path: "verificationStatus"
         transform: "default_condition_verification_status"
-
-  # AllergyIntolerance resource derived from AL1 segments
+  # AllergyIntolerance resource (optional, derived from AL1 segments)
   - resource: AllergyIntolerance
     profile: "http://hl7.org/fhir/us/core/StructureDefinition/us-core-allergyintolerance"
     rules:
@@ -96,8 +82,7 @@ resourcePlan:
       - hl7_path: "-"
         fhir_path: "verificationStatus"
         transform: "default_allergy_verification_status"
-
-  # Procedure resource derived from PR1 segments
+  # Procedure resource (optional, derived from PR1 segments)
   - resource: Procedure
     profile: "http://hl7.org/fhir/us/core/StructureDefinition/us-core-procedure"
     rules:
@@ -113,3 +98,19 @@ resourcePlan:
       - hl7_path: "-"
         fhir_path: "status"
         transform: "default_procedure_status"
+  # Person resource to link surviving and prior identifiers
+  - resource: Person
+    # Person does not have a US Core profile; use base definition
+    rules:
+      - hl7_path: "PID.5[0]"
+        fhir_path: "name[]"
+        transform: "name_family_given"
+      - hl7_path: "PID.3[0]"
+        fhir_path: "link[0].target.identifier"
+        transform: "pid3_to_identifiers"
+      - hl7_path: "MRG.1"
+        fhir_path: "link[1].target.identifier"
+        transform: "cx_to_identifier"
+      - hl7_path: "-"
+        fhir_path: "active"
+        transform: "default_person_active"

@@ -1,0 +1,54 @@
+messageTypes:
+  # Clinical research management (CRM) and clinical study update (CSU) triggers
+  - "CRM^C01"
+  - "CRM^C02"
+  - "CRM^C03"
+  - "CRM^C04"
+  - "CRM^C05"
+  - "CRM^C06"
+  - "CRM^C07"
+  - "CRM^C08"
+  - "CSU^C09"
+
+# This mapping covers clinical research events.  The ResearchStudy resource
+# is populated with identifiers derived from the message header (MSH), and
+# default status set to active.  The ResearchSubject resource links
+# participants (derived from PID-3) to the study identifiers.  More
+# sophisticated mappings may be required for real-world research
+# messages, but this provides a baseline translation.
+resourcePlan:
+  # Define the research study
+  - resource: ResearchStudy
+    profile: "http://hl7.org/fhir/StructureDefinition/ResearchStudy"
+    rules:
+      # Use MSH-10 (Message Control ID) as the study identifier value
+      - hl7_path: "MSH.10"
+        fhir_path: "identifier[0].value"
+      # Use MSH-3 (Sending Application) as the identifier system
+      - hl7_path: "MSH.3"
+        fhir_path: "identifier[0].system"
+      # Populate the period start from MSH-7 (Date/Time of Message)
+      - hl7_path: "MSH.7"
+        fhir_path: "period.start"
+        transform: "ts_to_datetime"
+      # Default status for the research study
+      - hl7_path: "-"
+        fhir_path: "status"
+        transform: "default_researchstudy_status"
+  # Define the research subject
+  - resource: ResearchSubject
+    profile: "http://hl7.org/fhir/StructureDefinition/ResearchSubject"
+    rules:
+      # Link the individual via patient identifier
+      - hl7_path: "PID.3"
+        fhir_path: "individual.identifier"
+        transform: "cx_to_identifier"
+      # Set the default status for the subject
+      - hl7_path: "-"
+        fhir_path: "status"
+        transform: "default_researchsubject_status"
+      # Reference the study by its identifier
+      - hl7_path: "MSH.10"
+        fhir_path: "study.identifier.value"
+      - hl7_path: "MSH.3"
+        fhir_path: "study.identifier.system"

@@ -1,0 +1,88 @@
+messageTypes:
+  # All ADT trigger events that may include NK1 segments (contacts/next-of-kin).
+  # The translator will apply this mapping to any of these message types
+  # to create RelatedPerson resources linked to the Patient.  If no NK1
+  # segment is present in a message, the rules will simply not populate
+  # and no RelatedPerson will be emitted.
+  - "ADT^A01"
+  - "ADT^A02"
+  - "ADT^A03"
+  - "ADT^A04"
+  - "ADT^A05"
+  - "ADT^A06"
+  - "ADT^A07"
+  - "ADT^A08"
+  - "ADT^A09"
+  - "ADT^A10"
+  - "ADT^A11"
+  - "ADT^A12"
+  - "ADT^A13"
+  - "ADT^A14"
+  - "ADT^A15"
+  - "ADT^A16"
+  - "ADT^A17"
+  - "ADT^A18"
+  - "ADT^A20"
+  - "ADT^A21"
+  - "ADT^A22"
+  - "ADT^A23"
+  - "ADT^A24"
+  - "ADT^A25"
+  - "ADT^A26"
+  - "ADT^A27"
+  - "ADT^A28"
+  - "ADT^A29"
+  - "ADT^A30"
+  - "ADT^A31"
+  - "ADT^A32"
+  - "ADT^A33"
+  - "ADT^A34"
+  - "ADT^A35"
+  - "ADT^A36"
+  - "ADT^A37"
+  - "ADT^A38"
+  - "ADT^A39"
+  - "ADT^A40"
+  - "ADT^A41"
+  - "ADT^A42"
+  - "ADT^A43"
+  - "ADT^A44"
+  - "ADT^A45"
+  - "ADT^A46"
+  - "ADT^A47"
+  - "ADT^A48"
+  - "ADT^A49"
+  - "ADT^A50"
+  - "ADT^A51"
+  - "ADT^A52"
+  - "ADT^A53"
+  - "ADT^A54"
+  - "ADT^A55"
+  - "ADT^A60"
+  - "ADT^A61"
+  - "ADT^A62"
+
+# This mapping produces a RelatedPerson resource for each NK1 segment in an
+# ADT message.  It extracts the contact's name from NK1-2 (XPN), maps
+# NK1-3 (relationship) to a simple text field, and uses NK1-4 for
+# telecom.  The RelatedPerson.patient reference is populated via the
+# patient identifier in PID.3.  If there are multiple NK1 segments, the
+# translator will emit multiple RelatedPerson resources (one per NK1).
+resourcePlan:
+  - resource: RelatedPerson
+    profile: "http://hl7.org/fhir/StructureDefinition/RelatedPerson"
+    rules:
+      # NK1-2 (XPN) -> RelatedPerson.name; reuse name_family_given to split family/given
+      - hl7_path: "NK1.2"
+        fhir_path: "name[]"
+        transform: "name_family_given"
+      # NK1-3 (relationship) -> text description of relationship
+      - hl7_path: "NK1.3"
+        fhir_path: "relationship[0].text"
+      # NK1-4 (address/telecom) -> first telecom value
+      - hl7_path: "NK1.4"
+        fhir_path: "telecom[0].value"
+      # Link RelatedPerson to the patient via identifier
+      - hl7_path: "PID.3"
+        fhir_path: "patient.identifier"
+        transform: "cx_to_identifier"
