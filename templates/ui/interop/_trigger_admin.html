@@ -1,0 +1,11 @@
+{% for it in items %}
+  <form class="row gap mt"
+        hx-post="/interop/triggers/set"
+        hx-trigger="change" hx-swap="none">
+    <code class="mono" style="min-width:8rem;">{{ it.trigger }}</code>
+    <input type="hidden" name="trigger" value="{{ it.trigger }}" />
+    <input class="input grow" type="text" name="description" value="{{ it.description }}" />
+  </form>
+{% else %}
+  <div class="muted">No trigger descriptions loaded.</div>
+{% endfor %}

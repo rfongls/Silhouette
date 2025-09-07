@@ -1,7 +1,9 @@
 {% for it in items %}
   <div class="sample-row">
     <div class="sample-title">
-      <strong>{{ it.trigger }}</strong> <small class="chip chip-version">{{ it.version }}</small>
+      <strong>{{ it.trigger }}</strong>
+      {% if it.description %}<span class="muted">— {{ it.description }}</span>{% endif %}
+      <small class="chip chip-version">{{ it.version }}</small>
     </div>
     <div class="sample-actions">
       <button 
@@ -15,7 +17,7 @@
         title="Preview">
         Preview
       </button>
-      <button 
+      <button
         class="btn btn-xs"
         hx-get="/api/interop/sample"
         hx-params="*"
@@ -25,6 +27,13 @@
         hx-vals='{"relpath":"{{ it.relpath }}"}'
         title="Insert">
         Insert
+      </button>
+      <button
+        class="btn btn-xs"
+        type="button"
+        onclick="document.querySelector('#gen-form [name=template_relpath]').value='{{ it.relpath }}';document.querySelector('#gen-version').value='{{ it.version }}';"
+        title="Use in Generator">
+        Use
       </button>
     </div>
     <div class="sample-meta">
