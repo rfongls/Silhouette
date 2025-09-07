@@ -12,7 +12,6 @@ from skills.hl7_drafter import draft_message, send_message
 
 router = APIRouter()
 templates = Jinja2Templates(directory="templates")
-
 REG_PATH = Path("config/skills.yaml")
 
 
@@ -55,7 +54,6 @@ def _load_skills() -> list[dict]:
         )
     return norm
 
-
 @router.get("/", include_in_schema=False)
 def root():
     # Default entry → Reports Home
@@ -69,7 +67,6 @@ def ui_home(request: Request):
     Uses registry + HTMX to pull skill-specific summaries.
     """
     return templates.TemplateResponse("ui/home_reports.html", {"request": request, "skills": _load_skills()})
-
 
 @router.get("/ui/skills", response_class=HTMLResponse)
 def ui_skills_index(request: Request):
