@@ -586,9 +586,6 @@ async def interop_quickstart(
 
 # -------------------- helpers for quickstart pipeline --------------------
 
-
-# -------------------- helpers for quickstart pipeline --------------------
-
 def _which(cmd: str) -> Optional[str]:
     return shutil.which(cmd)
 
