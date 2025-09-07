@@ -87,6 +87,12 @@
     // seed datalists
     fillDatalist("qs");
     fillDatalist("ds");
+
+    // refresh datalists after HTMX replaces the trigger <select>s
+    document.body.addEventListener("htmx:afterSwap", (e) => {
+      if (e && e.target && e.target.id === "qs-trigger") fillDatalist("qs");
+      if (e && e.target && e.target.id === "ds-trigger-select") fillDatalist("ds");
+    });
   });
 
   // expose a tiny API

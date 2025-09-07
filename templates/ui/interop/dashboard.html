@@ -77,7 +77,8 @@
           hx-get="/ui/interop/triggers"
           hx-target="#qs-trigger"
           hx-vals='{"version": this.value}'
-          hx-trigger="load, change">
+          hx-trigger="load, change"
+          onchange="window.InteropUI.fillDatalist('qs')">
           <option value="hl7-v2-3">HL7 v2.3</option>
           <option value="hl7-v2-4" selected>HL7 v2.4</option>
           <option value="hl7-v2-5">HL7 v2.5</option>
@@ -136,6 +137,12 @@
                 hx-vals='{"version": document.getElementById("sample-version").value || "hl7-v2-4"}'
                 hx-trigger="load">
         </select>
+        <script>
+          (function(){
+            const v = document.getElementById('sample-version');
+            if (v) v.addEventListener('change', () => window.InteropUI.fillDatalist('ds'));
+          })();
+        </script>
         <button class="btn" type="button"
                 onclick="var sel=document.getElementById('ds-trigger-select'); var v=sel && sel.value || ''; if(v){document.getElementById('ds-trigger-input').value=v;}">
           Use Selected
