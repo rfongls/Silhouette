@@ -1,32 +1,68 @@
 messageTypes:
-  - ADT^A02
-  - ADT^A03
-  - ADT^A08
-  - ADT^A11
-  - ADT^A13
-  - ADT^A40
+  # Observation result and specimen-oriented messages similar to ORU^R01
+  - "ORF^R02"
+  - "ORF^R04"
+  - "OUL^R21"
+  - "OUL^R22"
+#
+# These message types carry observation results and specimen information.
+# We reuse the ORU^R01 mapping to create DiagnosticReport, Observation,
+# Specimen, Condition, AllergyIntolerance and Procedure resources where
+# applicable.
 resourcePlan:
   - resource: Patient
+    profile: "http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient"
     rules:
       - hl7_path: "PID.3[*]"
         fhir_path: "identifier[]"
         transform: "pid3_to_identifiers"
-      - hl7_path: "MSH.9.2"
-        fhir_path: "active"
-        transform: "adt_event_to_patient_active"
-  - resource: Encounter
+      - hl7_path: "PID.5[0]"
+        fhir_path: "name[0]"
+        transform: "name_family_given"
+      - hl7_path: "PID.7"
+        fhir_path: "birthDate"
+        transform: "ts_to_date"
+      - hl7_path: "PID.8"
+        fhir_path: "gender"
+        transform: "sex_to_gender"
+  - resource: DiagnosticReport
+    profile: "http://hl7.org/fhir/us/core/StructureDefinition/us-core-diagnosticreport-lab"
     rules:
-      - hl7_path: "PID.3"
-        fhir_path: "subject.identifier"
-        transform: "cx_to_identifier"
-      - hl7_path: "PV1.19"
-        fhir_path: "identifier[0]"
-        transform: "cx_to_identifier"
-      - hl7_path: "MSH.9.2"
+      - hl7_path: "-"
         fhir_path: "status"
-        transform: "adt_event_to_encounter_status"
-
-  # Condition resource derived from DG1 segments
+        transform: "default_dr_status"
+      - hl7_path: "OBR.4"
+        fhir_path: "code"
+        transform: "obx_cwe_to_codeableconcept"
+      - hl7_path: "OBR.7"
+        fhir_path: "effectiveDateTime"
+        transform: "ts_to_datetime"
+      - hl7_path: "OBR.25"
+        fhir_path: "status"
+        transform: "obr_status_to_report_status"
+  - resource: Observation
+    profile: "http://hl7.org/fhir/us/core/StructureDefinition/us-core-observation-lab"
+    rules:
+      - hl7_path: "-"
+        fhir_path: "category[0]"
+        transform: "obs_category_laboratory"
+      - hl7_path: "OBX.3"
+        fhir_path: "code"
+        transform: "obx_cwe_to_codeableconcept"
+      - hl7_path: "OBX.2|OBX.5|OBX.6|OBX.3"
+        fhir_path: "value[x]"
+        transform: "obx_value_to_valuex"
+      - hl7_path: "OBX.11"
+        fhir_path: "status"
+        transform: "obx_status_to_obs_status"
+  - resource: Specimen
+    profile: "http://hl7.org/fhir/StructureDefinition/Specimen"
+    rules:
+      - hl7_path: "SPM.2"
+        fhir_path: "id"
+      - hl7_path: "SPM.4"
+        fhir_path: "type"
+        transform: "spm_cwe_to_codeableconcept"
   - resource: Condition
     profile: "http://hl7.org/fhir/us/core/StructureDefinition/us-core-condition"
     rules:
@@ -45,8 +81,6 @@ resourcePlan:
       - hl7_path: "-"
         fhir_path: "verificationStatus"
         transform: "default_condition_verification_status"
-
-  # AllergyIntolerance resource derived from AL1 segments
   - resource: AllergyIntolerance
     profile: "http://hl7.org/fhir/us/core/StructureDefinition/us-core-allergyintolerance"
     rules:
@@ -67,8 +101,6 @@ resourcePlan:
       - hl7_path: "-"
         fhir_path: "verificationStatus"
         transform: "default_allergy_verification_status"
-
-  # Procedure resource derived from PR1 segments
   - resource: Procedure
     profile: "http://hl7.org/fhir/us/core/StructureDefinition/us-core-procedure"
     rules:
@@ -84,4 +116,3 @@ resourcePlan:
       - hl7_path: "-"
         fhir_path: "status"
         transform: "default_procedure_status"
-

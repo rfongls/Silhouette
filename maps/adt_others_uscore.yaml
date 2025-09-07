@@ -1,61 +1,94 @@
 messageTypes:
-  - "ORU^R01"
+  # Additional ADT events not explicitly covered by existing mappings
+  - "ADT^A04"
+  - "ADT^A05"
+  - "ADT^A06"
+  - "ADT^A07"
+  - "ADT^A09"
+  - "ADT^A10"
+  - "ADT^A12"
+  - "ADT^A14"
+  - "ADT^A15"
+  - "ADT^A16"
+  - "ADT^A17"
+  - "ADT^A18"
+  - "ADT^A20"
+  - "ADT^A21"
+  - "ADT^A22"
+  - "ADT^A23"
+  - "ADT^A24"
+  - "ADT^A25"
+  - "ADT^A26"
+  - "ADT^A27"
+  - "ADT^A28"
+  - "ADT^A29"
+  - "ADT^A30"
+  - "ADT^A31"
+  - "ADT^A32"
+  - "ADT^A33"
+  - "ADT^A34"
+  - "ADT^A35"
+  - "ADT^A36"
+  - "ADT^A37"
+  - "ADT^A38"
+  - "ADT^A39"
+  - "ADT^A41"
+  - "ADT^A42"
+  - "ADT^A43"
+  - "ADT^A44"
+  - "ADT^A45"
+  - "ADT^A46"
+  - "ADT^A47"
+  - "ADT^A48"
+  - "ADT^A49"
+  - "ADT^A50"
+  - "ADT^A51"
+  - "ADT^A52"
+  - "ADT^A53"
+  - "ADT^A54"
+  - "ADT^A55"
+  - "ADT^A60"
+  - "ADT^A61"
+  - "ADT^A62"
+#
+# This file maps all remaining ADT trigger events to the same FHIR
+# resource plan used for ADT^A01.  These events cover a wide range
+# of administrative scenarios (registration, pre‑admission, merges, etc.).
+# While some events (e.g., merges) require more sophisticated handling
+# (such as FHIR Person and $merge operations), this mapping at least
+# produces Patient and Encounter resources along with optional Condition,
+# AllergyIntolerance and Procedure resources when DG1, AL1 and PR1
+# segments are present.  Device and Provenance resources are added
+# automatically by the pipeline.
 resourcePlan:
   - resource: Patient
     profile: "http://hl7.org/fhir/us/core/StructureDefinition/us-core-patient"
     rules:
-      - hl7_path: "PID.3[*]"
+      - hl7_path: "PID.3[0]"
         fhir_path: "identifier[]"
         transform: "pid3_to_identifiers"
       - hl7_path: "PID.5[0]"
-        fhir_path: "name[0]"
+        fhir_path: "name[]"
         transform: "name_family_given"
-      - hl7_path: "PID.7"
-        fhir_path: "birthDate"
-        transform: "ts_to_date"
       - hl7_path: "PID.8"
         fhir_path: "gender"
         transform: "sex_to_gender"
-  - resource: DiagnosticReport
-    profile: "http://hl7.org/fhir/us/core/StructureDefinition/us-core-diagnosticreport-lab"
+      - hl7_path: "PID.7"
+        fhir_path: "birthDate"
+        transform: "ts_to_date"
+  - resource: Encounter
+    profile: "http://hl7.org/fhir/us/core/StructureDefinition/us-core-encounter"
     rules:
-      - hl7_path: "-"
-        fhir_path: "status"
-        transform: "default_dr_status"
-      - hl7_path: "OBR.4"
-        fhir_path: "code"
-        transform: "obx_cwe_to_codeableconcept"
-      - hl7_path: "OBR.7"
-        fhir_path: "effectiveDateTime"
-        transform: "ts_to_datetime"
-      - hl7_path: "OBR.25"
-        fhir_path: "status"
-        transform: "obr_status_to_report_status"
-  - resource: Observation
-    profile: "http://hl7.org/fhir/us/core/StructureDefinition/us-core-observation-lab"
-    rules:
-      - hl7_path: "-"
-        fhir_path: "category[0]"
-        transform: "obs_category_laboratory"
-      - hl7_path: "OBX.3"
-        fhir_path: "code"
-        transform: "obx_cwe_to_codeableconcept"
-      - hl7_path: "OBX.2|OBX.5|OBX.6|OBX.3"
-        fhir_path: "value[x]"
-        transform: "obx_value_to_valuex"
-      - hl7_path: "OBX.11"
-        fhir_path: "status"
-        transform: "obx_status_to_obs_status"
-  - resource: Specimen
-    profile: "http://hl7.org/fhir/StructureDefinition/Specimen"
-    rules:
-      - hl7_path: "SPM.2"
-        fhir_path: "id"
-      - hl7_path: "SPM.4"
-        fhir_path: "type"
-        transform: "spm_cwe_to_codeableconcept"
-
-  # Condition resource derived from DG1 segments
+      - hl7_path: "PV1.2"
+        fhir_path: "class"
+        transform: "pv1_class_to_code"
+      - hl7_path: "PV1.44"
+        fhir_path: "period.start"
+        transform: "ts_to_date"
+      - hl7_path: "PV1.45"
+        fhir_path: "period.end"
+        transform: "ts_to_date"
+  # Include optional Condition from DG1 segments
   - resource: Condition
     profile: "http://hl7.org/fhir/us/core/StructureDefinition/us-core-condition"
     rules:
@@ -74,8 +107,7 @@ resourcePlan:
       - hl7_path: "-"
         fhir_path: "verificationStatus"
         transform: "default_condition_verification_status"
-
-  # AllergyIntolerance resource derived from AL1 segments
+  # Include optional AllergyIntolerance from AL1 segments
   - resource: AllergyIntolerance
     profile: "http://hl7.org/fhir/us/core/StructureDefinition/us-core-allergyintolerance"
     rules:
@@ -96,8 +128,7 @@ resourcePlan:
       - hl7_path: "-"
         fhir_path: "verificationStatus"
         transform: "default_allergy_verification_status"
-
-  # Procedure resource derived from PR1 segments
+  # Include optional Procedure from PR1 segments
   - resource: Procedure
     profile: "http://hl7.org/fhir/us/core/StructureDefinition/us-core-procedure"
     rules:
