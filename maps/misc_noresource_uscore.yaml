@@ -1,0 +1,25 @@
+messageTypes:
+  # Administrative and research messages that do not map to specific FHIR resources
+  - "ACK^A01"
+  - "ADR^A19"
+  - "CRM^C01"
+  - "CRM^C02"
+  - "CRM^C03"
+  - "CRM^C04"
+  - "CRM^C05"
+  - "CRM^C06"
+  - "CRM^C07"
+  - "CRM^C08"
+  - "CSU^C09"
+  - "NMD^N02"
+  - "NMQ^N01"
+  - "NMR^N01"
+  - "QRY^A19"
+  - "RSP^K21"
+#
+# These messages represent acknowledgements, queries, application management or
+# clinical research events that do not directly translate into standard FHIR
+# clinical resources.  Including them here with an empty resource plan
+# ensures the pipeline still processes the messages (producing Device and
+# Provenance) while signalling that no domain resources are generated.
+resourcePlan: []

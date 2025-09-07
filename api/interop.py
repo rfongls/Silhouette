@@ -729,7 +729,6 @@ def _hl7_to_fhir_via_cli(hl7_text: str, trigger: str = '') -> tuple[str, str]:
     except Exception as e:
         return json.dumps({'error': f'unexpected: {e}'}, indent=2), 'CLI error.'
 
-
 def _esc(s: str) -> str:
     return s.replace("<", "&lt;").replace(">", "&gt;")
 
