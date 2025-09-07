@@ -22,26 +22,6 @@ UI_OUT = OUT_ROOT / "ui"
 INDEX_PATH = UI_OUT / "index.json"
 
 
-@router.get("/security/summary", response_class=HTMLResponse)
-def security_summary():
-    """Minimal KPI block so the Security dashboard doesn't 404."""
-    kpis = {
-        "controls_mapped": 12,
-        "evidence_items": 34,
-        "findings_open": 3,
-        "last_scan": "n/a",
-    }
-    html = (
-        "<section class='card'><h3>Security Summary</h3>"
-        "<div class='row gap'>"
-        f"<span class='chip'>controls: <strong>{kpis['controls_mapped']}</strong></span>"
-        f"<span class='chip'>evidence: <strong>{kpis['evidence_items']}</strong></span>"
-        f"<span class='chip'>open findings: <strong>{kpis['findings_open']}</strong></span>"
-        f"<span class='chip'>last scan: <strong>{kpis['last_scan']}</strong></span>"
-        "</div></section>"
-    )
-    return HTMLResponse(html)
-
 
 def _save_upload(out_dir: Path, up: UploadFile) -> Path:
     uploads = out_dir / "uploads"
@@ -188,6 +168,48 @@ async def security_summary(request: Request):
         "security/summary.html",
         {"request": request, "kpi": kpi, "last_recon": last_recon},
     )
+
+
+# ---------- HTML-friendly UI endpoints (Security features) ----------
+
+
+@router.post("/ui/security/scan", response_class=HTMLResponse)
+async def ui_security_scan(target: str = Form("localhost"), scope: str = Form("light")):
+    """Render scan results as HTML (placeholder)."""
+    html = (
+        f"<div class='muted'>Scan started for <strong>{target}</strong> (scope: {scope}).</div>"
+        "<div class='mt'>This is a placeholder panel — wire recon_tool here.</div>"
+    )
+    return HTMLResponse(html)
+
+
+@router.post("/ui/security/recon", response_class=HTMLResponse)
+async def ui_security_recon(query: str = Form("example.org")):
+    html = (
+        f"<div class='muted'>Recon queued for <strong>{query}</strong>.</div>"
+        "<div class='mt'>Placeholder panel — wire recon_tool with query targets.</div>"
+    )
+    return HTMLResponse(html)
+
+
+@router.post("/ui/security/pentest", response_class=HTMLResponse)
+async def ui_security_pentest(ack: str = Form("off"), play: str = Form("dry-run")):
+    if ack != "on":
+        return HTMLResponse("<div class='error'>Authorization required (toggle 'ack').</div>", status_code=400)
+    html = (
+        f"<div>Authorized pentest run: <strong>{play}</strong></div>"
+        "<div class='mt muted'>Placeholder — call gate_tool.run(...) with safe flags.</div>"
+    )
+    return HTMLResponse(html)
+
+
+@router.post("/ui/security/ir", response_class=HTMLResponse)
+async def ui_security_ir(incident_id: str = Form("INC-12345"), action: str = Form("triage")):
+    html = (
+        f"<div>IR action <strong>{action}</strong> for <strong>{incident_id}</strong></div>"
+        "<div class='mt muted'>Placeholder — wire ir_tool workflows here.</div>"
+    )
+    return HTMLResponse(html)
 
 
 @router.post("/security/demo/seed", response_class=HTMLResponse)
