@@ -1,0 +1,20 @@
+messageTypes:
+  # Immunization query and update events (V codes)
+  - "VXQ^V01"
+  - "VXX^V02"
+  - "VXR^V03"
+  - "VXU^V04"
+resourcePlan:
+  # Immunization records capture administered vaccines
+  - resource: Immunization
+    rules:
+      - hl7Field: PID.3
+        fhirPath: patient.identifier
+      - hl7Field: ""
+        fhirPath: status
+        transform: default_immunization_status
+  # Recommendations document suggested vaccinations
+  - resource: ImmunizationRecommendation
+    rules:
+      - hl7Field: PID.3
+        fhirPath: patient.identifier
