@@ -92,6 +92,7 @@ def _enumerate_samples(version: str, q: str | None = None, limit: int = 200) -> 
     for f in sorted(base.rglob("*.hl7")):
         rel = f.relative_to(SAMPLE_DIR).as_posix()
         trigger = f.stem
+        desc = _describe_trigger(trigger)
         if qnorm:
             hay = f"{trigger} {rel} {desc}".lower()
             if qnorm not in hay:
@@ -189,6 +190,19 @@ def render_hl7_samples_partial(
     )
 
 
+@router.get("/api/interop/triggers", response_class=JSONResponse)
+def triggers_json(version: str = Query("hl7-v2-4")):
+    """
+    JSON trigger list for datalist typeahead.
+    Returns: [{trigger, description, relpath}]
+    """
+    try:
+        items = _enumerate_samples(version, q=None, limit=5000)
+    except HTTPException:
+        items = []
+    return {"version": version, "items": items}
+
+
 @router.get("/ui/interop/triggers", response_class=HTMLResponse)
 def render_trigger_options(
     request: Request,
@@ -203,6 +217,46 @@ def render_trigger_options(
         "ui/interop/_trigger_options.html",
         {"request": request, "items": items},
     )
+
+
+@router.post("/ui/interop/deidentify", response_class=HTMLResponse)
+async def ui_deidentify(text: str = Form(...), seed: Optional[int] = Form(None)):
+    """
+    HTML-friendly De-Identify: returns <pre> with scrubbed HL7 (no JSON body).
+    """
+    out = deidentify_message(text, seed=seed if seed not in ("", None) else None)
+    html = f"<pre class='codepane'>{_esc(out)}</pre>"
+    return HTMLResponse(html)
+
+
+@router.post("/ui/interop/validate", response_class=HTMLResponse)
+async def ui_validate(text: str = Form(...), profile: Optional[str] = Form(None)):
+    """
+    HTML-friendly Validate: returns a small list of errors/warnings with OK/FAIL chip.
+    """
+    res = validate_message(text, profile=profile)
+    badge = "<span class='chip'>OK</span>" if res.get("ok") else "<span class='chip'>Issues</span>"
+    errs = "".join(f"<li>{_esc(e)}</li>" for e in res.get("errors", []))
+    warns = "".join(f"<li>{_esc(w)}</li>" for w in res.get("warnings", []))
+    html = [
+        f"<div>Result: {badge}</div>",
+        "<div class='mt'><strong>Errors</strong><ul>" + (errs or "<li>None</li>") + "</ul></div>",
+        "<div class='mt'><strong>Warnings</strong><ul class='muted'>" + (warns or "<li>None</li>") + "</ul></div>",
+    ]
+    return HTMLResponse("".join(html))
+
+
+@router.get("/api/interop/preview", response_class=HTMLResponse)
+def api_preview(relpath: str = Query(...)):
+    """
+    Small HTML preview for a sample: used by the Finder to avoid raw JSON.
+    """
+    try:
+        p = _assert_rel_under_templates(relpath)
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="Sample not found")
+    txt = p.read_text(encoding="utf-8", errors="ignore")
+    return HTMLResponse(f"<pre class='codepane'>{_esc(txt)}</pre>")
 
 @router.get("/interop/triggers/csv")
 def download_trigger_csv():

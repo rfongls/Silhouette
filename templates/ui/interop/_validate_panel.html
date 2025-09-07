@@ -1,8 +1,7 @@
-<section class="card">
+<section class="card" data-feature="validate">
   <h3>Validate (Profile)</h3>
   <form id="val-form"
-        hx-post="/api/interop/validate"
-        hx-encoding="json"
+        hx-post="/ui/interop/validate"
         hx-trigger="submit"
         hx-target="#val-output"
         hx-swap="innerHTML">
@@ -12,5 +11,5 @@
       <button class="btn">Validate</button>
     </div>
   </form>
-  <div id="val-output" class="mt"></div>
+  <div id="val-output" class="mt muted">Result will appear here…</div>
 </section>
