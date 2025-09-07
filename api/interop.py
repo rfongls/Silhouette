@@ -1,5 +1,4 @@
 from __future__ import annotations
-
 import json, subprocess, time, shutil, re, io, csv
 from pathlib import Path
 from typing import List, Optional, Dict, Any
@@ -93,7 +92,6 @@ def _enumerate_samples(version: str, q: str | None = None, limit: int = 200) -> 
     for f in sorted(base.rglob("*.hl7")):
         rel = f.relative_to(SAMPLE_DIR).as_posix()
         trigger = f.stem
-        desc = _describe_trigger(trigger)
         if qnorm:
             hay = f"{trigger} {rel} {desc}".lower()
             if qnorm not in hay:
@@ -206,7 +204,6 @@ def render_trigger_options(
         {"request": request, "items": items},
     )
 
-
 @router.get("/interop/triggers/csv")
 def download_trigger_csv():
     """Download the trigger description CSV (template created if missing)."""
@@ -244,7 +241,6 @@ def set_trigger_description(trigger: str = Form(...), description: str = Form(""
     mapping[trigger.upper()] = description.strip()
     _save_trigger_descriptions(mapping)
     return JSONResponse({"ok": True})
-
 
 @router.post("/interop/hl7/draft-send")
 async def interop_hl7_send(
@@ -793,7 +789,6 @@ def _hl7_to_fhir_via_cli(hl7_text: str, trigger: str = '') -> tuple[str, str]:
         return json.dumps({'error':'silhouette not found'},indent=2), 'CLI not found.'
     except Exception as e:
         return json.dumps({'error': f'unexpected: {e}'}, indent=2), 'CLI error.'
-
 
 def _esc(s: str) -> str:
     return s.replace("<", "&lt;").replace(">", "&gt;")

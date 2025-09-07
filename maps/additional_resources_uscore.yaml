@@ -1,0 +1,286 @@
+messageTypes:
+  # Apply this mapping to all ADT events to generate additional FHIR
+  # resources that are not represented in HL7 v2.  These resources use
+  # minimal mappings: they link back to the patient (via PID.3) and set a
+  # default status.  This enables downstream testing of resource handling
+  # even when the source message does not explicitly carry the data.
+  - "ADT^A01"
+  - "ADT^A02"
+  - "ADT^A03"
+  - "ADT^A04"
+  - "ADT^A05"
+  - "ADT^A06"
+  - "ADT^A07"
+  - "ADT^A08"
+  - "ADT^A09"
+  - "ADT^A10"
+  - "ADT^A11"
+  - "ADT^A12"
+  - "ADT^A13"
+  - "ADT^A14"
+  - "ADT^A15"
+  - "ADT^A16"
+  - "ADT^A17"
+  - "ADT^A18"
+  - "ADT^A20"
+  - "ADT^A21"
+  - "ADT^A22"
+  - "ADT^A23"
+  - "ADT^A24"
+  - "ADT^A25"
+  - "ADT^A26"
+  - "ADT^A27"
+  - "ADT^A28"
+  - "ADT^A29"
+  - "ADT^A30"
+  - "ADT^A31"
+  - "ADT^A32"
+  - "ADT^A33"
+  - "ADT^A34"
+  - "ADT^A35"
+  - "ADT^A36"
+  - "ADT^A37"
+  - "ADT^A38"
+  - "ADT^A39"
+  - "ADT^A40"
+  - "ADT^A41"
+  - "ADT^A42"
+  - "ADT^A43"
+  - "ADT^A44"
+  - "ADT^A45"
+  - "ADT^A46"
+  - "ADT^A47"
+  - "ADT^A48"
+  - "ADT^A49"
+  - "ADT^A50"
+  - "ADT^A51"
+  - "ADT^A52"
+  - "ADT^A53"
+  - "ADT^A54"
+  - "ADT^A55"
+  - "ADT^A60"
+  - "ADT^A61"
+  - "ADT^A62"
+
+resourcePlan:
+  # Care coordination resources
+  - resource: CarePlan
+    profile: "http://hl7.org/fhir/StructureDefinition/CarePlan"
+    rules:
+      - hl7_path: "PID.3"
+        fhir_path: "subject.identifier"
+        transform: "cx_to_identifier"
+      - hl7_path: "-"
+        fhir_path: "status"
+        transform: "default_careplan_status"
+
+  - resource: CareTeam
+    profile: "http://hl7.org/fhir/StructureDefinition/CareTeam"
+    rules:
+      - hl7_path: "PID.3"
+        fhir_path: "subject.identifier"
+        transform: "cx_to_identifier"
+      - hl7_path: "-"
+        fhir_path: "status"
+        transform: "default_careteam_status"
+
+  - resource: Goal
+    profile: "http://hl7.org/fhir/StructureDefinition/Goal"
+    rules:
+      - hl7_path: "PID.3"
+        fhir_path: "subject.identifier"
+        transform: "cx_to_identifier"
+      - hl7_path: "-"
+        fhir_path: "status"
+        transform: "default_goal_status"
+
+  - resource: FamilyMemberHistory
+    profile: "http://hl7.org/fhir/StructureDefinition/FamilyMemberHistory"
+    rules:
+      - hl7_path: "PID.3"
+        fhir_path: "patient.identifier"
+        transform: "cx_to_identifier"
+      - hl7_path: "-"
+        fhir_path: "status"
+        transform: "default_familymemberhistory_status"
+
+  - resource: RiskAssessment
+    profile: "http://hl7.org/fhir/StructureDefinition/RiskAssessment"
+    rules:
+      - hl7_path: "PID.3"
+        fhir_path: "subject.identifier"
+        transform: "cx_to_identifier"
+      - hl7_path: "-"
+        fhir_path: "status"
+        transform: "default_risk_assessment_status"
+
+  # Nutrition and supply
+  - resource: NutritionOrder
+    profile: "http://hl7.org/fhir/StructureDefinition/NutritionOrder"
+    rules:
+      - hl7_path: "PID.3"
+        fhir_path: "patient.identifier"
+        transform: "cx_to_identifier"
+      - hl7_path: "-"
+        fhir_path: "status"
+        transform: "default_nutritionorder_status"
+
+  - resource: NutritionIntake
+    profile: "http://hl7.org/fhir/StructureDefinition/NutritionIntake"
+    rules:
+      - hl7_path: "PID.3"
+        fhir_path: "subject.identifier"
+        transform: "cx_to_identifier"
+      - hl7_path: "-"
+        fhir_path: "status"
+        transform: "default_nutritionintake_status"
+
+  - resource: SupplyRequest
+    profile: "http://hl7.org/fhir/StructureDefinition/SupplyRequest"
+    rules:
+      - hl7_path: "PID.3"
+        fhir_path: "subject.identifier"
+        transform: "cx_to_identifier"
+      - hl7_path: "-"
+        fhir_path: "status"
+        transform: "default_supplyrequest_status"
+
+  - resource: SupplyDelivery
+    profile: "http://hl7.org/fhir/StructureDefinition/SupplyDelivery"
+    rules:
+      - hl7_path: "PID.3"
+        fhir_path: "patient.identifier"
+        transform: "cx_to_identifier"
+      - hl7_path: "-"
+        fhir_path: "status"
+        transform: "default_supplydelivery_status"
+
+  # Financial
+  - resource: Claim
+    profile: "http://hl7.org/fhir/StructureDefinition/Claim"
+    rules:
+      - hl7_path: "PID.3"
+        fhir_path: "patient.identifier"
+        transform: "cx_to_identifier"
+      - hl7_path: "-"
+        fhir_path: "status"
+        transform: "default_claim_status"
+
+  - resource: ClaimResponse
+    profile: "http://hl7.org/fhir/StructureDefinition/ClaimResponse"
+    rules:
+      - hl7_path: "PID.3"
+        fhir_path: "patient.identifier"
+        transform: "cx_to_identifier"
+      - hl7_path: "-"
+        fhir_path: "status"
+        transform: "default_claimresponse_status"
+
+  - resource: CoverageEligibilityRequest
+    profile: "http://hl7.org/fhir/StructureDefinition/CoverageEligibilityRequest"
+    rules:
+      - hl7_path: "PID.3"
+        fhir_path: "patient.identifier"
+        transform: "cx_to_identifier"
+      - hl7_path: "-"
+        fhir_path: "status"
+        transform: "default_coverageeligibilityrequest_status"
+
+  - resource: CoverageEligibilityResponse
+    profile: "http://hl7.org/fhir/StructureDefinition/CoverageEligibilityResponse"
+    rules:
+      - hl7_path: "PID.3"
+        fhir_path: "patient.identifier"
+        transform: "cx_to_identifier"
+      - hl7_path: "-"
+        fhir_path: "status"
+        transform: "default_coverageeligibilityresponse_status"
+
+  - resource: Invoice
+    profile: "http://hl7.org/fhir/StructureDefinition/Invoice"
+    rules:
+      - hl7_path: "PID.3"
+        fhir_path: "subject.identifier"
+        transform: "cx_to_identifier"
+      - hl7_path: "-"
+        fhir_path: "status"
+        transform: "default_invoice_status"
+
+  - resource: PaymentNotice
+    profile: "http://hl7.org/fhir/StructureDefinition/PaymentNotice"
+    rules:
+      - hl7_path: "PID.3"
+        fhir_path: "recipient.identifier"
+        transform: "cx_to_identifier"
+      - hl7_path: "-"
+        fhir_path: "status"
+        transform: "default_paymentnotice_status"
+
+  - resource: PaymentReconciliation
+    profile: "http://hl7.org/fhir/StructureDefinition/PaymentReconciliation"
+    rules:
+      - hl7_path: "PID.3"
+        fhir_path: "request.identifier"
+        transform: "cx_to_identifier"
+      - hl7_path: "-"
+        fhir_path: "status"
+        transform: "default_paymentreconciliation_status"
+
+  # Imaging and questionnaire
+  - resource: ImagingStudy
+    profile: "http://hl7.org/fhir/StructureDefinition/ImagingStudy"
+    rules:
+      - hl7_path: "PID.3"
+        fhir_path: "subject.identifier"
+        transform: "cx_to_identifier"
+      - hl7_path: "-"
+        fhir_path: "status"
+        transform: "default_imagingstudy_status"
+
+  - resource: Questionnaire
+    profile: "http://hl7.org/fhir/StructureDefinition/Questionnaire"
+    rules:
+      - hl7_path: "-"
+        fhir_path: "status"
+        transform: "default_questionnaire_status"
+
+  - resource: QuestionnaireResponse
+    profile: "http://hl7.org/fhir/StructureDefinition/QuestionnaireResponse"
+    rules:
+      - hl7_path: "PID.3"
+        fhir_path: "subject.identifier"
+        transform: "cx_to_identifier"
+      - hl7_path: "-"
+        fhir_path: "status"
+        transform: "default_questionnaireresponse_status"
+
+  # Device requests and usage
+  - resource: DeviceRequest
+    profile: "http://hl7.org/fhir/StructureDefinition/DeviceRequest"
+    rules:
+      - hl7_path: "PID.3"
+        fhir_path: "subject.identifier"
+        transform: "cx_to_identifier"
+      - hl7_path: "-"
+        fhir_path: "status"
+        transform: "default_devicerequest_status"
+
+  - resource: DeviceDispense
+    profile: "http://hl7.org/fhir/StructureDefinition/DeviceDispense"
+    rules:
+      - hl7_path: "PID.3"
+        fhir_path: "subject.identifier"
+        transform: "cx_to_identifier"
+      - hl7_path: "-"
+        fhir_path: "status"
+        transform: "default_devicedispense_status"
+
+  - resource: DeviceUsage
+    profile: "http://hl7.org/fhir/StructureDefinition/DeviceUsage"
+    rules:
+      - hl7_path: "PID.3"
+        fhir_path: "subject.identifier"
+        transform: "cx_to_identifier"
+      - hl7_path: "-"
+        fhir_path: "status"
+        transform: "default_deviceusage_status"
