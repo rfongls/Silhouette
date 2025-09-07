@@ -1,0 +1,97 @@
+// Lightweight UI helpers for Interop dashboard
+// - Manage Features vs Reports view
+// - Populate datalists for trigger typeahead from /api/interop/triggers
+
+(function () {
+  const LS_FEATURES = "interop.features.visible";
+  const LS_REPORTS = "interop.view.reports";
+
+  function q(id) { return document.getElementById(id); }
+
+  function saveVisible() {
+    const toggles = Array.from(document.querySelectorAll(".feature-toggle"));
+    const state = {};
+    toggles.forEach(t => state[t.dataset.target] = t.checked);
+    localStorage.setItem(LS_FEATURES, JSON.stringify(state));
+    applyVisible(state);
+  }
+  function loadVisible() {
+    try { return JSON.parse(localStorage.getItem(LS_FEATURES) || "{}"); }
+    catch { return {}; }
+  }
+  function applyVisible(state) {
+    Object.entries(state).forEach(([k, v]) => {
+      document.querySelectorAll(`[data-feature="${k}"]`).forEach(el => el.hidden = !v);
+    });
+  }
+  function saveReportsMode(on) {
+    localStorage.setItem(LS_REPORTS, on ? "1" : "0");
+    applyReportsMode(on);
+  }
+  function loadReportsMode() {
+    return localStorage.getItem(LS_REPORTS) === "1";
+  }
+  function applyReportsMode(on) {
+    // In a real split, we'd hide feature cards and show report cards.
+    // For now, only hide elements with [data-feature] when reports is ON.
+    document.querySelectorAll("[data-feature]").forEach(el => el.hidden = on ? true : el.hidden && false);
+  }
+
+  async function fillDatalist(prefix) {
+    const versionSel = q(prefix + "-version") || q("sample-version");
+    const version = versionSel ? versionSel.value : "hl7-v2-4";
+    try {
+      const r = await fetch(`/api/interop/triggers?version=${encodeURIComponent(version)}`, {cache: "no-cache"});
+      const data = await r.json();
+      const dl = q(prefix + "-trigger-datalist");
+      if (!dl) return;
+      dl.innerHTML = "";
+      (data.items || []).forEach(it => {
+        const opt = document.createElement("option");
+        opt.value = it.trigger;
+        opt.label = it.description ? `${it.trigger} — ${it.description}` : it.trigger;
+        dl.appendChild(opt);
+      });
+    } catch (e) {
+      // swallow
+    }
+  }
+
+  function syncTyped(prefix) {
+    const typed = q(prefix + "-trigger-typed");
+    const select = q(prefix + "-trigger") || q(prefix + "-trigger-select");
+    if (typed && select && typed.value) {
+      // try to select matching <option>
+      const val = typed.value.toUpperCase();
+      const opt = Array.from(select.options).find(o => o.value.toUpperCase() === val);
+      if (opt) select.value = opt.value;
+    }
+  }
+
+  // wire up after load
+  window.addEventListener("DOMContentLoaded", () => {
+    // Feature toggles
+    const initial = loadVisible();
+    if (Object.keys(initial).length) applyVisible(initial);
+    document.querySelectorAll(".feature-toggle").forEach(t => {
+      if (initial.hasOwnProperty(t.dataset.target)) t.checked = !!initial[t.dataset.target];
+      t.addEventListener("change", saveVisible);
+    });
+    // Reports toggle
+    const rep = q("view-reports-toggle");
+    if (rep) {
+      rep.checked = loadReportsMode();
+      applyReportsMode(rep.checked);
+      rep.addEventListener("change", () => saveReportsMode(rep.checked));
+    }
+    // seed datalists
+    fillDatalist("qs");
+    fillDatalist("ds");
+  });
+
+  // expose a tiny API
+  window.InteropUI = {
+    syncTyped,
+    fillDatalist
+  };
+})();
