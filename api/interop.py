@@ -1,5 +1,5 @@
 from __future__ import annotations
-import json, subprocess, time, shutil, re, io, csv, datetime, textwrap
+import json, subprocess, time, shutil, re, io, csv, datetime, textwrap, tempfile
 from pathlib import Path
 from typing import List, Optional, Dict, Any
 import threading
@@ -829,32 +829,11 @@ def _pick_map_for_trigger(trigger: str) -> str:
     return 'maps/adt_uscore.yaml'
 
 def _hl7_to_fhir_via_cli(hl7_text: str, trigger: str = '') -> tuple[str, str]:
-    """Translate HL7 to FHIR using silhouette CLI if available, selecting map by trigger."""
-    exe=_which('silhouette')
-    map_path=_pick_map_for_trigger(trigger)
-    if not exe:
-        stub={"note": f"silhouette CLI not found on PATH; showing stub JSON. Intended map: {map_path}"}
-        return json.dumps(stub, indent=2), f"CLI not found — would use: {map_path}"
-    args=[exe,'fhir','translate','--in','-','--map',map_path,'--out','-','--message-mode']
-    try:
-        proc=subprocess.run(args,input=hl7_text.encode('utf-8'),stdout=subprocess.PIPE,stderr=subprocess.PIPE,timeout=20)
-        if proc.returncode!=0:
-            note=f"CLI failed (exit {proc.returncode}). Showing stderr."
-            out=(proc.stderr or b'').decode('utf-8','ignore')
-            return out,note
-        out=(proc.stdout or b'').decode('utf-8','ignore')
-        try:
-            parsed=json.loads(out)
-            out=json.dumps(parsed,indent=2)
-        except Exception:
-            pass
-        return out,f"Translated with CLI map: {map_path}"
-    except subprocess.TimeoutExpired:
-        return json.dumps({'error':'translation timeout'},indent=2), 'CLI timeout.'
-    except FileNotFoundError:
-        return json.dumps({'error':'silhouette not found'},indent=2), 'CLI not found.'
-    except Exception as e:
-        return json.dumps({'error': f'unexpected: {e}'}, indent=2), 'CLI error.'
+    """Backward-compatible wrapper using _translate_hl7_to_fhir_cli."""
+    tmp_dir = Path(tempfile.gettempdir()) / "silhouette_qs"
+    tmp_dir.mkdir(parents=True, exist_ok=True)
+    res = _translate_hl7_to_fhir_cli(hl7_text, tmp_dir)
+    return (res.get("stdout", "") or "", res.get("stderr", "") or "")
 
 def _esc(s: str) -> str:
     return s.replace("<", "&lt;").replace(">", "&gt;")
@@ -1016,3 +995,20 @@ def run_pipeline(
             post_result = {"ok": False, "lines": ["No endpoint specified (dummy server disabled in this build)."]}
 
     return _render_pipeline_result(text, val, trans, post_result, run_dir)
+
+# -------- In-app dummy FHIR endpoint (for local testing) --------
+FHIR_DUMMY_OUT = Path("out/fhir/dummy")
+
+@router.post("/api/fhir/dummy", response_class=HTMLResponse)
+async def fhir_dummy(request: Request):
+    """Accept FHIR payloads and save them for inspection."""
+    payload = await request.body()
+    FHIR_DUMMY_OUT.mkdir(parents=True, exist_ok=True)
+    name = f"{_now_tag()}.json"
+    path = FHIR_DUMMY_OUT / name
+    try:
+        path.write_bytes(payload)
+        size = len(payload or b"")
+        return HTMLResponse(f"<div class='muted'>Dummy FHIR accepted <code>{_esc(name)}</code> ({size} bytes).</div>")
+    except Exception as e:
+        return HTMLResponse(f"<div class='error'>Failed to write payload: {_esc(str(e))}</div>", status_code=500)

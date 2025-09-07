@@ -26,12 +26,7 @@
         <option value="hl7-v2-5">HL7 v2.5</option>
       </select>
       <label>Trigger</label>
-      <select class="input" name="trigger" id="pipe-trigger-select"
-              hx-get="/ui/interop/triggers"
-              hx-target="#pipe-trigger-select"
-              hx-vals='{"version": document.getElementById("pipe-version").value}'
-              hx-trigger="load">
-      </select>
+      <select class="input" name="trigger" id="pipe-trigger-select"></select>
       <input class="input" list="pipe-trigger-datalist" id="pipe-trigger-typed" placeholder="Type trigger" oninput="window.InteropUI.syncTyped('pipe')"/>
       <datalist id="pipe-trigger-datalist"></datalist>
       <input class="input" name="template_relpath" placeholder="hl7-v2-4/ADT_A01.hl7" />
@@ -45,7 +40,8 @@
     </div>
     <div class="row gap mt">
       <label><input type="checkbox" name="post_fhir"/> Send FHIR</label>
-      <input class="input grow" name="fhir_endpoint" placeholder="https://example.org/fhir (Bundle/Resource)"/>
+      <input class="input grow" id="fhir-endpoint" name="fhir_endpoint" placeholder="https://example.org/fhir (Bundle/Resource)"/>
+      <button class="btn" type="button" onclick="document.getElementById('fhir-endpoint').value='/api/fhir/dummy';">Use dummy</button>
     </div>
     <div class="row gap mt">
       <button class="btn">Run Pipeline</button>
