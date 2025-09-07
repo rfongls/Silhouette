@@ -39,8 +39,8 @@ if %errorlevel% neq 0 goto :pipfail
 
 echo.
 echo [4/4] Starting server at http://localhost:8000/
-start "" "http://localhost:8000/ui/security/dashboard"
-call .venv\Scripts\python -m uvicorn main:app --host 127.0.0.1 --port 8000
+start "" "http://localhost:8000/ui/home"
+call .venv\Scripts\python -m uvicorn server:app --host 127.0.0.1 --port 8000 --reload
 goto :eof
 
 :pipfail

@@ -13,7 +13,7 @@ templates = Jinja2Templates(directory="templates")
 
 @router.get("/ui/security/dashboard", response_class=HTMLResponse)
 async def dashboard(request: Request):
-    return templates.TemplateResponse("security/dashboard.html", {"request": request})
+    return templates.TemplateResponse("ui/security/dashboard.html", {"request": request})
 
 
 @router.get("/ui/security/history", response_class=HTMLResponse)
