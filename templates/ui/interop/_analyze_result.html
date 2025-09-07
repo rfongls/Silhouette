@@ -1,0 +1,26 @@
+{% for r in rows %}
+  <section class="card">
+    <h4>{{ r.filename }}</h4>
+    <div class="row gap">
+      {% for k, v in (r.segments or {}).items() %}
+        <span class="chip">{{ k }}: <strong>{{ v }}</strong></span>
+      {% endfor %}
+    </div>
+    {% if r.validation %}
+      <div class="mt">
+        <strong>Validation:</strong>
+        {% if r.validation.ok %}
+          <span class="chip">OK</span>
+        {% else %}
+          <span class="chip">Issues</span>
+        {% endif %}
+        {% if r.validation.errors %}
+          <ul>{% for e in r.validation.errors %}<li>{{ e }}</li>{% endfor %}</ul>
+        {% endif %}
+        {% if r.validation.warnings %}
+          <ul class="muted">{% for w in r.validation.warnings %}<li>{{ w }}</li>{% endfor %}</ul>
+        {% endif %}
+      </div>
+    {% endif %}
+  </section>
+{% endfor %}

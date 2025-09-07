@@ -1,7 +1,9 @@
 {% for it in items %}
   <div class="sample-row">
     <div class="sample-title">
-      <strong>{{ it.trigger }}</strong> <small class="chip chip-version">{{ it.version }}</small>
+      <strong>{{ it.trigger }}</strong>
+      {% if it.description %}<span class="muted">— {{ it.description }}</span>{% endif %}
+      <small class="chip chip-version">{{ it.version }}</small>
     </div>
     <div class="sample-actions">
       <button 

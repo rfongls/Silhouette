@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-import json, subprocess, time, re
+import json, subprocess, time, shutil, re, io
 from pathlib import Path
 from typing import List, Optional, Dict, Any
 import threading
 from fastapi import APIRouter, UploadFile, File, Form, Request, Query, HTTPException
-from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse
+from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse, StreamingResponse
 from starlette.templating import Jinja2Templates
 try:
     import requests  # for optional FHIR reads
@@ -30,7 +30,22 @@ INDEX_PATH = UI_OUT / "index.json"
 # -------- HL7 Sample Indexing (templates/hl7/*) ----------
 SAMPLE_DIR = (Path(__file__).resolve().parent.parent / "templates" / "hl7").resolve()
 VALID_VERSIONS = {"hl7-v2-3", "hl7-v2-4", "hl7-v2-5"}
-
+# Human-friendly trigger descriptions (extend as needed)
+TRIGGER_DESCRIPTIONS: Dict[str, str] = {
+    "ADT_A01": "Admit/Visit Start",
+    "ADT_A03": "Discharge",
+    "ADT_A08": "Update Patient Info",
+    "ADT_A28": "Add Person",
+    "ADT_A31": "Update Person",
+    "ORM_O01": "General Order",
+    "ORU_R01": "Observation Result (LOINC)",
+    "RDE_O11": "Pharmacy/Treatment Encoded Order",
+    "VXU_V04": "Immunization Update",
+    "MDM_T02": "Document/Media update",
+    "SIU_S12": "Schedule Notification",
+    "DFT_P03": "Detailed Financial Transaction",
+    "BAR_P01": "Billing Account",
+}
 
 def _safe_sample_dir(version: str) -> Path:
     if version not in VALID_VERSIONS:
@@ -52,13 +67,15 @@ def _enumerate_samples(version: str, q: str | None = None, limit: int = 200) -> 
     for f in sorted(base.rglob("*.hl7")):
         rel = f.relative_to(SAMPLE_DIR).as_posix()
         trigger = f.stem
+        desc = TRIGGER_DESCRIPTIONS.get(trigger, "")
         if qnorm:
-            hay = f"{trigger} {rel}".lower()
+            hay = f"{trigger} {rel} {desc}".lower()
             if qnorm not in hay:
                 continue
         items.append({
             "version": version,
             "trigger": trigger,
+            "description": desc,
             "filename": f.name,
             "relpath": rel,
         })
@@ -148,6 +165,22 @@ def render_hl7_samples_partial(
     )
 
 
+@router.get("/ui/interop/triggers", response_class=HTMLResponse)
+def render_trigger_options(
+    request: Request,
+    version: str = Query("hl7-v2-4"),
+):
+    """Returns <option> list for trigger selects based on templates/hl7/<version>."""
+    try:
+        items = _enumerate_samples(version, q=None, limit=5000)
+    except HTTPException:
+        items = []
+    return templates.TemplateResponse(
+        "ui/interop/_trigger_options.html",
+        {"request": request, "items": items},
+    )
+
+
 @router.post("/interop/hl7/draft-send")
 async def interop_hl7_send(
     request: Request,
@@ -167,6 +200,25 @@ async def interop_hl7_send(
             media_type="text/html",
         )
     message = draft_message(message_type, data)
+    # Save temp HL7 for traceability
+    hl7_path = UI_OUT / "draft" / "active" / f"{int(time.time())}.hl7"
+    hl7_path.parent.mkdir(parents=True, exist_ok=True)
+    hl7_path.write_text(message, encoding="utf-8")
+    # Translate using trigger→map selection
+    map_path = _pick_map_for_trigger(message_type)
+    tr = _run_cli([
+        "fhir",
+        "translate",
+        "--in",
+        str(hl7_path),
+        "--map",
+        map_path,
+        "--out",
+        str(UI_OUT),
+        "--message-mode",
+    ])
+    _write_artifact("translate", {**tr, "out": str(UI_OUT)})
+    # send MLLP
     ack = await send_message(host, port, message)
     msa_aa = bool(re.search(r'(^|\r|\\r|\n)MSA\|AA(\||$)', ack or ""))
     payload = {
@@ -178,8 +230,29 @@ async def interop_hl7_send(
     _write_artifact("send", payload)
     return templates.TemplateResponse(
         "interop/partials/draft_result.html",
-        {"request": request, "payload": payload, "kpi": _compute_kpis()},
+        {"request": request, "payload": payload, "translate": tr, "kpi": _compute_kpis()},
         media_type="text/html",
+    )
+
+
+@router.post("/interop/hl7/analyze", response_class=HTMLResponse)
+async def interop_hl7_analyze(request: Request, hl7_files: List[UploadFile] = File(...)):
+    """Returns an HTML summary: per-file segment counts + simple validation warnings."""
+    rows = []
+    for up in hl7_files:
+        text = (await up.read()).decode("utf-8", errors="ignore")
+        segs: Dict[str, int] = {}
+        for ln in text.splitlines():
+            if not ln.strip():
+                continue
+            seg = ln.split("|", 1)[0].strip()
+            if len(seg) == 3 and seg.isupper():
+                segs[seg] = segs.get(seg, 0) + 1
+        v = validate_message(text, profile=None)
+        rows.append({"filename": up.filename, "segments": segs, "validation": v})
+    return templates.TemplateResponse(
+        "ui/interop/_analyze_result.html",
+        {"request": request, "rows": rows},
     )
 
 
@@ -582,7 +655,6 @@ async def interop_quickstart(
         "</div>"
     )
     return HTMLResponse(html)
-
 
 # -------------------- helpers for quickstart pipeline --------------------
 

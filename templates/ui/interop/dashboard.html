@@ -62,16 +62,21 @@
           hx-swap="innerHTML">
       <div class="row gap">
         <label class="label">Version</label>
-        <select name="version" class="input">
+        <select name="version" class="input" id="qs-version"
+          hx-get="/ui/interop/triggers"
+          hx-target="#qs-trigger"
+          hx-vals='{"version": this.value}'
+          hx-trigger="load, change">
           <option value="hl7-v2-3">HL7 v2.3</option>
           <option value="hl7-v2-4" selected>HL7 v2.4</option>
           <option value="hl7-v2-5">HL7 v2.5</option>
         </select>
         <label class="label">Trigger</label>
-        <select name="trigger" class="input">
-          {% for t in (triggers or ['VXU_V04','ADT_A01','ORU_R01']) %}
-            <option>{{ t }}</option>
-          {% endfor %}
+        <select name="trigger" class="input" id="qs-trigger"
+                hx-get="/ui/interop/triggers"
+                hx-target="#qs-trigger"
+                hx-vals='{"version": document.getElementById("qs-version").value}'
+                hx-trigger="load">
         </select>
       </div>
       <div class="row gap mt">
@@ -90,7 +95,11 @@
   <div class="card">
     <h3>Analyze HL7</h3>
     <p class="muted">Quick segment summary for uploaded HL7 file(s).</p>
-    <form action="/interop/hl7/analyze" method="post" hx-post="/interop/hl7/analyze" hx-target="#draft-result" hx-swap="innerHTML" enctype="multipart/form-data">
+    <form action="/interop/hl7/analyze" method="post"
+          hx-post="/interop/hl7/analyze"
+          hx-target="#draft-result"
+          hx-swap="innerHTML"
+          enctype="multipart/form-data">
       <input type="file" name="hl7_files" multiple />
       <button type="submit">Analyze</button>
     </form>
@@ -100,8 +109,22 @@
   <div class="card">
     <h3>Draft &amp; Send HL7</h3>
     <p class="muted">Create a standards-conformant HL7 message for a given trigger and send via MLLP. Pick a sample below to auto-fill valid content.</p>
-    <form action="/interop/hl7/draft-send" method="post" hx-post="/interop/hl7/draft-send" hx-target="#draft-result" hx-swap="innerHTML">
-      <input type="text" name="message_type" placeholder="ADT_A01" value="ADT_A01" />
+    <form action="/interop/hl7/draft-send" method="post"
+          hx-post="/interop/hl7/draft-send"
+          hx-target="#draft-result" hx-swap="innerHTML">
+      <div class="row gap">
+        <input type="text" name="message_type" id="ds-trigger-input" placeholder="ADT_A01" value="ADT_A01" />
+        <select class="input" id="ds-trigger-select"
+                hx-get="/ui/interop/triggers"
+                hx-target="#ds-trigger-select"
+                hx-vals='{"version": document.getElementById("sample-version").value || "hl7-v2-4"}'
+                hx-trigger="load">
+        </select>
+        <button class="btn" type="button"
+                onclick="var sel=document.getElementById('ds-trigger-select'); var v=sel && sel.value || ''; if(v){document.getElementById('ds-trigger-input').value=v;}">
+          Use Selected
+        </button>
+      </div>
       <label>JSON Data <small>(Click an Example below)</small></label>
       <textarea name="json_data" id="hl7-json" rows="14" placeholder="{}"></textarea>
       <div style="display:flex; gap:.5rem; align-items:center; margin:.25rem 0 .75rem;">
