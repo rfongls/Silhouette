@@ -15,7 +15,6 @@ def test_generate_is_deterministic_with_seed():
         "ensure_unique": True,
         "include_clinical": True,
         "deidentify": True,
-        "output_format": "ndjson",
     }
     r1 = client.post("/api/interop/generate", json=body).text
     r2 = client.post("/api/interop/generate", json=body).text
