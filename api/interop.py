@@ -1007,7 +1007,6 @@ def run_pipeline(
             "ensure_unique": ensure_unique,
             "include_clinical": include_clinical,
             "deidentify": deidentify,
-            "output_format": "single",
         }
         resp = generate_messages(body)
         text = resp.body.decode("utf-8") if hasattr(resp, "body") else str(resp)
