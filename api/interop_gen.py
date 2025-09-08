@@ -3,7 +3,6 @@ import hashlib
 from pathlib import Path
 from typing import Optional
 import re
-import json
 from urllib.parse import parse_qs
 from fastapi import APIRouter, Body, HTTPException, Request
 from fastapi.responses import JSONResponse, PlainTextResponse
@@ -155,27 +154,19 @@ def generate_messages(body: dict):
 async def generate_messages_endpoint(request: Request):
     """HTTP endpoint wrapper for :func:`generate_messages`.
     Accepts JSON or HTML form posts and always returns plain HL7 text."""
-    raw = await request.body()
     ctype = (request.headers.get("content-type") or "").lower()
-    body: dict
     if "application/json" in ctype:
         try:
-            parsed = json.loads(raw)
-            body = parsed if isinstance(parsed, dict) else {}
+            body = await request.json()
         except Exception:
+            raw = await request.body()
             qdict = parse_qs(raw.decode("utf-8", errors="ignore"))
             body = {k: v[-1] for k, v in qdict.items()}
+        if not isinstance(body, dict):
+            body = {}
     else:
-        try:
-            form = await request.form()
-            body = {k: v for k, v in form.items()}
-        except Exception:
-            qdict = parse_qs(raw.decode("utf-8", errors="ignore"))
-            body = {k: v[-1] for k, v in qdict.items()}
-    if not body:
-        text = raw.decode("utf-8", errors="ignore")
-        if text.strip():
-            body = {"text": text}
+        form = await request.form()
+        body = {k: form.get(k) for k in form.keys()}
     return generate_messages(body)
 
 
