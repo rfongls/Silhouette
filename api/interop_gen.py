@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Literal, Optional
 import re
 
-from fastapi import APIRouter, Body, HTTPException
+from fastapi import APIRouter, Body, HTTPException  # Body used for request parsing
 from fastapi.responses import JSONResponse, PlainTextResponse, StreamingResponse
 
 from silhouette_core.interop.hl7_mutate import (

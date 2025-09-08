@@ -4,7 +4,34 @@
   <h1 class="title">Reports</h1>
   <p class="subtitle">High-level view across skills</p>
 </section>
-
+<section class="card">
+  <form class="row gap" onsubmit="location.href=this.dash.value; return false;">
+    <label class="label" for="home-skill-launcher">Quick launch</label>
+    <select class="input" name="dash" id="home-skill-launcher">
+      {% for s in (skills or []) if s.dashboard %}
+        <option value="{{ s.dashboard }}">{{ s.name }}</option>
+      {% endfor %}
+    </select>
+    <button class="btn" aria-label="Open selected skill">Open</button>
+  </form>
+  <div class="muted mt">Tip: You can also click “Open … Skill” on any KPI card below.</div>
+  <script>
+    (function(){
+      var KEY = "home.quicklaunch.skill";
+      var sel = document.getElementById("home-skill-launcher");
+      if (!sel) return;
+      try {
+        var saved = localStorage.getItem(KEY);
+        if (saved) {
+          for (var i=0;i<sel.options.length;i++){
+            if (sel.options[i].value === saved) { sel.selectedIndex = i; break; }
+          }
+        }
+        sel.addEventListener("change", function(){ localStorage.setItem(KEY, sel.value); });
+      } catch(e) {}
+    })();
+  </script>
+</section>
 <section class="grid grid-3">
   {% for s in (skills or []) %}
     <div class="card">
