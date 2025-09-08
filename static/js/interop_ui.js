@@ -51,7 +51,6 @@
     try {
       fillDatalist("qs");
       fillDatalist("ds");
-      fillDatalist("gen");
       fillDatalist("pipe");
     } catch {}
   }
@@ -124,38 +123,24 @@
     setPrimaryVersion(getPrimaryVersion());
 
     // seed datalists
-    fillDatalist("qs");
-    fillDatalist("ds");
-    fillDatalist("gen");
-    fillDatalist("pipe");
+      fillDatalist("qs");
+      fillDatalist("ds");
+      fillDatalist("pipe");
 
     // refresh datalists after HTMX replaces the trigger <select>s
     document.body.addEventListener("htmx:afterSwap", (e) => {
       if (e && e.target && e.target.id === "qs-trigger") fillDatalist("qs");
       if (e && e.target && e.target.id === "ds-trigger-select") fillDatalist("ds");
-      if (e && e.target && e.target.id === "gen-trigger-select") fillDatalist("gen");
       if (e && e.target && e.target.id === "pipe-trigger-select") fillDatalist("pipe");
     });
 
     const genSel = q("gen-trigger-select");
-    if (genSel) genSel.addEventListener("change", () => syncTyped("gen"));
-
-    // Fallback: if trigger select is empty after load, populate via JSON
-    (async function ensureGenTriggers(){
-      const sel = q("gen-trigger-select");
-      const ver = (q("gen-version") || {}).value || getPrimaryVersion();
-      if (!sel || sel.options.length > 0) return;
-      try {
-        const r = await fetch(`/api/interop/triggers?version=${encodeURIComponent(ver)}`, { cache: "no-cache" });
-        const data = await r.json();
-        (data.items || []).forEach(it => {
-          const opt = document.createElement("option");
-          opt.value = it.trigger;
-          opt.textContent = it.description ? `${it.trigger} — ${it.description}` : it.trigger;
-          sel.appendChild(opt);
-        });
-      } catch (_) { }
-    })();
+    if (genSel) genSel.addEventListener("change", () => {
+      const v = (q("gen-version") || {}).value || getPrimaryVersion();
+      const input = document.querySelector('#gen-form [name="template_relpath"]');
+      const trig = genSel.value;
+      if (input && trig) input.value = `${v}/${trig}.hl7`;
+    });
   });
 
   // expose a tiny API

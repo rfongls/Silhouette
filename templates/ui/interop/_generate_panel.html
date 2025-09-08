@@ -19,15 +19,18 @@
               hx-include="#gen-version"
               onchange="window.InteropUI.syncTyped('gen')">
       </select>
-
+      <label>Trigger</label>
       <select class="input" id="gen-trigger-select" name="trigger"
               hx-get="/ui/interop/triggers"
               hx-target="#gen-trigger-select"
               hx-trigger="load, change from:#gen-version"
-              hx-include="#gen-version"
-              onchange="window.InteropUI.syncTyped('gen')">
+              hx-vals='{"version": document.getElementById("gen-version").value}'>
       </select>
+    </div>
 
+    <div class="row gap mt">
+      <input class="input grow" type="text" name="template_relpath"
+             placeholder="e.g., hl7-v2-4/ADT_A01.hl7"/>
       <select class="input" id="gen-trigger-select" name="trigger"
               hx-get="/ui/interop/triggers"
               hx-target="#gen-trigger-select"
