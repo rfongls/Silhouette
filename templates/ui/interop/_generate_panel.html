@@ -8,14 +8,23 @@
         hx-swap="innerHTML">
     <div class="row gap">
       <label>Version</label>
-      <select name="version" class="input" id="gen-version">
+      <select name="version" class="input hl7-version-select" id="gen-version" data-hx-refresh-target="1">
         <option value="hl7-v2-3">HL7 v2.3</option>
         <option value="hl7-v2-4" selected>HL7 v2.4</option>
         <option value="hl7-v2-5">HL7 v2.5</option>
       </select>
 
-      <input class="input grow" type="text" name="template_relpath"
-             placeholder="e.g., hl7-v2-4/ADT_A01.hl7 (from Sample Finder)"/>
+      <select class="input" id="gen-trigger-select"
+              hx-get="/ui/interop/triggers"
+              hx-vals='{"version": document.getElementById("gen-version").value}'
+              hx-target="#gen-trigger-select"
+              hx-trigger="load, change from:#gen-version"
+              onchange="window.InteropUI.syncTyped('gen')">
+      </select>
+
+      <input class="input grow" type="text" name="template_relpath" list="gen-trigger-datalist"
+             placeholder="e.g., hl7-v2-4/ADT_A01.hl7"/>
+      <datalist id="gen-trigger-datalist"></datalist>
 
       <input class="input" type="number" name="count" min="1" max="10000" value="25" />
       <input class="input" type="number" name="seed" placeholder="seed (optional)"/>
@@ -33,9 +42,9 @@
     </div>
 
     <div class="row gap mt">
-      <button class="btn">Preview 1</button>
-      <button class="btn" onclick="this.form.count.value=Math.max(1,parseInt(this.form.count.value||'1')); return true;">Generate</button>
+      <button class="btn" onclick="this.form.count.value=1; return true;">Preview 1</button>
+      <button class="btn" onclick="this.form.count.value=Math.max(1, parseInt(this.form.count.value||'1')); return true;">Generate</button>
     </div>
   </form>
-  <pre id="gen-output" class="codepane muted mt">Use Sample Finder to copy a template relpath, then Generate.</pre>
+  <pre id="gen-output" class="codepane muted mt">Use Sample Finder to copy a template relpath, pick a trigger, or type and select. Then Generate.</pre>
 </section>

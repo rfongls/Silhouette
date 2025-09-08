@@ -35,18 +35,21 @@ def _assert_rel_under_templates(relpath: str) -> Path:
     return p
 
 
-class GenerateReq(dict):
-    """Request body for message generation."""
-
-
-@router.post("/api/interop/generate")
-def generate_messages(body: GenerateReq):
+@router.post("/api/interop/generate", response_model=None)
+def generate_messages(body: dict = Body(...)):
     version = body.get("version", "hl7-v2-4")
     if version not in VALID_VERSIONS:
         raise HTTPException(400, f"Unknown version '{version}'")
 
     rel = body.get("template_relpath")
+    trig = (body.get("trigger") or "").strip()
     text = body.get("text")
+    if not rel and trig:
+        t = trig.upper()
+        cand = f"{version}/{t}.hl7"
+        p = (TEMPLATES_HL7_DIR / cand).resolve()
+        if p.exists():
+            rel = cand
     if not rel and not text:
         raise HTTPException(400, "Provide template_relpath or text")
     if rel and not rel.startswith(version + "/"):
