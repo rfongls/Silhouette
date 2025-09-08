@@ -78,23 +78,11 @@ def _find_template_by_trigger(version: str, trigger: str) -> Optional[str]:
     return None
 
 
-@router.post("/api/interop/generate", response_model=None)
-async def generate_messages(request: Request):
+def generate_messages(body: dict):
     """Generate HL7 messages from a template.
-
-    The endpoint accepts either JSON payloads or regular HTML form posts. We
-    attempt to parse JSON first and fall back to form fields if the body isn't
-    JSON. If both attempts fail, an empty dictionary is used so downstream
-    validation can raise a helpful error."""
-    try:
-        body = await request.json()
-    except Exception:
-        try:
-            form = await request.form()
-            body = dict(form)
-        except Exception:
-            body = {}
-
+    This helper takes a dict-like body and returns a FastAPI response. It is
+    used by the HTTP endpoint below and by internal callers such as the
+    pipeline runner."""
     version = body.get("version", "hl7-v2-4")
     if version not in VALID_VERSIONS:
         raise HTTPException(400, f"Unknown version '{version}'")
@@ -160,6 +148,21 @@ async def generate_messages(request: Request):
         return StreamingResponse(mem, media_type="application/zip", headers=headers)
     else:
         raise HTTPException(400, "Unknown output_format")
+
+
+@router.post("/api/interop/generate", response_model=None)
+async def generate_messages_endpoint(request: Request):
+    """HTTP endpoint wrapper for :func:`generate_messages` that accepts both JSON
+    and HTML form posts."""
+    try:
+        body = await request.json()
+    except Exception:
+        try:
+            form = await request.form()
+            body = dict(form)
+        except Exception:
+            body = {}
+    return generate_messages(body)
 
 
 @router.post("/api/interop/deidentify")
