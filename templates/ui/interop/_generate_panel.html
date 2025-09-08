@@ -7,20 +7,19 @@
         hx-swap="text">
     <div class="row gap">
       <label>Version</label>
-      <select name="version" class="input hl7-version-select" id="gen-version" data-hx-refresh-target="1" onchange="window.InteropUI.fillDatalist('gen')">
+      <select name="version" class="input hl7-version-select" id="gen-version" data-hx-refresh-target="1" onchange="window.InteropUI.fillTemplates('gen')">
         <option value="hl7-v2-3">HL7 v2.3</option>
         <option value="hl7-v2-4" selected>HL7 v2.4</option>
         <option value="hl7-v2-5">HL7 v2.5</option>
       </select>
-      <label>Trigger</label>
-      <!-- Single field: dropdown + type-ahead -->
+      <label>Template</label>
       <input class="input grow"
-             id="gen-trigger-typed"
-             name="trigger"
-             list="gen-trigger-datalist"
-             placeholder="Type a trigger (e.g., ADT_A01)"
-             onfocus="window.InteropUI.fillDatalist('gen')"/>
-      <datalist id="gen-trigger-datalist"></datalist>
+             id="gen-template"
+             name="template_relpath"
+             list="gen-template-datalist"
+             placeholder="Select HL7 template"
+             onfocus="window.InteropUI.fillTemplates('gen')"/>
+      <datalist id="gen-template-datalist"></datalist>
     </div>
 
     <div class="row gap mt">
@@ -38,5 +37,5 @@
       <button class="btn" onclick="this.form.count.value=Math.max(1, parseInt(this.form.count.value||'1')); return true;">Generate</button>
     </div>
   </form>
-  <pre id="gen-output" class="codepane muted mt">Type a trigger above and press Generate.</pre>
+  <pre id="gen-output" class="codepane muted mt">Select a template above and press Generate.</pre>
 </section>

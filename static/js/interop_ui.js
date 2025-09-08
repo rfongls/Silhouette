@@ -1,6 +1,6 @@
 // Lightweight UI helpers for Interop dashboard
 // - Manage Features vs Reports view
-// - Populate datalists for trigger typeahead from /api/interop/triggers
+// - Populate trigger or template typeaheads for various panels
 // - Maintain a primary HL7 version shared across panels
 
 (function () {
@@ -51,7 +51,7 @@
     try {
       fillDatalist("qs");
       fillDatalist("ds");
-      fillDatalist("gen");
+      fillTemplates("gen");
       fillDatalist("pipe");
     } catch {}
   }
@@ -72,6 +72,26 @@
         const opt = document.createElement("option");
         opt.value = it.trigger;
         opt.label = it.description ? `${it.trigger} — ${it.description}` : it.trigger;
+        dl.appendChild(opt);
+      });
+    } catch (e) {
+      // swallow
+    }
+  }
+
+  async function fillTemplates(prefix) {
+    const versionSel = q(prefix + "-version") || q("sample-version") || q("gen-version");
+    const version = versionSel ? versionSel.value : getPrimaryVersion();
+    try {
+      const r = await fetch(`/api/interop/samples?version=${encodeURIComponent(version)}&limit=5000`, {cache: "no-cache"});
+      const data = await r.json();
+      const dl = q(prefix + "-template-datalist");
+      if (!dl) return;
+      dl.innerHTML = "";
+      (data.items || []).forEach(it => {
+        const opt = document.createElement("option");
+        opt.value = it.relpath;
+        opt.label = it.description ? `${it.filename} — ${it.description}` : it.filename;
         dl.appendChild(opt);
       });
     } catch (e) {
@@ -114,7 +134,7 @@
     // seed datalists
     fillDatalist("qs");
     fillDatalist("ds");
-    fillDatalist("gen");
+    fillTemplates("gen");
     fillDatalist("pipe");
 
     // refresh datalists after HTMX replaces the trigger <select>s
@@ -124,15 +144,16 @@
       if (e && e.target && e.target.id === "pipe-trigger-select") fillDatalist("pipe");
     });
 
-    // ensure Generate list is filled when the field receives focus
-    const genTyped = q("gen-trigger-typed");
-    if (genTyped) genTyped.addEventListener("focus", () => fillDatalist("gen"));
+    // ensure Generate template list is filled when the field receives focus
+    const genTpl = q("gen-template");
+    if (genTpl) genTpl.addEventListener("focus", () => fillTemplates("gen"));
   });
 
   // expose a tiny API
   window.InteropUI = {
     syncTyped,
     fillDatalist,
+    fillTemplates,
     setPrimaryVersion,
     getPrimaryVersion
   };

@@ -75,6 +75,26 @@ def _find_template_by_trigger(version: str, trigger: str) -> Optional[str]:
     return None
 
 
+def _guess_rel_from_trigger(trigger: str, version: str) -> Optional[str]:
+    """Find a template relpath for a trigger, trying the given version, then others.
+
+    Also searches the top-level templates/hl7 directory for convenience."""
+    cand = _find_template_by_trigger(version, trigger)
+    if cand:
+        return cand
+    for v in sorted(VALID_VERSIONS):
+        if v == version:
+            continue
+        cand = _find_template_by_trigger(v, trigger)
+        if cand:
+            return cand
+    want = (trigger or "").upper()
+    for f in TEMPLATES_HL7_DIR.iterdir():
+        if _is_template_file(f) and _derive_trigger_from_name(f.name) == want:
+            return f.relative_to(TEMPLATES_HL7_DIR).as_posix()
+    return None
+
+
 def generate_messages(body: dict):
     """Generate HL7 messages from a template.
     This helper takes a dict-like body and returns a FastAPI response. It is
@@ -88,13 +108,11 @@ def generate_messages(body: dict):
     trig = (body.get("trigger") or "").strip()
     text = body.get("text")
     if not rel and trig:
-        cand = _find_template_by_trigger(version, trig)
-        if cand:
-            rel = cand
+        rel = _guess_rel_from_trigger(trig, version)
+    if rel:
+        version = rel.split("/", 1)[0]
     if not rel and not text:
-        raise HTTPException(400, "Provide template_relpath or text")
-    if rel and not rel.startswith(version + "/"):
-        raise HTTPException(400, "template_relpath must live under the selected version folder")
+        raise HTTPException(404, f"No template found for trigger '{trig}'")
 
     count = _to_int(body.get("count", 1), 1)
     if count is None or count < 1 or count > 10000:

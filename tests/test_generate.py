@@ -100,4 +100,23 @@ def test_generate_tolerates_mislabeled_json():
     )
     assert r.status_code == 200
     assert "ADT^A01" in r.text
+    
 
+def test_trigger_searches_other_versions(tmp_path, monkeypatch):
+    base = tmp_path / "templates" / "hl7"
+    base.mkdir(parents=True)
+    (base / "hl7-v2-5").mkdir(parents=True)
+    (base / "hl7-v2-5" / "ZZZ_X99.hl7").write_text(
+        "MSH|^~\\&||||||ZZZ_X99|MSGID|P|2.5\\r",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(ig, "TEMPLATES_HL7_DIR", base)
+    app = FastAPI()
+    app.include_router(ig.router)
+    local_client = TestClient(app)
+    r = local_client.post(
+        "/api/interop/generate",
+        data={"version": "hl7-v2-4", "trigger": "ZZZ_X99"},
+    )
+    assert r.status_code == 200
+    assert "ZZZ_X99" in r.text
