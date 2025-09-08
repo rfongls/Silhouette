@@ -51,7 +51,7 @@
     try {
       fillDatalist("qs");
       fillDatalist("ds");
-      fillTemplates("gen");
+      fillDatalist("gen");
       fillDatalist("pipe");
     } catch {}
   }
@@ -62,15 +62,22 @@
   async function fillDatalist(prefix) {
     const versionSel = q(prefix + "-version") || q("sample-version") || q("gen-version");
     const version = versionSel ? versionSel.value : getPrimaryVersion();
+    const dl = q(prefix + "-trigger-datalist");
+    if (!dl) return;
+    // clear and tag with version to avoid races
+    dl.innerHTML = "";
+    dl.dataset.ver = version;
     try {
       const r = await fetch(`/api/interop/triggers?version=${encodeURIComponent(version)}`, {cache: "no-cache"});
       const data = await r.json();
-      const dl = q(prefix + "-trigger-datalist");
-      if (!dl) return;
-      dl.innerHTML = "";
+      const seen = new Set();
       (data.items || []).forEach(it => {
+        // Only show one per trigger and only for this version
+        const trig = (it.trigger || "").toUpperCase().trim();
+        if (!trig || seen.has(trig)) return;
+        seen.add(trig);
         const opt = document.createElement("option");
-        opt.value = it.trigger;
+        opt.value = trig;
         opt.label = it.description ? `${it.trigger} — ${it.description}` : it.trigger;
         dl.appendChild(opt);
       });
@@ -136,7 +143,7 @@
     // seed datalists
     fillDatalist("qs");
     fillDatalist("ds");
-    fillTemplates("gen");
+    fillDatalist("gen");
     fillDatalist("pipe");
 
     // refresh datalists after HTMX replaces the trigger <select>s
@@ -145,10 +152,6 @@
       if (e && e.target && e.target.id === "ds-trigger-select") fillDatalist("ds");
       if (e && e.target && e.target.id === "pipe-trigger-select") fillDatalist("pipe");
     });
-
-    // ensure Generate template list is filled when the field receives focus
-    const genTpl = q("gen-template");
-    if (genTpl) genTpl.addEventListener("focus", () => fillTemplates("gen"));
   });
 
   // expose a tiny API
