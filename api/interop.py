@@ -108,13 +108,10 @@ def _enumerate_samples(version: str, q: str | None = None, limit: int = 200) -> 
     base = _safe_sample_dir(version)
     items: list[dict[str, str]] = []
     qnorm = (q or "").strip().lower()
-    seen: set[str] = set()
     files = sorted([p for p in base.rglob("*") if _is_template_file(p)])
     for f in files:
         rel = f.relative_to(SAMPLE_DIR).as_posix()
         trigger = _derive_trigger_from_name(f.name)
-        if not trigger or trigger in seen:
-            continue
         desc = _describe_trigger(trigger)
         if qnorm and qnorm not in f"{trigger} {rel} {desc}".lower():
             continue
@@ -125,7 +122,6 @@ def _enumerate_samples(version: str, q: str | None = None, limit: int = 200) -> 
             "filename": f.name,
             "relpath": rel,
         })
-        seen.add(trigger)
         if len(items) >= limit:
             break
     return items
@@ -1007,7 +1003,6 @@ def run_pipeline(
             "ensure_unique": ensure_unique,
             "include_clinical": include_clinical,
             "deidentify": deidentify,
-            "output_format": "single",
         }
         resp = generate_messages(body)
         text = resp.body.decode("utf-8") if hasattr(resp, "body") else str(resp)
