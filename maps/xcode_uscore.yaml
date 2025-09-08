@@ -1,0 +1,20 @@
+messageTypes:
+  # Product experience event (X code)
+  - "PEX^X01"
+resourcePlan:
+  # AdverseEvent captures adverse product experiences
+  - resource: AdverseEvent
+    rules:
+      - hl7Field: PID.3
+        fhirPath: subject.identifier
+      - hl7Field: ""
+        fhirPath: status
+        transform: default_adverseevent_status
+  # DetectedIssue documents any resulting issues or warnings
+  - resource: DetectedIssue
+    rules:
+      - hl7Field: PID.3
+        fhirPath: patient.identifier
+      - hl7Field: ""
+        fhirPath: status
+        transform: default_detectedissue_status
