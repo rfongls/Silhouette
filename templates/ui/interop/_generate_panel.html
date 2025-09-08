@@ -13,7 +13,7 @@
         <option value="hl7-v2-5">HL7 v2.5</option>
       </select>
       <label>Trigger</label>
-      <!-- Single type-ahead field with a dropdown of available messages -->
+      <!-- Single field: dropdown + type-ahead -->
       <input class="input grow"
              id="gen-trigger-typed"
              name="trigger"
@@ -43,5 +43,5 @@
       <button class="btn" onclick="this.form.count.value=Math.max(1, parseInt(this.form.count.value||'1')); return true;">Generate</button>
     </div>
   </form>
-  <pre id="gen-output" class="codepane muted mt">Type a trigger above, then press Generate.</pre>
+  <pre id="gen-output" class="codepane muted mt">Type a trigger above and press Generate.</pre>
 </section>
