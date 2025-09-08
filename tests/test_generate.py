@@ -75,3 +75,16 @@ def test_deidentify_can_be_disabled():
     r = client.post("/api/interop/generate", json=body)
     assert r.status_code == 200
     assert "Davis^Jessica" in r.text
+
+def test_generate_accepts_form_posts():
+    """HTMX-style form posts should be accepted without JSON payloads."""
+    data = {
+        "version": "hl7-v2-4",
+        "trigger": "ADT_A01",
+        "count": "1",
+    }
+    r = client.post("/api/interop/generate", data=data)
+    assert r.status_code == 200
+    # The returned message should contain the ADT^A01 event in the MSH segment
+    assert "ADT^A01" in r.text
+

@@ -6,7 +6,7 @@ from io import BytesIO
 from pathlib import Path
 from typing import Literal, Optional
 import re
-from fastapi import APIRouter, Body, HTTPException, Request  # Body used for request parsing
+from fastapi import APIRouter, Body, HTTPException, Request
 from fastapi.responses import JSONResponse, PlainTextResponse, StreamingResponse
 
 from silhouette_core.interop.hl7_mutate import (
@@ -79,12 +79,16 @@ def _find_template_by_trigger(version: str, trigger: str) -> Optional[str]:
 
 
 @router.post("/api/interop/generate", response_model=None)
-async def generate_messages(
-    request: Request,
-    body: dict | None = Body(None),
-):
-    # If the client didn't send JSON, try parsing form data
-    if body is None:
+async def generate_messages(request: Request):
+    """Generate HL7 messages from a template.
+
+    The endpoint accepts either JSON payloads or regular HTML form posts. We
+    attempt to parse JSON first and fall back to form fields if the body isn't
+    JSON. If both attempts fail, an empty dictionary is used so downstream
+    validation can raise a helpful error."""
+    try:
+        body = await request.json()
+    except Exception:
         try:
             form = await request.form()
             body = dict(form)
