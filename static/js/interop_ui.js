@@ -92,7 +92,8 @@
       (data.items || []).forEach(it => {
         const opt = document.createElement("option");
         opt.value = it.relpath;
-        opt.label = it.description ? `${it.filename} — ${it.description}` : it.filename;
+        const label = it.description ? `${it.relpath} — ${it.description}` : it.relpath;
+        opt.label = label;
         dl.appendChild(opt);
       });
     } catch (e) {

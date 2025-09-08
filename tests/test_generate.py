@@ -101,6 +101,7 @@ def test_generate_tolerates_mislabeled_json():
     assert r.status_code == 200
     assert "ADT^A01" in r.text
 
+    
 def test_trigger_searches_other_versions(tmp_path, monkeypatch):
     base = tmp_path / "templates" / "hl7"
     base.mkdir(parents=True)
