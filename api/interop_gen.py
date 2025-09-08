@@ -115,7 +115,10 @@ async def generate_messages(
     rng_seed = _to_int(seed, None)
     ensure_unique = _to_bool(body.get("ensure_unique", True))
     include_clinical = _to_bool(body.get("include_clinical", False))
-    deidentify = _to_bool(body.get("deidentify", False))
+    deid_input = body.get("deidentify")
+    deidentify = _to_bool(deid_input)
+    if count > 1 and (deid_input is None or str(deid_input).strip() == ""):
+        deidentify = True
     output_format: Literal["single", "one_per_file", "ndjson", "zip"] = body.get("output_format", "single")
 
     template_text = text or load_template_text(_assert_rel_under_templates(rel))
@@ -137,8 +140,8 @@ async def generate_messages(
         msgs.append(msg)
 
     if output_format == "single":
-        body = "\n".join(msgs)
-        return PlainTextResponse(body, media_type="text/plain")
+        out = "\n".join(msgs) + ("\n" if msgs else "")
+        return PlainTextResponse(out, media_type="text/plain")
     elif output_format == "ndjson":
         lines = [json.dumps({"i": i, "hl7": m}, ensure_ascii=False) for i, m in enumerate(msgs)]
         return PlainTextResponse("\n".join(lines), media_type="application/x-ndjson")
