@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Literal, Optional
 import re
 
-from fastapi import APIRouter, Body, HTTPException
+from fastapi import APIRouter, Body, HTTPException, Request  # Body used for request parsing
 from fastapi.responses import JSONResponse, PlainTextResponse, StreamingResponse
 
 from silhouette_core.interop.hl7_mutate import (
@@ -35,32 +35,89 @@ def _assert_rel_under_templates(relpath: str) -> Path:
     return p
 
 
-class GenerateReq(dict):
-    """Request body for message generation."""
+def _to_bool(v):
+    if isinstance(v, bool):
+        return v
+    s = str(v).strip().lower()
+    return s in ("1", "true", "on", "yes")
 
 
-@router.post("/api/interop/generate")
-def generate_messages(body: GenerateReq):
+def _to_int(v, default=None):
+    try:
+        return int(v)
+    except Exception:
+        return default
+
+
+def _derive_trigger_from_name(name: str) -> str:
+    s = name
+    if s.lower().endswith(".j2"):
+        s = s[:-3]
+    for ext in (".hl7", ".txt"):
+        if s.lower().endswith(ext):
+            s = s[: -len(ext)]
+    return Path(s).stem.upper()
+
+
+def _is_template_file(p: Path) -> bool:
+    if not p.is_file():
+        return False
+    n = p.name.lower()
+    return n.endswith(".hl7.j2") or n.endswith(".hl7") or n.endswith(".txt")
+
+
+def _find_template_by_trigger(version: str, trigger: str) -> Optional[str]:
+    """Return relpath under templates/hl7 for first file matching trigger, any extension."""
+    base = (TEMPLATES_HL7_DIR / version).resolve()
+    if not base.exists():
+        return None
+    want = (trigger or "").upper()
+    for f in base.rglob("*"):
+        if not _is_template_file(f):
+            continue
+        if _derive_trigger_from_name(f.name) == want:
+            return f.relative_to(TEMPLATES_HL7_DIR).as_posix()
+    return None
+
+
+@router.post("/api/interop/generate", response_model=None)
+async def generate_messages(
+    request: Request,
+    body: dict | None = Body(None),
+):
+    # If the client didn't send JSON, try parsing form data
+    if body is None:
+        try:
+            form = await request.form()
+            body = dict(form)
+        except Exception:
+            body = {}
+
     version = body.get("version", "hl7-v2-4")
     if version not in VALID_VERSIONS:
         raise HTTPException(400, f"Unknown version '{version}'")
 
-    rel = body.get("template_relpath")
+    rel = (body.get("template_relpath") or "").strip()
+    trig = (body.get("trigger") or "").strip()
     text = body.get("text")
+    if not rel and trig:
+        cand = _find_template_by_trigger(version, trig)
+        if cand:
+            rel = cand
     if not rel and not text:
         raise HTTPException(400, "Provide template_relpath or text")
     if rel and not rel.startswith(version + "/"):
         raise HTTPException(400, "template_relpath must live under the selected version folder")
 
-    count = int(body.get("count", 1))
-    if count < 1 or count > 10000:
+    count = _to_int(body.get("count", 1), 1)
+    if count is None or count < 1 or count > 10000:
         raise HTTPException(400, "count must be 1..10000")
 
     seed = body.get("seed")
-    rng_seed = int(seed) if seed is not None else None
-    ensure_unique = bool(body.get("ensure_unique", True))
-    include_clinical = bool(body.get("include_clinical", False))
-    deidentify = bool(body.get("deidentify", False))
+    rng_seed = _to_int(seed, None)
+    ensure_unique = _to_bool(body.get("ensure_unique", True))
+    include_clinical = _to_bool(body.get("include_clinical", False))
+    deidentify = _to_bool(body.get("deidentify", False))
     output_format: Literal["single", "one_per_file", "ndjson", "zip"] = body.get("output_format", "single")
 
     template_text = text or load_template_text(_assert_rel_under_templates(rel))

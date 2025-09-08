@@ -2,20 +2,26 @@
   <h3>Generate Messages</h3>
   <form id="gen-form"
         hx-post="/api/interop/generate"
-        hx-encoding="json"
         hx-trigger="submit"
         hx-target="#gen-output"
         hx-swap="innerHTML">
     <div class="row gap">
       <label>Version</label>
-      <select name="version" class="input" id="gen-version">
+      <select name="version" class="input hl7-version-select" id="gen-version" data-hx-refresh-target="1" onchange="window.InteropUI.fillDatalist('gen')">
         <option value="hl7-v2-3">HL7 v2.3</option>
         <option value="hl7-v2-4" selected>HL7 v2.4</option>
         <option value="hl7-v2-5">HL7 v2.5</option>
       </select>
+      <label>Trigger</label>
+      <input class="input" id="gen-trigger-typed" name="trigger" list="gen-trigger-datalist"
+             placeholder="Type a trigger (e.g., ADT_A01)"
+             oninput="window.InteropUI.syncTyped('gen')"/>
+      <datalist id="gen-trigger-datalist"></datalist>
+    </div>
 
+    <div class="row gap mt">
       <input class="input grow" type="text" name="template_relpath"
-             placeholder="e.g., hl7-v2-4/ADT_A01.hl7 (from Sample Finder)"/>
+             placeholder="e.g., hl7-v2-4/ADT_A01.hl7"/>
 
       <input class="input" type="number" name="count" min="1" max="10000" value="25" />
       <input class="input" type="number" name="seed" placeholder="seed (optional)"/>
@@ -33,9 +39,9 @@
     </div>
 
     <div class="row gap mt">
-      <button class="btn">Preview 1</button>
-      <button class="btn" onclick="this.form.count.value=Math.max(1,parseInt(this.form.count.value||'1')); return true;">Generate</button>
+      <button class="btn" onclick="this.form.count.value=1; return true;">Preview 1</button>
+      <button class="btn" onclick="this.form.count.value=Math.max(1, parseInt(this.form.count.value||'1')); return true;">Generate</button>
     </div>
   </form>
-  <pre id="gen-output" class="codepane muted mt">Use Sample Finder to copy a template relpath, then Generate.</pre>
+  <pre id="gen-output" class="codepane muted mt">Use Sample Finder to copy a template relpath, pick a trigger, or type and select. Then Generate.</pre>
 </section>
