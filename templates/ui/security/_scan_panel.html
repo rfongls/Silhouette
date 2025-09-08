@@ -1,0 +1,14 @@
+<section class="card" data-feature="scan">
+  <h3>Scan</h3>
+  <form hx-post="/ui/security/scan" hx-target="#scan-out" hx-swap="innerHTML">
+    <div class="row gap">
+      <input class="input" name="target" placeholder="host or CIDR" value="localhost"/>
+      <select class="input" name="scope">
+        <option value="light" selected>Light</option>
+        <option value="deep">Deep</option>
+      </select>
+      <button class="btn">Run</button>
+    </div>
+  </form>
+  <div id="scan-out" class="mt muted">Results will appear here…</div>
+</section>

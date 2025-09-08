@@ -1,0 +1,15 @@
+<section class="card" data-feature="ir">
+  <h3>IR Playbook</h3>
+  <form hx-post="/ui/security/ir" hx-target="#ir-out" hx-swap="innerHTML">
+    <div class="row gap">
+      <input class="input" name="incident_id" placeholder="INC-12345" value="INC-12345"/>
+      <select class="input" name="action">
+        <option value="triage" selected>Triage</option>
+        <option value="contain">Contain</option>
+        <option value="eradicate">Eradicate</option>
+      </select>
+      <button class="btn">Run</button>
+    </div>
+  </form>
+  <div id="ir-out" class="mt muted">IR results appear here…</div>
+</section>
