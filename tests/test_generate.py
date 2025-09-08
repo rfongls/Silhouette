@@ -52,3 +52,26 @@ def test_generate_from_trigger_any_extension(tmp_path, monkeypatch):
     )
     assert r.status_code == 200
     assert "ZZZ_TEST" in r.text
+
+
+def test_auto_deidentify_when_count_gt_one():
+    body = {
+        "version": "hl7-v2-4",
+        "template_relpath": "hl7-v2-4/ADT_A01.hl7",
+        "count": 2,
+    }
+    r = client.post("/api/interop/generate", json=body)
+    assert r.status_code == 200
+    assert "Davis^Jessica" not in r.text
+
+
+def test_deidentify_can_be_disabled():
+    body = {
+        "version": "hl7-v2-4",
+        "template_relpath": "hl7-v2-4/ADT_A01.hl7",
+        "count": 2,
+        "deidentify": False,
+    }
+    r = client.post("/api/interop/generate", json=body)
+    assert r.status_code == 200
+    assert "Davis^Jessica" in r.text
