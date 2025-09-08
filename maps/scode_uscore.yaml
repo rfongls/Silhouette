@@ -1,0 +1,164 @@
+messageTypes:
+  # Scheduling and specimen logistics events (S codes)
+  # Appointment management requests
+  - "SRM^S01"
+  - "SRR^S01"
+  - "SRM^S02"
+  - "SRR^S02"
+  - "SRM^S03"
+  - "SRR^S03"
+  - "SRM^S04"
+  - "SRR^S04"
+  - "SRM^S05"
+  - "SRR^S05"
+  - "SRM^S06"
+  - "SRR^S06"
+  - "SRM^S07"
+  - "SRR^S07"
+  - "SRM^S08"
+  - "SRR^S08"
+  - "SRM^S09"
+  - "SRR^S09"
+  - "SRM^S10"
+  - "SRR^S10"
+  - "SRM^S11"
+  - "SRR^S11"
+  # Appointment broadcast notifications
+  - "SIU^S27"
+  - "ACK^S27"
+  # Sterilization and antimicrobial device events
+  - "SLR^S28"
+  - "SLS^S28"
+  - "SLR^S29"
+  - "SLS^S29"
+  - "STI^S30"
+  - "STS^S30"
+  - "SDR^S31"
+  - "SDS^S31"
+  - "SMD^S32"
+  - "SMS^S32"
+  - "STC^S33"
+  - "ACK^S33"
+  - "SLN^S34"
+  - "ACK^S34"
+  - "SLN^S35"
+  - "ACK^S35"
+  - "SDN^S36"
+  - "ACK^S36"
+  - "SCN^S37"
+  - "ACK^S37"
+  # Specimen procedure and transport events
+  - "S38^S38"
+  - "S39^S39"
+  - "S40^S40"
+  - "S41^S41"
+  - "S42^S42"
+  - "S43^S43"
+  - "S44^S44"
+  - "S45^S45"
+  - "S46^S46"
+  - "S47^S47"
+  - "S48^S48"
+  - "S49^S49"
+  - "S50^S50"
+  - "S51^S51"
+  - "S52^S52"
+resourcePlan:
+  # Appointment resources schedule and respond to booking requests
+  - resource: Appointment
+    rules:
+      - hl7Field: PID.3
+        fhirPath: subject.identifier
+      - hl7Field: ""
+        fhirPath: status
+        transform: default_appointment_status
+  - resource: AppointmentResponse
+    rules:
+      - hl7Field: PID.3
+        fhirPath: subject.identifier
+      - hl7Field: ""
+        fhirPath: status
+        transform: default_appointmentresponse_status
+  - resource: Schedule
+    rules:
+      - hl7Field: PID.3
+        fhirPath: actor.identifier
+      - hl7Field: ""
+        fhirPath: status
+        transform: default_schedule_status
+  - resource: Slot
+    rules:
+      - hl7Field: PID.3
+        fhirPath: schedule.actor.identifier
+      - hl7Field: ""
+        fhirPath: status
+        transform: default_slot_status
+  - resource: ServiceRequest
+    rules:
+      - hl7Field: PID.3
+        fhirPath: subject.identifier
+      - hl7Field: ""
+        fhirPath: status
+        transform: default_servicerequest_status
+  # Specimen resources manage specimen lifecycle events
+  - resource: Specimen
+    rules:
+      - hl7Field: PID.3
+        fhirPath: subject.identifier
+      - hl7Field: ""
+        fhirPath: status
+        transform: default_specimen_status
+  # Procedures capture specimen collection and processing steps
+  - resource: Procedure
+    rules:
+      - hl7Field: PID.3
+        fhirPath: subject.identifier
+      - hl7Field: ""
+        fhirPath: status
+        transform: default_procedure_status
+  # BiologicallyDerivedProduct represents derived specimens (e.g. aliquots)
+  - resource: BiologicallyDerivedProduct
+    rules:
+      - hl7Field: ""
+        fhirPath: status
+        transform: default_biologicallyderivedproduct_status
+  # Device resources represent equipment used in sterilization cycles
+  - resource: Device
+    rules:
+      - hl7Field: ""
+        fhirPath: status
+        transform: default_device_status
+  - resource: DeviceMetric
+    rules:
+      - hl7Field: ""
+        fhirPath: status
+        transform: default_devicemetric_status
+  - resource: DeviceRequest
+    rules:
+      - hl7Field: PID.3
+        fhirPath: subject.identifier
+      - hl7Field: ""
+        fhirPath: status
+        transform: default_devicerequest_status
+  - resource: DeviceUsage
+    rules:
+      - hl7Field: PID.3
+        fhirPath: subject.identifier
+      - hl7Field: ""
+        fhirPath: status
+        transform: default_deviceusage_status
+  # SupplyRequest and SupplyDelivery track sterilization lots and device supply
+  - resource: SupplyRequest
+    rules:
+      - hl7Field: PID.3
+        fhirPath: subject.identifier
+      - hl7Field: ""
+        fhirPath: status
+        transform: default_supplyrequest_status
+  - resource: SupplyDelivery
+    rules:
+      - hl7Field: PID.3
+        fhirPath: subject.identifier
+      - hl7Field: ""
+        fhirPath: status
+        transform: default_supplydelivery_status

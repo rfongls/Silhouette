@@ -1,0 +1,67 @@
+messageTypes:
+  # Problem, goal, and pathway events (PC codes)
+  - "PPR^PC1"
+  - "PPR^PC2"
+  - "PPR^PC3"
+  - "QRY^PC4"
+  - "PRR^PC5"
+  - "PGL^PC6"
+  - "PGL^PC7"
+  - "PGL^PC8"
+  - "QRY^PC9"
+  - "PPV^PCA"
+  - "PPV^PCB"
+  - "PPV^PCC"
+  - "PPV^PCD"
+  - "PPV^PCE"
+  - "PPV^PCF"
+  - "PPV^PCG"
+  - "PPV^PCH"
+  - "PPV^PCJ"
+  - "PPV^PCK"
+  - "PPV^PCL"
+resourcePlan:
+  # Condition resources record problems associated with the patient
+  - resource: Condition
+    rules:
+      - hl7Field: DG1.3
+        fhirPath: code
+        transform: dg1_to_codeableconcept
+      - hl7Field: ""
+        fhirPath: clinicalStatus
+        transform: default_condition_clinical_status
+      - hl7Field: ""
+        fhirPath: verificationStatus
+        transform: default_condition_verification_status
+      - hl7Field: PID.3
+        fhirPath: subject.identifier
+  # Goal resources capture desired outcomes
+  - resource: Goal
+    rules:
+      - hl7Field: PID.3
+        fhirPath: subject.identifier
+      - hl7Field: ""
+        fhirPath: status
+        transform: default_goal_status
+  # CarePlan ties problems and goals into a plan of care
+  - resource: CarePlan
+    rules:
+      - hl7Field: PID.3
+        fhirPath: subject.identifier
+      - hl7Field: ""
+        fhirPath: status
+        transform: default_careplan_status
+  # PlanDefinition represents clinical pathways associated with care
+  - resource: PlanDefinition
+    rules:
+      - hl7Field: ""
+        fhirPath: status
+        transform: default_plandefinition_status
+  # ServiceRequest may be created from pathway actions
+  - resource: ServiceRequest
+    rules:
+      - hl7Field: PID.3
+        fhirPath: subject.identifier
+      - hl7Field: ""
+        fhirPath: status
+        transform: default_servicerequest_status
