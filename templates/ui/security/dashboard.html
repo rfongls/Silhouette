@@ -1,0 +1,25 @@
+{% extends "layout.html" %}
+{% block extra_head %}
+<link rel="stylesheet" href="/static/css/interop_extras.css" />
+<script type="module" src="/static/js/interop_ui.js"></script>
+{% endblock %}
+{% block content %}
+<h2>Security Dashboard</h2>
+<div class="row gap mt">
+  <label><input type="checkbox" id="view-reports-toggle" /> Reports view</label>
+  <label><input type="checkbox" class="feature-toggle" data-target="scan" checked/> Scan</label>
+  <label><input type="checkbox" class="feature-toggle" data-target="recon" checked/> Recon</label>
+  <label><input type="checkbox" class="feature-toggle" data-target="pentest" /> Pentest</label>
+  <label><input type="checkbox" class="feature-toggle" data-target="ir" /> IR Playbook</label>
+</div>
+
+<div hx-get="/security/summary" hx-trigger="load, every 20s" hx-target="#sec-kpi-wrap" hx-swap="innerHTML"></div>
+<div id="sec-kpi-wrap" class="mt"></div>
+
+<div class="grid">
+  {% include "ui/security/_scan_panel.html" %}
+  {% include "ui/security/_recon_panel.html" %}
+  {% include "ui/security/_pentest_panel.html" %}
+  {% include "ui/security/_ir_panel.html" %}
+</div>
+{% endblock %}
