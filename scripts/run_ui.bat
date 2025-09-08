@@ -1,49 +1,19 @@
 @echo off
-setlocal enabledelayedexpansion
-REM -----------------------------------------------------------------------------
-REM Silhouette UI — One-click launcher (Windows)
-REM Creates .venv if missing, installs UI deps, starts Uvicorn, opens browser.
-REM -----------------------------------------------------------------------------
+setlocal ENABLEDELAYEDEXPANSION
+pushd %~dp0\..
 
-REM Move to repo root (this file lives in scripts/)
-pushd "%~dp0\.."
+set HOST=127.0.0.1
+set PORT=8000
+set URL=http://%HOST%:%PORT%/ui/home
 
-REM Prefer py launcher when available
-where py >nul 2>nul
-if %errorlevel%==0 (
-  set PYEXE=py -3
-) else (
-  set PYEXE=python
-)
+REM Optional: activate venv if present
+if exist venv\Scripts\activate.bat call venv\Scripts\activate.bat
+if exist .venv\Scripts\activate.bat call .venv\Scripts\activate.bat
 
-echo.
-echo [1/4] Ensuring virtual env: .venv
-if not exist .venv (
-  %PYEXE% -m venv .venv
-  if %errorlevel% neq 0 (
-    echo Failed to create virtualenv. Ensure Python 3.10+ is installed.
-    pause
-    exit /b 1
-  )
-)
+echo Starting Silhouette UI server on http://%HOST%:%PORT%/ ...
+start "Silhouette UI (server)" cmd /k python -m uvicorn server:app --host %HOST% --port %PORT% --reload
+timeout /t 2 >nul
+start "" %URL%
 
-echo.
-echo [2/4] Upgrading pip
-call .venv\Scripts\python -m pip install -U pip
-if %errorlevel% neq 0 goto :pipfail
-
-echo.
-echo [3/4] Installing UI dependencies (fastapi, uvicorn, jinja2, anyio, python-multipart)
-call .venv\Scripts\python -m pip install "fastapi>=0.110" "uvicorn[standard]>=0.23" "jinja2>=3.1" "anyio>=4.0" "python-multipart>=0.0.9"
-if %errorlevel% neq 0 goto :pipfail
-
-echo.
-echo [4/4] Starting server at http://localhost:8000/
-start "" "http://localhost:8000/ui/security/dashboard"
-call .venv\Scripts\python -m uvicorn main:app --host 127.0.0.1 --port 8000
-goto :eof
-
-:pipfail
-echo Pip installation failed. Check your network and try again.
-pause
-exit /b 1
+popd
+endlocal
