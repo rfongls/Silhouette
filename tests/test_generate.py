@@ -120,4 +120,3 @@ def test_trigger_searches_other_versions(tmp_path, monkeypatch):
     )
     assert r.status_code == 200
     assert "ZZZ_X99" in r.text
-

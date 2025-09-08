@@ -7,7 +7,6 @@ import json
 from urllib.parse import parse_qs
 from fastapi import APIRouter, Body, HTTPException, Request
 from fastapi.responses import JSONResponse, PlainTextResponse
-
 from silhouette_core.interop.hl7_mutate import (
     enrich_clinical_fields,
     ensure_unique_fields,
@@ -151,7 +150,6 @@ def generate_messages(body: dict):
 
     out = "\n".join(msgs) + ("\n" if msgs else "")
     return PlainTextResponse(out, media_type="text/plain")
-
 
 @router.post("/api/interop/generate", response_class=PlainTextResponse)
 async def generate_messages_endpoint(request: Request):
