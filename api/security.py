@@ -169,7 +169,6 @@ async def security_summary(request: Request):
         {"request": request, "kpi": kpi, "last_recon": last_recon},
     )
 
-
 # ---------- Helpers ----------
 
 

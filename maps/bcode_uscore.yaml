@@ -1,0 +1,32 @@
+messageTypes:
+  # Personnel management events (B codes)
+  - "PMU^B01"
+  - "PMU^B02"
+  - "PMU^B03"
+  - "PMU^B04"
+  - "PMU^B05"
+  - "PMU^B06"
+  - "PMU^B07"
+  - "PMU^B08"
+resourcePlan:
+  # Practitioner resources represent healthcare professionals
+  - resource: Practitioner
+    rules:
+      - hl7Field: PID.3
+        fhirPath: identifier
+  # PractitionerRole assigns practitioners to organizations and specialties
+  - resource: PractitionerRole
+    rules:
+      - hl7Field: PID.3
+        fhirPath: practitioner.identifier
+      - hl7Field: ""
+        fhirPath: active
+        transform: default_practitionerrole_status
+  # Organization resources represent facilities or issuing authorities
+  - resource: Organization
+    rules: []
+  # Person resources link multiple patient or practitioner records
+  - resource: Person
+    rules:
+      - hl7Field: PID.3
+        fhirPath: identifier

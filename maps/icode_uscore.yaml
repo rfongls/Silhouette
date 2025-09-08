@@ -1,0 +1,96 @@
+messageTypes:
+  # Insurance inquiries, authorizations and referrals (I codes)
+  - "RQI^I01"
+  - "RPI^I01"
+  - "RQI^I02"
+  - "RPL^I02"
+  - "RQI^I03"
+  - "RPR^I03"
+  - "RQD^I04"
+  - "RPI^I04"
+  - "RQC^I05"
+  - "RCI^I05"
+  - "RQC^I06"
+  - "RCL^I06"
+  - "PIN^I07"
+  - "ACK^I07"
+  - "RQA^I08"
+  - "RPA^I08"
+  - "RQA^I09"
+  - "RPA^I09"
+  - "RQA^I10"
+  - "RPA^I10"
+  - "RQA^I11"
+  - "RPA^I11"
+  - "REF^I12"
+  - "RRI^I12"
+  - "REF^I13"
+  - "RRI^I13"
+  - "REF^I14"
+  - "RRI^I14"
+  - "REF^I15"
+  - "RRI^I15"
+  - "I16^I16"
+  - "I17^I17"
+  - "I18^I18"
+  - "I19^I19"
+  - "I20^I20"
+  - "I21^I21"
+  - "I22^I22"
+resourcePlan:
+  # Coverage resources represent insurance policies associated with the patient
+  - resource: Coverage
+    rules:
+      - hl7Field: PID.3
+        fhirPath: beneficiary.identifier
+      - hl7Field: ""
+        fhirPath: status
+        transform: default_coverage_status
+  # Service requests capture authorization and referral requests
+  - resource: ServiceRequest
+    rules:
+      - hl7Field: PID.3
+        fhirPath: subject.identifier
+      - hl7Field: ""
+        fhirPath: status
+        transform: default_servicerequest_status
+  # Care plans coordinate collaborative and referral care
+  - resource: CarePlan
+    rules:
+      - hl7Field: PID.3
+        fhirPath: subject.identifier
+      - hl7Field: ""
+        fhirPath: status
+        transform: default_careplan_status
+  # Care teams identify participants in collaborative care
+  - resource: CareTeam
+    rules:
+      - hl7Field: PID.3
+        fhirPath: subject.identifier
+      - hl7Field: ""
+        fhirPath: status
+        transform: default_careteam_status
+  # CommunicationRequests initiate requests for information or authorization
+  - resource: CommunicationRequest
+    rules:
+      - hl7Field: PID.3
+        fhirPath: subject.identifier
+      - hl7Field: ""
+        fhirPath: status
+        transform: default_communicationrequest_status
+  # Communications convey responses and updates
+  - resource: Communication
+    rules:
+      - hl7Field: PID.3
+        fhirPath: subject.identifier
+      - hl7Field: ""
+        fhirPath: status
+        transform: default_communication_status
+  # Goals can be referenced in collaborative care referrals
+  - resource: Goal
+    rules:
+      - hl7Field: PID.3
+        fhirPath: subject.identifier
+      - hl7Field: ""
+        fhirPath: status
+        transform: default_goal_status
