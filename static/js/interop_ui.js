@@ -80,18 +80,13 @@
   }
 
   function syncTyped(prefix) {
+    // keep for parity with other panels if needed later, but no relpath auto-fill here
     const typed = q(prefix + "-trigger-typed");
     const select = q(prefix + "-trigger") || q(prefix + "-trigger-select");
     if (typed && select && typed.value) {
       const val = typed.value.toUpperCase();
       const opt = Array.from(select.options).find(o => o.value.toUpperCase() === val);
       if (opt) select.value = opt.value;
-    }
-    if (prefix === "gen") {
-      const v = (q("gen-version") || {}).value || getPrimaryVersion();
-      const relInput = document.querySelector('#gen-form [name="template_relpath"]');
-      const trig = typed && typed.value ? typed.value : "";
-      if (relInput && trig) relInput.value = `${v}/${trig}.hl7`;
     }
   }
 
@@ -123,10 +118,10 @@
     setPrimaryVersion(getPrimaryVersion());
 
     // seed datalists
-      fillDatalist("qs");
-      fillDatalist("ds");
-      fillDatalist("gen");
-      fillDatalist("pipe");
+    fillDatalist("qs");
+    fillDatalist("ds");
+    fillDatalist("gen");
+    fillDatalist("pipe");
 
     // refresh datalists after HTMX replaces the trigger <select>s
     document.body.addEventListener("htmx:afterSwap", (e) => {
@@ -134,6 +129,10 @@
       if (e && e.target && e.target.id === "ds-trigger-select") fillDatalist("ds");
       if (e && e.target && e.target.id === "pipe-trigger-select") fillDatalist("pipe");
     });
+
+    // ensure Generate list is filled when the field receives focus
+    const genTyped = q("gen-trigger-typed");
+    if (genTyped) genTyped.addEventListener("focus", () => fillDatalist("gen"));
   });
 
   // expose a tiny API
