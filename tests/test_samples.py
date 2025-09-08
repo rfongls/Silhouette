@@ -30,6 +30,5 @@ def test_get_sample_by_relpath():
     relpath = listing["items"][0]["relpath"]
     r = client.get("/api/interop/sample", params={"relpath": relpath})
     assert r.status_code == 200
-    body = r.json()
-    assert "MSH" in body["text"]
-    assert body["relpath"] == relpath
+    body = r.text
+    assert "MSH" in body

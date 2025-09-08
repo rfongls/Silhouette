@@ -108,6 +108,8 @@ def generate_messages(body: dict):
     rel = (body.get("template_relpath") or "").strip()
     trig = (body.get("trigger") or "").strip()
     text = body.get("text")
+    if rel and "/" not in rel:
+        rel = f"{version}/{rel}"
     if not rel and trig:
         rel = _guess_rel_from_trigger(trig, version)
     if rel:
@@ -155,20 +157,25 @@ async def generate_messages_endpoint(request: Request):
     Accepts JSON or HTML form posts and always returns plain HL7 text."""
     raw = await request.body()
     ctype = (request.headers.get("content-type") or "").lower()
-    text = raw.decode("utf-8", errors="ignore")
-
     body: dict
     if "application/json" in ctype:
         try:
-            parsed = json.loads(text)
+            parsed = json.loads(raw)
             body = parsed if isinstance(parsed, dict) else {}
         except Exception:
-            body = {k: v[-1] for k, v in parse_qs(text).items()}
+            qdict = parse_qs(raw.decode("utf-8", errors="ignore"))
+            body = {k: v[-1] for k, v in qdict.items()}
     else:
-        body = {k: v[-1] for k, v in parse_qs(text).items()}
-
-    if not body and text.strip():
-        body = {"text": text}
+        try:
+            form = await request.form()
+            body = {k: v for k, v in form.items()}
+        except Exception:
+            qdict = parse_qs(raw.decode("utf-8", errors="ignore"))
+            body = {k: v[-1] for k, v in qdict.items()}
+    if not body:
+        text = raw.decode("utf-8", errors="ignore")
+        if text.strip():
+            body = {"text": text}
     return generate_messages(body)
 
 
