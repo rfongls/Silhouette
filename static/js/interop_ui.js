@@ -62,7 +62,7 @@
   async function fillDatalist(prefix) {
     const versionSel = q(prefix + "-version") || q("sample-version") || q("gen-version");
     const version = versionSel ? versionSel.value : getPrimaryVersion();
-    const dl = q(prefix + "-trigger-datalist");
+    const dl = q(prefix + "-trigger-datalist");  // e.g., gen-trigger-datalist
     if (!dl) return;
     // clear and tag with version to avoid races
     dl.innerHTML = "";
@@ -70,9 +70,8 @@
     try {
       const r = await fetch(`/api/interop/triggers?version=${encodeURIComponent(version)}`, {cache: "no-cache"});
       const data = await r.json();
-      const seen = new Set();
+      const seen = new Set(); // de-dupe by trigger (per version)
       (data.items || []).forEach(it => {
-        // Only show one per trigger and only for this version
         const trig = (it.trigger || "").toUpperCase().trim();
         if (!trig || seen.has(trig)) return;
         seen.add(trig);
