@@ -5,7 +5,7 @@ from typing import Optional
 import re
 from fastapi import APIRouter, Body, HTTPException, Request
 from fastapi.responses import JSONResponse, PlainTextResponse
-
+from urllib.parse import parse_qs
 from silhouette_core.interop.hl7_mutate import (
     enrich_clinical_fields,
     ensure_unique_fields,
@@ -136,13 +136,36 @@ async def generate_messages_endpoint(request: Request):
     """HTTP endpoint wrapper for :func:`generate_messages`.
     Accepts JSON or HTML form posts and always returns plain HL7 text."""
     ctype = (request.headers.get("content-type") or "").lower()
+    body: dict
+
     if "application/json" in ctype:
-        body = await request.json()
-        if not isinstance(body, dict):
-            body = {}
+        try:
+            parsed = await request.json()
+        except Exception:
+            parsed = None
+        if isinstance(parsed, dict):
+            body = parsed
+        else:
+            # fall back to form-style parsing if JSON body is invalid
+            try:
+                form = await request.form()
+                body = {k: form.get(k) for k in form.keys()}
+                if not body:
+                    raise ValueError("empty form")
+            except Exception:
+                raw = (await request.body()).decode("utf-8", errors="ignore")
+                qs = {k: v[-1] for k, v in parse_qs(raw).items()}
+                body = qs or ({"text": raw} if raw.strip() else {})
     else:
-        form = await request.form()
-        body = {k: form.get(k) for k in form.keys()}
+        try:
+            form = await request.form()
+            body = {k: form.get(k) for k in form.keys()}
+            if not body:
+                raise ValueError("empty form")
+        except Exception:
+            raw = (await request.body()).decode("utf-8", errors="ignore")
+            qs = {k: v[-1] for k, v in parse_qs(raw).items()}
+            body = qs or ({"text": raw} if raw.strip() else {})
     return generate_messages(body)
 
 

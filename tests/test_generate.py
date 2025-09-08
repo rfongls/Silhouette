@@ -85,3 +85,19 @@ def test_generate_accepts_form_posts():
     # The returned message should contain the ADT^A01 event in the MSH segment
     assert "ADT^A01" in r.text
 
+
+def test_generate_tolerates_mislabeled_json():
+    """Even if the content-type claims JSON but isn't, fallback parsing works."""
+    data = {
+        "version": "hl7-v2-4",
+        "trigger": "ADT_A01",
+        "count": "1",
+    }
+    r = client.post(
+        "/api/interop/generate",
+        data=data,
+        headers={"Content-Type": "application/json"},
+    )
+    assert r.status_code == 200
+    assert "ADT^A01" in r.text
+
