@@ -64,7 +64,7 @@
     const version = versionSel ? versionSel.value : getPrimaryVersion();
     const dl = q(prefix + "-trigger-datalist");
     if (!dl) return;
-    // If the version didn’t change we’ll still rebuild, but make sure we clear first
+    // clear and tag with version to avoid races
     dl.innerHTML = "";
     dl.dataset.ver = version;
     try {
@@ -76,7 +76,6 @@
         const trig = (it.trigger || "").toUpperCase().trim();
         if (!trig || seen.has(trig)) return;
         seen.add(trig);
-        // (We keep relpath in the payload server-side, but we display triggers only)
         const opt = document.createElement("option");
         opt.value = trig;
         opt.label = it.description ? `${it.trigger} — ${it.description}` : it.trigger;

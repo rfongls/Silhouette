@@ -155,19 +155,29 @@ async def generate_messages_endpoint(request: Request):
     """HTTP endpoint wrapper for :func:`generate_messages`.
     Accepts JSON or HTML form posts and always returns plain HL7 text."""
     ctype = (request.headers.get("content-type") or "").lower()
+    body: dict = {}
     if "application/json" in ctype:
         try:
-            body = await request.json()
+            parsed = await request.json()
+            body = parsed if isinstance(parsed, dict) else {}
         except Exception:
-            raw = await request.body()
-            qdict = parse_qs(raw.decode("utf-8", errors="ignore"))
-            body = {k: v[-1] for k, v in qdict.items()}
-        if not isinstance(body, dict):
-            body = {}
-    else:
-        form = await request.form()
-        body = {k: form.get(k) for k in form.keys()}
+            pass
+    if not body:
+        try:
+            form = await request.form()
+            body = {k: form.get(k) for k in form.keys()}
+        except Exception:
+            pass
+    if not body:
+        raw = await request.body()
+        q = parse_qs(raw.decode("utf-8", errors="ignore"))
+        body = {k: v[-1] for k, v in q.items()}
     return generate_messages(body)
+
+# Stable alias so the UI never collides with older routes:
+@router.post("/api/interop/generate/plain", response_class=PlainTextResponse)
+async def generate_messages_plain(request: Request):
+    return await generate_messages_endpoint(request)
 
 
 @router.post("/api/interop/deidentify")

@@ -1,11 +1,12 @@
 <section class="card">
   <h3>Generate Messages</h3>
   <form id="gen-form"
-        hx-post="/api/interop/generate"
+        hx-post="/api/interop/generate/plain"
         hx-trigger="submit"
         hx-encoding="json"
         hx-include="#gen-version,#gen-trigger-typed,[name='count'],[name='seed'],[name='ensure_unique'],[name='include_clinical'],[name='deidentify']"
         hx-target="#gen-output"
+        hx-headers='{"Accept":"text/plain"}'
         hx-swap="text">
     <div class="row gap">
       <label>Version</label>
@@ -40,5 +41,5 @@
       <button class="btn" onclick="this.form.count.value=Math.max(1, parseInt(this.form.count.value||'1')); return true;">Generate</button>
     </div>
   </form>
-  <pre id="gen-output" class="codepane muted mt">Select/Type a template above and press Generate.</pre>
+  <pre id="gen-output" class="codepane muted mt">Select / type a template above and press Generate.</pre>
 </section>
