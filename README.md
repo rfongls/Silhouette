@@ -6,6 +6,20 @@ It is purpose-aligned, hardware-flexible, and built to be **carried, revived, an
 > **Docs Index:** See [docs/README.md](docs/README.md) for the full table of contents.
 ---
 
+## UI & Dashboards
+
+ Silhouette Core separates **Reports** (KPI summaries) from **Skills** (dashboards with tools).
+
+ - **Reports Home**: `/ui/home` — shows KPI cards for all enabled skills and includes a Quick Launch dropdown to jump straight to a skill dashboard.
+ - **Skills Index**: `/ui/skills` — navigate to each skill’s dashboard.
+ - **Registry**: `config/skills.yaml` toggles which skills appear and where their summary/dashboard routes live.
+
+See **[docs/ui_skills_registry.md](docs/ui_skills_registry.md)** for the full architecture and how to add new skills.
+
+> Existing skills:
+> - Interoperability — `/ui/interop/dashboard`
+> - Security — `/ui/security/dashboard`
+
 ## 🚀 One-Click Agent Setup
 
 - Windows: double-click `setup.bat`
