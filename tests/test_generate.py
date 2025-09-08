@@ -17,19 +17,16 @@ def test_generate_single_from_template():
         "ensure_unique": True,
         "include_clinical": True,
         "deidentify": True,
-        "output_format": "ndjson",
     }
     r = client.post("/api/interop/generate", json=body)
     assert r.status_code == 200
-    lines = r.text.strip().splitlines()
-    assert len(lines) == 3
+    raw = r.text.strip()
+    parts = raw.split("\nMSH")
+    msgs = [parts[0]] + ["MSH" + p for p in parts[1:]] if parts else []
+    assert len(msgs) == 3
     ids = set()
-    import json as _json
-
-    for line in lines:
-        obj = _json.loads(line)
-        hl7 = obj["hl7"]
-        msh = next(l for l in hl7.splitlines() if l.startswith("MSH|"))
+    for msg in msgs:
+        msh = next(l for l in msg.splitlines() if l.startswith("MSH|"))
         mcid = msh.split("|")[9]
         ids.add(mcid)
     assert len(ids) == 3
