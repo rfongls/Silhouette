@@ -83,7 +83,8 @@
     const versionSel = q(prefix + "-version") || q("sample-version") || q("gen-version");
     const version = versionSel ? versionSel.value : getPrimaryVersion();
     try {
-      const r = await fetch(`/api/interop/samples?version=${encodeURIComponent(version)}&limit=5000`, {cache: "no-cache"});
+      // endpoint caps limit at 2000, so stay within that bound
+      const r = await fetch(`/api/interop/samples?version=${encodeURIComponent(version)}&limit=2000`, {cache: "no-cache"});
       const data = await r.json();
       const dl = q(prefix + "-template-datalist");
       if (!dl) return;

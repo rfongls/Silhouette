@@ -148,8 +148,7 @@ def generate_messages(body: dict):
     out = "\n".join(msgs) + ("\n" if msgs else "")
     return PlainTextResponse(out, media_type="text/plain")
 
-
-@router.post("/api/interop/generate")
+@router.post("/api/interop/generate", response_class=PlainTextResponse)
 async def generate_messages_endpoint(request: Request):
     """HTTP endpoint wrapper for :func:`generate_messages`.
     Accepts JSON or HTML form posts and always returns plain HL7 text."""
