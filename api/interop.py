@@ -785,9 +785,6 @@ async def interop_quickstart(
 
 # -------------------- helpers for quickstart pipeline --------------------
 
-def _which(cmd: str) -> Optional[str]:
-    return shutil.which(cmd)
-
 # Trigger → Map selection
 MAP_INDEX: Dict[str, str] = {
     # Admissions / ADT family
@@ -829,11 +826,20 @@ def _pick_map_for_trigger(trigger: str) -> str:
     return 'maps/adt_uscore.yaml'
 
 def _hl7_to_fhir_via_cli(hl7_text: str, trigger: str = '') -> tuple[str, str]:
-    """Backward-compatible wrapper using _translate_hl7_to_fhir_cli."""
+    """Backward-compatible wrapper using _translate_hl7_to_fhir_cli.
+
+    Returns (stdout, note) where ``note`` includes the selected map path so callers
+    can confirm which mapping was chosen even if the CLI is missing.
+    """
     tmp_dir = Path(tempfile.gettempdir()) / "silhouette_qs"
     tmp_dir.mkdir(parents=True, exist_ok=True)
+    map_path = _pick_map_for_trigger(trigger) if trigger else None
     res = _translate_hl7_to_fhir_cli(hl7_text, tmp_dir)
-    return (res.get("stdout", "") or "", res.get("stderr", "") or "")
+    note = res.get("stderr", "") or ""
+    if map_path:
+        note = f"{note}\n(using map {map_path})".strip()
+    out = res.get("stdout", "") or "{}"
+    return (out, note)
 
 def _esc(s: str) -> str:
     return s.replace("<", "&lt;").replace(">", "&gt;")
