@@ -41,16 +41,16 @@ python -m pip install \
 
 PORT="${PORT:-8000}"
 HOST="${HOST:-127.0.0.1}"
-URL="http://"${HOST}:${PORT}"/ui/security/dashboard"
+URL="http://${HOST}:${PORT}/ui/home"
 
 echo
 echo "[4/4] Starting server at http://${HOST}:${PORT}/"
 
-# Try to open the browser (xdg-open is the freedesktop standard)
+# Open the browser to the Home page after a short delay
 if command -v xdg-open >/dev/null 2>&1; then
-  xdg-open "$URL" >/dev/null 2>&1 || true
-elif command -v gio >/dev/null 2>&1; then
-  gio open "$URL" >/dev/null 2>&1 || true
+  (sleep 2 && xdg-open "$URL" >/dev/null 2>&1) &
+elif command -v open >/dev/null 2>&1; then  # macOS
+  (sleep 2 && open "$URL" >/dev/null 2>&1) &
 fi
 
-exec python -m uvicorn main:app --host "$HOST" --port "$PORT"
+exec python -m uvicorn server:app --host "$HOST" --port "$PORT" --reload

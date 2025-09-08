@@ -1,0 +1,67 @@
+{% extends "layout.html" %}
+{% block content %}
+<section class="hero">
+  <h1 class="title">Reports</h1>
+  <p class="subtitle">High-level view across skills</p>
+</section>
+
+<section class="card">
+  <form class="row gap" onsubmit="location.href=this.dash.value; return false;">
+    <label class="label" for="home-skill-launcher">Quick launch</label>
+    <select class="input" name="dash" id="home-skill-launcher">
+      {% for s in (skills or []) if s.dashboard %}
+        <option value="{{ s.dashboard }}">{{ s.name }}</option>
+      {% endfor %}
+    </select>
+    <button class="btn" aria-label="Open selected skill">Open</button>
+  </form>
+  <div class="muted mt">Tip: You can also click “Open … Skill” on any KPI card below.</div>
+  <script>
+    (function(){
+      var KEY = "home.quicklaunch.skill";
+      var sel = document.getElementById("home-skill-launcher");
+      if (!sel) return;
+      try {
+        var saved = localStorage.getItem(KEY);
+        if (saved) {
+          for (var i=0;i<sel.options.length;i++){
+            if (sel.options[i].value === saved) { sel.selectedIndex = i; break; }
+          }
+        }
+        sel.addEventListener("change", function(){ localStorage.setItem(KEY, sel.value); });
+      } catch(e) {}
+    })();
+  </script>
+</section>
+
+<section class="grid grid-3">
+  {% for s in (skills or []) %}
+    <div class="card">
+      <h3>{{ s.name }} — KPIs</h3>
+      {% if s.summary_url %}
+      <div hx-get="{{ s.summary_url }}" hx-trigger="load, every 45s" hx-target="this" hx-swap="innerHTML"></div>
+      {% else %}
+      <div class="muted">No summary configured.</div>
+      {% endif %}
+      {% if s.dashboard %}
+      <div class="mt"><a class="btn" href="{{ s.dashboard }}">Open {{ s.name }} Skill</a></div>
+      {% endif %}
+    </div>
+  {% endfor %}
+  <div class="card">
+    <h3>Recent Activity</h3>
+    <div class="muted">Recent translate/validate, sends, findings, etc. (wire to your index or logs)</div>
+  </div>
+</section>
+
+<section class="grid">
+  <div class="card">
+    <h3>Alerts & Issues</h3>
+    <div class="muted">Validation errors or failed sends appear here.</div>
+  </div>
+  <div class="card">
+    <h3>Trends</h3>
+    <div class="muted">Plug in charts when you’re ready (HTMX/JSON feed or static images).</div>
+  </div>
+</section>
+{% endblock %}

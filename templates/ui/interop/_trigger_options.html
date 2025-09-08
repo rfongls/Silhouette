@@ -1,6 +1,7 @@
-{% for it in items %}
-  <option value="{{ it.trigger }}">
-    {{ it.trigger }}{% if it.description %} — {{ it.description }}{% endif %}
-  </option>
-{% endfor %}
-{% if not items %}<option disabled>(no triggers found)</option>{% endif %}
+{% if items and items|length > 0 %}
+  {% for it in items %}
+    <option value="{{ it.trigger }}">{{ it.trigger }}{% if it.description %} — {{ it.description }}{% endif %}</option>
+  {% endfor %}
+{% else %}
+  <option value="" disabled>(no templates found for this version)</option>
+{% endif %}
