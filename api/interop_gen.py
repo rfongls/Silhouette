@@ -1,13 +1,11 @@
 from __future__ import annotations
 import hashlib
-import json
-import zipfile
-from io import BytesIO
 from pathlib import Path
-from typing import Literal, Optional
+from typing import Optional
 import re
 from fastapi import APIRouter, Body, HTTPException, Request
-from fastapi.responses import JSONResponse, PlainTextResponse, StreamingResponse
+from fastapi.responses import JSONResponse, PlainTextResponse
+from urllib.parse import parse_qs
 
 from silhouette_core.interop.hl7_mutate import (
     enrich_clinical_fields,
@@ -111,7 +109,6 @@ def generate_messages(body: dict):
     deidentify = _to_bool(deid_input)
     if count > 1 and (deid_input is None or str(deid_input).strip() == ""):
         deidentify = True
-    output_format: Literal["single", "one_per_file", "ndjson", "zip"] = body.get("output_format", "single")
 
     template_text = text or load_template_text(_assert_rel_under_templates(rel))
 
@@ -131,37 +128,46 @@ def generate_messages(body: dict):
             msg = deidentify_message(msg, seed=derived)
         msgs.append(msg)
 
-    if output_format == "single":
-        out = "\n".join(msgs) + ("\n" if msgs else "")
-        return PlainTextResponse(out, media_type="text/plain")
-    elif output_format == "ndjson":
-        lines = [json.dumps({"i": i, "hl7": m}, ensure_ascii=False) for i, m in enumerate(msgs)]
-        return PlainTextResponse("\n".join(lines), media_type="application/x-ndjson")
-    elif output_format in ("one_per_file", "zip"):
-        mem = BytesIO()
-        with zipfile.ZipFile(mem, "w", zipfile.ZIP_DEFLATED) as z:
-            for i, m in enumerate(msgs):
-                name = f"msg_{i:05d}.hl7"
-                z.writestr(name, m)
-        mem.seek(0)
-        headers = {"Content-Disposition": 'attachment; filename="generated_messages.zip"'}
-        return StreamingResponse(mem, media_type="application/zip", headers=headers)
-    else:
-        raise HTTPException(400, "Unknown output_format")
+    out = "\n".join(msgs) + ("\n" if msgs else "")
+    return PlainTextResponse(out, media_type="text/plain")
 
 
-@router.post("/api/interop/generate", response_model=None)
+@router.post("/api/interop/generate")
 async def generate_messages_endpoint(request: Request):
-    """HTTP endpoint wrapper for :func:`generate_messages` that accepts both JSON
-    and HTML form posts."""
-    try:
-        body = await request.json()
-    except Exception:
+    """HTTP endpoint wrapper for :func:`generate_messages`.
+    Accepts JSON or HTML form posts and always returns plain HL7 text."""
+    ctype = (request.headers.get("content-type") or "").lower()
+    body: dict
+
+    if "application/json" in ctype:
+        try:
+            parsed = await request.json()
+        except Exception:
+            parsed = None
+        if isinstance(parsed, dict):
+            body = parsed
+        else:
+            # fall back to form-style parsing if JSON body is invalid
+            try:
+                form = await request.form()
+                body = {k: form.get(k) for k in form.keys()}
+                if not body:
+                    raise ValueError("empty form")
+            except Exception:
+                raw = (await request.body()).decode("utf-8", errors="ignore")
+                qs = {k: v[-1] for k, v in parse_qs(raw).items()}
+                body = qs or ({"text": raw} if raw.strip() else {})
+    else:
         try:
             form = await request.form()
-            body = dict(form)
+            body = {k: form.get(k) for k in form.keys()}
+            if not body:
+                raise ValueError("empty form")
         except Exception:
-            body = {}
+            raw = (await request.body()).decode("utf-8", errors="ignore")
+            qs = {k: v[-1] for k, v in parse_qs(raw).items()}
+            body = qs or ({"text": raw} if raw.strip() else {})
+
     return generate_messages(body)
 
 

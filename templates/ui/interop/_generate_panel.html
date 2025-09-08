@@ -4,7 +4,7 @@
         hx-post="/api/interop/generate"
         hx-trigger="submit"
         hx-target="#gen-output"
-        hx-swap="innerHTML">
+        hx-swap="text">
     <div class="row gap">
       <label>Version</label>
       <select name="version" class="input hl7-version-select" id="gen-version" data-hx-refresh-target="1" onchange="window.InteropUI.fillDatalist('gen')">
@@ -13,7 +13,7 @@
         <option value="hl7-v2-5">HL7 v2.5</option>
       </select>
       <label>Trigger</label>
-      <!-- Single type-ahead field with a dropdown of available messages -->
+      <!-- Single field: dropdown + type-ahead -->
       <input class="input grow"
              id="gen-trigger-typed"
              name="trigger"
@@ -32,16 +32,11 @@
       <label><input type="checkbox" name="ensure_unique" checked/> Unique IDs</label>
       <label><input type="checkbox" name="include_clinical"/> Enrich clinical (DG1/AL1)</label>
       <label><input type="checkbox" name="deidentify"/> De-identify</label>
-      <select class="input" name="output_format">
-        <option value="single" selected>single .hl7 (concatenated)</option>
-        <option value="ndjson">NDJSON</option>
-        <option value="zip">ZIP (one per file)</option>
-      </select>
     </div>
 
     <div class="row gap mt">
       <button class="btn" onclick="this.form.count.value=Math.max(1, parseInt(this.form.count.value||'1')); return true;">Generate</button>
     </div>
   </form>
-  <pre id="gen-output" class="codepane muted mt">Type a trigger above, then press Generate.</pre>
+  <pre id="gen-output" class="codepane muted mt">Type a trigger above and press Generate.</pre>
 </section>
