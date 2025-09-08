@@ -220,9 +220,19 @@ def render_trigger_options(
 ):
     """Returns <option> list for trigger selects based on templates/hl7/<version>."""
     try:
-        items = _enumerate_samples(version, q=None, limit=5000)
+        raw = _enumerate_samples(version, q=None, limit=5000)
     except HTTPException:
-        items = []
+        raw = []
+    # Deduplicate and sort by trigger code
+    seen: set[str] = set()
+    items: list[dict[str, str]] = []
+    for it in raw:
+        trig = (it.get("trigger") or "").upper()
+        if not trig or trig in seen:
+            continue
+        seen.add(trig)
+        items.append({"trigger": trig, "description": it.get("description", "")})
+    items = sorted(items, key=lambda x: x["trigger"])
     return templates.TemplateResponse(
         "ui/interop/_trigger_options.html",
         {"request": request, "items": items},

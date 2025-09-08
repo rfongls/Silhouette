@@ -81,7 +81,6 @@
         <select name="version" class="input hl7-version-select" id="qs-version" data-hx-refresh-target="1"
           hx-get="/ui/interop/triggers"
           hx-target="#qs-trigger"
-          hx-vals='{"version": this.value}'
           hx-trigger="load, change"
           onchange="window.InteropUI.fillDatalist('qs')">
           <option value="hl7-v2-3">HL7 v2.3</option>
@@ -93,8 +92,8 @@
           <select name="trigger" class="input" id="qs-trigger"
                 hx-get="/ui/interop/triggers"
                 hx-target="#qs-trigger"
-                hx-vals='{"version": document.getElementById("qs-version").value}'
-                hx-trigger="load">
+                hx-trigger="load, change from:#qs-version"
+                hx-include="#qs-version">
           </select>
           <!-- typeahead -->
           <input class="input" list="qs-trigger-datalist" id="qs-trigger-typed" placeholder="Type trigger e.g. ADT_A01" oninput="window.InteropUI.syncTyped('qs')"/>
@@ -139,8 +138,8 @@
         <select class="input" id="ds-trigger-select"
                 hx-get="/ui/interop/triggers"
                 hx-target="#ds-trigger-select"
-                hx-vals='{"version": document.getElementById("sample-version").value || "hl7-v2-4"}'
-                hx-trigger="load">
+                hx-trigger="load, change from:#sample-version"
+                hx-include="#sample-version">
         </select>
         <script>
           (function(){

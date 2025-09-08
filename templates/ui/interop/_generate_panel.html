@@ -13,12 +13,11 @@
         <option value="hl7-v2-4" selected>HL7 v2.4</option>
         <option value="hl7-v2-5">HL7 v2.5</option>
       </select>
-
-      <select class="input" id="gen-trigger-select"
+      <select class="input" id="gen-trigger-select" name="trigger"
               hx-get="/ui/interop/triggers"
-              hx-vals='{"version": document.getElementById("gen-version").value}'
               hx-target="#gen-trigger-select"
               hx-trigger="load, change from:#gen-version"
+              hx-include="#gen-version"
               onchange="window.InteropUI.syncTyped('gen')">
       </select>
 
