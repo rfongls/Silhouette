@@ -6,7 +6,7 @@ from io import BytesIO
 from pathlib import Path
 from typing import Literal, Optional
 import re
-from fastapi import APIRouter, Body, HTTPException, Request  # Body used for request parsing
+from fastapi import APIRouter, Body, HTTPException, Request
 from fastapi.responses import JSONResponse, PlainTextResponse, StreamingResponse
 
 from silhouette_core.interop.hl7_mutate import (
@@ -78,19 +78,12 @@ def _find_template_by_trigger(version: str, trigger: str) -> Optional[str]:
     return None
 
 
-@router.post("/api/interop/generate", response_model=None)
-async def generate_messages(
-    request: Request,
-    body: dict | None = Body(None),
-):
-    # If the client didn't send JSON, try parsing form data
-    if body is None:
-        try:
-            form = await request.form()
-            body = dict(form)
-        except Exception:
-            body = {}
+def generate_messages(body: dict):
+    """Generate HL7 messages from a template.
 
+    This helper takes a dict-like body and returns a FastAPI response. It is
+    used by the HTTP endpoint below and by internal callers such as the
+    pipeline runner."""
     version = body.get("version", "hl7-v2-4")
     if version not in VALID_VERSIONS:
         raise HTTPException(400, f"Unknown version '{version}'")
@@ -115,7 +108,10 @@ async def generate_messages(
     rng_seed = _to_int(seed, None)
     ensure_unique = _to_bool(body.get("ensure_unique", True))
     include_clinical = _to_bool(body.get("include_clinical", False))
-    deidentify = _to_bool(body.get("deidentify", False))
+    deid_input = body.get("deidentify")
+    deidentify = _to_bool(deid_input)
+    if count > 1 and (deid_input is None or str(deid_input).strip() == ""):
+        deidentify = True
     output_format: Literal["single", "one_per_file", "ndjson", "zip"] = body.get("output_format", "single")
 
     template_text = text or load_template_text(_assert_rel_under_templates(rel))
@@ -137,8 +133,8 @@ async def generate_messages(
         msgs.append(msg)
 
     if output_format == "single":
-        body = "\n".join(msgs)
-        return PlainTextResponse(body, media_type="text/plain")
+        out = "\n".join(msgs) + ("\n" if msgs else "")
+        return PlainTextResponse(out, media_type="text/plain")
     elif output_format == "ndjson":
         lines = [json.dumps({"i": i, "hl7": m}, ensure_ascii=False) for i, m in enumerate(msgs)]
         return PlainTextResponse("\n".join(lines), media_type="application/x-ndjson")
@@ -153,6 +149,21 @@ async def generate_messages(
         return StreamingResponse(mem, media_type="application/zip", headers=headers)
     else:
         raise HTTPException(400, "Unknown output_format")
+
+
+@router.post("/api/interop/generate", response_model=None)
+async def generate_messages_endpoint(request: Request):
+    """HTTP endpoint wrapper for :func:`generate_messages` that accepts both JSON
+    and HTML form posts."""
+    try:
+        body = await request.json()
+    except Exception:
+        try:
+            form = await request.form()
+            body = dict(form)
+        except Exception:
+            body = {}
+    return generate_messages(body)
 
 
 @router.post("/api/interop/deidentify")
