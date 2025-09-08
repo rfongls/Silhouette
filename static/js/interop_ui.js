@@ -139,6 +139,23 @@
 
     const genSel = q("gen-trigger-select");
     if (genSel) genSel.addEventListener("change", () => syncTyped("gen"));
+
+    // Fallback: if trigger select is empty after load, populate via JSON
+    (async function ensureGenTriggers(){
+      const sel = q("gen-trigger-select");
+      const ver = (q("gen-version") || {}).value || getPrimaryVersion();
+      if (!sel || sel.options.length > 0) return;
+      try {
+        const r = await fetch(`/api/interop/triggers?version=${encodeURIComponent(ver)}`, { cache: "no-cache" });
+        const data = await r.json();
+        (data.items || []).forEach(it => {
+          const opt = document.createElement("option");
+          opt.value = it.trigger;
+          opt.textContent = it.description ? `${it.trigger} — ${it.description}` : it.trigger;
+          sel.appendChild(opt);
+        });
+      } catch (_) { }
+    })();
   });
 
   // expose a tiny API

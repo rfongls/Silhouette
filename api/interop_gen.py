@@ -38,7 +38,27 @@ def _to_bool(v):
         return v
     s = str(v).strip().lower()
     return s in ("1", "true", "on", "yes")
+  
 
+def _to_int(v, default=None):
+    try:
+        return int(v)
+    except Exception:
+        return default
+
+
+@router.post("/api/interop/generate", response_model=None)
+async def generate_messages(
+    request: Request,
+    body: dict | None = Body(None),
+):
+    # If the client didn't send JSON, try parsing form data
+    if body is None:
+        try:
+            form = await request.form()
+            body = dict(form)
+        except Exception:
+            body = {}
 
 def _to_int(v, default=None):
     try:

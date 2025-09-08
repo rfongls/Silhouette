@@ -953,6 +953,118 @@ async def ui_security_ir(incident_id: str = Form("INC-12345"), action: str = For
     )
 
 
+# ---------- Helpers ----------
+
+
+def _now_tag() -> str:
+    return time.strftime("%Y%m%d-%H%M%S", time.gmtime())
+
+
+def _write_json(dir_: Path, base: str, payload: dict) -> Path:
+    dir_.mkdir(parents=True, exist_ok=True)
+    p = dir_ / f"{_now_tag()}_{base}.json"
+    p.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+    return p
+
+
+async def _run_tool(tool, payload: dict) -> dict:
+    """Run a wrapper tool in a worker thread. Expect tool.run(payload) -> dict-like."""
+    try:
+        if not hasattr(tool, "run"):
+            raise RuntimeError(f"{getattr(tool, '__name__', 'tool')} has no .run(...)")
+        result = await anyio.to_thread.run_sync(lambda: tool.run(payload))
+        if isinstance(result, dict):
+            return result
+        return {"ok": True, "result": result}
+    except Exception as e:
+        return {
+            "ok": False,
+            "error": str(e),
+            "traceback": traceback.format_exc(limit=2),
+            "echo_payload": payload,
+        }
+
+
+def _mini_html_summary(title: str, lines: list[str]) -> str:
+    items = "".join(f"<li>{line}</li>" for line in lines)
+    return f"<div class='mt'><strong>{title}</strong><ul>{items or '<li>n/a</li>'}</ul></div>"
+
+
+def _html_block_with_raw(summary_html: str, raw: dict) -> HTMLResponse:
+    raw_block = (
+        "<details class='mt'><summary>Show raw</summary>"
+        f"<pre class='codepane'>{json.dumps(raw, indent=2)[:20000]}</pre></details>"
+        "<script>try{refreshKPI('#sec-kpi-wrap','/security/summary')}catch(_){}</script>"
+    )
+    return HTMLResponse(summary_html + raw_block)
+
+
+# ---------- HTML-friendly UI endpoints (Security features) ----------
+
+
+@router.post("/ui/security/scan", response_class=HTMLResponse)
+async def ui_security_scan(target: str = Form("localhost"), scope: str = Form("light")):
+    """Lightweight scan (backed by recon_tool)."""
+    payload = {"target": target, "scope": scope}
+    res = await _run_tool(recon_tool, payload)
+    _write_json(ACTIVE_DIR, "scan", {"input": payload, "output": res})
+    lines = []
+    services = (res.get("inventory", {}) or {}).get("services")
+    if isinstance(services, list):
+        lines.append(f"services: {len(services)}")
+    lines.append(f"ok: {res.get('ok', 'n/a')}")
+    return _html_block_with_raw(
+        f"<div>Scan started for <strong>{target}</strong> (scope: {scope}).</div>"
+        + _mini_html_summary("Summary", lines),
+        res,
+    )
+
+
+@router.post("/ui/security/recon", response_class=HTMLResponse)
+async def ui_security_recon(query: str = Form("example.org")):
+    payload = {"query": query}
+    res = await _run_tool(recon_tool, payload)
+    _write_json(ACTIVE_DIR, "recon", {"input": payload, "output": res})
+    sev = (((res.get("summary") or {}).get("severity_breakdown")) or {})
+    sev_line = ", ".join(f"{k}:{v}" for k, v in sev.items()) if isinstance(sev, dict) else "n/a"
+    return _html_block_with_raw(
+        f"<div>Recon queued for <strong>{query}</strong>.</div>"
+        + _mini_html_summary("Severities", [sev_line]),
+        res,
+    )
+
+
+@router.post("/ui/security/pentest", response_class=HTMLResponse)
+async def ui_security_pentest(ack: str = Form("off"), play: str = Form("dry-run")):
+    if ack != "on":
+        return HTMLResponse("<div class='error'>Authorization required (toggle 'ack').</div>", status_code=400)
+    play = play if play in ("dry-run", "safe-scan") else "dry-run"
+    payload = {"mode": play, "profile": "safe", "ack": True}
+    res = await _run_tool(gate_tool, payload)
+    _write_json(ACTIVE_DIR, "pentest", {"input": payload, "output": res})
+    gate = res.get("gate") or {}
+    allowed = gate.get("allowed")
+    total = gate.get("total")
+    return _html_block_with_raw(
+        f"<div>Authorized pentest run: <strong>{play}</strong></div>"
+        + _mini_html_summary("Gate", [f"allowed/total: {allowed}/{total}"]),
+        res,
+    )
+
+
+@router.post("/ui/security/ir", response_class=HTMLResponse)
+async def ui_security_ir(incident_id: str = Form("INC-12345"), action: str = Form("triage")):
+    payload = {"incident_id": incident_id, "action": action}
+    res = await _run_tool(ir_tool, payload)
+    _write_json(ACTIVE_DIR, "ir", {"input": payload, "output": res})
+    status = (res.get("result") or {}).get("status") if isinstance(res.get("result"), dict) else res.get("ok")
+    return _html_block_with_raw(
+        f"<div>IR action <strong>{action}</strong> for <strong>{incident_id}</strong></div>"
+        + _mini_html_summary("Status", [str(status)]),
+        res,
+    )
+
+
 @router.post("/security/demo/seed", response_class=HTMLResponse)
 async def security_demo_seed(request: Request):
     src = Path("static/examples/cyber/results")
