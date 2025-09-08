@@ -59,7 +59,7 @@
     return localStorage.getItem(LS_PRIMARY_VER) || "hl7-v2-4";
   }
 
-  async function fillDatalist(prefix) {
+  async function fillDatalist(prefix) {  // e.g. prefix === 'gen'
     const versionSel = q(prefix + "-version") || q("sample-version") || q("gen-version");
     const version = versionSel ? versionSel.value : getPrimaryVersion();
     const dl = q(prefix + "-trigger-datalist");  // e.g., gen-trigger-datalist

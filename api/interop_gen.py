@@ -128,7 +128,7 @@ def generate_messages(body: dict):
     deidentify = _to_bool(deid_input)
     if count > 1 and (deid_input is None or str(deid_input).strip() == ""):
         deidentify = True
-
+    # Load text (from relpath or inline "text")
     template_text = text or load_template_text(_assert_rel_under_templates(rel))
 
     msgs: list[str] = []
@@ -162,6 +162,7 @@ async def generate_messages_form(
     deidentify: bool = Form(False),
     text: str | None = Form(None),
 ):
+    """Form-post variant. Always returns plain HL7 text."""
     body = {
         "version": version,
         "trigger": (trigger or "").strip(),
@@ -173,11 +174,12 @@ async def generate_messages_form(
         "deidentify": bool(deidentify),
         "text": text,
     }
-    if count > 1 and deidentify is False and "deidentify" not in body:
+    if count > 1 and deidentify is False:
+        # Friendly default: auto-deidentify when generating more than one unless explicitly disabled
         body["deidentify"] = True
     return generate_messages(body)
 
-# Optional alias that still handles JSON or query-string body (used by tests/tools)
+# Backward-compatible alias that accepts JSON *or* form or raw query body
 @router.post("/api/interop/generate/plain", response_class=PlainTextResponse)
 async def generate_messages_plain(request: Request):
     ctype = (request.headers.get("content-type") or "").lower()
@@ -196,7 +198,7 @@ async def generate_messages_plain(request: Request):
         except Exception:
             raw = await request.body()
             q = parse_qs(raw.decode("utf-8", errors="ignore"))
-            body = {k: v[-1] for k, v in q.items()}
+            body = {k: v[-1] for k, v in q.items()} if q else {}
     return generate_messages(body)
 
 
