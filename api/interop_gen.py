@@ -6,7 +6,6 @@ import re
 from fastapi import APIRouter, Body, HTTPException, Request
 from fastapi.responses import JSONResponse, PlainTextResponse
 from urllib.parse import parse_qs
-
 from silhouette_core.interop.hl7_mutate import (
     enrich_clinical_fields,
     ensure_unique_fields,
@@ -185,7 +184,6 @@ async def generate_messages_endpoint(request: Request):
             raw = (await request.body()).decode("utf-8", errors="ignore")
             qs = {k: v[-1] for k, v in parse_qs(raw).items()}
             body = qs or ({"text": raw} if raw.strip() else {})
-
     return generate_messages(body)
 
 
