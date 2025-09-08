@@ -1,0 +1,153 @@
+messageTypes:
+  # Pharmacy, laboratory, imaging, blood product and general order events (O codes)
+  - "RRE^O12"
+  - "RRD^O14"
+  - "RRG^O16"
+  - "RRA^O18"
+  - "OMG^O19"
+  - "ORG^O20"
+  - "ORL^O20"
+  - "OML^O21"
+  - "ORL^O22"
+  - "OMI^O23"
+  - "ORI^O24"
+  - "RDE^O25"
+  - "RRE^O26"
+  - "OMB^O27"
+  - "ORB^O28"
+  - "BPS^O29"
+  - "BRP^O30"
+  - "BTS^O31"
+  - "BRT^O32"
+  - "OML^O33"
+  - "ORL^O34"
+  - "OML^O35"
+  - "ORL^O36"
+  - "OPL^O37"
+  - "OPR^O38"
+  - "O39^O39"
+  - "O40^O40"
+  - "DBC^O41"
+  - "DBU^O42"
+  - "O43^O43"
+  - "O44^O44"
+  - "O45^O45"
+  - "O46^O46"
+  - "O47^O47"
+  - "O48^O48"
+  - "O49^O49"
+  - "O50^O50"
+  - "OSU^O51"
+  - "OSU^O52"
+  - "ORL^O53"
+  - "ORL^O54"
+  - "ORL^O55"
+  - "ORL^O56"
+  - "OMQ^O57"
+  - "ORX^O58"
+  - "OML^O59"
+resourcePlan:
+  # ServiceRequest covers orders for labs, imaging, pharmacy and blood products
+  - resource: ServiceRequest
+    rules:
+      - hl7Field: PID.3
+        fhirPath: subject.identifier
+      - hl7Field: ""
+        fhirPath: status
+        transform: default_servicerequest_status
+  # DiagnosticReport compiles results produced by orders
+  - resource: DiagnosticReport
+    rules:
+      - hl7Field: PID.3
+        fhirPath: subject.identifier
+      - hl7Field: ""
+        fhirPath: status
+        transform: default_dr_status
+  # Observation captures individual results
+  - resource: Observation
+    rules:
+      - hl7Field: PID.3
+        fhirPath: subject.identifier
+  # Specimen records material on which tests are performed
+  - resource: Specimen
+    rules:
+      - hl7Field: PID.3
+        fhirPath: subject.identifier
+      - hl7Field: ""
+        fhirPath: status
+        transform: default_specimen_status
+  # Procedure captures operations such as transfusions or imaging
+  - resource: Procedure
+    rules:
+      - hl7Field: PID.3
+        fhirPath: subject.identifier
+      - hl7Field: ""
+        fhirPath: status
+        transform: default_procedure_status
+  # MedicationRequest encodes orders for medications
+  - resource: MedicationRequest
+    rules:
+      - hl7Field: PID.3
+        fhirPath: subject.identifier
+      - hl7Field: ""
+        fhirPath: status
+        transform: default_medicationrequest_status
+  # MedicationDispense records dispensing events
+  - resource: MedicationDispense
+    rules:
+      - hl7Field: PID.3
+        fhirPath: subject.identifier
+      - hl7Field: ""
+        fhirPath: status
+        transform: default_medicationdispense_status
+  # MedicationAdministration records administrations
+  - resource: MedicationAdministration
+    rules:
+      - hl7Field: PID.3
+        fhirPath: subject.identifier
+      - hl7Field: ""
+        fhirPath: status
+        transform: default_medicationadmin_status
+  # BiologicallyDerivedProduct captures blood products used in transfusions
+  - resource: BiologicallyDerivedProduct
+    rules:
+      - hl7Field: ""
+        fhirPath: status
+        transform: default_biologicallyderivedproduct_status
+  # SupplyRequest and SupplyDelivery manage supply chain aspects of orders
+  - resource: SupplyRequest
+    rules:
+      - hl7Field: PID.3
+        fhirPath: subject.identifier
+      - hl7Field: ""
+        fhirPath: status
+        transform: default_supplyrequest_status
+  - resource: SupplyDelivery
+    rules:
+      - hl7Field: PID.3
+        fhirPath: subject.identifier
+      - hl7Field: ""
+        fhirPath: status
+        transform: default_supplydelivery_status
+  # DocumentReference stores any associated documents
+  - resource: DocumentReference
+    rules:
+      - hl7Field: PID.3
+        fhirPath: subject.identifier
+      - hl7Field: ""
+        fhirPath: status
+        transform: default_documentreference_status
+  # ImagingStudy represents imaging orders and results
+  - resource: ImagingStudy
+    rules:
+      - hl7Field: PID.3
+        fhirPath: subject.identifier
+      - hl7Field: ""
+        fhirPath: status
+        transform: default_imagingstudy_status
+  # Device records equipment referenced in orders
+  - resource: Device
+    rules:
+      - hl7Field: ""
+        fhirPath: status
+        transform: default_device_status

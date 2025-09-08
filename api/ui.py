@@ -12,6 +12,913 @@ from skills.hl7_drafter import draft_message, send_message
 
 router = APIRouter()
 templates = Jinja2Templates(directory="templates")
+REG_PATH = Path("config/skills.yaml")
+
+
+def _load_skills() -> list[dict]:
+    """Load skills from registry, fallback to built-in defaults."""
+    if REG_PATH.exists():
+        data = yaml.safe_load(REG_PATH.read_text(encoding="utf-8")) or {}
+        skills = data.get("skills") or []
+    else:
+        skills = [
+            {
+                "id": "interop",
+                "name": "Interoperability",
+                "desc": "Generate/de-ID/validate HL7, translate to FHIR, and transport via MLLP.",
+                "dashboard": "/ui/interop/dashboard",
+                "summary_url": "/interop/summary",
+                "enabled": True,
+            },
+            {
+                "id": "security",
+                "name": "Security",
+                "desc": "Run security tools, capture evidence, and review findings.",
+                "dashboard": "/ui/security/dashboard",
+                "summary_url": "/security/summary",
+                "enabled": True,
+            },
+        ]
+    norm = []
+    for s in skills:
+        if not s or not s.get("enabled"):
+            continue
+        norm.append(
+            {
+                "id": s.get("id", ""),
+                "name": s.get("name", ""),
+                "desc": s.get("desc", ""),
+                "dashboard": s.get("dashboard", ""),
+                "summary_url": s.get("summary_url", ""),
+            }
+        )
+    return norm
+
+@router.get("/", include_in_schema=False)
+def root():
+    # Default entry → Reports Home
+    return RedirectResponse("/ui/home", status_code=307)
+
+
+@router.get("/ui/home", response_class=HTMLResponse)
+def ui_home(request: Request):
+    """
+    Reports Home — high-level KPIs and recent activity.
+    Uses registry + HTMX to pull skill-specific summaries.
+    """
+    return templates.TemplateResponse("ui/home_reports.html", {"request": request, "skills": _load_skills()})
+
+@router.get("/ui/skills", response_class=HTMLResponse)
+def ui_skills_index(request: Request):
+    """
+    Skills Index — navigate to skill dashboards (Interop, Security, etc.).
+    """
+    return templates.TemplateResponse("ui/skills_index.html", {"request": request, "skills": _load_skills()})
+
+REG_PATH = Path("config/skills.yaml")
+
+
+def _load_skills() -> list[dict]:
+    """Load skills from registry, fallback to built-in defaults."""
+    if REG_PATH.exists():
+        data = yaml.safe_load(REG_PATH.read_text(encoding="utf-8")) or {}
+        skills = data.get("skills") or []
+    else:
+        skills = [
+            {
+                "id": "interop",
+                "name": "Interoperability",
+                "desc": "Generate/de-ID/validate HL7, translate to FHIR, and transport via MLLP.",
+                "dashboard": "/ui/interop/dashboard",
+                "summary_url": "/interop/summary",
+                "enabled": True,
+            },
+            {
+                "id": "security",
+                "name": "Security",
+                "desc": "Run security tools, capture evidence, and review findings.",
+                "dashboard": "/ui/security/dashboard",
+                "summary_url": "/security/summary",
+                "enabled": True,
+            },
+        ]
+    norm = []
+    for s in skills:
+        if not s or not s.get("enabled"):
+            continue
+        norm.append(
+            {
+                "id": s.get("id", ""),
+                "name": s.get("name", ""),
+                "desc": s.get("desc", ""),
+                "dashboard": s.get("dashboard", ""),
+                "summary_url": s.get("summary_url", ""),
+            }
+        )
+    return norm
+
+
+@router.get("/", include_in_schema=False)
+def root():
+    # Default entry → Reports Home
+    return RedirectResponse("/ui/home", status_code=307)
+
+
+@router.get("/ui/home", response_class=HTMLResponse)
+def ui_home(request: Request):
+    """
+    Reports Home — high-level KPIs and recent activity.
+    Uses registry + HTMX to pull skill-specific summaries.
+    """
+    return templates.TemplateResponse("ui/home_reports.html", {"request": request, "skills": _load_skills()})
+
+
+@router.get("/ui/skills", response_class=HTMLResponse)
+def ui_skills_index(request: Request):
+    """
+    Skills Index — navigate to skill dashboards (Interop, Security, etc.).
+    """
+    return templates.TemplateResponse("ui/skills_index.html", {"request": request, "skills": _load_skills()})
+
+REG_PATH = Path("config/skills.yaml")
+
+
+def _load_skills() -> list[dict]:
+    """Load skills from registry, fallback to built-in defaults."""
+    if REG_PATH.exists():
+        data = yaml.safe_load(REG_PATH.read_text(encoding="utf-8")) or {}
+        skills = data.get("skills") or []
+    else:
+        skills = [
+            {
+                "id": "interop",
+                "name": "Interoperability",
+                "desc": "Generate/de-ID/validate HL7, translate to FHIR, and transport via MLLP.",
+                "dashboard": "/ui/interop/dashboard",
+                "summary_url": "/interop/summary",
+                "enabled": True,
+            },
+            {
+                "id": "security",
+                "name": "Security",
+                "desc": "Run security tools, capture evidence, and review findings.",
+                "dashboard": "/ui/security/dashboard",
+                "summary_url": "/security/summary",
+                "enabled": True,
+            },
+        ]
+    norm = []
+    for s in skills:
+        if not s or not s.get("enabled"):
+            continue
+        norm.append(
+            {
+                "id": s.get("id", ""),
+                "name": s.get("name", ""),
+                "desc": s.get("desc", ""),
+                "dashboard": s.get("dashboard", ""),
+                "summary_url": s.get("summary_url", ""),
+            }
+        )
+    return norm
+
+
+@router.get("/", include_in_schema=False)
+def root():
+    # Default entry → Reports Home
+    return RedirectResponse("/ui/home", status_code=307)
+
+
+@router.get("/ui/home", response_class=HTMLResponse)
+def ui_home(request: Request):
+    """
+    Reports Home — high-level KPIs and recent activity.
+    Uses registry + HTMX to pull skill-specific summaries.
+    """
+    return templates.TemplateResponse("ui/home_reports.html", {"request": request, "skills": _load_skills()})
+
+
+@router.get("/ui/skills", response_class=HTMLResponse)
+def ui_skills_index(request: Request):
+    """
+    Skills Index — navigate to skill dashboards (Interop, Security, etc.).
+    """
+    return templates.TemplateResponse("ui/skills_index.html", {"request": request, "skills": _load_skills()})
+
+REG_PATH = Path("config/skills.yaml")
+
+
+def _load_skills() -> list[dict]:
+    """Load skills from registry, fallback to built-in defaults."""
+    if REG_PATH.exists():
+        data = yaml.safe_load(REG_PATH.read_text(encoding="utf-8")) or {}
+        skills = data.get("skills") or []
+    else:
+        skills = [
+            {
+                "id": "interop",
+                "name": "Interoperability",
+                "desc": "Generate/de-ID/validate HL7, translate to FHIR, and transport via MLLP.",
+                "dashboard": "/ui/interop/dashboard",
+                "summary_url": "/interop/summary",
+                "enabled": True,
+            },
+            {
+                "id": "security",
+                "name": "Security",
+                "desc": "Run security tools, capture evidence, and review findings.",
+                "dashboard": "/ui/security/dashboard",
+                "summary_url": "/security/summary",
+                "enabled": True,
+            },
+        ]
+    norm = []
+    for s in skills:
+        if not s or not s.get("enabled"):
+            continue
+        norm.append(
+            {
+                "id": s.get("id", ""),
+                "name": s.get("name", ""),
+                "desc": s.get("desc", ""),
+                "dashboard": s.get("dashboard", ""),
+                "summary_url": s.get("summary_url", ""),
+            }
+        )
+    return norm
+
+
+@router.get("/", include_in_schema=False)
+def root():
+    # Default entry → Reports Home
+    return RedirectResponse("/ui/home", status_code=307)
+
+
+@router.get("/ui/home", response_class=HTMLResponse)
+def ui_home(request: Request):
+    """
+    Reports Home — high-level KPIs and recent activity.
+    Uses registry + HTMX to pull skill-specific summaries.
+    """
+    return templates.TemplateResponse("ui/home_reports.html", {"request": request, "skills": _load_skills()})
+
+
+@router.get("/ui/skills", response_class=HTMLResponse)
+def ui_skills_index(request: Request):
+    """
+    Skills Index — navigate to skill dashboards (Interop, Security, etc.).
+    """
+    return templates.TemplateResponse("ui/skills_index.html", {"request": request, "skills": _load_skills()})
+
+REG_PATH = Path("config/skills.yaml")
+
+
+def _load_skills() -> list[dict]:
+    """Load skills from registry, fallback to built-in defaults."""
+    if REG_PATH.exists():
+        data = yaml.safe_load(REG_PATH.read_text(encoding="utf-8")) or {}
+        skills = data.get("skills") or []
+    else:
+        skills = [
+            {
+                "id": "interop",
+                "name": "Interoperability",
+                "desc": "Generate/de-ID/validate HL7, translate to FHIR, and transport via MLLP.",
+                "dashboard": "/ui/interop/dashboard",
+                "summary_url": "/interop/summary",
+                "enabled": True,
+            },
+            {
+                "id": "security",
+                "name": "Security",
+                "desc": "Run security tools, capture evidence, and review findings.",
+                "dashboard": "/ui/security/dashboard",
+                "summary_url": "/security/summary",
+                "enabled": True,
+            },
+        ]
+    norm = []
+    for s in skills:
+        if not s or not s.get("enabled"):
+            continue
+        norm.append(
+            {
+                "id": s.get("id", ""),
+                "name": s.get("name", ""),
+                "desc": s.get("desc", ""),
+                "dashboard": s.get("dashboard", ""),
+                "summary_url": s.get("summary_url", ""),
+            }
+        )
+    return norm
+
+
+@router.get("/", include_in_schema=False)
+def root():
+    # Default entry → Reports Home
+    return RedirectResponse("/ui/home", status_code=307)
+
+
+@router.get("/ui/home", response_class=HTMLResponse)
+def ui_home(request: Request):
+    """
+    Reports Home — high-level KPIs and recent activity.
+    Uses registry + HTMX to pull skill-specific summaries.
+    """
+    return templates.TemplateResponse("ui/home_reports.html", {"request": request, "skills": _load_skills()})
+
+
+@router.get("/ui/skills", response_class=HTMLResponse)
+def ui_skills_index(request: Request):
+    """
+    Skills Index — navigate to skill dashboards (Interop, Security, etc.).
+    """
+    return templates.TemplateResponse("ui/skills_index.html", {"request": request, "skills": _load_skills()})
+
+REG_PATH = Path("config/skills.yaml")
+
+
+def _load_skills() -> list[dict]:
+    """Load skills from registry, fallback to built-in defaults."""
+    if REG_PATH.exists():
+        data = yaml.safe_load(REG_PATH.read_text(encoding="utf-8")) or {}
+        skills = data.get("skills") or []
+    else:
+        skills = [
+            {
+                "id": "interop",
+                "name": "Interoperability",
+                "desc": "Generate/de-ID/validate HL7, translate to FHIR, and transport via MLLP.",
+                "dashboard": "/ui/interop/dashboard",
+                "summary_url": "/interop/summary",
+                "enabled": True,
+            },
+            {
+                "id": "security",
+                "name": "Security",
+                "desc": "Run security tools, capture evidence, and review findings.",
+                "dashboard": "/ui/security/dashboard",
+                "summary_url": "/security/summary",
+                "enabled": True,
+            },
+        ]
+    norm = []
+    for s in skills:
+        if not s or not s.get("enabled"):
+            continue
+        norm.append(
+            {
+                "id": s.get("id", ""),
+                "name": s.get("name", ""),
+                "desc": s.get("desc", ""),
+                "dashboard": s.get("dashboard", ""),
+                "summary_url": s.get("summary_url", ""),
+            }
+        )
+    return norm
+
+
+@router.get("/", include_in_schema=False)
+def root():
+    # Default entry → Reports Home
+    return RedirectResponse("/ui/home", status_code=307)
+
+
+@router.get("/ui/home", response_class=HTMLResponse)
+def ui_home(request: Request):
+    """
+    Reports Home — high-level KPIs and recent activity.
+    Uses registry + HTMX to pull skill-specific summaries.
+    """
+    return templates.TemplateResponse("ui/home_reports.html", {"request": request, "skills": _load_skills()})
+
+
+@router.get("/ui/skills", response_class=HTMLResponse)
+def ui_skills_index(request: Request):
+    """
+    Skills Index — navigate to skill dashboards (Interop, Security, etc.).
+    """
+    return templates.TemplateResponse("ui/skills_index.html", {"request": request, "skills": _load_skills()})
+
+REG_PATH = Path("config/skills.yaml")
+
+
+def _load_skills() -> list[dict]:
+    """Load skills from registry, fallback to built-in defaults."""
+    if REG_PATH.exists():
+        data = yaml.safe_load(REG_PATH.read_text(encoding="utf-8")) or {}
+        skills = data.get("skills") or []
+    else:
+        skills = [
+            {
+                "id": "interop",
+                "name": "Interoperability",
+                "desc": "Generate/de-ID/validate HL7, translate to FHIR, and transport via MLLP.",
+                "dashboard": "/ui/interop/dashboard",
+                "summary_url": "/interop/summary",
+                "enabled": True,
+            },
+            {
+                "id": "security",
+                "name": "Security",
+                "desc": "Run security tools, capture evidence, and review findings.",
+                "dashboard": "/ui/security/dashboard",
+                "summary_url": "/security/summary",
+                "enabled": True,
+            },
+        ]
+    norm = []
+    for s in skills:
+        if not s or not s.get("enabled"):
+            continue
+        norm.append(
+            {
+                "id": s.get("id", ""),
+                "name": s.get("name", ""),
+                "desc": s.get("desc", ""),
+                "dashboard": s.get("dashboard", ""),
+                "summary_url": s.get("summary_url", ""),
+            }
+        )
+    return norm
+
+
+@router.get("/", include_in_schema=False)
+def root():
+    # Default entry → Reports Home
+    return RedirectResponse("/ui/home", status_code=307)
+
+
+@router.get("/ui/home", response_class=HTMLResponse)
+def ui_home(request: Request):
+    """
+    Reports Home — high-level KPIs and recent activity.
+    Uses registry + HTMX to pull skill-specific summaries.
+    """
+    return templates.TemplateResponse("ui/home_reports.html", {"request": request, "skills": _load_skills()})
+
+
+@router.get("/ui/skills", response_class=HTMLResponse)
+def ui_skills_index(request: Request):
+    """
+    Skills Index — navigate to skill dashboards (Interop, Security, etc.).
+    """
+    return templates.TemplateResponse("ui/skills_index.html", {"request": request, "skills": _load_skills()})
+
+REG_PATH = Path("config/skills.yaml")
+
+
+def _load_skills() -> list[dict]:
+    """Load skills from registry, fallback to built-in defaults."""
+    if REG_PATH.exists():
+        data = yaml.safe_load(REG_PATH.read_text(encoding="utf-8")) or {}
+        skills = data.get("skills") or []
+    else:
+        skills = [
+            {
+                "id": "interop",
+                "name": "Interoperability",
+                "desc": "Generate/de-ID/validate HL7, translate to FHIR, and transport via MLLP.",
+                "dashboard": "/ui/interop/dashboard",
+                "summary_url": "/interop/summary",
+                "enabled": True,
+            },
+            {
+                "id": "security",
+                "name": "Security",
+                "desc": "Run security tools, capture evidence, and review findings.",
+                "dashboard": "/ui/security/dashboard",
+                "summary_url": "/security/summary",
+                "enabled": True,
+            },
+        ]
+    norm = []
+    for s in skills:
+        if not s or not s.get("enabled"):
+            continue
+        norm.append(
+            {
+                "id": s.get("id", ""),
+                "name": s.get("name", ""),
+                "desc": s.get("desc", ""),
+                "dashboard": s.get("dashboard", ""),
+                "summary_url": s.get("summary_url", ""),
+            }
+        )
+    return norm
+
+
+@router.get("/", include_in_schema=False)
+def root():
+    # Default entry → Reports Home
+    return RedirectResponse("/ui/home", status_code=307)
+
+
+@router.get("/ui/home", response_class=HTMLResponse)
+def ui_home(request: Request):
+    """
+    Reports Home — high-level KPIs and recent activity.
+    Uses registry + HTMX to pull skill-specific summaries.
+    """
+    return templates.TemplateResponse("ui/home_reports.html", {"request": request, "skills": _load_skills()})
+
+
+@router.get("/ui/skills", response_class=HTMLResponse)
+def ui_skills_index(request: Request):
+    """
+    Skills Index — navigate to skill dashboards (Interop, Security, etc.).
+    """
+    return templates.TemplateResponse("ui/skills_index.html", {"request": request, "skills": _load_skills()})
+
+REG_PATH = Path("config/skills.yaml")
+
+
+def _load_skills() -> list[dict]:
+    """Load skills from registry, fallback to built-in defaults."""
+    if REG_PATH.exists():
+        data = yaml.safe_load(REG_PATH.read_text(encoding="utf-8")) or {}
+        skills = data.get("skills") or []
+    else:
+        skills = [
+            {
+                "id": "interop",
+                "name": "Interoperability",
+                "desc": "Generate/de-ID/validate HL7, translate to FHIR, and transport via MLLP.",
+                "dashboard": "/ui/interop/dashboard",
+                "summary_url": "/interop/summary",
+                "enabled": True,
+            },
+            {
+                "id": "security",
+                "name": "Security",
+                "desc": "Run security tools, capture evidence, and review findings.",
+                "dashboard": "/ui/security/dashboard",
+                "summary_url": "/security/summary",
+                "enabled": True,
+            },
+        ]
+    norm = []
+    for s in skills:
+        if not s or not s.get("enabled"):
+            continue
+        norm.append(
+            {
+                "id": s.get("id", ""),
+                "name": s.get("name", ""),
+                "desc": s.get("desc", ""),
+                "dashboard": s.get("dashboard", ""),
+                "summary_url": s.get("summary_url", ""),
+            }
+        )
+    return norm
+
+
+@router.get("/", include_in_schema=False)
+def root():
+    # Default entry → Reports Home
+    return RedirectResponse("/ui/home", status_code=307)
+
+
+@router.get("/ui/home", response_class=HTMLResponse)
+def ui_home(request: Request):
+    """
+    Reports Home — high-level KPIs and recent activity.
+    Uses registry + HTMX to pull skill-specific summaries.
+    """
+    return templates.TemplateResponse("ui/home_reports.html", {"request": request, "skills": _load_skills()})
+
+
+@router.get("/ui/skills", response_class=HTMLResponse)
+def ui_skills_index(request: Request):
+    """
+    Skills Index — navigate to skill dashboards (Interop, Security, etc.).
+    """
+    return templates.TemplateResponse("ui/skills_index.html", {"request": request, "skills": _load_skills()})
+
+REG_PATH = Path("config/skills.yaml")
+
+
+def _load_skills() -> list[dict]:
+    """Load skills from registry, fallback to built-in defaults."""
+    if REG_PATH.exists():
+        data = yaml.safe_load(REG_PATH.read_text(encoding="utf-8")) or {}
+        skills = data.get("skills") or []
+    else:
+        skills = [
+            {
+                "id": "interop",
+                "name": "Interoperability",
+                "desc": "Generate/de-ID/validate HL7, translate to FHIR, and transport via MLLP.",
+                "dashboard": "/ui/interop/dashboard",
+                "summary_url": "/interop/summary",
+                "enabled": True,
+            },
+            {
+                "id": "security",
+                "name": "Security",
+                "desc": "Run security tools, capture evidence, and review findings.",
+                "dashboard": "/ui/security/dashboard",
+                "summary_url": "/security/summary",
+                "enabled": True,
+            },
+        ]
+    norm = []
+    for s in skills:
+        if not s or not s.get("enabled"):
+            continue
+        norm.append(
+            {
+                "id": s.get("id", ""),
+                "name": s.get("name", ""),
+                "desc": s.get("desc", ""),
+                "dashboard": s.get("dashboard", ""),
+                "summary_url": s.get("summary_url", ""),
+            }
+        )
+    return norm
+
+
+@router.get("/", include_in_schema=False)
+def root():
+    # Default entry → Reports Home
+    return RedirectResponse("/ui/home", status_code=307)
+
+
+@router.get("/ui/home", response_class=HTMLResponse)
+def ui_home(request: Request):
+    """
+    Reports Home — high-level KPIs and recent activity.
+    Uses registry + HTMX to pull skill-specific summaries.
+    """
+    return templates.TemplateResponse("ui/home_reports.html", {"request": request, "skills": _load_skills()})
+
+
+@router.get("/ui/skills", response_class=HTMLResponse)
+def ui_skills_index(request: Request):
+    """
+    Skills Index — navigate to skill dashboards (Interop, Security, etc.).
+    """
+    return templates.TemplateResponse("ui/skills_index.html", {"request": request, "skills": _load_skills()})
+
+REG_PATH = Path("config/skills.yaml")
+
+
+def _load_skills() -> list[dict]:
+    """Load skills from registry, fallback to built-in defaults."""
+    if REG_PATH.exists():
+        data = yaml.safe_load(REG_PATH.read_text(encoding="utf-8")) or {}
+        skills = data.get("skills") or []
+    else:
+        skills = [
+            {
+                "id": "interop",
+                "name": "Interoperability",
+                "desc": "Generate/de-ID/validate HL7, translate to FHIR, and transport via MLLP.",
+                "dashboard": "/ui/interop/dashboard",
+                "summary_url": "/interop/summary",
+                "enabled": True,
+            },
+            {
+                "id": "security",
+                "name": "Security",
+                "desc": "Run security tools, capture evidence, and review findings.",
+                "dashboard": "/ui/security/dashboard",
+                "summary_url": "/security/summary",
+                "enabled": True,
+            },
+        ]
+    norm = []
+    for s in skills:
+        if not s or not s.get("enabled"):
+            continue
+        norm.append(
+            {
+                "id": s.get("id", ""),
+                "name": s.get("name", ""),
+                "desc": s.get("desc", ""),
+                "dashboard": s.get("dashboard", ""),
+                "summary_url": s.get("summary_url", ""),
+            }
+        )
+    return norm
+
+
+@router.get("/", include_in_schema=False)
+def root():
+    # Default entry → Reports Home
+    return RedirectResponse("/ui/home", status_code=307)
+
+
+@router.get("/ui/home", response_class=HTMLResponse)
+def ui_home(request: Request):
+    """
+    Reports Home — high-level KPIs and recent activity.
+    Uses registry + HTMX to pull skill-specific summaries.
+    """
+    return templates.TemplateResponse("ui/home_reports.html", {"request": request, "skills": _load_skills()})
+
+
+@router.get("/ui/skills", response_class=HTMLResponse)
+def ui_skills_index(request: Request):
+    """
+    Skills Index — navigate to skill dashboards (Interop, Security, etc.).
+    """
+    return templates.TemplateResponse("ui/skills_index.html", {"request": request, "skills": _load_skills()})
+
+REG_PATH = Path("config/skills.yaml")
+
+
+def _load_skills() -> list[dict]:
+    """Load skills from registry, fallback to built-in defaults."""
+    if REG_PATH.exists():
+        data = yaml.safe_load(REG_PATH.read_text(encoding="utf-8")) or {}
+        skills = data.get("skills") or []
+    else:
+        skills = [
+            {
+                "id": "interop",
+                "name": "Interoperability",
+                "desc": "Generate/de-ID/validate HL7, translate to FHIR, and transport via MLLP.",
+                "dashboard": "/ui/interop/dashboard",
+                "summary_url": "/interop/summary",
+                "enabled": True,
+            },
+            {
+                "id": "security",
+                "name": "Security",
+                "desc": "Run security tools, capture evidence, and review findings.",
+                "dashboard": "/ui/security/dashboard",
+                "summary_url": "/security/summary",
+                "enabled": True,
+            },
+        ]
+    norm = []
+    for s in skills:
+        if not s or not s.get("enabled"):
+            continue
+        norm.append(
+            {
+                "id": s.get("id", ""),
+                "name": s.get("name", ""),
+                "desc": s.get("desc", ""),
+                "dashboard": s.get("dashboard", ""),
+                "summary_url": s.get("summary_url", ""),
+            }
+        )
+    return norm
+
+
+@router.get("/", include_in_schema=False)
+def root():
+    # Default entry → Reports Home
+    return RedirectResponse("/ui/home", status_code=307)
+
+
+@router.get("/ui/home", response_class=HTMLResponse)
+def ui_home(request: Request):
+    """
+    Reports Home — high-level KPIs and recent activity.
+    Uses registry + HTMX to pull skill-specific summaries.
+    """
+    return templates.TemplateResponse("ui/home_reports.html", {"request": request, "skills": _load_skills()})
+
+
+@router.get("/ui/skills", response_class=HTMLResponse)
+def ui_skills_index(request: Request):
+    """
+    Skills Index — navigate to skill dashboards (Interop, Security, etc.).
+    """
+    return templates.TemplateResponse("ui/skills_index.html", {"request": request, "skills": _load_skills()})
+
+REG_PATH = Path("config/skills.yaml")
+
+
+def _load_skills() -> list[dict]:
+    """Load skills from registry, fallback to built-in defaults."""
+    if REG_PATH.exists():
+        data = yaml.safe_load(REG_PATH.read_text(encoding="utf-8")) or {}
+        skills = data.get("skills") or []
+    else:
+        skills = [
+            {
+                "id": "interop",
+                "name": "Interoperability",
+                "desc": "Generate/de-ID/validate HL7, translate to FHIR, and transport via MLLP.",
+                "dashboard": "/ui/interop/dashboard",
+                "summary_url": "/interop/summary",
+                "enabled": True,
+            },
+            {
+                "id": "security",
+                "name": "Security",
+                "desc": "Run security tools, capture evidence, and review findings.",
+                "dashboard": "/ui/security/dashboard",
+                "summary_url": "/security/summary",
+                "enabled": True,
+            },
+        ]
+    norm = []
+    for s in skills:
+        if not s or not s.get("enabled"):
+            continue
+        norm.append(
+            {
+                "id": s.get("id", ""),
+                "name": s.get("name", ""),
+                "desc": s.get("desc", ""),
+                "dashboard": s.get("dashboard", ""),
+                "summary_url": s.get("summary_url", ""),
+            }
+        )
+    return norm
+
+
+@router.get("/", include_in_schema=False)
+def root():
+    # Default entry → Reports Home
+    return RedirectResponse("/ui/home", status_code=307)
+
+
+@router.get("/ui/home", response_class=HTMLResponse)
+def ui_home(request: Request):
+    """
+    Reports Home — high-level KPIs and recent activity.
+    Uses registry + HTMX to pull skill-specific summaries.
+    """
+    return templates.TemplateResponse("ui/home_reports.html", {"request": request, "skills": _load_skills()})
+
+
+@router.get("/ui/skills", response_class=HTMLResponse)
+def ui_skills_index(request: Request):
+    """
+    Skills Index — navigate to skill dashboards (Interop, Security, etc.).
+    """
+    return templates.TemplateResponse("ui/skills_index.html", {"request": request, "skills": _load_skills()})
+
+REG_PATH = Path("config/skills.yaml")
+
+
+def _load_skills() -> list[dict]:
+    """Load skills from registry, fallback to built-in defaults."""
+    if REG_PATH.exists():
+        data = yaml.safe_load(REG_PATH.read_text(encoding="utf-8")) or {}
+        skills = data.get("skills") or []
+    else:
+        skills = [
+            {
+                "id": "interop",
+                "name": "Interoperability",
+                "desc": "Generate/de-ID/validate HL7, translate to FHIR, and transport via MLLP.",
+                "dashboard": "/ui/interop/dashboard",
+                "summary_url": "/interop/summary",
+                "enabled": True,
+            },
+            {
+                "id": "security",
+                "name": "Security",
+                "desc": "Run security tools, capture evidence, and review findings.",
+                "dashboard": "/ui/security/dashboard",
+                "summary_url": "/security/summary",
+                "enabled": True,
+            },
+        ]
+    norm = []
+    for s in skills:
+        if not s or not s.get("enabled"):
+            continue
+        norm.append(
+            {
+                "id": s.get("id", ""),
+                "name": s.get("name", ""),
+                "desc": s.get("desc", ""),
+                "dashboard": s.get("dashboard", ""),
+                "summary_url": s.get("summary_url", ""),
+            }
+        )
+    return norm
+
+
+@router.get("/", include_in_schema=False)
+def root():
+    # Default entry → Reports Home
+    return RedirectResponse("/ui/home", status_code=307)
+
+
+@router.get("/ui/home", response_class=HTMLResponse)
+def ui_home(request: Request):
+    """
+    Reports Home — high-level KPIs and recent activity.
+    Uses registry + HTMX to pull skill-specific summaries.
+    """
+    return templates.TemplateResponse("ui/home_reports.html", {"request": request, "skills": _load_skills()})
+
+
+@router.get("/ui/skills", response_class=HTMLResponse)
+def ui_skills_index(request: Request):
+    """
+    Skills Index — navigate to skill dashboards (Interop, Security, etc.).
+    """
+    return templates.TemplateResponse("ui/skills_index.html", {"request": request, "skills": _load_skills()})
 
 REG_PATH = Path("config/skills.yaml")
 
