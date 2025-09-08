@@ -28,9 +28,9 @@ def test_pick_map_wildcards_and_fallback():
 
 
 def test_quickstart_uses_trigger_to_report_map(monkeypatch):
-    def fake_which(cmd):
-        return None
-    monkeypatch.setattr(interop, "_which", fake_which)
-    out, note = interop._hl7_to_fhir_via_cli("MSH|^~\\&|...||...||...||ADT^A01|X|P|2.4\r\nPID|1||123||DOE^JOHN", trigger="ADT_A01")
+    out, note = interop._hl7_to_fhir_via_cli(
+        "MSH|^~\\&|...||...||...||ADT^A01|X|P|2.4\r\nPID|1||123||DOE^JOHN",
+        trigger="ADT_A01",
+    )
     assert "maps/adt_uscore.yaml" in note
     assert out.strip().startswith("{")
