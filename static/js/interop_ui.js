@@ -51,6 +51,7 @@
     try {
       fillDatalist("qs");
       fillDatalist("ds");
+      fillDatalist("gen");
       fillDatalist("pipe");
     } catch {}
   }
@@ -88,10 +89,9 @@
     }
     if (prefix === "gen") {
       const v = (q("gen-version") || {}).value || getPrimaryVersion();
-      const sel = q("gen-trigger-select");
-      const input = document.querySelector('#gen-form [name="template_relpath"]');
-      const trig = (sel && sel.value) ? sel.value : (typed && typed.value) ? typed.value : "";
-      if (input && trig) input.value = `${v}/${trig}.hl7`;
+      const relInput = document.querySelector('#gen-form [name="template_relpath"]');
+      const trig = typed && typed.value ? typed.value : "";
+      if (relInput && trig) relInput.value = `${v}/${trig}.hl7`;
     }
   }
 
@@ -125,6 +125,7 @@
     // seed datalists
       fillDatalist("qs");
       fillDatalist("ds");
+      fillDatalist("gen");
       fillDatalist("pipe");
 
     // refresh datalists after HTMX replaces the trigger <select>s
@@ -132,14 +133,6 @@
       if (e && e.target && e.target.id === "qs-trigger") fillDatalist("qs");
       if (e && e.target && e.target.id === "ds-trigger-select") fillDatalist("ds");
       if (e && e.target && e.target.id === "pipe-trigger-select") fillDatalist("pipe");
-    });
-
-    const genSel = q("gen-trigger-select");
-    if (genSel) genSel.addEventListener("change", () => {
-      const v = (q("gen-version") || {}).value || getPrimaryVersion();
-      const input = document.querySelector('#gen-form [name="template_relpath"]');
-      const trig = genSel.value;
-      if (input && trig) input.value = `${v}/${trig}.hl7`;
     });
   });
 

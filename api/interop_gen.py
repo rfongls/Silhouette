@@ -39,12 +39,43 @@ def _to_bool(v):
     s = str(v).strip().lower()
     return s in ("1", "true", "on", "yes")
 
-  
+
 def _to_int(v, default=None):
     try:
         return int(v)
     except Exception:
         return default
+
+
+def _derive_trigger_from_name(name: str) -> str:
+    s = name
+    if s.lower().endswith(".j2"):
+        s = s[:-3]
+    for ext in (".hl7", ".txt"):
+        if s.lower().endswith(ext):
+            s = s[: -len(ext)]
+    return Path(s).stem.upper()
+
+
+def _is_template_file(p: Path) -> bool:
+    if not p.is_file():
+        return False
+    n = p.name.lower()
+    return n.endswith(".hl7.j2") or n.endswith(".hl7") or n.endswith(".txt")
+
+
+def _find_template_by_trigger(version: str, trigger: str) -> Optional[str]:
+    """Return relpath under templates/hl7 for first file matching trigger, any extension."""
+    base = (TEMPLATES_HL7_DIR / version).resolve()
+    if not base.exists():
+        return None
+    want = (trigger or "").upper()
+    for f in base.rglob("*"):
+        if not _is_template_file(f):
+            continue
+        if _derive_trigger_from_name(f.name) == want:
+            return f.relative_to(TEMPLATES_HL7_DIR).as_posix()
+    return None
 
 
 @router.post("/api/interop/generate", response_model=None)
@@ -68,10 +99,8 @@ async def generate_messages(
     trig = (body.get("trigger") or "").strip()
     text = body.get("text")
     if not rel and trig:
-        t = trig.upper()
-        cand = f"{version}/{t}.hl7"
-        p = (TEMPLATES_HL7_DIR / cand).resolve()
-        if p.exists():
+        cand = _find_template_by_trigger(version, trig)
+        if cand:
             rel = cand
     if not rel and not text:
         raise HTTPException(400, "Provide template_relpath or text")

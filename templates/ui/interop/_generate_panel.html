@@ -7,37 +7,21 @@
         hx-swap="innerHTML">
     <div class="row gap">
       <label>Version</label>
-      <select name="version" class="input hl7-version-select" id="gen-version" data-hx-refresh-target="1">
+      <select name="version" class="input hl7-version-select" id="gen-version" data-hx-refresh-target="1" onchange="window.InteropUI.fillDatalist('gen')">
         <option value="hl7-v2-3">HL7 v2.3</option>
         <option value="hl7-v2-4" selected>HL7 v2.4</option>
         <option value="hl7-v2-5">HL7 v2.5</option>
       </select>
-      <select class="input" id="gen-trigger-select" name="trigger"
-              hx-get="/ui/interop/triggers"
-              hx-target="#gen-trigger-select"
-              hx-trigger="load, change from:#gen-version"
-              hx-include="#gen-version"
-              onchange="window.InteropUI.syncTyped('gen')">
-      </select>
       <label>Trigger</label>
-      <select class="input" id="gen-trigger-select" name="trigger"
-              hx-get="/ui/interop/triggers"
-              hx-target="#gen-trigger-select"
-              hx-trigger="load, change from:#gen-version"
-              hx-vals='{"version": document.getElementById("gen-version").value}'>
-      </select>
+      <input class="input" id="gen-trigger-typed" name="trigger" list="gen-trigger-datalist"
+             placeholder="Type a trigger (e.g., ADT_A01)"
+             oninput="window.InteropUI.syncTyped('gen')"/>
+      <datalist id="gen-trigger-datalist"></datalist>
     </div>
 
     <div class="row gap mt">
       <input class="input grow" type="text" name="template_relpath"
              placeholder="e.g., hl7-v2-4/ADT_A01.hl7"/>
-      <select class="input" id="gen-trigger-select" name="trigger"
-              hx-get="/ui/interop/triggers"
-              hx-target="#gen-trigger-select"
-              hx-trigger="load, change from:#gen-version"
-              hx-include="#gen-version"
-              onchange="window.InteropUI.syncTyped('gen')">
-      </select>
 
       <!-- Optional explicit relpath entry -->
       <input class="input grow" type="text" name="template_relpath"

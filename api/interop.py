@@ -18,7 +18,7 @@ from silhouette_core.interop.hl7_mutate import (
 )
 from silhouette_core.interop.deid import deidentify_message
 from silhouette_core.interop.validate_workbook import validate_message
-from .interop_gen import generate_messages
+from .interop_gen import generate_messages, _find_template_by_trigger
 
 router = APIRouter()
 templates = Jinja2Templates(directory="templates")
@@ -30,6 +30,23 @@ INDEX_PATH = UI_OUT / "index.json"
 # -------- HL7 Sample Indexing (templates/hl7/*) ----------
 SAMPLE_DIR = (Path(__file__).resolve().parent.parent / "templates" / "hl7").resolve()
 VALID_VERSIONS = {"hl7-v2-3", "hl7-v2-4", "hl7-v2-5"}
+
+
+def _derive_trigger_from_name(name: str) -> str:
+    s = name
+    if s.lower().endswith(".j2"):
+        s = s[:-3]
+    for ext in (".hl7", ".txt"):
+        if s.lower().endswith(ext):
+            s = s[: -len(ext)]
+    return Path(s).stem.upper()
+
+
+def _is_template_file(p: Path) -> bool:
+    if not p.is_file():
+        return False
+    n = p.name.lower()
+    return n.endswith(".hl7.j2") or n.endswith(".hl7") or n.endswith(".txt")
 
 # ---- Trigger Description Library (CSV) ----
 TRIGGER_CSV_PATH = SAMPLE_DIR / "trigger-events-v2.csv"
@@ -86,18 +103,21 @@ def _safe_sample_dir(version: str) -> Path:
 
 
 def _enumerate_samples(version: str, q: str | None = None, limit: int = 200) -> list[dict[str, str]]:
-    """Return a list of {version, trigger, filename, relpath} dicts filtered by q."""
+    """Return a list of {version, trigger, filename, relpath} dicts filtered by q.
+    Supports *.hl7, *.hl7.j2, *.txt (case-insensitive)."""
     base = _safe_sample_dir(version)
     items: list[dict[str, str]] = []
     qnorm = (q or "").strip().lower()
-    for f in sorted(base.rglob("*.hl7")):
+    seen: set[str] = set()
+    files = sorted([p for p in base.rglob("*") if _is_template_file(p)])
+    for f in files:
         rel = f.relative_to(SAMPLE_DIR).as_posix()
-        trigger = f.stem
+        trigger = _derive_trigger_from_name(f.name)
+        if not trigger or trigger in seen:
+            continue
         desc = _describe_trigger(trigger)
-        if qnorm:
-            hay = f"{trigger} {rel} {desc}".lower()
-            if qnorm not in hay:
-                continue
+        if qnorm and qnorm not in f"{trigger} {rel} {desc}".lower():
+            continue
         items.append({
             "version": version,
             "trigger": trigger,
@@ -105,6 +125,7 @@ def _enumerate_samples(version: str, q: str | None = None, limit: int = 200) -> 
             "filename": f.name,
             "relpath": rel,
         })
+        seen.add(trigger)
         if len(items) >= limit:
             break
     return items
@@ -118,13 +139,14 @@ def _assert_rel_under_templates(relpath: str) -> Path:
 
 
 def _guess_rel_from_trigger(trigger: str, version: str = "hl7-v2-4") -> Optional[str]:
-    cand = SAMPLE_DIR / version / f"{trigger}.hl7"
-    if cand.exists():
-        return f"{version}/{trigger}.hl7"
+    """Find a template relpath for a trigger, checking the given version first then others."""
+    cand = _find_template_by_trigger(version, trigger)
+    if cand:
+        return cand
     for v in sorted(VALID_VERSIONS):
-        cand = SAMPLE_DIR / v / f"{trigger}.hl7"
-        if cand.exists():
-            return f"{v}/{trigger}.hl7"
+        cand = _find_template_by_trigger(v, trigger)
+        if cand:
+            return cand
     return None
 
 
