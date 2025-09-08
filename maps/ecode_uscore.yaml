@@ -1,0 +1,76 @@
+messageTypes:
+  # Claims and reimbursement related events (E codes)
+  # Submit and cancel invoices, query and respond to invoice status,
+  # authorization requests and responses, and related document events.
+  - "EHC^E01"
+  - "EHC^E02"
+  - "QBP^E03"
+  - "RSP^E03"
+  - "EHC^E04"
+  - "EHC^E10"
+  - "EHC^E12"
+  - "EHC^E13"
+  - "EHC^E15"
+  - "EHC^E20"
+  - "EHC^E21"
+  - "QBP^E22"
+  - "RSP^E22"
+  - "EHC^E24"
+  - "EHC^E30"
+  - "EHC^E31"
+resourcePlan:
+  # Submit and cancel invoices or authorization requests map to financial resources
+  - resource: Claim
+    rules:
+      - hl7Field: PID.3
+        fhirPath: patient.identifier
+      - hl7Field: ""
+        fhirPath: status
+        transform: default_claim_status
+  - resource: ClaimResponse
+    rules:
+      - hl7Field: PID.3
+        fhirPath: patient.identifier
+      - hl7Field: ""
+        fhirPath: status
+        transform: default_claimresponse_status
+  - resource: CoverageEligibilityRequest
+    rules:
+      - hl7Field: PID.3
+        fhirPath: patient.identifier
+      - hl7Field: ""
+        fhirPath: status
+        transform: default_coverageeligibilityrequest_status
+  - resource: CoverageEligibilityResponse
+    rules:
+      - hl7Field: PID.3
+        fhirPath: patient.identifier
+      - hl7Field: ""
+        fhirPath: status
+        transform: default_coverageeligibilityresponse_status
+  - resource: Invoice
+    rules:
+      - hl7Field: PID.3
+        fhirPath: subject.identifier
+      - hl7Field: ""
+        fhirPath: status
+        transform: default_invoice_status
+  - resource: PaymentNotice
+    rules:
+      - hl7Field: PID.3
+        fhirPath: request.identifier
+      - hl7Field: ""
+        fhirPath: status
+        transform: default_paymentnotice_status
+  - resource: PaymentReconciliation
+    rules:
+      - hl7Field: ""
+        fhirPath: status
+        transform: default_paymentreconciliation_status
+  - resource: Coverage
+    rules:
+      - hl7Field: PID.3
+        fhirPath: beneficiary.identifier
+      - hl7Field: ""
+        fhirPath: status
+        transform: default_coverage_status
