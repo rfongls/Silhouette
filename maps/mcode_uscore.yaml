@@ -1,0 +1,76 @@
+messageTypes:
+  # Master file notification events (M codes) update definitional data rather than patient-specific data
+  - "MFN^M01"
+  - "MFN^M02"
+  - "MFN^M03"
+  - "MFN^M04"
+  - "MFN^M05"
+  - "MFN^M06"
+  - "MFN^M07"
+  - "MFN^M08"
+  - "MFN^M09"
+  - "MFN^M10"
+  - "MFN^M11"
+  - "MFN^M12"
+  - "MFN^M13"
+  - "MFN^M14"
+  - "MFN^M15"
+  - "MFN^M16"
+  - "DRG^M17"
+  - "MFN^M18"
+resourcePlan:
+  # ObservationDefinition captures definitions for tests and observations
+  - resource: ObservationDefinition
+    rules:
+      - hl7Field: ""
+        fhirPath: status
+        transform: default_observationdefinition_status
+  # ChargeItemDefinition defines billable services and procedures
+  - resource: ChargeItemDefinition
+    rules:
+      - hl7Field: ""
+        fhirPath: status
+        transform: default_chargeitemdefinition_status
+  # Locations may be updated via patient location master files
+  - resource: Location
+    rules: []
+  # ResearchStudy and ResearchSubject handle clinical study definitions
+  - resource: ResearchStudy
+    rules:
+      - hl7Field: ""
+        fhirPath: status
+        transform: default_researchstudy_status
+  - resource: ResearchSubject
+    rules:
+      - hl7Field: ""
+        fhirPath: status
+        transform: default_researchsubject_status
+  # PlanDefinition represents care pathways and study schedules
+  - resource: PlanDefinition
+    rules:
+      - hl7Field: ""
+        fhirPath: status
+        transform: default_plandefinition_status
+  # Inventory items and reports represent supply master files
+  - resource: InventoryItem
+    rules:
+      - hl7Field: ""
+        fhirPath: status
+        transform: default_inventoryitem_status
+  - resource: InventoryReport
+    rules:
+      - hl7Field: ""
+        fhirPath: status
+        transform: default_inventoryreport_status
+  # BiologicallyDerivedProduct represents blood products and tissues
+  - resource: BiologicallyDerivedProduct
+    rules:
+      - hl7Field: ""
+        fhirPath: status
+        transform: default_biologicallyderivedproduct_status
+  # DeviceDefinition captures equipment definitions
+  - resource: DeviceDefinition
+    rules:
+      - hl7Field: ""
+        fhirPath: status
+        transform: default_devicedefinition_status
