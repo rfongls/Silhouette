@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Optional
 import re
 from urllib.parse import parse_qs
-from fastapi import APIRouter, Body, HTTPException, Request
+from fastapi import APIRouter, Body, HTTPException, Request, Form
 from fastapi.responses import JSONResponse, PlainTextResponse
 from silhouette_core.interop.hl7_mutate import (
     enrich_clinical_fields,
@@ -128,7 +128,7 @@ def generate_messages(body: dict):
     deidentify = _to_bool(deid_input)
     if count > 1 and (deid_input is None or str(deid_input).strip() == ""):
         deidentify = True
-
+    # Load text (from relpath or inline "text")
     template_text = text or load_template_text(_assert_rel_under_templates(rel))
 
     msgs: list[str] = []
@@ -151,15 +151,44 @@ def generate_messages(body: dict):
     return PlainTextResponse(out, media_type="text/plain")
 
 @router.post("/api/interop/generate", response_class=PlainTextResponse)
-async def generate_messages_endpoint(request: Request):
-    """HTTP endpoint wrapper for :func:`generate_messages`.
-    Accepts JSON or HTML form posts and always returns plain HL7 text."""
+async def generate_messages_form(
+    version: str = Form(...),
+    trigger: str | None = Form(None),
+    template_relpath: str | None = Form(None),
+    count: int = Form(1),
+    seed: int | None = Form(None),
+    ensure_unique: bool = Form(False),
+    include_clinical: bool = Form(False),
+    deidentify: bool = Form(False),
+    text: str | None = Form(None),
+):
+    """Form-post variant. Always returns plain HL7 text."""
+    body = {
+        "version": version,
+        "trigger": (trigger or "").strip(),
+        "template_relpath": (template_relpath or "").strip(),
+        "count": count,
+        "seed": seed,
+        "ensure_unique": bool(ensure_unique),
+        "include_clinical": bool(include_clinical),
+        "deidentify": bool(deidentify),
+        "text": text,
+    }
+    if count > 1 and deidentify is False:
+        # Friendly default: auto-deidentify when generating more than one unless explicitly disabled
+        body["deidentify"] = True
+    return generate_messages(body)
+
+# Backward-compatible alias that accepts JSON *or* form or raw query body
+@router.post("/api/interop/generate/plain", response_class=PlainTextResponse)
+async def generate_messages_plain(request: Request):
     ctype = (request.headers.get("content-type") or "").lower()
     body: dict = {}
     if "application/json" in ctype:
         try:
             parsed = await request.json()
-            body = parsed if isinstance(parsed, dict) else {}
+            if isinstance(parsed, dict):
+                body = parsed
         except Exception:
             pass
     if not body:
@@ -167,17 +196,10 @@ async def generate_messages_endpoint(request: Request):
             form = await request.form()
             body = {k: form.get(k) for k in form.keys()}
         except Exception:
-            pass
-    if not body:
-        raw = await request.body()
-        q = parse_qs(raw.decode("utf-8", errors="ignore"))
-        body = {k: v[-1] for k, v in q.items()}
+            raw = await request.body()
+            q = parse_qs(raw.decode("utf-8", errors="ignore"))
+            body = {k: v[-1] for k, v in q.items()} if q else {}
     return generate_messages(body)
-
-# Stable alias so the UI never collides with older routes:
-@router.post("/api/interop/generate/plain", response_class=PlainTextResponse)
-async def generate_messages_plain(request: Request):
-    return await generate_messages_endpoint(request)
 
 
 @router.post("/api/interop/deidentify")
