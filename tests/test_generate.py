@@ -76,7 +76,6 @@ def test_deidentify_can_be_disabled():
     assert r.status_code == 200
     assert "Davis^Jessica" in r.text
 
-
 def test_generate_accepts_form_posts():
     """HTMX-style form posts should be accepted without JSON payloads."""
     data = {
@@ -88,3 +87,4 @@ def test_generate_accepts_form_posts():
     assert r.status_code == 200
     # The returned message should contain the ADT^A01 event in the MSH segment
     assert "ADT^A01" in r.text
+

@@ -80,7 +80,6 @@ def _find_template_by_trigger(version: str, trigger: str) -> Optional[str]:
 
 def generate_messages(body: dict):
     """Generate HL7 messages from a template.
-
     This helper takes a dict-like body and returns a FastAPI response. It is
     used by the HTTP endpoint below and by internal callers such as the
     pipeline runner."""
