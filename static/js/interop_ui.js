@@ -80,14 +80,8 @@
   }
 
   function syncTyped(prefix) {
-    // keep for parity with other panels if needed later, but no relpath auto-fill here
-    const typed = q(prefix + "-trigger-typed");
-    const select = q(prefix + "-trigger") || q(prefix + "-trigger-select");
-    if (typed && select && typed.value) {
-      const val = typed.value.toUpperCase();
-      const opt = Array.from(select.options).find(o => o.value.toUpperCase() === val);
-      if (opt) select.value = opt.value;
-    }
+    // For now, a pure datalist only (no backing <select>) is used on Generate.
+    // Kept for parity with other panels if you re-add a <select> later.
   }
 
   // wire up after load
