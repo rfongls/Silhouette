@@ -1,0 +1,98 @@
+messageTypes:
+  # Observation result and related query/response events (R codes)
+  - "ORU^R01"
+  - "QRY^R02"
+  - "QRY^R03"
+  - "QRY^R05"
+  - "UDM^R06"
+  - "EDR^R07"
+  - "TBR^R08"
+  - "ERP^R09"
+  - "ORF^R04"
+  - "OUL^R21"
+  - "OUL^R22"
+  - "OUL^R23"
+  - "OUL^R24"
+  - "OPU^R25"
+  - "OSM^R26"
+  - "ORU^R30"
+  - "ORU^R31"
+  - "ORU^R32"
+  - "ORA^R33"
+  - "ORU^R40"
+  - "ACK^R41"
+  - "ORU^R42"
+  - "ORU^R43"
+  - "R0R^R0R"
+resourcePlan:
+  # DiagnosticReport summarises observation results
+  - resource: DiagnosticReport
+    rules:
+      - hl7Field: PID.3
+        fhirPath: subject.identifier
+      - hl7Field: ""
+        fhirPath: status
+        transform: default_dr_status
+  # Observation captures individual test results
+  - resource: Observation
+    rules:
+      - hl7Field: PID.3
+        fhirPath: subject.identifier
+  # Specimen records sample details
+  - resource: Specimen
+    rules:
+      - hl7Field: PID.3
+        fhirPath: subject.identifier
+      - hl7Field: ""
+        fhirPath: status
+        transform: default_specimen_status
+  # Procedure logs procedures associated with observations (e.g. imaging or biopsy)
+  - resource: Procedure
+    rules:
+      - hl7Field: PID.3
+        fhirPath: subject.identifier
+      - hl7Field: ""
+        fhirPath: status
+        transform: default_procedure_status
+  # MedicationRequest, Dispense and Administration may accompany some result flows
+  - resource: MedicationRequest
+    rules:
+      - hl7Field: PID.3
+        fhirPath: subject.identifier
+      - hl7Field: ""
+        fhirPath: status
+        transform: default_medicationrequest_status
+  - resource: MedicationDispense
+    rules:
+      - hl7Field: PID.3
+        fhirPath: subject.identifier
+      - hl7Field: ""
+        fhirPath: status
+        transform: default_medicationdispense_status
+  - resource: MedicationAdministration
+    rules:
+      - hl7Field: PID.3
+        fhirPath: subject.identifier
+      - hl7Field: ""
+        fhirPath: status
+        transform: default_medicationadmin_status
+  # Device records equipment generating observations or associated events
+  - resource: Device
+    rules:
+      - hl7Field: ""
+        fhirPath: status
+        transform: default_device_status
+  # BiologicallyDerivedProduct represents specimen products (e.g. blood units)
+  - resource: BiologicallyDerivedProduct
+    rules:
+      - hl7Field: ""
+        fhirPath: status
+        transform: default_biologicallyderivedproduct_status
+  # ServiceRequest captures orders driving these observations
+  - resource: ServiceRequest
+    rules:
+      - hl7Field: PID.3
+        fhirPath: subject.identifier
+      - hl7Field: ""
+        fhirPath: status
+        transform: default_servicerequest_status
