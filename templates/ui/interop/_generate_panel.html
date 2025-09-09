@@ -3,6 +3,7 @@
   <form id="gen-form"
         hx-post="/api/interop/generate"
         hx-trigger="submit"
+        hx-include="#gen-version,#gen-trigger-typed,[name='count'],[name='seed'],[name='ensure_unique'],[name='include_clinical'],[name='deidentify']"
         hx-target="#gen-output"
         hx-swap="text">
     <div class="row gap">
