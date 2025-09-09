@@ -126,7 +126,7 @@ def generate_messages(body: dict):
         msgs.append(msg)
 
     out = "\n".join(msgs) + ("\n" if msgs else "")
-    return PlainTextResponse(out, media_type="text/plain")
+    return PlainTextResponse(out, media_type="text/plain", headers={"Cache-Control": "no-store"})
 
 @router.post("/api/interop/generate", response_class=PlainTextResponse)
 async def generate_messages_form(

@@ -5,7 +5,8 @@
         hx-trigger="submit"
         hx-include="#gen-version,#gen-trigger-typed,[name='count'],[name='seed'],[name='ensure_unique'],[name='include_clinical'],[name='deidentify']"
         hx-target="#gen-output"
-        hx-swap="text">
+        hx-headers='{"Accept":"text/plain"}'
+        hx-swap="textContent">
     <div class="row gap">
       <label>Version</label>
       <select name="version" class="input hl7-version-select" id="gen-version"
