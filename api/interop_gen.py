@@ -19,6 +19,7 @@ router = APIRouter()
 
 TEMPLATES_HL7_DIR = (Path(__file__).resolve().parent.parent / "templates" / "hl7").resolve()
 VALID_VERSIONS = {"hl7-v2-3", "hl7-v2-4", "hl7-v2-5"}
+ALLOWED_EXTS = (".hl7", ".txt", ".hl7.j2")
 
 
 def _assert_rel_under_templates(relpath: str) -> Path:
@@ -44,55 +45,31 @@ def _to_int(v, default=None):
         return default
 
 
-def _derive_trigger_from_name(name: str) -> str:
-    s = name
-    if s.lower().endswith(".j2"):
-        s = s[:-3]
+def _stem_for_match(name: str) -> str:
+    n = name
+    if n.lower().endswith(".j2"):
+        n = n[:-3]
     for ext in (".hl7", ".txt"):
-        if s.lower().endswith(ext):
-            s = s[: -len(ext)]
-    return Path(s).stem.upper()
-
-
-def _is_template_file(p: Path) -> bool:
-    if not p.is_file():
-        return False
-    n = p.name.lower()
-    return n.endswith(".hl7.j2") or n.endswith(".hl7") or n.endswith(".txt")
+        if n.lower().endswith(ext):
+            n = n[: -len(ext)]
+    return Path(n).stem.upper()
 
 
 def _find_template_by_trigger(version: str, trigger: str) -> Optional[str]:
-    """Return relpath under templates/hl7 for first file matching trigger, any extension."""
     base = (TEMPLATES_HL7_DIR / version).resolve()
     if not base.exists():
         return None
-    want = (trigger or "").upper()
-    for f in base.rglob("*"):
-        if not _is_template_file(f):
-            continue
-        if _derive_trigger_from_name(f.name) == want:
-            return f.relative_to(TEMPLATES_HL7_DIR).as_posix()
+    want = (trigger or "").strip().upper()
+    for p in base.rglob("*"):
+        if p.is_file() and any(p.name.lower().endswith(ext) for ext in ALLOWED_EXTS):
+            if _stem_for_match(p.name) == want:
+                return p.relative_to(TEMPLATES_HL7_DIR).as_posix()
     return None
 
 
 def _guess_rel_from_trigger(trigger: str, version: str) -> Optional[str]:
-    """Find a template relpath for a trigger, trying the given version, then others.
-
-    Also searches the top-level templates/hl7 directory for convenience."""
-    cand = _find_template_by_trigger(version, trigger)
-    if cand:
-        return cand
-    for v in sorted(VALID_VERSIONS):
-        if v == version:
-            continue
-        cand = _find_template_by_trigger(v, trigger)
-        if cand:
-            return cand
-    want = (trigger or "").upper()
-    for f in TEMPLATES_HL7_DIR.iterdir():
-        if _is_template_file(f) and _derive_trigger_from_name(f.name) == want:
-            return f.relative_to(TEMPLATES_HL7_DIR).as_posix()
-    return None
+    """Find first template under the version folder whose stem matches the trigger."""
+    return _find_template_by_trigger(version, trigger)
 
 
 def generate_messages(body: dict):
@@ -114,7 +91,8 @@ def generate_messages(body: dict):
     if rel:
         version = rel.split("/", 1)[0]
     if not rel and not text:
-        raise HTTPException(404, f"No template found for trigger '{trig}'")
+        # Note: return a helpful 404 if the trigger can’t be resolved
+        raise HTTPException(404, detail=f"No template found for trigger '{trig}' in {version}")
 
     count = _to_int(body.get("count", 1), 1)
     if count is None or count < 1 or count > 10000:
@@ -128,7 +106,7 @@ def generate_messages(body: dict):
     deidentify = _to_bool(deid_input)
     if count > 1 and (deid_input is None or str(deid_input).strip() == ""):
         deidentify = True
-
+    # Load text (from relpath or inline "text")
     template_text = text or load_template_text(_assert_rel_under_templates(rel))
 
     msgs: list[str] = []
@@ -148,35 +126,55 @@ def generate_messages(body: dict):
         msgs.append(msg)
 
     out = "\n".join(msgs) + ("\n" if msgs else "")
-    return PlainTextResponse(out, media_type="text/plain")
+    return PlainTextResponse(out, media_type="text/plain", headers={"Cache-Control": "no-store"})
 
 @router.post("/api/interop/generate", response_class=PlainTextResponse)
 async def generate_messages_endpoint(request: Request):
-    """HTTP endpoint wrapper for :func:`generate_messages`.
-    Accepts JSON or HTML form posts and always returns plain HL7 text."""
+    """
+    Accept JSON, x-www-form-urlencoded form, or raw querystring bodies.
+    Always returns plain HL7 text. This avoids 'value is not a valid dict'
+    when callers post forms to a JSON-only handler (or vice versa).
+    """
     ctype = (request.headers.get("content-type") or "").lower()
     body: dict = {}
+
+    # 1) JSON
     if "application/json" in ctype:
         try:
             parsed = await request.json()
-            body = parsed if isinstance(parsed, dict) else {}
+            if isinstance(parsed, dict):
+                body = parsed
         except Exception:
-            pass
+            body = {}
+
+    # 2) Form
     if not body:
         try:
             form = await request.form()
             body = {k: form.get(k) for k in form.keys()}
         except Exception:
-            pass
+            body = {}
+
+    # 3) Raw 'version=...&trigger=...' (e.g., text/plain)
     if not body:
         raw = await request.body()
         q = parse_qs(raw.decode("utf-8", errors="ignore"))
-        body = {k: v[-1] for k, v in q.items()}
+        body = {k: v[-1] for k, v in q.items()} if q else {}
+
+    # Friendly default: auto-deidentify when generating more than one
+    try:
+        cnt_raw = body.get("count", 1)
+        cnt = int(cnt_raw) if str(cnt_raw).strip() != "" else 1
+    except Exception:
+        cnt = 1
+    if cnt > 1 and ("deidentify" not in body or str(body.get("deidentify", "")).strip() == ""):
+        body["deidentify"] = True
+
     return generate_messages(body)
 
-# Stable alias so the UI never collides with older routes:
 @router.post("/api/interop/generate/plain", response_class=PlainTextResponse)
 async def generate_messages_plain(request: Request):
+    # Stable alias for tests/tools; shares the same robust parser.
     return await generate_messages_endpoint(request)
 
 
