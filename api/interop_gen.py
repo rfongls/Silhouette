@@ -4,7 +4,7 @@ from pathlib import Path
 from typing import Optional
 import re
 from urllib.parse import parse_qs
-from fastapi import APIRouter, Body, HTTPException, Request
+from fastapi import APIRouter, Body, HTTPException, Request, Form
 from fastapi.responses import JSONResponse, PlainTextResponse
 from silhouette_core.interop.hl7_mutate import (
     enrich_clinical_fields,
@@ -176,7 +176,6 @@ async def generate_messages_endpoint(request: Request):
 async def generate_messages_plain(request: Request):
     # Stable alias for tests/tools; shares the same robust parser.
     return await generate_messages_endpoint(request)
-
 
 @router.post("/api/interop/deidentify")
 def api_deidentify(text: str = Body(..., embed=True), seed: Optional[int] = Body(None)):
