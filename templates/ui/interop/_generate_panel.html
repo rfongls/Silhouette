@@ -3,14 +3,13 @@
   <form id="gen-form"
         hx-post="/api/interop/generate/plain"
         hx-trigger="submit"
-        hx-encoding="json"
-        hx-include="#gen-version,#gen-trigger-typed,[name='count'],[name='seed'],[name='ensure_unique'],[name='include_clinical'],[name='deidentify']"
         hx-target="#gen-output"
-        hx-headers='{"Accept":"text/plain"}'
         hx-swap="text">
     <div class="row gap">
       <label>Version</label>
-      <select name="version" class="input hl7-version-select" id="gen-version" data-hx-refresh-target="1" onchange="window.InteropUI.fillDatalist('gen')">
+      <select name="version" class="input hl7-version-select" id="gen-version"
+              data-hx-refresh-target="1"
+              onchange="window.InteropUI.fillDatalist('gen')">
         <option value="hl7-v2-3">HL7 v2.3</option>
         <option value="hl7-v2-4" selected>HL7 v2.4</option>
         <option value="hl7-v2-5">HL7 v2.5</option>
@@ -28,6 +27,7 @@
 
     <div class="row gap mt">
       <input class="input" type="number" name="count" min="1" max="10000" value="25" />
+      <!-- seed is optional -->
       <input class="input" type="number" name="seed" placeholder="seed (optional)"/>
     </div>
 
