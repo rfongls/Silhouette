@@ -129,56 +129,53 @@ def generate_messages(body: dict):
     return PlainTextResponse(out, media_type="text/plain", headers={"Cache-Control": "no-store"})
 
 @router.post("/api/interop/generate", response_class=PlainTextResponse)
-async def generate_messages_form(
-    version: str = Form(...),
-    trigger: str | None = Form(None),
-    template_relpath: str | None = Form(None),
-    count: int = Form(1),
-    seed: int | None = Form(None),
-    ensure_unique: bool = Form(False),
-    include_clinical: bool = Form(False),
-    deidentify: bool = Form(False),
-    text: str | None = Form(None),
-):
-    """Form-post variant. Always returns plain HL7 text."""
-    body = {
-        "version": version,
-        "trigger": (trigger or "").strip(),
-        "template_relpath": (template_relpath or "").strip(),
-        "count": count,
-        "seed": seed,
-        "ensure_unique": bool(ensure_unique),
-        "include_clinical": bool(include_clinical),
-        "deidentify": bool(deidentify),
-        "text": text,
-    }
-    if count > 1 and deidentify is False:
-        # Friendly default: auto-deidentify when generating more than one unless explicitly disabled
-        body["deidentify"] = True
-    return generate_messages(body)
-
-# Backward-compatible alias that accepts JSON *or* form or raw query body
-@router.post("/api/interop/generate/plain", response_class=PlainTextResponse)
-async def generate_messages_plain(request: Request):
+async def generate_messages_endpoint(request: Request):
+    """
+    Accept JSON, x-www-form-urlencoded form, or raw querystring bodies.
+    Always returns plain HL7 text. This avoids 'value is not a valid dict'
+    when callers post forms to a JSON-only handler (or vice versa).
+    """
     ctype = (request.headers.get("content-type") or "").lower()
     body: dict = {}
+
+    # 1) JSON
     if "application/json" in ctype:
         try:
             parsed = await request.json()
             if isinstance(parsed, dict):
                 body = parsed
         except Exception:
-            pass
+            body = {}
+
+    # 2) Form
     if not body:
         try:
             form = await request.form()
             body = {k: form.get(k) for k in form.keys()}
         except Exception:
-            raw = await request.body()
-            q = parse_qs(raw.decode("utf-8", errors="ignore"))
-            body = {k: v[-1] for k, v in q.items()} if q else {}
+            body = {}
+
+    # 3) Raw 'version=...&trigger=...' (e.g., text/plain)
+    if not body:
+        raw = await request.body()
+        q = parse_qs(raw.decode("utf-8", errors="ignore"))
+        body = {k: v[-1] for k, v in q.items()} if q else {}
+
+    # Friendly default: auto-deidentify when generating more than one
+    try:
+        cnt_raw = body.get("count", 1)
+        cnt = int(cnt_raw) if str(cnt_raw).strip() != "" else 1
+    except Exception:
+        cnt = 1
+    if cnt > 1 and ("deidentify" not in body or str(body.get("deidentify", "")).strip() == ""):
+        body["deidentify"] = True
+
     return generate_messages(body)
 
+@router.post("/api/interop/generate/plain", response_class=PlainTextResponse)
+async def generate_messages_plain(request: Request):
+    # Stable alias for tests/tools; shares the same robust parser.
+    return await generate_messages_endpoint(request)
 
 @router.post("/api/interop/deidentify")
 def api_deidentify(text: str = Body(..., embed=True), seed: Optional[int] = Body(None)):
