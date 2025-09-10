@@ -3,7 +3,7 @@
   <form id="gen-form"
         hx-post="/api/interop/generate"
         hx-trigger="submit"
-        hx-include="#gen-version,#gen-trigger-typed,[name='count'],[name='seed'],[name='ensure_unique'],[name='include_clinical'],[name='deidentify']"
+        hx-include="#gen-version,#gen-trigger-typed,#gen-template-relpath,[name='count'],[name='seed'],[name='ensure_unique'],[name='include_clinical'],[name='deidentify']"
         hx-target="#gen-output"
         hx-headers='{"Accept":"text/plain"}'
         hx-swap="textContent">
@@ -25,6 +25,7 @@
              placeholder="Type a trigger (e.g., ADT_A01)"
              onfocus="window.InteropUI.fillDatalist('gen')"/>
       <datalist id="gen-trigger-datalist"></datalist>
+      <input type="hidden" name="template_relpath" id="gen-template-relpath" />
     </div>
 
     <div class="row gap mt">
