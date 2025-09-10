@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Optional
 import re
 from urllib.parse import parse_qs
+import logging
 from fastapi import APIRouter, Body, HTTPException, Request, Form
 from fastapi.responses import JSONResponse, PlainTextResponse
 from silhouette_core.interop.hl7_mutate import (
@@ -16,6 +17,7 @@ from silhouette_core.interop.mllp import send_mllp_batch
 from silhouette_core.interop.validate_workbook import validate_message
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 TEMPLATES_HL7_DIR = (Path(__file__).resolve().parent.parent / "templates" / "hl7").resolve()
 VALID_VERSIONS = {"hl7-v2-3", "hl7-v2-4", "hl7-v2-5"}
@@ -90,6 +92,7 @@ def generate_messages(body: dict):
     This helper takes a dict-like body and returns a FastAPI response. It is
     used by the HTTP endpoint below and by internal callers such as the
     pipeline runner."""
+    logger.debug("generate_messages: body=%s", body)
     version = body.get("version", "hl7-v2-4")
     if version not in VALID_VERSIONS:
         raise HTTPException(400, f"Unknown version '{version}'")
@@ -103,6 +106,7 @@ def generate_messages(body: dict):
         rel = _guess_rel_from_trigger(trig, version)
     if rel:
         version = rel.split("/", 1)[0]
+    logger.debug("resolved template: rel=%s trigger=%s version=%s", rel, trig, version)
     if not rel and not text:
         # Note: return a helpful 404 if the trigger can’t be resolved
         raise HTTPException(404, detail=f"No template found for trigger '{trig}' in {version}")
@@ -137,6 +141,7 @@ def generate_messages(body: dict):
         if deidentify:
             msg = deidentify_message(msg, seed=derived)
         msgs.append(msg)
+    logger.debug("generated %d message(s) from %s", len(msgs), rel or "inline text")
 
     out = "\n".join(msgs) + ("\n" if msgs else "")
     return PlainTextResponse(out, media_type="text/plain", headers={"Cache-Control": "no-store"})
@@ -151,6 +156,7 @@ async def generate_messages_endpoint(request: Request):
     """
     ctype = (request.headers.get("content-type") or "").lower()
     body: dict = {}
+    logger.debug("incoming request: content-type=%s", ctype)
 
     # 1) JSON
     if "application/json" in ctype:
@@ -158,7 +164,10 @@ async def generate_messages_endpoint(request: Request):
             parsed = await request.json()
             if isinstance(parsed, dict):
                 body = parsed
+            else:
+                logger.debug("JSON body was not dict: %s", type(parsed))
         except Exception:
+            logger.debug("failed to parse JSON body", exc_info=True)
             body = {}
 
     # 2) Form
@@ -166,14 +175,25 @@ async def generate_messages_endpoint(request: Request):
         try:
             form = await request.form()
             body = {k: form.get(k) for k in form.keys()}
+            logger.debug("parsed form body: keys=%s", list(body.keys()))
         except Exception:
+            logger.debug("failed to parse form body", exc_info=True)
             body = {}
 
     # 3) Raw 'version=...&trigger=...' (e.g., text/plain)
     if not body:
         raw = await request.body()
+        logger.debug("raw body bytes=%r", raw[:200])
         q = parse_qs(raw.decode("utf-8", errors="ignore"))
         body = {k: v[-1] for k, v in q.items()} if q else {}
+        if body:
+            logger.debug("parsed raw query body: %s", body)
+
+    # 4) URL query parameters (POST /path?version=...&trigger=...)
+    if not body:
+        qp = request.query_params
+        body = {k: qp.get(k) for k in qp.keys()}
+        logger.debug("parsed query params: %s", body)
 
     # 4) URL query parameters (POST /path?version=...&trigger=...)
     if not body:
@@ -188,6 +208,7 @@ async def generate_messages_endpoint(request: Request):
         cnt = 1
     if cnt > 1 and ("deidentify" not in body or str(body.get("deidentify", "")).strip() == ""):
         body["deidentify"] = True
+    logger.debug("final parsed body=%s", body)
 
     return generate_messages(body)
 
