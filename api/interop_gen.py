@@ -204,7 +204,6 @@ async def generate_messages_endpoint(request: Request):
     if cnt > 1 and ("deidentify" not in body or str(body.get("deidentify", "")).strip() == ""):
         body["deidentify"] = True
     logger.info("final parsed body=%s", body)
-
     return generate_messages(body)
 
 @router.post("/api/interop/generate/plain", response_class=PlainTextResponse)
