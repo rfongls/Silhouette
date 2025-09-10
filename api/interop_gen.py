@@ -142,7 +142,6 @@ def generate_messages(body: dict):
             msg = deidentify_message(msg, seed=derived)
         msgs.append(msg)
     logger.info("generated %d message(s) from %s", len(msgs), rel or "inline text")
-
     out = "\n".join(msgs) + ("\n" if msgs else "")
     logger.info("returning %d HL7 bytes", len(out))
     return PlainTextResponse(out, media_type="text/plain", headers={"Cache-Control": "no-store"})
@@ -205,7 +204,6 @@ async def generate_messages_endpoint(request: Request):
     if cnt > 1 and ("deidentify" not in body or str(body.get("deidentify", "")).strip() == ""):
         body["deidentify"] = True
     logger.info("final parsed body=%s", body)
-
     return generate_messages(body)
 
 @router.post("/api/interop/generate/plain", response_class=PlainTextResponse)
