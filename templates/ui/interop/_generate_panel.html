@@ -1,7 +1,7 @@
 <section class="card">
   <h3>Generate Messages</h3>
   <form id="gen-form"
-        hx-post="/api/interop/generate"
+        hx-get="/api/interop/generate"
         hx-trigger="submit"
         hx-target="#gen-output"
         hx-headers='{"Accept":"text/plain"}'
