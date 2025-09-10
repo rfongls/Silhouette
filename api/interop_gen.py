@@ -68,8 +68,21 @@ def _find_template_by_trigger(version: str, trigger: str) -> Optional[str]:
 
 
 def _guess_rel_from_trigger(trigger: str, version: str) -> Optional[str]:
-    """Find first template under the version folder whose stem matches the trigger."""
-    return _find_template_by_trigger(version, trigger)
+    """
+    Find a template whose stem matches the trigger. Search the requested
+    version first, then fall back to other known versions. This mirrors the
+    behaviour expected by the UI where a trigger is unique across versions.
+    """
+    rel = _find_template_by_trigger(version, trigger)
+    if rel:
+        return rel
+    for v in VALID_VERSIONS:
+        if v == version:
+            continue
+        rel = _find_template_by_trigger(v, trigger)
+        if rel:
+            return rel
+    return None
 
 
 def generate_messages(body: dict):
@@ -131,9 +144,10 @@ def generate_messages(body: dict):
 @router.post("/api/interop/generate", response_class=PlainTextResponse)
 async def generate_messages_endpoint(request: Request):
     """
-    Accept JSON, x-www-form-urlencoded form, or raw querystring bodies.
-    Always returns plain HL7 text. This avoids 'value is not a valid dict'
-    when callers post forms to a JSON-only handler (or vice versa).
+    Accept JSON, x-www-form-urlencoded form, raw querystring bodies, or
+    query parameters with no body. Always returns plain HL7 text. This
+    avoids "value is not a valid dict" when callers post forms to a
+    JSON-only handler (or vice versa).
     """
     ctype = (request.headers.get("content-type") or "").lower()
     body: dict = {}
@@ -160,6 +174,11 @@ async def generate_messages_endpoint(request: Request):
         raw = await request.body()
         q = parse_qs(raw.decode("utf-8", errors="ignore"))
         body = {k: v[-1] for k, v in q.items()} if q else {}
+
+    # 4) URL query parameters (POST /path?version=...&trigger=...)
+    if not body:
+        qp = request.query_params
+        body = {k: qp.get(k) for k in qp.keys()}
 
     # Friendly default: auto-deidentify when generating more than one
     try:

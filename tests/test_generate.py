@@ -102,6 +102,15 @@ def test_generate_tolerates_mislabeled_json():
     assert "ADT^A01" in r.text
 
 
+def test_generate_accepts_query_params():
+    """Posting with only query parameters should also work."""
+    r = client.post(
+        "/api/interop/generate?version=hl7-v2-4&trigger=ADT_A01&count=1"
+    )
+    assert r.status_code == 200
+    assert "ADT^A01" in r.text
+
+
 def test_trigger_searches_other_versions(tmp_path, monkeypatch):
     base = tmp_path / "templates" / "hl7"
     base.mkdir(parents=True)
