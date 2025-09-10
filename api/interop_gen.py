@@ -4,8 +4,9 @@ from pathlib import Path
 from typing import Optional
 import re
 from urllib.parse import parse_qs
+import json
 import logging
-from fastapi import APIRouter, Body, HTTPException, Request, Form
+from fastapi import APIRouter, Body, HTTPException, Request
 from fastapi.responses import JSONResponse, PlainTextResponse
 from silhouette_core.interop.hl7_mutate import (
     enrich_clinical_fields,
@@ -148,53 +149,35 @@ def generate_messages(body: dict):
 
 @router.post("/api/interop/generate", response_class=PlainTextResponse)
 async def generate_messages_endpoint(request: Request):
-    """
-    Accept JSON, x-www-form-urlencoded form, raw querystring bodies, or
-    query parameters with no body. Always returns plain HL7 text. This
-    avoids "value is not a valid dict" when callers post forms to a
-    JSON-only handler (or vice versa).
-    """
+    """Robust HL7 generation endpoint supporting JSON, form posts, raw
+    ``version=...&trigger=...`` bodies, or pure query parameters. This
+    avoids ``value is not a valid dict`` when the client submits a form
+    instead of JSON."""
     ctype = (request.headers.get("content-type") or "").lower()
+    raw = await request.body()
+    logger.info("incoming request: content-type=%s bytes=%d", ctype, len(raw))
     body: dict = {}
     logger.info("incoming request: content-type=%s", ctype)
-
-    # 1) JSON
-    if "application/json" in ctype:
-        try:
-            parsed = await request.json()
-            if isinstance(parsed, dict):
-                body = parsed
-            else:
-                logger.warning("JSON body was not dict: %s", type(parsed))
-        except Exception:
-            logger.warning("failed to parse JSON body", exc_info=True)
-            body = {}
-
-    # 2) Form
-    if not body:
-        try:
-            form = await request.form()
-            body = {k: form.get(k) for k in form.keys()}
-            logger.info("parsed form body: keys=%s", list(body.keys()))
-        except Exception:
-            logger.warning("failed to parse form body", exc_info=True)
-            body = {}
-
-    # 3) Raw 'version=...&trigger=...' (e.g., text/plain)
-    if not body:
-        raw = await request.body()
-        logger.info("raw body bytes=%r", raw[:200])
-        q = parse_qs(raw.decode("utf-8", errors="ignore"))
-        body = {k: v[-1] for k, v in q.items()} if q else {}
-        if body:
-            logger.info("parsed raw query body: %s", body)
-
-    # 4) URL query parameters (POST /path?version=...&trigger=...)
+    if raw:
+        if "json" in ctype:
+            try:
+                parsed = json.loads(raw.decode("utf-8"))
+                if isinstance(parsed, dict):
+                    body = parsed
+                else:
+                    logger.warning("JSON body was not dict: %s", type(parsed))
+            except Exception:
+                logger.warning("failed to parse JSON body", exc_info=True)
+        if not body:
+            q = parse_qs(raw.decode("utf-8", errors="ignore"))
+            body = {k: v[-1] for k, v in q.items()} if q else {}
+            if body:
+                logger.info("parsed form/raw body: %s", body)
     if not body:
         qp = request.query_params
         body = {k: qp.get(k) for k in qp.keys()}
-        logger.info("parsed query params: %s", body)
-
+        if body:
+            logger.info("parsed query params: %s", body)
     # Friendly default: auto-deidentify when generating more than one
     try:
         cnt_raw = body.get("count", 1)
@@ -205,6 +188,11 @@ async def generate_messages_endpoint(request: Request):
         body["deidentify"] = True
     logger.info("final parsed body=%s", body)
     return generate_messages(body)
+
+@router.get("/api/interop/generate", response_class=PlainTextResponse)
+async def generate_messages_get(request: Request):
+    """GET variant for simple query-string based generation."""
+    return await generate_messages_endpoint(request)
 
 @router.post("/api/interop/generate/plain", response_class=PlainTextResponse)
 async def generate_messages_plain(request: Request):
