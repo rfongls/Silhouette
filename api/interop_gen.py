@@ -177,6 +177,7 @@ async def generate_messages_endpoint(request: Request):
         body = {k: qp.get(k) for k in qp.keys()}
         if body:
             logger.info("parsed query params: %s", body)
+
     # Friendly default: auto-deidentify when generating more than one
     try:
         cnt_raw = body.get("count", 1)
