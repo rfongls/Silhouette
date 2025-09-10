@@ -157,7 +157,6 @@ async def generate_messages_endpoint(request: Request):
     raw = await request.body()
     logger.info("incoming request: content-type=%s bytes=%d", ctype, len(raw))
     body: dict = {}
-    logger.info("incoming request: content-type=%s", ctype)
     if raw:
         if "json" in ctype:
             try:

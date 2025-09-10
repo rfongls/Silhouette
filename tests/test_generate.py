@@ -86,6 +86,18 @@ def test_generate_accepts_form_posts():
     assert "ADT^A01" in r.text
 
 
+def test_generate_accepts_template_relpath():
+    """Form posts providing a template_relpath should also work."""
+    data = {
+        "version": "hl7-v2-4",
+        "template_relpath": "hl7-v2-4/ADT_A01.hl7",
+        "count": "1",
+    }
+    r = client.post("/api/interop/generate", data=data)
+    assert r.status_code == 200
+    assert "ADT^A01" in r.text
+
+
 def test_generate_tolerates_mislabeled_json():
     """Even if the content-type claims JSON but isn't, fallback parsing works."""
     data = {
