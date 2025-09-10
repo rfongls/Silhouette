@@ -11,6 +11,8 @@ from api.ui import router as ui_router
 from api.ui_interop import router as ui_interop_router
 from api.ui_security import router as ui_security_router
 
+logging.basicConfig(level=logging.INFO)
+
 app = FastAPI(title="Silhouette Core Interop")
 for r in (
     ui_router,

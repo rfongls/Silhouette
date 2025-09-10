@@ -92,7 +92,7 @@ def generate_messages(body: dict):
     This helper takes a dict-like body and returns a FastAPI response. It is
     used by the HTTP endpoint below and by internal callers such as the
     pipeline runner."""
-    logger.debug("generate_messages: body=%s", body)
+    logger.info("generate_messages: body=%s", body)
     version = body.get("version", "hl7-v2-4")
     if version not in VALID_VERSIONS:
         raise HTTPException(400, f"Unknown version '{version}'")
@@ -106,7 +106,7 @@ def generate_messages(body: dict):
         rel = _guess_rel_from_trigger(trig, version)
     if rel:
         version = rel.split("/", 1)[0]
-    logger.debug("resolved template: rel=%s trigger=%s version=%s", rel, trig, version)
+    logger.info("resolved template: rel=%s trigger=%s version=%s", rel, trig, version)
     if not rel and not text:
         # Note: return a helpful 404 if the trigger can’t be resolved
         raise HTTPException(404, detail=f"No template found for trigger '{trig}' in {version}")
@@ -141,9 +141,9 @@ def generate_messages(body: dict):
         if deidentify:
             msg = deidentify_message(msg, seed=derived)
         msgs.append(msg)
-    logger.debug("generated %d message(s) from %s", len(msgs), rel or "inline text")
-
+    logger.info("generated %d message(s) from %s", len(msgs), rel or "inline text")
     out = "\n".join(msgs) + ("\n" if msgs else "")
+    logger.info("returning %d HL7 bytes", len(out))
     return PlainTextResponse(out, media_type="text/plain", headers={"Cache-Control": "no-store"})
 
 @router.post("/api/interop/generate", response_class=PlainTextResponse)
