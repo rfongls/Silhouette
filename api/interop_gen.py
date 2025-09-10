@@ -156,7 +156,7 @@ async def generate_messages_endpoint(request: Request):
     """
     ctype = (request.headers.get("content-type") or "").lower()
     body: dict = {}
-    logger.debug("incoming request: content-type=%s", ctype)
+    logger.info("incoming request: content-type=%s", ctype)
 
     # 1) JSON
     if "application/json" in ctype:
@@ -165,9 +165,9 @@ async def generate_messages_endpoint(request: Request):
             if isinstance(parsed, dict):
                 body = parsed
             else:
-                logger.debug("JSON body was not dict: %s", type(parsed))
+                logger.warning("JSON body was not dict: %s", type(parsed))
         except Exception:
-            logger.debug("failed to parse JSON body", exc_info=True)
+            logger.warning("failed to parse JSON body", exc_info=True)
             body = {}
 
     # 2) Form
@@ -175,30 +175,25 @@ async def generate_messages_endpoint(request: Request):
         try:
             form = await request.form()
             body = {k: form.get(k) for k in form.keys()}
-            logger.debug("parsed form body: keys=%s", list(body.keys()))
+            logger.info("parsed form body: keys=%s", list(body.keys()))
         except Exception:
-            logger.debug("failed to parse form body", exc_info=True)
+            logger.warning("failed to parse form body", exc_info=True)
             body = {}
 
     # 3) Raw 'version=...&trigger=...' (e.g., text/plain)
     if not body:
         raw = await request.body()
-        logger.debug("raw body bytes=%r", raw[:200])
+        logger.info("raw body bytes=%r", raw[:200])
         q = parse_qs(raw.decode("utf-8", errors="ignore"))
         body = {k: v[-1] for k, v in q.items()} if q else {}
         if body:
-            logger.debug("parsed raw query body: %s", body)
+            logger.info("parsed raw query body: %s", body)
 
     # 4) URL query parameters (POST /path?version=...&trigger=...)
     if not body:
         qp = request.query_params
         body = {k: qp.get(k) for k in qp.keys()}
-        logger.debug("parsed query params: %s", body)
-
-    # 4) URL query parameters (POST /path?version=...&trigger=...)
-    if not body:
-        qp = request.query_params
-        body = {k: qp.get(k) for k in qp.keys()}
+        logger.info("parsed query params: %s", body)
 
     # Friendly default: auto-deidentify when generating more than one
     try:
@@ -208,8 +203,7 @@ async def generate_messages_endpoint(request: Request):
         cnt = 1
     if cnt > 1 and ("deidentify" not in body or str(body.get("deidentify", "")).strip() == ""):
         body["deidentify"] = True
-    logger.debug("final parsed body=%s", body)
-
+    logger.info("final parsed body=%s", body)
     return generate_messages(body)
 
 @router.post("/api/interop/generate/plain", response_class=PlainTextResponse)
