@@ -149,33 +149,40 @@ def generate_messages(body: dict):
 
 @router.post("/api/interop/generate", response_class=PlainTextResponse)
 async def generate_messages_endpoint(request: Request):
-    """Robust HL7 generation endpoint supporting JSON, form posts, raw
-    ``version=...&trigger=...`` bodies, or pure query parameters. This
-    avoids ``value is not a valid dict`` when the client submits a form
-    instead of JSON."""
+    """
+    Robust HL7 generation endpoint supporting:
+      - JSON bodies (application/json)
+      - HTML forms (application/x-www-form-urlencoded, multipart/form-data)
+      - raw 'key=value&...' bodies
+      - query parameters only
+    Avoids FastAPI's 'value is not a valid dict' when forms are posted.
+    """
     ctype = (request.headers.get("content-type") or "").lower()
     raw = await request.body()
     logger.info("incoming request: content-type=%s bytes=%d", ctype, len(raw))
+
     body: dict = {}
-    if raw:
-        if "json" in ctype:
-            try:
-                parsed = json.loads(raw.decode("utf-8"))
-                if isinstance(parsed, dict):
-                    body = parsed
-                else:
-                    logger.warning("JSON body was not dict: %s", type(parsed))
-            except Exception:
-                logger.warning("failed to parse JSON body", exc_info=True)
-        if not body:
+
+    # 1) JSON
+    if raw and "json" in ctype:
+        try:
+            parsed = json.loads(raw.decode("utf-8"))
+            if isinstance(parsed, dict):
+                body = parsed
+        except Exception:
+            pass
+
+    # 2) x-www-form-urlencoded (or raw key=value&key2=..)
+    if not body and raw:
+        try:
             q = parse_qs(raw.decode("utf-8", errors="ignore"))
             body = {k: v[-1] for k, v in q.items()} if q else {}
             if body:
-                logger.info("parsed form/raw body: %s", body)
+                logger.info("parsed urlencoded body: %s", body)
+        except Exception:
+            pass
 
-    # If the client used a traditional form post (e.g., multipart) the raw
-    # bytes above might not decode cleanly. Attempt Starlette's form parser as
-    # a fallback so ``<form enctype>`` variations are still supported.
+    # 3) multipart/form-data (or other <form enctype> variants)
     if not body:
         try:
             form = await request.form()
@@ -183,15 +190,17 @@ async def generate_messages_endpoint(request: Request):
             if body:
                 logger.info("parsed request.form: %s", body)
         except Exception:
-            # Ignore form parsing errors; we'll fall back to query params below.
             pass
+
+    # 4) Only query parameters
     if not body:
         qp = request.query_params
         body = {k: qp.get(k) for k in qp.keys()}
         if body:
             logger.info("parsed query params: %s", body)
 
-    # Friendly default: auto-deidentify when generating more than one
+    # Friendly default: if generating more than one message and 'deidentify'
+    # is not provided, turn it on. (UI behavior expectation.)
     try:
         cnt_raw = body.get("count", 1)
         cnt = int(cnt_raw) if str(cnt_raw).strip() != "" else 1
@@ -199,6 +208,7 @@ async def generate_messages_endpoint(request: Request):
         cnt = 1
     if cnt > 1 and ("deidentify" not in body or str(body.get("deidentify", "")).strip() == ""):
         body["deidentify"] = True
+
     logger.info("final parsed body=%s", body)
     return generate_messages(body)
 
