@@ -114,6 +114,18 @@ def test_generate_tolerates_mislabeled_json():
     assert "ADT^A01" in r.text
 
 
+def test_generate_handles_text_plain_forms():
+    """Some clients submit form-encoded bodies with text/plain content type."""
+    payload = "version=hl7-v2-4&trigger=ADT_A01&count=1"
+    r = client.post(
+        "/api/interop/generate",
+        data=payload,
+        headers={"Content-Type": "text/plain"},
+    )
+    assert r.status_code == 200
+    assert "ADT^A01" in r.text
+
+
 def test_generate_accepts_query_params():
     """Posting with only query parameters should also work."""
     r = client.post(

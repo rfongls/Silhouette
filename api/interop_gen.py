@@ -172,6 +172,19 @@ async def generate_messages_endpoint(request: Request):
             body = {k: v[-1] for k, v in q.items()} if q else {}
             if body:
                 logger.info("parsed form/raw body: %s", body)
+
+    # If the client used a traditional form post (e.g., multipart) the raw
+    # bytes above might not decode cleanly. Attempt Starlette's form parser as
+    # a fallback so ``<form enctype>`` variations are still supported.
+    if not body:
+        try:
+            form = await request.form()
+            body = {k: form.get(k) for k in form.keys()} if form else {}
+            if body:
+                logger.info("parsed request.form: %s", body)
+        except Exception:
+            # Ignore form parsing errors; we'll fall back to query params below.
+            pass
     if not body:
         qp = request.query_params
         body = {k: qp.get(k) for k in qp.keys()}
