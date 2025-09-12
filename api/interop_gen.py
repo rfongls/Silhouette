@@ -6,6 +6,9 @@ import re
 from urllib.parse import parse_qs
 import json
 import logging
+import os
+import sys
+import inspect
 from fastapi import APIRouter, Body, HTTPException, Request
 from fastapi.responses import JSONResponse, PlainTextResponse
 from silhouette_core.interop.hl7_mutate import (
@@ -19,6 +22,9 @@ from silhouette_core.interop.validate_workbook import validate_message
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
+print("[interop_gen] robust router module imported", file=sys.stderr)
+this_file = os.path.abspath(inspect.getfile(sys.modules[__name__]))
+print(f"[interop_gen] using file: {this_file}", file=sys.stderr)
 
 TEMPLATES_HL7_DIR = (Path(__file__).resolve().parent.parent / "templates" / "hl7").resolve()
 VALID_VERSIONS = {"hl7-v2-3", "hl7-v2-4", "hl7-v2-5"}
@@ -157,6 +163,7 @@ async def generate_messages_endpoint(request: Request):
       - query parameters only
     Avoids FastAPI's 'value is not a valid dict' when forms are posted.
     """
+    print("[interop_gen] generate_messages_endpoint invoked", file=sys.stderr)
     ctype = (request.headers.get("content-type") or "").lower()
     raw = await request.body()
     logger.info("incoming request: content-type=%s bytes=%d", ctype, len(raw))
