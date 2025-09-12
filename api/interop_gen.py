@@ -4,7 +4,9 @@ from pathlib import Path
 from typing import Optional
 import re
 from urllib.parse import parse_qs
-from fastapi import APIRouter, Body, HTTPException, Request, Form
+import json
+import logging
+from fastapi import APIRouter, Body, HTTPException, Request
 from fastapi.responses import JSONResponse, PlainTextResponse
 from silhouette_core.interop.hl7_mutate import (
     enrich_clinical_fields,
@@ -16,6 +18,7 @@ from silhouette_core.interop.mllp import send_mllp_batch
 from silhouette_core.interop.validate_workbook import validate_message
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 TEMPLATES_HL7_DIR = (Path(__file__).resolve().parent.parent / "templates" / "hl7").resolve()
 VALID_VERSIONS = {"hl7-v2-3", "hl7-v2-4", "hl7-v2-5"}
@@ -68,8 +71,21 @@ def _find_template_by_trigger(version: str, trigger: str) -> Optional[str]:
 
 
 def _guess_rel_from_trigger(trigger: str, version: str) -> Optional[str]:
-    """Find first template under the version folder whose stem matches the trigger."""
-    return _find_template_by_trigger(version, trigger)
+    """
+    Find a template whose stem matches the trigger. Search the requested
+    version first, then fall back to other known versions. This mirrors the
+    behaviour expected by the UI where a trigger is unique across versions.
+    """
+    rel = _find_template_by_trigger(version, trigger)
+    if rel:
+        return rel
+    for v in VALID_VERSIONS:
+        if v == version:
+            continue
+        rel = _find_template_by_trigger(v, trigger)
+        if rel:
+            return rel
+    return None
 
 
 def generate_messages(body: dict):
@@ -77,6 +93,7 @@ def generate_messages(body: dict):
     This helper takes a dict-like body and returns a FastAPI response. It is
     used by the HTTP endpoint below and by internal callers such as the
     pipeline runner."""
+    logger.info("generate_messages: body=%s", body)
     version = body.get("version", "hl7-v2-4")
     if version not in VALID_VERSIONS:
         raise HTTPException(400, f"Unknown version '{version}'")
@@ -90,6 +107,7 @@ def generate_messages(body: dict):
         rel = _guess_rel_from_trigger(trig, version)
     if rel:
         version = rel.split("/", 1)[0]
+    logger.info("resolved template: rel=%s trigger=%s version=%s", rel, trig, version)
     if not rel and not text:
         # Note: return a helpful 404 if the trigger can’t be resolved
         raise HTTPException(404, detail=f"No template found for trigger '{trig}' in {version}")
@@ -124,42 +142,57 @@ def generate_messages(body: dict):
         if deidentify:
             msg = deidentify_message(msg, seed=derived)
         msgs.append(msg)
+    logger.info("generated %d message(s) from %s", len(msgs), rel or "inline text")
 
     out = "\n".join(msgs) + ("\n" if msgs else "")
+    logger.info("returning %d HL7 bytes", len(out))
     return PlainTextResponse(out, media_type="text/plain", headers={"Cache-Control": "no-store"})
 
 @router.post("/api/interop/generate", response_class=PlainTextResponse)
 async def generate_messages_endpoint(request: Request):
-    """
-    Accept JSON, x-www-form-urlencoded form, or raw querystring bodies.
-    Always returns plain HL7 text. This avoids 'value is not a valid dict'
-    when callers post forms to a JSON-only handler (or vice versa).
-    """
+    """Robust HL7 generation endpoint supporting JSON, form posts, raw
+    ``version=...&trigger=...`` bodies, or pure query parameters. This
+    avoids ``value is not a valid dict`` when the client submits a form
+    instead of JSON."""
     ctype = (request.headers.get("content-type") or "").lower()
+    raw = await request.body()
+    logger.info("incoming request: content-type=%s bytes=%d", ctype, len(raw))
     body: dict = {}
 
-    # 1) JSON
-    if "application/json" in ctype:
-        try:
-            parsed = await request.json()
-            if isinstance(parsed, dict):
-                body = parsed
-        except Exception:
-            body = {}
+    if raw:
+        if "json" in ctype:
+            try:
+                parsed = json.loads(raw.decode("utf-8"))
+                if isinstance(parsed, dict):
+                    body = parsed
+                else:
+                    logger.warning("JSON body was not dict: %s", type(parsed))
+            except Exception:
+                logger.warning("failed to parse JSON body", exc_info=True)
+        if not body:
+            q = parse_qs(raw.decode("utf-8", errors="ignore"))
+            body = {k: v[-1] for k, v in q.items()} if q else {}
+            if body:
+                logger.info("parsed form/raw body: %s", body)
 
-    # 2) Form
+    # If the client used a traditional form post (e.g., multipart) the raw
+    # bytes above might not decode cleanly. Attempt Starlette's form parser as
+    # a fallback so ``<form enctype>`` variations are still supported.
     if not body:
         try:
             form = await request.form()
-            body = {k: form.get(k) for k in form.keys()}
+            body = {k: form.get(k) for k in form.keys()} if form else {}
+            if body:
+                logger.info("parsed request.form: %s", body)
         except Exception:
-            body = {}
+            # Ignore form parsing errors; we'll fall back to query params below.
+            pass
 
-    # 3) Raw 'version=...&trigger=...' (e.g., text/plain)
     if not body:
-        raw = await request.body()
-        q = parse_qs(raw.decode("utf-8", errors="ignore"))
-        body = {k: v[-1] for k, v in q.items()} if q else {}
+        qp = request.query_params
+        body = {k: qp.get(k) for k in qp.keys()}
+        if body:
+            logger.info("parsed query params: %s", body)
 
     # Friendly default: auto-deidentify when generating more than one
     try:
@@ -169,8 +202,14 @@ async def generate_messages_endpoint(request: Request):
         cnt = 1
     if cnt > 1 and ("deidentify" not in body or str(body.get("deidentify", "")).strip() == ""):
         body["deidentify"] = True
+    logger.info("final parsed body=%s", body)
 
     return generate_messages(body)
+
+@router.get("/api/interop/generate", response_class=PlainTextResponse)
+async def generate_messages_get(request: Request):
+    """GET variant for simple query-string based generation."""
+    return await generate_messages_endpoint(request)
 
 @router.post("/api/interop/generate/plain", response_class=PlainTextResponse)
 async def generate_messages_plain(request: Request):
