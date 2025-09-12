@@ -1,4 +1,5 @@
 import logging
+import sys
 from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import JSONResponse
@@ -18,14 +19,43 @@ for r in (
     ui_router,
     ui_interop_router,
     ui_security_router,
-    interop_router,
-    interop_gen_router,
+    interop_gen_router,  # static /api/interop/generate first
+    interop_router,      # generic /api/interop/{tool} after
     security_router,
 ):
     app.include_router(r)
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 logger = logging.getLogger(__name__)
+
+
+@app.on_event("startup")
+async def _route_sanity_check():
+    all_posts = []
+    for idx, r in enumerate(app.routes):
+        path = getattr(r, "path", None)
+        methods = getattr(r, "methods", set()) or set()
+        if not path or "POST" not in methods:
+            continue
+        ep = getattr(r, "endpoint", None)
+        mod = getattr(ep, "__module__", "?")
+        name = getattr(ep, "__name__", "?")
+        if path.startswith("/api/interop"):
+            all_posts.append((idx, path, mod, name))
+
+    for idx, path, mod, name in all_posts:
+        print(f"[ROUTE]#{idx} POST {path} -> {mod}.{name}", file=sys.stderr)
+
+    gen_idx = next((i for i, p, _, _ in all_posts if p == "/api/interop/generate"), None)
+    param_idxs = [i for i, p, _, _ in all_posts if p.startswith("/api/interop/") and "{" in p]
+
+    if gen_idx is None:
+        raise RuntimeError("Missing POST /api/interop/generate route.")
+    if any(gen_idx > i for i in param_idxs):
+        raise RuntimeError(
+            "Static /api/interop/generate is registered AFTER a param route and will be shadowed. "
+            "Include interop_gen_router before interop_router."
+        )
 
 
 @app.exception_handler(RequestValidationError)
