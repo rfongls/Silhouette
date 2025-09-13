@@ -1,6 +1,12 @@
 <section class="card">
   <h3>Generate Messages</h3>
-<form id="gen-form" autocomplete="off" novalidate>
+<form id="gen-form"
+      autocomplete="off"
+      novalidate
+      hx-post="/api/interop/generate"
+      hx-target="#gen-output"
+      hx-headers='{"Accept":"text/plain"}'
+      hx-swap="textContent">
     <div class="row gap">
       <label>Version</label>
       <select name="version" class="input hl7-version-select" id="gen-version"
@@ -34,21 +40,60 @@
       <label><input type="checkbox" name="deidentify"/> De-identify</label>
     </div>
 
-   <div class="row gap mt">
-        <button
-          type="button"
-          id="btn-generate"
-          class="btn btn-primary"
-          hx-post="/api/interop/generate"
-          hx-include="#gen-form"
-          hx-target="#gen-output-msgs"
-          hx-headers='{"Accept":"text/plain"}'
-          hx-swap="textContent"
-          hx-trigger="click"
-          onclick="this.form.count.value=Math.max(1, parseInt(this.form.count.value||'1'));">
-          Generate
-        </button>
-      </div>
+    <div class="row gap mt">
+      <button
+        type="submit"
+        id="btn-generate"
+        class="btn btn-primary"
+        onclick="this.form.count.value=Math.max(1, parseInt(this.form.count.value||'1'));">
+        Generate
+      </button>
+    </div>
   </form>
-  <pre id="gen-output-msgs" class="codepane muted mt">Select / type a template above and press Generate.</pre>
+  <pre id="gen-output" class="codepane muted mt">Select / type a template above and press Generate.</pre>
+  
+  <!-- Fallback: if HTMX isn't active, use fetch to submit the form -->
+  <script>
+  (function () {
+    // Run after DOM is ready
+    function ready(fn){ if(document.readyState!=='loading'){ fn(); } else { document.addEventListener('DOMContentLoaded', fn); } }
+    ready(function () {
+      var form = document.getElementById('gen-form');
+      var btn  = document.getElementById('btn-generate');
+      var out  = document.getElementById('gen-output');
+      if (!form || !btn || !out) return;
+
+      // If HTMX is present, let it handle submission
+      if (window.htmx) return;
+
+      // Otherwise, submit via fetch and write text into <pre>
+      btn.addEventListener('click', function (ev) {
+        // type="submit" will try to submit the form; stop the browser default and do fetch
+        ev.preventDefault();
+        try {
+          // Make sure count is a positive integer (same as onclick)
+          var countInput = form.querySelector('input[name="count"]');
+          if (countInput) {
+            var n = parseInt(countInput.value || '1', 10);
+            countInput.value = isFinite(n) && n > 0 ? n : 1;
+          }
+          var params = new URLSearchParams(new FormData(form));
+          fetch('/api/interop/generate', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+              'Accept': 'text/plain'
+            },
+            body: params.toString()
+          })
+          .then(function (resp) { return resp.text(); })
+          .then(function (text) { out.textContent = text; })
+          .catch(function (err) { out.textContent = String(err); });
+        } catch (e) {
+          out.textContent = String(e);
+        }
+      });
+    });
+  })();
+  </script>
 </section>
