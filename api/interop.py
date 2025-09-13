@@ -3,7 +3,7 @@ import json, subprocess, time, shutil, re, io, csv, datetime, textwrap, tempfile
 from pathlib import Path
 from typing import List, Optional, Dict, Any
 import threading
-from fastapi import APIRouter, UploadFile, File, Form, Request, Query, HTTPException
+from fastapi import APIRouter, UploadFile, File, Form, Request, Query, HTTPException, Body
 from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse, StreamingResponse
 from starlette.templating import Jinja2Templates
 try:
@@ -21,6 +21,14 @@ from silhouette_core.interop.validate_workbook import validate_message
 from .interop_gen import generate_messages, _find_template_by_trigger
 
 router = APIRouter()
+
+
+@router.post("/api/interop/exec/{tool}")
+def run_tool(tool: str, body: dict = Body(...)):
+    """
+    Catch-all interop tool executor (renamed to avoid colliding with /api/interop/generate).
+    """
+    raise HTTPException(status_code=404, detail=f"Unknown tool: {tool}")
 templates = Jinja2Templates(directory="templates")
 OUT_ROOT = Path("out/interop")
 UI_OUT = OUT_ROOT / "ui"
