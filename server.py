@@ -19,8 +19,8 @@ for r in (
     ui_router,
     ui_interop_router,
     ui_security_router,
-    interop_gen_router,  # static /api/interop/generate first
-    interop_router,      # generic /api/interop/{tool} after
+    interop_gen_router,  # specific generator endpoint
+    interop_router,      # generic tools (now under /api/interop/exec/{tool})
     security_router,
 ):
     app.include_router(r)
@@ -31,31 +31,39 @@ logger = logging.getLogger(__name__)
 
 @app.on_event("startup")
 async def _route_sanity_check():
-    all_posts = []
+    """
+    Enforce: no legacy /api/interop/{...} routes; /api/interop/generate present.
+    Also dump interop routes with registration order for quick diagnosis.
+    """
+    interop_routes = []
+    generate_get = generate_post = None
+    legacy_param_routes = []
     for idx, r in enumerate(app.routes):
         path = getattr(r, "path", None)
         methods = getattr(r, "methods", set()) or set()
-        if not path or "POST" not in methods:
+        if not path or not path.startswith("/api/interop"):
             continue
         ep = getattr(r, "endpoint", None)
         mod = getattr(ep, "__module__", "?")
         name = getattr(ep, "__name__", "?")
-        if path.startswith("/api/interop"):
-            all_posts.append((idx, path, mod, name))
+        print(f"[ROUTE]#{idx} {methods} {path} -> {mod}.{name}", file=sys.stderr)
+        interop_routes.append((idx, path, methods, mod, name))
+        if path == "/api/interop/generate":
+            if "GET" in methods:
+                generate_get = idx
+            if "POST" in methods:
+                generate_post = idx
+        if path.startswith("/api/interop/") and "{" in path and not path.startswith("/api/interop/exec/"):
+            legacy_param_routes.append((idx, path, methods, mod, name))
 
-    for idx, path, mod, name in all_posts:
-        print(f"[ROUTE]#{idx} POST {path} -> {mod}.{name}", file=sys.stderr)
-
-    gen_idx = next((i for i, p, _, _ in all_posts if p == "/api/interop/generate"), None)
-    param_idxs = [i for i, p, _, _ in all_posts if p.startswith("/api/interop/") and "{" in p]
-
-    if gen_idx is None:
-        raise RuntimeError("Missing POST /api/interop/generate route.")
-    if any(gen_idx > i for i in param_idxs):
+    if legacy_param_routes:
+        details = ", ".join(f"#{i}:{p}" for i, p, *_ in legacy_param_routes)
         raise RuntimeError(
-            "Static /api/interop/generate is registered AFTER a param route and will be shadowed. "
-            "Include interop_gen_router before interop_router."
+            f"Legacy dynamic route(s) still present: {details}. "
+            f"All catch-all tools must live under /api/interop/exec/{{tool}}."
         )
+    if generate_get is None or generate_post is None:
+        raise RuntimeError("Missing GET/POST /api/interop/generate route.")
 
 
 @app.exception_handler(RequestValidationError)
