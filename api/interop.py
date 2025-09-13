@@ -3,7 +3,7 @@ import json, subprocess, time, shutil, re, io, csv, datetime, textwrap, tempfile
 from pathlib import Path
 from typing import List, Optional, Dict, Any
 import threading
-from fastapi import APIRouter, UploadFile, File, Form, Request, Query, HTTPException
+from fastapi import APIRouter, UploadFile, File, Form, Request, Query, HTTPException, Body
 from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse, StreamingResponse
 from starlette.templating import Jinja2Templates
 try:
@@ -21,6 +21,16 @@ from silhouette_core.interop.validate_workbook import validate_message
 from .interop_gen import generate_messages, _find_template_by_trigger
 
 router = APIRouter()
+
+
+@router.post("/api/interop/exec/{tool}")
+def run_tool(tool: str, body: dict = Body(...)):
+    """
+    Catch-all interop tool executor (renamed to avoid colliding with /api/interop/generate).
+    The project currently exposes no dynamic tools, so this endpoint fails fast
+    with 404 for any requested tool name.
+    """
+    raise HTTPException(status_code=404, detail=f"Unknown tool: {tool}")
 templates = Jinja2Templates(directory="templates")
 OUT_ROOT = Path("out/interop")
 UI_OUT = OUT_ROOT / "ui"
@@ -979,22 +989,68 @@ def _render_pipeline_result(hl7_txt: str, val: dict, trans: dict, post_res: dict
     return HTMLResponse(textwrap.dedent(html))
 
 @router.post("/api/interop/pipeline/run", response_class=HTMLResponse)
-def run_pipeline(
-    version: str = Form("hl7-v2-4"),
-    trigger: str | None = Form(None),
-    template_relpath: str | None = Form(None),
-    text: str | None = Form(None),
-    seed: int | None = Form(None),
-    ensure_unique: bool = Form(True),
-    include_clinical: bool = Form(False),
-    deidentify: bool = Form(False),
-    post_fhir: bool = Form(False),
-    fhir_endpoint: str | None = Form(None),
-):
+async def run_pipeline(request: Request):
+    """Robust pipeline runner that accepts JSON or form submissions."""
+    from urllib.parse import parse_qs
+
+    ctype = (request.headers.get("content-type") or "").lower()
+    raw = await request.body()
+    body: dict[str, Any] = {}
+
+    if raw and "json" in ctype:
+        try:
+            parsed = json.loads(raw.decode("utf-8"))
+            if isinstance(parsed, dict):
+                body = parsed
+        except Exception:
+            body = {}
+
+    if not body and raw:
+        try:
+            q = parse_qs(raw.decode("utf-8", errors="ignore"))
+            body = {k: v[-1] for k, v in q.items()} if q else {}
+        except Exception:
+            body = {}
+
+    if not body:
+        try:
+            form = await request.form()
+            body = {k: form.get(k) for k in form.keys()} if form else {}
+        except Exception:
+            body = {}
+
+    if not body:
+        qp = request.query_params
+        body = {k: qp.get(k) for k in qp.keys()}
+
+    def _to_bool(v: Any, default: bool = False) -> bool:
+        if v is None:
+            return default
+        if isinstance(v, bool):
+            return v
+        return str(v).lower() in {"1", "true", "on", "yes"}
+
+    def _to_int(v: Any) -> int | None:
+        try:
+            return int(v)
+        except Exception:
+            return None
+
+    version = body.get("version", "hl7-v2-4")
+    trigger = body.get("trigger")
+    template_relpath = body.get("template_relpath")
+    text = body.get("text")
+    seed = _to_int(body.get("seed"))
+    ensure_unique = _to_bool(body.get("ensure_unique"), True)
+    include_clinical = _to_bool(body.get("include_clinical"), False)
+    deidentify = _to_bool(body.get("deidentify"), False)
+    post_fhir = _to_bool(body.get("post_fhir"), False)
+    fhir_endpoint = body.get("fhir_endpoint")
+
     if version not in VALID_VERSIONS:
         raise HTTPException(400, f"Unknown version '{version}'")
     if not text:
-        body = {
+        body2 = {
             "version": version,
             "template_relpath": template_relpath,
             "trigger": trigger,
@@ -1004,7 +1060,7 @@ def run_pipeline(
             "include_clinical": include_clinical,
             "deidentify": deidentify,
         }
-        resp = generate_messages(body)
+        resp = generate_messages(body2)
         text = resp.body.decode("utf-8") if hasattr(resp, "body") else str(resp)
     if not text or not text.strip():
         raise HTTPException(400, "No HL7 content to process")
