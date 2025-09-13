@@ -18,8 +18,8 @@ for r in (
     ui_router,
     ui_interop_router,
     ui_security_router,
-    interop_router,
-    interop_gen_router,
+    interop_gen_router,  # specific generator endpoint
+    interop_router,      # generic tools (now under /api/interop/exec/{tool})
     security_router,
     admin_router,
 ):
