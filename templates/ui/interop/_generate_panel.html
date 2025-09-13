@@ -1,10 +1,6 @@
 <section class="card">
   <h3>Generate Messages</h3>
-   <form id="gen-form"
-         hx-post="/api/interop/generate"
-         hx-target="#gen-output"
-         hx-headers='{"Accept":"text/plain"}'
-         hx-swap="textContent">
+<form id="gen-form" autocomplete="off" novalidate>
     <div class="row gap">
       <label>Version</label>
       <select name="version" class="input hl7-version-select" id="gen-version"
@@ -40,12 +36,19 @@
 
    <div class="row gap mt">
         <button
-          type="submit"
-          class="btn"
+          type="button"
+          id="btn-generate"
+          class="btn btn-primary"
+          hx-post="/api/interop/generate"
+          hx-include="#gen-form"
+          hx-target="#gen-output-msgs"
+          hx-headers='{"Accept":"text/plain"}'
+          hx-swap="textContent"
+          hx-trigger="click"
           onclick="this.form.count.value=Math.max(1, parseInt(this.form.count.value||'1'));">
           Generate
         </button>
       </div>
   </form>
-  <pre id="gen-output" class="codepane muted mt">Select / type a template above and press Generate.</pre>
+  <pre id="gen-output-msgs" class="codepane muted mt">Select / type a template above and press Generate.</pre>
 </section>
