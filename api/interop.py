@@ -27,6 +27,8 @@ router = APIRouter()
 def run_tool(tool: str, body: dict = Body(...)):
     """
     Catch-all interop tool executor (renamed to avoid colliding with /api/interop/generate).
+    The project currently exposes no dynamic tools, so this endpoint fails fast
+    with 404 for any requested tool name.
     """
     raise HTTPException(status_code=404, detail=f"Unknown tool: {tool}")
 templates = Jinja2Templates(directory="templates")
