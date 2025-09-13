@@ -16,6 +16,17 @@ All notable changes to this project will be documented here.
 - PR-27: License ops – customer license issuance tooling & watermark embedding.
 - Docs normalization + parity fixes.
 
+## [X.Y.Z] - 2025-09-13
+### Changed
+- **Breaking:** moved the generic interop tool route from `/api/interop/{tool}`
+  to `/api/interop/exec/{tool}` to remove a hard collision with
+  `/api/interop/generate` used by the HL7 message generator UI.
+
+### Migration
+- Update any client code and tests that call `/api/interop/{tool}` to
+  `/api/interop/exec/{tool}`.
+- The HL7 generator UI continues to use `/api/interop/generate` unchanged.
+
 ## Phase 10 – Release & Licensing (PR-26 → PR-27)
 - Release playbook and artifact bundling.
 - Customer license issuance with watermark embedding.
