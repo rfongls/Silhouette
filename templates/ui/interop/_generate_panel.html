@@ -40,9 +40,11 @@
           id="btn-generate"
           class="btn btn-primary"
           hx-post="/api/interop/generate"
+          hx-include="#gen-form"
           hx-target="#gen-output-msgs"
           hx-headers='{"Accept":"text/plain"}'
           hx-swap="textContent"
+          hx-trigger="click"
           onclick="this.form.count.value=Math.max(1, parseInt(this.form.count.value||'1'));">
           Generate
         </button>
