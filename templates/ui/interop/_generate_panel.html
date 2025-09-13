@@ -40,8 +40,7 @@
           id="btn-generate"
           class="btn btn-primary"
           hx-post="/api/interop/generate"
-          hx-include="#gen-form"
-          hx-target="#gen-output"
+          hx-target="#gen-output-msgs"
           hx-headers='{"Accept":"text/plain"}'
           hx-swap="textContent"
           onclick="this.form.count.value=Math.max(1, parseInt(this.form.count.value||'1'));">
@@ -49,5 +48,5 @@
         </button>
       </div>
   </form>
-  <pre id="gen-output-msgs" class="mono hl7-output">Select / type a template above and press Generate.</pre>
+  <pre id="gen-output-msgs" class="codepane muted mt">Select / type a template above and press Generate.</pre>
 </section>
