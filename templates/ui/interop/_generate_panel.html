@@ -1,6 +1,15 @@
 <section class="card">
   <h3>Generate Messages</h3>
-<form id="gen-form" autocomplete="off" novalidate>
+<!-- Form uses HTMX when available; action ensures no-JS fallback -->
+<form id="gen-form"
+      method="post"
+      action="/ui/interop/generate"
+      autocomplete="off"
+      novalidate
+      hx-post="/api/interop/generate"
+      hx-target="#gen-output"
+      hx-swap="textContent"
+      hx-headers='{"Accept":"text/plain"}'>
     <div class="row gap">
       <label>Version</label>
       <select name="version" class="input hl7-version-select" id="gen-version"
@@ -34,21 +43,18 @@
       <label><input type="checkbox" name="deidentify"/> De-identify</label>
     </div>
 
-   <div class="row gap mt">
-        <button
-          type="button"
-          id="btn-generate"
-          class="btn btn-primary"
-          hx-post="/api/interop/generate"
-          hx-include="#gen-form"
-          hx-target="#gen-output-msgs"
-          hx-headers='{"Accept":"text/plain"}'
-          hx-swap="textContent"
-          hx-trigger="click"
-          onclick="this.form.count.value=Math.max(1, parseInt(this.form.count.value||'1'));">
-          Generate
-        </button>
-      </div>
+    <div class="row gap mt">
+      <button
+        type="submit"
+        id="btn-generate"
+        class="btn btn-primary"
+        onclick="this.form.count.value=Math.max(1, parseInt(this.form.count.value||'1'));">
+        Generate
+      </button>
+    </div>
   </form>
-  <pre id="gen-output-msgs" class="codepane muted mt">Select / type a template above and press Generate.</pre>
+  <pre id="gen-output" class="codepane muted mt">Select / type a template above and press Generate.</pre>
+  <noscript>
+    <p class="muted mt">JavaScript is disabled. Submitting will open a results page.</p>
+  </noscript>
 </section>
