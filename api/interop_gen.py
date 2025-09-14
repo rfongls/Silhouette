@@ -214,28 +214,49 @@ async def generate_messages_plain(request: Request):
     return await generate_messages_endpoint(request)
 
 @router.post("/api/interop/deidentify")
-def api_deidentify(text: str = Body(..., embed=True), seed: Optional[int] = Body(None)):
-    out = deidentify_message(text, seed=seed)
+async def api_deidentify(request: Request):
+    """De-identify HL7 text; accepts JSON, form, or query data."""
+    body = await parse_any_request(request)
+    text = body.get("text")
+    seed = body.get("seed")
+    if text is None or str(text).strip() == "":
+        raise HTTPException(status_code=400, detail="Missing 'text' to de-identify")
+    try:
+        seed_int = int(seed) if seed not in (None, "") else None
+    except Exception:
+        seed_int = None
+    out = deidentify_message(text, seed=seed_int)
     return JSONResponse({"text": out})
 
 
 @router.post("/api/interop/validate")
-def api_validate(text: str = Body(..., embed=True), profile: Optional[str] = Body(None)):
+async def api_validate(request: Request):
+    """Validate HL7 text; accepts JSON, form, or query data."""
+    body = await parse_any_request(request)
+    text = body.get("text", "")
+    profile = body.get("profile")
     results = validate_message(text, profile=profile)
     return JSONResponse(results)
 
 
 @router.post("/api/interop/mllp/send")
-def api_mllp_send(
-    host: str = Body(...),
-    port: int = Body(...),
-    messages: list[str] | str = Body(..., embed=True),
-    timeout: float = Body(5.0),
-):
+async def api_mllp_send(request: Request):
+    """Send HL7 messages over MLLP; accepts JSON or form data."""
+    body = await parse_any_request(request)
+    host = (body.get("host") or "").strip()
+    port = int(body.get("port") or 0)
+    timeout = float(body.get("timeout") or 5.0)
+    messages = body.get("messages") or body.get("text") or ""
+    if not host or not port:
+        raise HTTPException(status_code=400, detail="Missing 'host' or 'port'")
     if isinstance(messages, str):
         chunks = re.split(r"\r?\n\s*\r?\n", messages)
-        messages = [m.strip() for m in chunks if m.strip()]
-        if not messages:
-            raise HTTPException(status_code=400, detail="No messages parsed from input string")
-    acks = send_mllp_batch(host, port, messages, timeout=timeout)
-    return JSONResponse({"sent": len(messages), "acks": acks})
+        messages_list = [m.strip() for m in chunks if m.strip()]
+    elif isinstance(messages, list):
+        messages_list = [str(m).strip() for m in messages if str(m).strip()]
+    else:
+        messages_list = []
+    if not messages_list:
+        raise HTTPException(status_code=400, detail="No messages parsed from input")
+    acks = send_mllp_batch(host, port, messages_list, timeout=timeout)
+    return JSONResponse({"sent": len(messages_list), "acks": acks})
