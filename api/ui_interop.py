@@ -6,6 +6,8 @@ from fastapi import APIRouter, Request, HTTPException
 from fastapi.responses import HTMLResponse, PlainTextResponse
 from starlette.templating import Jinja2Templates
 from api.interop_gen import generate_messages, parse_any_request
+from silhouette_core.interop.deid import deidentify_message
+from silhouette_core.interop.validate_workbook import validate_message
 
 router = APIRouter()
 templates = Jinja2Templates(directory="templates")
@@ -58,3 +60,36 @@ async def ui_generate(request: Request):
         {"request": request, "hl7_text": text}
     )
 
+# De-identify (HTML fragment suitable for hx-swap)
+@router.post("/ui/interop/deidentify", response_class=HTMLResponse)
+async def ui_deidentify(request: Request):
+    body = await parse_any_request(request)
+    text = (body.get("text") or "").strip()
+    seed = body.get("seed")
+    try:
+        seed_int = int(seed) if seed not in (None, "") else None
+    except Exception:
+        seed_int = None
+    if not text:
+        return HTMLResponse("<div class='muted'>No input.</div>")
+    out = deidentify_message(text, seed=seed_int)
+    return HTMLResponse(f"<pre class='codepane'>{out}</pre>")
+
+# Validate (HTML fragment suitable for hx-swap)
+@router.post("/ui/interop/validate", response_class=HTMLResponse)
+async def ui_validate(request: Request):
+    body = await parse_any_request(request)
+    text = body.get("text", "")
+    profile = body.get("profile")
+    res = validate_message(text, profile=profile)
+    errs = "".join(f"<li>{e.get('message','')}</li>" for e in (res.get('errors') or []))
+    warns = "".join(f"<li class='muted'>{w.get('message','')}</li>" for w in (res.get('warnings') or []))
+    html = f"""
+      <div class='mt'><strong>Analyze</strong> {('<span class="chip">OK</span>' if res.get('ok') else '<span class="chip">Issues</span>')}
+        <div class='grid2'>
+          <div><em>Errors</em><ul>{errs or '<li>None</li>'}</ul></div>
+          <div><em>Warnings</em><ul class='muted'>{warns or '<li>None</li>'}</ul></div>
+        </div>
+      </div>
+    """
+    return HTMLResponse(html)

@@ -1,6 +1,8 @@
 <section class="card" data-feature="deid">
   <h3>De-Identify</h3>
   <form id="deid-form"
+        method="post"
+        action="/ui/interop/deidentify"
         hx-post="/ui/interop/deidentify"
         hx-trigger="submit"
         hx-target="#deid-output"

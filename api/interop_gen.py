@@ -215,7 +215,7 @@ async def generate_messages_plain(request: Request):
 
 @router.post("/api/interop/deidentify")
 async def api_deidentify(request: Request):
-    """De-identify HL7 text; accepts JSON, form, or query data."""
+    """De-identify text; accept JSON, form, multipart, or query."""
     body = await parse_any_request(request)
     text = body.get("text")
     seed = body.get("seed")
@@ -231,7 +231,6 @@ async def api_deidentify(request: Request):
 
 @router.post("/api/interop/validate")
 async def api_validate(request: Request):
-    """Validate HL7 text; accepts JSON, form, or query data."""
     body = await parse_any_request(request)
     text = body.get("text", "")
     profile = body.get("profile")
@@ -241,7 +240,7 @@ async def api_validate(request: Request):
 
 @router.post("/api/interop/mllp/send")
 async def api_mllp_send(request: Request):
-    """Send HL7 messages over MLLP; accepts JSON or form data."""
+    """Send messages over MLLP; accept JSON, form, multipart, or query."""
     body = await parse_any_request(request)
     host = (body.get("host") or "").strip()
     port = int(body.get("port") or 0)
