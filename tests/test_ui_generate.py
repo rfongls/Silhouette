@@ -16,7 +16,6 @@ def test_api_generate_form_post_works():
     assert r.status_code == 200
     assert r.text.startswith("MSH|")
 
-
 def test_ui_generate_htmx_plaintext_works():
     r = client.post(
         "/ui/interop/generate",
@@ -26,6 +25,7 @@ def test_ui_generate_htmx_plaintext_works():
     assert r.status_code == 200
     assert r.text.startswith("MSH|")
 
+    
 def test_ui_generate_html_fallback_works():
     r = client.post(
         "/ui/interop/generate",

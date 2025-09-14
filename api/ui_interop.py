@@ -97,4 +97,3 @@ async def ui_validate(request: Request):
       </div>
     """
     return HTMLResponse(html)
-
