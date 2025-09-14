@@ -1,6 +1,8 @@
 <section class="card" data-feature="validate">
   <h3>Validate (Profile)</h3>
   <form id="val-form"
+        method="post"
+        action="/ui/interop/validate"
         hx-post="/ui/interop/validate"
         hx-trigger="submit"
         hx-target="#val-output"

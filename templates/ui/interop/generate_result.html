@@ -1,0 +1,10 @@
+{% extends "layout.html" %}
+{% block content %}
+<section class="card">
+  <h3>Generated HL7 Message(s)</h3>
+  <pre class="codepane">{{ hl7_text | e }}</pre>
+  <div class="row gap mt">
+    <a class="btn" href="/ui/interop">Back</a>
+  </div>
+</section>
+{% endblock %}
