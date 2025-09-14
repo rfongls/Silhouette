@@ -231,6 +231,7 @@ async def api_deidentify(request: Request):
 
 @router.post("/api/interop/validate")
 async def api_validate(request: Request):
+    """Validate HL7; accept JSON, form, multipart, or query."""
     body = await parse_any_request(request)
     text = body.get("text", "")
     profile = body.get("profile")

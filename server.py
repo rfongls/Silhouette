@@ -76,7 +76,14 @@ async def _log_request_validation(request: Request, exc: RequestValidationError)
         body[:200],
         exc.errors(),
     )
-    return JSONResponse({"detail": exc.errors()}, status_code=422)
+    return JSONResponse(
+        {
+            "detail": exc.errors(),
+            "path": str(request.url.path),
+            "ctype": request.headers.get("content-type"),
+        },
+        status_code=422,
+    )
 
 
 @app.get("/", include_in_schema=False)
