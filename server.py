@@ -28,6 +28,13 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 
 logger = logging.getLogger(__name__)
 
+@app.middleware("http")
+async def _trace_requests(request: Request, call_next):
+    print(f"[TRACE] {request.method} {request.url.path} ctype={request.headers.get('content-type')} accept={request.headers.get('accept')}")
+    resp = await call_next(request)
+    print(f"[TRACE] -> {resp.status_code} {request.url.path}")
+    return resp
+
 
 @app.on_event("startup")
 async def _route_sanity_check():

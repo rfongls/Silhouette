@@ -55,6 +55,10 @@ async def ui_generate(request: Request):
     body = await parse_any_request(request)
     resp = generate_messages(body)
     text = resp.body.decode("utf-8") if hasattr(resp, "body") else str(resp)
+    accept = (request.headers.get("accept") or "").lower()
+    hx = (request.headers.get("hx-request") or "").lower() == "true"
+    if hx or "text/plain" in accept:
+        return PlainTextResponse(text, media_type="text/plain")
     return templates.TemplateResponse(
         "ui/interop/generate_result.html",
         {"request": request, "hl7_text": text}
