@@ -22,4 +22,4 @@ def test_exec_catch_all_moved():
     r = client.post("/api/interop/someTool", json={"foo":"bar"})
     assert r.status_code in (404, 405)
     r2 = client.post("/api/interop/exec/someTool", json={"foo":"bar"})
-    assert r2.status_code in (200, 400, 404)
+    assert r2.status_code == 404

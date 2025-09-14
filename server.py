@@ -28,6 +28,13 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 
 logger = logging.getLogger(__name__)
 
+@app.middleware("http")
+async def _trace_requests(request: Request, call_next):
+    print(f"[TRACE] {request.method} {request.url.path} ctype={request.headers.get('content-type')} accept={request.headers.get('accept')}")
+    resp = await call_next(request)
+    print(f"[TRACE] -> {resp.status_code} {request.url.path}")
+    return resp
+
 
 @app.on_event("startup")
 async def _route_sanity_check():
@@ -76,7 +83,14 @@ async def _log_request_validation(request: Request, exc: RequestValidationError)
         body[:200],
         exc.errors(),
     )
-    return JSONResponse({"detail": exc.errors()}, status_code=422)
+    return JSONResponse(
+        {
+            "detail": exc.errors(),
+            "path": str(request.url.path),
+            "ctype": request.headers.get("content-type"),
+        },
+        status_code=422,
+    )
 
 
 @app.get("/", include_in_schema=False)
