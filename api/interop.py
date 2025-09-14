@@ -3,7 +3,8 @@ import json, subprocess, time, shutil, re, io, csv, datetime, textwrap, tempfile
 from pathlib import Path
 from typing import List, Optional, Dict, Any
 import threading
-from fastapi import APIRouter, UploadFile, File, Form, Request, Query, HTTPException, Body
+from urllib.parse import parse_qs
+from fastapi import APIRouter, UploadFile, File, Form, Request, Query, HTTPException
 from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse, StreamingResponse
 from starlette.templating import Jinja2Templates
 try:
@@ -24,12 +25,22 @@ router = APIRouter()
 
 
 @router.post("/api/interop/exec/{tool}")
-def run_tool(tool: str, body: dict = Body(...)):
+async def run_tool(tool: str, request: Request):
     """
-    Catch-all interop tool executor (renamed to avoid colliding with /api/interop/generate).
-    The project currently exposes no dynamic tools, so this endpoint fails fast
-    with 404 for any requested tool name.
+    Catch-all tool executor. Accept any body shape (JSON/form/multipart/query)
+    and fail cleanly without raising FastAPI's JSON dict validator.
     """
+    try:
+        ctype = (request.headers.get("content-type") or "").lower()
+        raw = await request.body()
+        if raw and "json" in ctype:
+            _ = json.loads(raw.decode("utf-8"))
+        elif raw:
+            _ = parse_qs(raw.decode("utf-8", errors="ignore"))
+        else:
+            _ = await request.form()
+    except Exception:
+        pass
     raise HTTPException(status_code=404, detail=f"Unknown tool: {tool}")
 templates = Jinja2Templates(directory="templates")
 OUT_ROOT = Path("out/interop")

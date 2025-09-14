@@ -5,6 +5,7 @@ from pathlib import Path
 from fastapi import APIRouter, Request, HTTPException
 from fastapi.responses import HTMLResponse, PlainTextResponse
 from starlette.templating import Jinja2Templates
+from api.interop_gen import generate_messages, parse_any_request
 
 router = APIRouter()
 templates = Jinja2Templates(directory="templates")
@@ -44,4 +45,16 @@ async def history_view(path: str):
     if not target.is_file() or not str(target).startswith(str(base)):
         raise HTTPException(404)
     return PlainTextResponse(target.read_text(encoding="utf-8"), media_type="application/json")
+
+
+# Pure-HTML fallback: when JS is disabled, the form posts here and we render a page.
+@router.post("/ui/interop/generate", response_class=HTMLResponse)
+async def ui_generate(request: Request):
+    body = await parse_any_request(request)
+    resp = generate_messages(body)
+    text = resp.body.decode("utf-8") if hasattr(resp, "body") else str(resp)
+    return templates.TemplateResponse(
+        "ui/interop/generate_result.html",
+        {"request": request, "hl7_text": text}
+    )
 
