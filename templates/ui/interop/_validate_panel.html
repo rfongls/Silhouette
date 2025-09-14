@@ -1,7 +1,9 @@
 <section class="card" data-feature="validate">
   <h3>Validate (Profile)</h3>
   <form id="val-form"
-        hx-post="/ui/interop/validate"
+        method="post"
+        action="{{ request.url_for('ui_validate') }}"
+        hx-post="{{ request.url_for('ui_validate') }}"
         hx-trigger="submit"
         hx-target="#val-output"
         hx-swap="innerHTML">

@@ -11,6 +11,7 @@ from api.security import router as security_router
 from api.ui import router as ui_router
 from api.ui_interop import router as ui_interop_router
 from api.ui_security import router as ui_security_router
+from api.diag import router as diag_router
 
 logging.basicConfig(level=logging.INFO)
 
@@ -22,11 +23,19 @@ for r in (
     interop_gen_router,  # specific generator endpoint
     interop_router,      # generic tools (now under /api/interop/exec/{tool})
     security_router,
+    diag_router,         # diagnostics
 ):
     app.include_router(r)
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
 logger = logging.getLogger(__name__)
+
+@app.middleware("http")
+async def _trace_requests(request: Request, call_next):
+    print(f"[TRACE] {request.method} {request.url.path} ctype={request.headers.get('content-type')} accept={request.headers.get('accept')}")
+    resp = await call_next(request)
+    print(f"[TRACE] -> {resp.status_code} {request.url.path}")
+    return resp
 
 
 @app.on_event("startup")
@@ -65,6 +74,20 @@ async def _route_sanity_check():
     if generate_get is None or generate_post is None:
         raise RuntimeError("Missing GET/POST /api/interop/generate route.")
 
+    # Soft check: ensure UI fallback route exists for no-JS submissions
+    ui_gen_present = False
+    for r in app.routes:
+        path = getattr(r, "path", None)
+        methods = getattr(r, "methods", set()) or set()
+        if path == "/ui/interop/generate" and "POST" in methods:
+            ui_gen_present = True
+            break
+    if not ui_gen_present:
+        print(
+            "[WARN] POST /ui/interop/generate missing — HTML (no-JS) fallback will 404; HTMX/API path still works.",
+            file=sys.stderr,
+        )
+
 
 @app.exception_handler(RequestValidationError)
 async def _log_request_validation(request: Request, exc: RequestValidationError):
@@ -76,7 +99,14 @@ async def _log_request_validation(request: Request, exc: RequestValidationError)
         body[:200],
         exc.errors(),
     )
-    return JSONResponse({"detail": exc.errors()}, status_code=422)
+    return JSONResponse(
+        {
+            "detail": exc.errors(),
+            "path": str(request.url.path),
+            "ctype": request.headers.get("content-type"),
+        },
+        status_code=422,
+    )
 
 
 @app.get("/", include_in_schema=False)
