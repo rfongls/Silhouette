@@ -1,12 +1,12 @@
 <section class="card">
   <h3>Generate Messages</h3>
-<!-- Form uses HTMX when available; action ensures no-JS fallback -->
+<!-- Form uses HTMX (API) and falls back to HTML (UI) when JS is disabled -->
 <form id="gen-form"
       method="post"
       action="/ui/interop/generate"
       autocomplete="off"
       novalidate
-      hx-post="/ui/interop/generate"
+      hx-post="/api/interop/generate"
       hx-target="#gen-output"
       hx-swap="textContent"
       hx-headers='{"Accept":"text/plain"}'>
