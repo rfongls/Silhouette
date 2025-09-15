@@ -1,3 +1,4 @@
+import asyncio
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
@@ -153,3 +154,47 @@ def test_trigger_searches_other_versions(tmp_path, monkeypatch):
     )
     assert r.status_code == 200
     assert "ZZZ_X99" in r.text
+
+
+def test_validation_error_fallback_generates(monkeypatch):
+    """A legacy dict validator should be recovered by the fallback handler."""
+    from fastapi.exceptions import RequestValidationError
+    from fastapi.responses import PlainTextResponse
+    from starlette.requests import Request
+    from pydantic.error_wrappers import ErrorWrapper
+    from pydantic.errors import DictError
+
+    captured = {}
+
+    def fake_generate(body):
+        captured["body"] = body
+        return PlainTextResponse("ok", media_type="text/plain")
+
+    monkeypatch.setattr(ig, "generate_messages", fake_generate)
+
+    scope = {
+        "type": "http",
+        "method": "POST",
+        "path": "/api/interop/generate",
+        "headers": [(b"content-type", b"application/x-www-form-urlencoded")],
+    }
+
+    payload = b"version=hl7-v2-4&trigger=ADT_A01&count=1"
+    seen = False
+
+    async def receive():
+        nonlocal seen
+        if seen:
+            return {"type": "http.request", "body": b"", "more_body": False}
+        seen = True
+        return {"type": "http.request", "body": payload, "more_body": False}
+
+    async def _exercise():
+        request = Request(scope, receive)
+        exc = RequestValidationError([ErrorWrapper(DictError(), loc=('body',))])
+        resp = await ig.try_generate_on_validation_error(request, exc)
+        assert resp is not None
+        assert resp.body == b"ok"
+        assert captured["body"]["trigger"] == "ADT_A01"
+
+    asyncio.run(_exercise())

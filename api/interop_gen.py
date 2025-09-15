@@ -9,7 +9,8 @@ import logging
 import os
 import sys
 import inspect
-from fastapi import APIRouter, Body, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse, PlainTextResponse
 from silhouette_core.interop.hl7_mutate import (
     enrich_clinical_fields,
@@ -212,6 +213,29 @@ async def generate_messages_get(request: Request):
 async def generate_messages_plain(request: Request):
     # Stable alias for tests/tools; shares the same robust parser.
     return await generate_messages_endpoint(request)
+
+
+async def try_generate_on_validation_error(
+    request: Request, exc: RequestValidationError
+):
+    """Attempt to salvage legacy validation failures for /api/interop/generate."""
+    path = request.url.path.rstrip("/")
+    if path not in {"/api/interop/generate", "/api/interop/generate/plain"}:
+        return None
+    errors = exc.errors() if hasattr(exc, "errors") else []
+    if not any(err.get("type") == "type_error.dict" for err in errors):
+        return None
+    try:
+        body = await parse_any_request(request)
+        logger.warning(
+            "Recovered generator request after validation error: path=%s body=%s",
+            path,
+            body,
+        )
+        return generate_messages(body)
+    except Exception:
+        logger.exception("Failed to recover generator request after validation error")
+        return None
 
 @router.post("/api/interop/deidentify")
 async def api_deidentify(request: Request):

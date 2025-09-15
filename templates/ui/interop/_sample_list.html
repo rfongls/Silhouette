@@ -31,7 +31,7 @@
       <button
         class="btn btn-xs"
         type="button"
-        onclick="document.querySelector('#gen-form [name=template_relpath]').value='{{ it.relpath }}';document.querySelector('#gen-version').value='{{ it.version }}';document.querySelector('#gen-trigger-typed').value='{{ it.trigger }}';"
+        onclick='window.InteropUI.useSample("gen", {{ {"relpath": it.relpath, "version": it.version, "trigger": it.trigger}|tojson }});'
         title="Use in Generator">
         Use
       </button>

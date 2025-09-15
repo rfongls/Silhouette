@@ -6,7 +6,7 @@ from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
 from starlette.responses import RedirectResponse
 from api.interop import router as interop_router
-from api.interop_gen import router as interop_gen_router
+from api.interop_gen import router as interop_gen_router, try_generate_on_validation_error
 from api.security import router as security_router
 from api.ui import router as ui_router
 from api.ui_interop import router as ui_interop_router
@@ -91,6 +91,9 @@ async def _route_sanity_check():
 
 @app.exception_handler(RequestValidationError)
 async def _log_request_validation(request: Request, exc: RequestValidationError):
+    fallback = await try_generate_on_validation_error(request, exc)
+    if fallback is not None:
+        return fallback
     body = await request.body()
     logger.warning(
         "validation error: path=%s ctype=%s body=%r errors=%s",
