@@ -1,7 +1,9 @@
 <section class="card" data-feature="deid">
   <h3>De-Identify</h3>
   <form id="deid-form"
-        hx-post="/ui/interop/deidentify"
+        method="post"
+        action="{{ request.url_for('ui_deidentify') }}"
+        hx-post="{{ request.url_for('ui_deidentify') }}"
         hx-trigger="submit"
         hx-target="#deid-output"
         hx-swap="innerHTML">

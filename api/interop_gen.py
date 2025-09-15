@@ -26,6 +26,48 @@ print("[interop_gen] robust router module imported", file=sys.stderr)
 this_file = os.path.abspath(inspect.getfile(sys.modules[__name__]))
 print(f"[interop_gen] using file: {this_file}", file=sys.stderr)
 
+
+async def parse_any_request(request: Request) -> dict:
+    """Parse JSON, x-www-form-urlencoded, multipart, or query into a dict."""
+    from urllib.parse import parse_qs
+    ctype = (request.headers.get("content-type") or "").lower()
+    raw = await request.body()
+    body: dict = {}
+    # JSON
+    if raw and "json" in ctype:
+        try:
+            parsed = json.loads(raw.decode("utf-8"))
+            if isinstance(parsed, dict):
+                body = parsed
+        except Exception:
+            body = {}
+    # urlencoded or raw key=value
+    if not body and raw:
+        try:
+            q = parse_qs(raw.decode("utf-8", errors="ignore"))
+            body = {k: v[-1] for k, v in q.items()} if q else {}
+        except Exception:
+            body = {}
+    # multipart/form-data
+    if not body:
+        try:
+            form = await request.form()
+            body = {k: form.get(k) for k in form.keys()} if form else {}
+        except Exception:
+            body = {}
+    # query params
+    if not body:
+        qp = request.query_params
+        body = {k: qp.get(k) for k in qp.keys()}
+    # friendly default: auto-enable deidentify for batches
+    try:
+        cnt = int(body.get("count", 1)) if str(body.get("count", "").strip()) else 1
+    except Exception:
+        cnt = 1
+    if cnt > 1 and ("deidentify" not in body or str(body.get("deidentify", "").strip()) == ""):
+        body["deidentify"] = True
+    return body
+
 TEMPLATES_HL7_DIR = (Path(__file__).resolve().parent.parent / "templates" / "hl7").resolve()
 VALID_VERSIONS = {"hl7-v2-3", "hl7-v2-4", "hl7-v2-5"}
 ALLOWED_EXTS = (".hl7", ".txt", ".hl7.j2")
@@ -155,67 +197,9 @@ def generate_messages(body: dict):
 
 @router.post("/api/interop/generate", response_class=PlainTextResponse)
 async def generate_messages_endpoint(request: Request):
-    """
-    Robust HL7 generation endpoint supporting:
-      - JSON bodies (application/json)
-      - HTML forms (application/x-www-form-urlencoded, multipart/form-data)
-      - raw 'key=value&...' bodies
-      - query parameters only
-    Avoids FastAPI's 'value is not a valid dict' when forms are posted.
-    """
+    """Robust HL7 generation endpoint (JSON/form/multipart/query)."""
     print("[interop_gen] generate_messages_endpoint invoked", file=sys.stderr)
-    ctype = (request.headers.get("content-type") or "").lower()
-    raw = await request.body()
-    logger.info("incoming request: content-type=%s bytes=%d", ctype, len(raw))
-
-    body: dict = {}
-
-    # 1) JSON
-    if raw and "json" in ctype:
-        try:
-            parsed = json.loads(raw.decode("utf-8"))
-            if isinstance(parsed, dict):
-                body = parsed
-        except Exception:
-            pass
-
-    # 2) x-www-form-urlencoded (or raw key=value&key2=..)
-    if not body and raw:
-        try:
-            q = parse_qs(raw.decode("utf-8", errors="ignore"))
-            body = {k: v[-1] for k, v in q.items()} if q else {}
-            if body:
-                logger.info("parsed urlencoded body: %s", body)
-        except Exception:
-            pass
-
-    # 3) multipart/form-data (or other <form enctype> variants)
-    if not body:
-        try:
-            form = await request.form()
-            body = {k: form.get(k) for k in form.keys()} if form else {}
-            if body:
-                logger.info("parsed request.form: %s", body)
-        except Exception:
-            pass
-
-    # 4) Only query parameters
-    if not body:
-        qp = request.query_params
-        body = {k: qp.get(k) for k in qp.keys()}
-        if body:
-            logger.info("parsed query params: %s", body)
-
-    # Friendly default: if generating more than one message and 'deidentify'
-    # is not provided, turn it on. (UI behavior expectation.)
-    try:
-        cnt_raw = body.get("count", 1)
-        cnt = int(cnt_raw) if str(cnt_raw).strip() != "" else 1
-    except Exception:
-        cnt = 1
-    if cnt > 1 and ("deidentify" not in body or str(body.get("deidentify", "")).strip() == ""):
-        body["deidentify"] = True
-
+    body = await parse_any_request(request)
     logger.info("final parsed body=%s", body)
     return generate_messages(body)
 
@@ -230,28 +214,49 @@ async def generate_messages_plain(request: Request):
     return await generate_messages_endpoint(request)
 
 @router.post("/api/interop/deidentify")
-def api_deidentify(text: str = Body(..., embed=True), seed: Optional[int] = Body(None)):
-    out = deidentify_message(text, seed=seed)
+async def api_deidentify(request: Request):
+    """De-identify text; accept JSON, form, multipart, or query."""
+    body = await parse_any_request(request)
+    text = body.get("text")
+    seed = body.get("seed")
+    if text is None or str(text).strip() == "":
+        raise HTTPException(status_code=400, detail="Missing 'text' to de-identify")
+    try:
+        seed_int = int(seed) if seed not in (None, "") else None
+    except Exception:
+        seed_int = None
+    out = deidentify_message(text, seed=seed_int)
     return JSONResponse({"text": out})
 
 
 @router.post("/api/interop/validate")
-def api_validate(text: str = Body(..., embed=True), profile: Optional[str] = Body(None)):
+async def api_validate(request: Request):
+    """Validate HL7; accept JSON, form, multipart, or query."""
+    body = await parse_any_request(request)
+    text = body.get("text", "")
+    profile = body.get("profile")
     results = validate_message(text, profile=profile)
     return JSONResponse(results)
 
 
 @router.post("/api/interop/mllp/send")
-def api_mllp_send(
-    host: str = Body(...),
-    port: int = Body(...),
-    messages: list[str] | str = Body(..., embed=True),
-    timeout: float = Body(5.0),
-):
+async def api_mllp_send(request: Request):
+    """Send messages over MLLP; accept JSON, form, multipart, or query."""
+    body = await parse_any_request(request)
+    host = (body.get("host") or "").strip()
+    port = int(body.get("port") or 0)
+    timeout = float(body.get("timeout") or 5.0)
+    messages = body.get("messages") or body.get("text") or ""
+    if not host or not port:
+        raise HTTPException(status_code=400, detail="Missing 'host' or 'port'")
     if isinstance(messages, str):
         chunks = re.split(r"\r?\n\s*\r?\n", messages)
-        messages = [m.strip() for m in chunks if m.strip()]
-        if not messages:
-            raise HTTPException(status_code=400, detail="No messages parsed from input string")
-    acks = send_mllp_batch(host, port, messages, timeout=timeout)
-    return JSONResponse({"sent": len(messages), "acks": acks})
+        messages_list = [m.strip() for m in chunks if m.strip()]
+    elif isinstance(messages, list):
+        messages_list = [str(m).strip() for m in messages if str(m).strip()]
+    else:
+        messages_list = []
+    if not messages_list:
+        raise HTTPException(status_code=400, detail="No messages parsed from input")
+    acks = send_mllp_batch(host, port, messages_list, timeout=timeout)
+    return JSONResponse({"sent": len(messages_list), "acks": acks})
