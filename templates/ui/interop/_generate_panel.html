@@ -6,7 +6,7 @@
       action="{{ request.url_for('ui_generate') }}"
       autocomplete="off"
       novalidate
-      hx-post="{{ request.url_for('generate_messages_endpoint') }}"
+      hx-post="/api/interop/generate"
       hx-target="#gen-output"
       hx-swap="textContent"
       hx-headers='{"Accept":"text/plain"}'>
