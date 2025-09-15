@@ -11,6 +11,7 @@ from api.security import router as security_router
 from api.ui import router as ui_router
 from api.ui_interop import router as ui_interop_router
 from api.ui_security import router as ui_security_router
+from api.diag import router as diag_router
 
 logging.basicConfig(level=logging.INFO)
 
@@ -22,6 +23,7 @@ for r in (
     interop_gen_router,  # specific generator endpoint
     interop_router,      # generic tools (now under /api/interop/exec/{tool})
     security_router,
+    diag_router,         # diagnostics
 ):
     app.include_router(r)
 app.mount("/static", StaticFiles(directory="static"), name="static")

@@ -3,10 +3,10 @@
 <!-- Form uses HTMX (API) and falls back to HTML (UI) when JS is disabled -->
 <form id="gen-form"
       method="post"
-      action="/ui/interop/generate"
+      action="{{ request.url_for('ui_generate') }}"
       autocomplete="off"
       novalidate
-      hx-post="/api/interop/generate"
+      hx-post="{{ request.url_for('generate_messages_endpoint') }}"
       hx-target="#gen-output"
       hx-swap="textContent"
       hx-headers='{"Accept":"text/plain"}'>
