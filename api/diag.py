@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, Request, FastAPI
 from fastapi.responses import JSONResponse
 
 router = APIRouter()
@@ -27,3 +27,20 @@ async def echo(request: Request):
         "form": form_data,
         "query": dict(request.query_params),
     })
+
+
+@router.get("/api/diag/routes")
+async def list_routes(request: Request):
+    app: FastAPI = request.app
+    out = []
+    for r in app.routes:
+        try:
+            name = getattr(r, "name", None)
+            path = getattr(r, "path", None)
+            methods = list(getattr(r, "methods", []) or [])
+            if path:
+                out.append({"name": name, "path": path, "methods": methods})
+        except Exception:
+            pass
+    out.sort(key=lambda x: (x["path"], ",".join(x["methods"])))
+    return JSONResponse({"routes": out})
