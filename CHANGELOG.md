@@ -14,6 +14,7 @@ All notable changes to this project will be documented here.
 - PR-25: Edge targets – INT8/ONNX/GGUF exports and edge latency probe.
 - PR-26: Release playbook & provenance artifacts – CI GitHub release workflow with scoreboard, gate summary, watermark.
 - PR-27: License ops – customer license issuance tooling & watermark embedding.
+- PR-28: Interop generator tolerant parsing, HTML fallback, and 422 diagnostics.
 - Docs normalization + parity fixes.
 
 ## [X.Y.Z] - 2025-09-13
