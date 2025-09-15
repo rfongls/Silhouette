@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from fastapi import APIRouter, Request, HTTPException
+from starlette.routing import NoMatchFound
 from fastapi.responses import HTMLResponse, PlainTextResponse
 from starlette.templating import Jinja2Templates
 from api.interop_gen import generate_messages, parse_any_request
