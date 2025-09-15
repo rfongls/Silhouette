@@ -2,8 +2,8 @@
   <h3>De-Identify</h3>
   <form id="deid-form"
         method="post"
-        action="{{ urls.ui_deidentify }}"
-        hx-post="{{ urls.ui_deidentify }}"
+        action="{{ urls.ui_deidentify | default('/ui/interop/deidentify', true) }}"
+        hx-post="{{ urls.ui_deidentify | default('/ui/interop/deidentify', true) }}"
         hx-trigger="submit"
         hx-target="#deid-output"
         hx-swap="innerHTML">

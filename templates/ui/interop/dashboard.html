@@ -4,6 +4,9 @@
 <script type="module" src="/static/js/interop_ui.js"></script>
 {% endblock %}
 {% block content %}
+{% if urls is not defined %}
+  {% set urls = {} %}
+{% endif %}
 <h2>Interoperability Dashboard</h2>
 <div class="row gap mt">
   <label><input type="checkbox" id="view-reports-toggle" /> Reports view</label>
