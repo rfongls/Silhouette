@@ -6,7 +6,7 @@
       action="{{ urls.ui_generate | default('/ui/interop/generate', true) }}"
       autocomplete="off"
       novalidate
-      hx-post="{{ urls.ui_generate | default('/ui/interop/generate', true) }}"
+      hx-post="{{ urls.api_generate | default('/api/interop/generate', true) }}"
       hx-target="#gen-output"
       hx-swap="textContent"
       hx-headers='{"Accept":"text/plain"}'>
