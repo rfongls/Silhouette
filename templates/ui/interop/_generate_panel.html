@@ -26,10 +26,14 @@
              name="trigger"
              list="gen-trigger-datalist"
              placeholder="Type a trigger (e.g., ADT_A01)"
-             onfocus="window.InteropUI.fillDatalist('gen')"/>
+             onfocus="window.InteropUI.fillDatalist('gen')"
+             oninput="window.InteropUI.syncTemplateRelpath('gen')"
+             onchange="window.InteropUI.syncTemplateRelpath('gen')"/>
       <datalist id="gen-trigger-datalist"></datalist>
       <input type="hidden" name="template_relpath" id="gen-template-relpath" />
     </div>
+
+    <p id="gen-template-hint" class="muted small mt" data-empty="No template selected.">No template selected.</p>
 
     <div class="row gap mt">
       <input class="input" type="number" name="count" min="1" max="10000" value="25" />
