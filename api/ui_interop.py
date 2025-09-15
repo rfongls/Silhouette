@@ -16,7 +16,7 @@ templates = Jinja2Templates(directory="templates")
 def _safe_url_for(request: Request, name: str, fallback: str) -> str:
     try:
         return request.url_for(name)
-    except NoMatchFound:
+    except Exception:
         return fallback
 
 def _ui_urls(request: Request) -> dict[str, str]:
