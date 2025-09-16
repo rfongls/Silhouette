@@ -294,11 +294,8 @@ async def try_generate_on_validation_error(
         _debug_log("validation_fallback.skip_path", path=path)
         return None
     errors = exc.errors() if hasattr(exc, "errors") else []
-    if not any(err.get("type") == "type_error.dict" for err in errors):
-        _debug_log("validation_fallback.skip_error", path=path, errors=errors)
-        return None
+    _debug_log("validation_fallback.recovering", path=path, errors=errors)
     try:
-        _debug_log("validation_fallback.recovering", path=path, errors=errors)
         body = await parse_any_request(request)
         _debug_log("validation_fallback.recovered_body", path=path, body=body)
         return generate_messages(body)

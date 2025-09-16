@@ -1,3 +1,6 @@
+{% if not enabled %}
+<div class="muted small">Debug logging is currently off. Use the Home dashboard toggle to enable it, then try generating a message.</div>
+{% endif %}
 {% if lines %}
 <pre class="codepane small" data-count="{{ lines|length }}">{{ lines|join('\n') }}</pre>
 {% else %}

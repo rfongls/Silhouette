@@ -10,7 +10,12 @@ from starlette.templating import Jinja2Templates
 from api.interop_gen import generate_messages, parse_any_request
 from silhouette_core.interop.deid import deidentify_message
 from silhouette_core.interop.validate_workbook import validate_message
-from api.debug_log import LOG_FILE, tail_debug_lines
+from api.debug_log import (
+    LOG_FILE,
+    tail_debug_lines,
+    is_debug_enabled,
+    log_debug_event,
+)
 
 router = APIRouter()
 templates = Jinja2Templates(directory="templates")
@@ -56,7 +61,6 @@ async def history(request: Request):
     files = sorted(root.glob("*/active/*.json"), reverse=True)
     items = [p.as_posix() for p in files]
     return templates.TemplateResponse("interop/history.html", {"request": request, "items": items, "urls": _ui_urls(request)})
-  
 
 @router.get("/ui/interop/logs/content", response_class=HTMLResponse)
 async def interop_logs_content(request: Request, limit: int = 200):
@@ -67,6 +71,7 @@ async def interop_logs_content(request: Request, limit: int = 200):
         "lines": lines,
         "limit": limit,
         "log_path": str(LOG_FILE),
+        "enabled": is_debug_enabled(),
         "refreshed": ts,
     }
     return templates.TemplateResponse("ui/interop/_debug_log_content.html", ctx)
@@ -88,11 +93,42 @@ async def history_view(path: str):
 # Pure-HTML fallback: when JS is disabled, the form posts here and we render a page.
 @router.post("/ui/interop/generate", response_class=HTMLResponse)
 async def ui_generate(request: Request):
+    log_debug_event(
+        "ui.generate.invoke",
+        method=request.method,
+        path=request.url.path,
+        query=request.url.query,
+        hx=request.headers.get("hx-request"),
+        accept=request.headers.get("accept"),
+        referer=request.headers.get("referer"),
+        content_type=request.headers.get("content-type"),
+    )
     body = await parse_any_request(request)
-    resp = generate_messages(body)
+    log_debug_event(
+        "ui.generate.body",
+        keys=";".join(sorted(body.keys())),
+        trigger=body.get("trigger"),
+        template=body.get("template_relpath"),
+        count=body.get("count"),
+    )
+    try:
+        resp = generate_messages(body)
+    except HTTPException as exc:
+        log_debug_event(
+            "ui.generate.error",
+            status=exc.status_code,
+            detail=getattr(exc, "detail", ""),
+        )
+        raise
     text = resp.body.decode("utf-8") if hasattr(resp, "body") else str(resp)
     accept = (request.headers.get("accept") or "").lower()
     hx = (request.headers.get("hx-request") or "").lower() == "true"
+    log_debug_event(
+        "ui.generate.result",
+        hx=hx,
+        accept=accept,
+        bytes=len(text.encode("utf-8", errors="ignore")),
+    )
     if hx or "text/plain" in accept:
         return PlainTextResponse(text, media_type="text/plain")
     return templates.TemplateResponse(
