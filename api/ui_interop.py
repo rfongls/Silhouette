@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from fastapi import APIRouter, Request, HTTPException
+from starlette.routing import NoMatchFound
 from fastapi.responses import HTMLResponse, PlainTextResponse
 from starlette.templating import Jinja2Templates
 from api.interop_gen import generate_messages, parse_any_request
@@ -60,7 +61,6 @@ async def history(request: Request):
     files = sorted(root.glob("*/active/*.json"), reverse=True)
     items = [p.as_posix() for p in files]
     return templates.TemplateResponse("interop/history.html", {"request": request, "items": items, "urls": _ui_urls(request)})
-
 
 @router.get("/ui/interop/logs/content", response_class=HTMLResponse)
 async def interop_logs_content(request: Request, limit: int = 200):

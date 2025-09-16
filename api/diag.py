@@ -1,5 +1,4 @@
 from typing import Any, Dict
-
 from fastapi import APIRouter, FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse, PlainTextResponse
 
