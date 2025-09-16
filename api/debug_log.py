@@ -4,13 +4,35 @@ from collections import deque
 from datetime import datetime, timezone
 from pathlib import Path
 from threading import Lock
-from typing import Iterable, List
+from typing import Any, Iterable, List, Tuple
 
 LOG_FILE = Path("out/interop/generator_debug.log")
 _MAX_BUFFER = 2000
 
 _buffer: deque[str] = deque(maxlen=_MAX_BUFFER)
 _lock = Lock()
+_enabled: bool = True
+
+
+def is_debug_enabled() -> bool:
+    with _lock:
+        return _enabled
+
+
+def set_debug_enabled(enabled: bool) -> bool:
+    global _enabled
+    enabled = bool(enabled)
+    with _lock:
+        changed = _enabled != enabled
+        _enabled = enabled
+    if changed:
+        state = "on" if enabled else "off"
+        log_debug_message(f"debug.enabled state={state}", force=True)
+    return enabled
+
+
+def toggle_debug_enabled() -> bool:
+    return set_debug_enabled(not is_debug_enabled())
 
 
 def _timestamp() -> str:
@@ -18,6 +40,42 @@ def _timestamp() -> str:
     return now.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
 
 
+def log_debug_message(text: str, *, force: bool = False) -> bool:
+    if not force and not is_debug_enabled():
+        return False
+    record_debug_line(text)
+    return True
+
+
+def _format_value(value: Any, limit: int = 160) -> str:
+    if value is None:
+        return "None"
+    try:
+        if isinstance(value, (bytes, bytearray)):
+            text = value.decode("utf-8", errors="replace")
+        else:
+            text = str(value)
+    except Exception:
+        text = repr(value)
+    text = text.replace("\r", "\\r").replace("\n", "\\n")
+    if len(text) > limit:
+        extra = len(text) - limit
+        text = f"{text[:limit]}…(+{extra})"
+    return text
+
+
+def _format_event(event: str, fields: Tuple[Tuple[str, Any], ...]) -> str:
+    parts = [event]
+    for key, value in fields:
+        parts.append(f"{key}={_format_value(value)}")
+    return " | ".join(parts)
+
+
+def log_debug_event(event: str, **fields: Any) -> bool:
+    message = _format_event(event, tuple(fields.items()))
+    return log_debug_message(message)
+
+  
 def record_debug_line(text: str) -> str:
     """Append a debug line to the rolling buffer and backing file."""
     if not isinstance(text, str):
@@ -71,6 +129,11 @@ def reset_debug_log(clear_file: bool = False) -> None:
 
 __all__ = [
     "LOG_FILE",
+    "is_debug_enabled",
+    "set_debug_enabled",
+    "toggle_debug_enabled",
+    "log_debug_event",
+    "log_debug_message",
     "record_debug_line",
     "tail_debug_lines",
     "iter_debug_file",
