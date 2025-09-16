@@ -1,5 +1,4 @@
 from typing import Any, Dict
-
 from fastapi import APIRouter, FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse, PlainTextResponse
 
@@ -56,7 +55,6 @@ async def list_routes(request: Request):
             pass
     out.sort(key=lambda x: (x["path"], ",".join(x["methods"])))
     return JSONResponse({"routes": out})
-
 
 @router.get("/api/diag/logs")
 async def get_debug_logs(limit: int = 200, format: str = "json"):

@@ -75,7 +75,7 @@ def log_debug_event(event: str, **fields: Any) -> bool:
     message = _format_event(event, tuple(fields.items()))
     return log_debug_message(message)
 
-
+  
 def record_debug_line(text: str) -> str:
     """Append a debug line to the rolling buffer and backing file."""
     if not isinstance(text, str):
