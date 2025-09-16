@@ -39,6 +39,70 @@
     document.querySelectorAll("[data-feature]").forEach(el => el.hidden = on ? true : el.hidden && false);
   }
 
+  function setTemplateHint(prefix, relpath) {
+    const hint = q(prefix + "-template-hint");
+    if (!hint) return;
+    const empty = hint.dataset ? hint.dataset.empty || "" : "";
+    if (relpath) {
+      hint.textContent = `Selected template: ${relpath}`;
+      hint.classList.remove("muted");
+    } else {
+      hint.textContent = empty || "No template selected.";
+      if (!hint.classList.contains("muted")) hint.classList.add("muted");
+    }
+  }
+
+  function syncTemplateRelpath(prefix) {
+    const input = q(prefix + "-trigger-typed");
+    const hidden = q(prefix + "-template-relpath");
+    const dl = q(prefix + "-trigger-datalist");
+    if (!input || !hidden || !dl) {
+      return;
+    }
+    const want = (input.value || "").toUpperCase().trim();
+    const options = dl.options ? Array.from(dl.options) : Array.from(dl.querySelectorAll("option"));
+    if (!options.length) {
+      setTemplateHint(prefix, hidden.value || "");
+      return;
+    }
+    let rel = "";
+    if (want) {
+      for (const opt of options) {
+        const v = (opt.value || "").toUpperCase().trim();
+        if (v === want) {
+          rel = opt.dataset && opt.dataset.relpath ? opt.dataset.relpath : "";
+          if (!rel && opt.getAttribute) {
+            rel = opt.getAttribute("data-relpath") || "";
+          }
+          break;
+        }
+      }
+    }
+    hidden.value = rel;
+    setTemplateHint(prefix, rel);
+  }
+
+  function useSample(prefix, payload) {
+    const data = payload || {};
+    const versionSel = q(prefix + "-version") || q("gen-version");
+    if (versionSel && data.version) {
+      versionSel.value = data.version;
+      if (versionSel.dataset && versionSel.dataset.hxRefreshTarget) {
+        versionSel.dispatchEvent(new Event("change", { bubbles: true }));
+      }
+    }
+    const triggerInput = q(prefix + "-trigger-typed");
+    if (triggerInput && data.trigger) {
+      triggerInput.value = data.trigger;
+    }
+    const hidden = q(prefix + "-template-relpath");
+    if (hidden && data.relpath) {
+      hidden.value = data.relpath;
+    }
+    setTemplateHint(prefix, data.relpath || "");
+    syncTemplateRelpath(prefix);
+  }
+
   function setPrimaryVersion(v) {
     try { localStorage.setItem(LS_PRIMARY_VER, v); } catch {}
     document.querySelectorAll(".hl7-version-select").forEach(sel => {
@@ -78,11 +142,15 @@
         const opt = document.createElement("option");
         opt.value = trig;
         opt.label = it.description ? `${it.trigger} — ${it.description}` : it.trigger;
+        if (it.relpath) {
+          opt.dataset.relpath = it.relpath;
+        }
         dl.appendChild(opt);
       });
     } catch (e) {
       // swallow
     }
+    syncTemplateRelpath(prefix);
   }
 
   async function fillTemplates(prefix) {
@@ -158,6 +226,8 @@
     syncTyped,
     fillDatalist,
     fillTemplates,
+    syncTemplateRelpath,
+    useSample,
     setPrimaryVersion,
     getPrimaryVersion
   };

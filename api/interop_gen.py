@@ -1,7 +1,7 @@
 from __future__ import annotations
 import hashlib
 from pathlib import Path
-from typing import Optional
+from typing import Any, Optional
 import re
 from urllib.parse import parse_qs
 import json
@@ -9,7 +9,8 @@ import logging
 import os
 import sys
 import inspect
-from fastapi import APIRouter, Body, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse, PlainTextResponse
 from silhouette_core.interop.hl7_mutate import (
     enrich_clinical_fields,
@@ -19,9 +20,35 @@ from silhouette_core.interop.hl7_mutate import (
 from silhouette_core.interop.deid import deidentify_message
 from silhouette_core.interop.mllp import send_mllp_batch
 from silhouette_core.interop.validate_workbook import validate_message
+from api.debug_log import record_debug_line
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
+
+
+def _preview(value: Any, limit: int = 160) -> str:
+    """Return a short, printable preview for logging."""
+    try:
+        if isinstance(value, (bytes, bytearray)):
+            text = value.decode("utf-8", errors="replace")
+        else:
+            text = str(value)
+    except Exception:
+        text = repr(value)
+    text = text.replace("\r", "\\r").replace("\n", "\\n")
+    if len(text) > limit:
+        return f"{text[:limit]}…(+{len(text) - limit})"
+    return text
+
+
+def _debug_log(event: str, **fields: Any) -> None:
+    parts = [event]
+    for key, value in fields.items():
+        parts.append(f"{key}={_preview(value)}")
+    message = " | ".join(parts)
+    record_debug_line(message)
+    logger.info(message)
+    print(f"[interop_gen] {message}", file=sys.stderr, flush=True)
 print("[interop_gen] robust router module imported", file=sys.stderr)
 this_file = os.path.abspath(inspect.getfile(sys.modules[__name__]))
 print(f"[interop_gen] using file: {this_file}", file=sys.stderr)
@@ -32,6 +59,16 @@ async def parse_any_request(request: Request) -> dict:
     from urllib.parse import parse_qs
     ctype = (request.headers.get("content-type") or "").lower()
     raw = await request.body()
+    _debug_log(
+        "parse_any_request.start",
+        method=request.method,
+        path=request.url.path,
+        query=request.url.query,
+        ctype=ctype,
+        content_length=request.headers.get("content-length"),
+        hx=request.headers.get("hx-request"),
+        raw_preview=_preview(raw),
+    )
     body: dict = {}
     # JSON
     if raw and "json" in ctype:
@@ -66,6 +103,7 @@ async def parse_any_request(request: Request) -> dict:
         cnt = 1
     if cnt > 1 and ("deidentify" not in body or str(body.get("deidentify", "").strip()) == ""):
         body["deidentify"] = True
+    _debug_log("parse_any_request.done", parsed_body=body)
     return body
 
 TEMPLATES_HL7_DIR = (Path(__file__).resolve().parent.parent / "templates" / "hl7").resolve()
@@ -126,13 +164,16 @@ def _guess_rel_from_trigger(trigger: str, version: str) -> Optional[str]:
     """
     rel = _find_template_by_trigger(version, trigger)
     if rel:
+        _debug_log("guess_rel.direct_hit", trigger=trigger, version=version, rel=rel)
         return rel
     for v in VALID_VERSIONS:
         if v == version:
             continue
         rel = _find_template_by_trigger(v, trigger)
         if rel:
+            _debug_log("guess_rel.fallback_hit", trigger=trigger, requested=version, matched_version=v, rel=rel)
             return rel
+    _debug_log("guess_rel.miss", trigger=trigger, version=version)
     return None
 
 
@@ -141,7 +182,7 @@ def generate_messages(body: dict):
     This helper takes a dict-like body and returns a FastAPI response. It is
     used by the HTTP endpoint below and by internal callers such as the
     pipeline runner."""
-    logger.info("generate_messages: body=%s", body)
+    _debug_log("generate_messages.start", body=body)
     version = body.get("version", "hl7-v2-4")
     if version not in VALID_VERSIONS:
         raise HTTPException(400, f"Unknown version '{version}'")
@@ -155,7 +196,7 @@ def generate_messages(body: dict):
         rel = _guess_rel_from_trigger(trig, version)
     if rel:
         version = rel.split("/", 1)[0]
-    logger.info("resolved template: rel=%s trigger=%s version=%s", rel, trig, version)
+    _debug_log("generate_messages.template_resolved", rel=rel or None, trigger=trig or None, version=version)
     if not rel and not text:
         # Note: return a helpful 404 if the trigger can’t be resolved
         raise HTTPException(404, detail=f"No template found for trigger '{trig}' in {version}")
@@ -173,7 +214,20 @@ def generate_messages(body: dict):
     if count > 1 and (deid_input is None or str(deid_input).strip() == ""):
         deidentify = True
     # Load text (from relpath or inline "text")
-    template_text = text or load_template_text(_assert_rel_under_templates(rel))
+    template_path = None
+    if not text:
+        template_path = _assert_rel_under_templates(rel)
+        template_text = load_template_text(template_path)
+    else:
+        template_text = text
+    if template_path:
+        _debug_log(
+            "generate_messages.template_loaded",
+            rel=rel,
+            bytes=len(template_text.encode("utf-8", errors="ignore")),
+        )
+    else:
+        _debug_log("generate_messages.inline_template", provided_bytes=len(template_text.encode("utf-8", errors="ignore")))
 
     msgs: list[str] = []
     for i in range(count):
@@ -190,17 +244,34 @@ def generate_messages(body: dict):
         if deidentify:
             msg = deidentify_message(msg, seed=derived)
         msgs.append(msg)
-    logger.info("generated %d message(s) from %s", len(msgs), rel or "inline text")
+    first_preview = msgs[0] if msgs else ""
+    _debug_log(
+        "generate_messages.done",
+        messages=len(msgs),
+        rel=rel or "inline",
+        deidentify=deidentify,
+        ensure_unique=ensure_unique,
+        include_clinical=include_clinical,
+        preview=first_preview,
+    )
     out = "\n".join(msgs) + ("\n" if msgs else "")
-    logger.info("returning %d HL7 bytes", len(out))
+    _debug_log("generate_messages.response_ready", bytes=len(out))
     return PlainTextResponse(out, media_type="text/plain", headers={"Cache-Control": "no-store"})
 
 @router.post("/api/interop/generate", response_class=PlainTextResponse)
 async def generate_messages_endpoint(request: Request):
     """Robust HL7 generation endpoint (JSON/form/multipart/query)."""
-    print("[interop_gen] generate_messages_endpoint invoked", file=sys.stderr)
+    _debug_log(
+        "generate_messages_endpoint.invoke",
+        method=request.method,
+        path=request.url.path,
+        query=request.url.query,
+        hx=request.headers.get("hx-request"),
+        accept=request.headers.get("accept"),
+        referer=request.headers.get("referer"),
+    )
     body = await parse_any_request(request)
-    logger.info("final parsed body=%s", body)
+    _debug_log("generate_messages_endpoint.parsed_body", body=body)
     return generate_messages(body)
 
 @router.get("/api/interop/generate", response_class=PlainTextResponse)
@@ -212,6 +283,29 @@ async def generate_messages_get(request: Request):
 async def generate_messages_plain(request: Request):
     # Stable alias for tests/tools; shares the same robust parser.
     return await generate_messages_endpoint(request)
+
+
+async def try_generate_on_validation_error(
+    request: Request, exc: RequestValidationError
+):
+    """Attempt to salvage legacy validation failures for /api/interop/generate."""
+    path = request.url.path.rstrip("/")
+    if path not in {"/api/interop/generate", "/api/interop/generate/plain"}:
+        _debug_log("validation_fallback.skip_path", path=path)
+        return None
+    errors = exc.errors() if hasattr(exc, "errors") else []
+    if not any(err.get("type") == "type_error.dict" for err in errors):
+        _debug_log("validation_fallback.skip_error", path=path, errors=errors)
+        return None
+    try:
+        _debug_log("validation_fallback.recovering", path=path, errors=errors)
+        body = await parse_any_request(request)
+        _debug_log("validation_fallback.recovered_body", path=path, body=body)
+        return generate_messages(body)
+    except Exception:
+        logger.exception("Failed to recover generator request after validation error")
+        _debug_log("validation_fallback.failed", path=path)
+        return None
 
 @router.post("/api/interop/deidentify")
 async def api_deidentify(request: Request):

@@ -1,6 +1,8 @@
 from __future__ import annotations
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.responses import RedirectResponse
 
@@ -9,7 +11,7 @@ from api.interop import router as interop_router
 from api.ui_security import router as ui_security_router
 from api.ui_interop import router as ui_interop_router
 from api.ui import router as ui_router
-from api.interop_gen import router as interop_gen_router
+from api.interop_gen import router as interop_gen_router, try_generate_on_validation_error
 from api.admin import router as admin_router
 
 app = FastAPI()
@@ -24,6 +26,21 @@ for r in (
     admin_router,
 ):
     app.include_router(r)
+
+
+@app.exception_handler(RequestValidationError)
+async def _handle_validation(request: Request, exc: RequestValidationError):
+    fallback = await try_generate_on_validation_error(request, exc)
+    if fallback is not None:
+        return fallback
+    return JSONResponse(
+        {
+            "detail": exc.errors(),
+            "path": str(request.url.path),
+            "ctype": request.headers.get("content-type"),
+        },
+        status_code=422,
+    )
 
 
 @app.get("/", include_in_schema=False)

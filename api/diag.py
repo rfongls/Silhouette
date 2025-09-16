@@ -1,5 +1,6 @@
-from fastapi import APIRouter, Request
-from fastapi.responses import JSONResponse
+from fastapi import APIRouter, Request, FastAPI
+from fastapi.responses import JSONResponse, PlainTextResponse
+from api.debug_log import LOG_FILE, tail_debug_lines
 
 router = APIRouter()
 
@@ -27,3 +28,37 @@ async def echo(request: Request):
         "form": form_data,
         "query": dict(request.query_params),
     })
+
+
+@router.get("/api/diag/routes")
+async def list_routes(request: Request):
+    app: FastAPI = request.app
+    out = []
+    for r in app.routes:
+        try:
+            name = getattr(r, "name", None)
+            path = getattr(r, "path", None)
+            methods = list(getattr(r, "methods", []) or [])
+            if path:
+                out.append({"name": name, "path": path, "methods": methods})
+        except Exception:
+            pass
+    out.sort(key=lambda x: (x["path"], ",".join(x["methods"])))
+    return JSONResponse({"routes": out})
+
+
+@router.get("/api/diag/logs")
+async def get_debug_logs(limit: int = 200, format: str = "json"):
+    lines = tail_debug_lines(limit)
+    payload = {
+        "lines": lines,
+        "limit": limit,
+        "path": str(LOG_FILE),
+        "count": len(lines),
+    }
+    if format.lower() in {"text", "plain", "txt"}:
+        text = "\n".join(lines)
+        if text:
+            text += "\n"
+        return PlainTextResponse(text or "", media_type="text/plain")
+    return JSONResponse(payload)
