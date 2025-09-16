@@ -46,7 +46,6 @@ async def list_routes(request: Request):
     out.sort(key=lambda x: (x["path"], ",".join(x["methods"])))
     return JSONResponse({"routes": out})
 
-
 @router.get("/api/diag/logs")
 async def get_debug_logs(limit: int = 200, format: str = "json"):
     lines = tail_debug_lines(limit)
