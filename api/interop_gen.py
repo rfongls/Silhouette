@@ -20,6 +20,7 @@ from silhouette_core.interop.hl7_mutate import (
 from silhouette_core.interop.deid import deidentify_message
 from silhouette_core.interop.mllp import send_mllp_batch
 from silhouette_core.interop.validate_workbook import validate_message
+from api.debug_log import record_debug_line
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -45,6 +46,7 @@ def _debug_log(event: str, **fields: Any) -> None:
     for key, value in fields.items():
         parts.append(f"{key}={_preview(value)}")
     message = " | ".join(parts)
+    record_debug_line(message)
     logger.info(message)
     print(f"[interop_gen] {message}", file=sys.stderr, flush=True)
 print("[interop_gen] robust router module imported", file=sys.stderr)

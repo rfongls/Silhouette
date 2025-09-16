@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import datetime, timezone
 from pathlib import Path
 
 from fastapi import APIRouter, Request, HTTPException
@@ -9,6 +10,7 @@ from starlette.templating import Jinja2Templates
 from api.interop_gen import generate_messages, parse_any_request
 from silhouette_core.interop.deid import deidentify_message
 from silhouette_core.interop.validate_workbook import validate_message
+from api.debug_log import LOG_FILE, tail_debug_lines
 
 router = APIRouter()
 templates = Jinja2Templates(directory="templates")
@@ -54,6 +56,20 @@ async def history(request: Request):
     files = sorted(root.glob("*/active/*.json"), reverse=True)
     items = [p.as_posix() for p in files]
     return templates.TemplateResponse("interop/history.html", {"request": request, "items": items, "urls": _ui_urls(request)})
+  
+
+@router.get("/ui/interop/logs/content", response_class=HTMLResponse)
+async def interop_logs_content(request: Request, limit: int = 200):
+    lines = tail_debug_lines(limit)
+    ts = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
+    ctx = {
+        "request": request,
+        "lines": lines,
+        "limit": limit,
+        "log_path": str(LOG_FILE),
+        "refreshed": ts,
+    }
+    return templates.TemplateResponse("ui/interop/_debug_log_content.html", ctx)
 
 
 @router.get("/ui/interop/history/view")

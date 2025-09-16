@@ -1,0 +1,6 @@
+{% if lines %}
+<pre class="codepane small" data-count="{{ lines|length }}">{{ lines|join('\n') }}</pre>
+{% else %}
+<div class="muted small">No generator debug logs captured yet. Trigger message generation to populate this view.</div>
+{% endif %}
+<p class="muted micro mt">Log file: {{ log_path }} • showing last {{ lines|length }} (limit {{ limit }}) • refreshed {{ refreshed }}</p>
