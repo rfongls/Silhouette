@@ -4,11 +4,15 @@
 <script type="module" src="/static/js/interop_ui.js"></script>
 {% endblock %}
 {% block content %}
+{% if urls is not defined %}
+  {% set urls = {} %}
+{% endif %}
 <h2>Interoperability Skills</h2>
 <div class="grid">
   {% include "ui/interop/_generate_panel.html" %}
   {% include "ui/interop/_deid_panel.html" %}
   {% include "ui/interop/_validate_panel.html" %}
+  {% include "ui/interop/_debug_log_panel.html" %}
   {% include "ui/interop/_mllp_panel.html" %}
   <section class="card">
     <h3>HL7 → FHIR Pipeline</h3>

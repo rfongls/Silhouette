@@ -6,7 +6,7 @@ from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
 from starlette.responses import RedirectResponse
 from api.interop import router as interop_router
-from api.interop_gen import router as interop_gen_router
+from api.interop_gen import router as interop_gen_router, try_generate_on_validation_error
 from api.security import router as security_router
 from api.ui import router as ui_router
 from api.ui_interop import router as ui_interop_router
@@ -30,11 +30,53 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 
 logger = logging.getLogger(__name__)
 
+def _preview_bytes(data: bytes | None, limit: int = 160) -> str:
+    if not data:
+        return ""
+    text = data.decode("utf-8", errors="replace").replace("\r", "\\r").replace("\n", "\\n")
+    if len(text) > limit:
+        return f"{text[:limit]}…(+{len(text) - limit})"
+    return text
+
+
 @app.middleware("http")
 async def _trace_requests(request: Request, call_next):
-    print(f"[TRACE] {request.method} {request.url.path} ctype={request.headers.get('content-type')} accept={request.headers.get('accept')}")
+    hx = request.headers.get("hx-request")
+    print(
+        "[TRACE] %s %s?%s ctype=%s accept=%s hx=%s clen=%s"
+        % (
+            request.method,
+            request.url.path,
+            request.url.query or "",
+            request.headers.get("content-type"),
+            request.headers.get("accept"),
+            hx,
+            request.headers.get("content-length"),
+        ),
+        flush=True,
+    )
     resp = await call_next(request)
-    print(f"[TRACE] -> {resp.status_code} {request.url.path}")
+    resp_body: bytes | None = None
+    preview = ""
+    if hasattr(resp, "body") and isinstance(resp.body, (bytes, bytearray)):
+        resp_body = bytes(resp.body)
+        preview = _preview_bytes(resp_body)
+    elif hasattr(resp, "body") and isinstance(resp.body, str):
+        resp_body = resp.body.encode("utf-8", errors="replace")
+        preview = _preview_bytes(resp_body)
+    else:
+        preview = "<stream>"
+    print(
+        "[TRACE] -> %s %s bytes=%s ctype=%s preview=%s"
+        % (
+            resp.status_code,
+            request.url.path,
+            len(resp_body) if resp_body is not None else "stream",
+            resp.headers.get("content-type"),
+            preview,
+        ),
+        flush=True,
+    )
     return resp
 
 
@@ -91,6 +133,9 @@ async def _route_sanity_check():
 
 @app.exception_handler(RequestValidationError)
 async def _log_request_validation(request: Request, exc: RequestValidationError):
+    fallback = await try_generate_on_validation_error(request, exc)
+    if fallback is not None:
+        return fallback
     body = await request.body()
     logger.warning(
         "validation error: path=%s ctype=%s body=%r errors=%s",

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from datetime import datetime, timezone
 from pathlib import Path
 
 import yaml
@@ -8,6 +9,12 @@ from fastapi import APIRouter, Form, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from starlette.templating import Jinja2Templates
 
+from api.debug_log import (
+    is_debug_enabled,
+    set_debug_enabled,
+    tail_debug_lines,
+    toggle_debug_enabled,
+)
 from skills.hl7_drafter import draft_message, send_message
 
 router = APIRouter()
@@ -1114,6 +1121,48 @@ def ui_skills_index(request: Request):
     Skills Index — navigate to skill dashboards (Interop, Security, etc.).
     """
     return templates.TemplateResponse("ui/skills_index.html", {"request": request, "skills": _load_skills()})
+
+
+def _home_debug_context(request: Request, limit: int = 50) -> dict:
+    try:
+        limit_int = int(limit)
+    except (TypeError, ValueError):
+        limit_int = 50
+    limit_int = max(1, min(2000, limit_int))
+    lines = tail_debug_lines(limit_int)
+    recent_count = min(5, len(lines))
+    recent = list(reversed(lines[-recent_count:])) if recent_count else []
+    return {
+        "request": request,
+        "enabled": is_debug_enabled(),
+        "lines": lines,
+        "recent": recent,
+        "limit": limit_int,
+        "total": len(lines),
+        "refreshed": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC"),
+    }
+
+
+@router.get("/ui/home/debug-log", response_class=HTMLResponse)
+async def ui_home_debug_log(request: Request, limit: int = 50):
+    ctx = _home_debug_context(request, limit)
+    return templates.TemplateResponse("ui/_debug_alerts.html", ctx)
+
+
+@router.post("/ui/home/debug-log", response_class=HTMLResponse)
+async def ui_home_debug_log_update(request: Request):
+    form = await request.form()
+    action = (form.get("action") or "refresh").strip().lower()
+    limit = form.get("limit") or form.get("tail") or form.get("count") or 50
+    if action == "enable":
+        set_debug_enabled(True)
+    elif action == "disable":
+        set_debug_enabled(False)
+    elif action == "toggle":
+        toggle_debug_enabled()
+    ctx = _home_debug_context(request, limit)
+    return templates.TemplateResponse("ui/_debug_alerts.html", ctx)
+
 
 def _load_targets():
     p = Path("config/hosts.yaml")

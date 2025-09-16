@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import datetime, timezone
 from pathlib import Path
 
 from fastapi import APIRouter, Request, HTTPException
@@ -8,24 +9,49 @@ from starlette.templating import Jinja2Templates
 from api.interop_gen import generate_messages, parse_any_request
 from silhouette_core.interop.deid import deidentify_message
 from silhouette_core.interop.validate_workbook import validate_message
+from api.debug_log import (
+    LOG_FILE,
+    tail_debug_lines,
+    is_debug_enabled,
+    log_debug_event,
+)
 
 router = APIRouter()
 templates = Jinja2Templates(directory="templates")
 
+def _safe_url_for(request: Request, name: str, fallback: str) -> str:
+    try:
+        return request.url_for(name)
+    except Exception:
+        return fallback
+
+def _ui_urls(request: Request) -> dict[str, str]:
+    """
+    Provide all URLs the templates need, with hardcoded fallbacks so the UI
+    keeps working even if a route name changes.
+    """
+    return {
+        # UI form posts (HTML fallback):
+        "ui_generate":   _safe_url_for(request, "ui_generate",   "/ui/interop/generate"),
+        "ui_deidentify": _safe_url_for(request, "ui_deidentify", "/ui/interop/deidentify"),
+        "ui_validate":   _safe_url_for(request, "ui_validate",   "/ui/interop/validate"),
+        # API endpoints (HTMX fast path):
+        "api_generate":  _safe_url_for(request, "generate_messages_endpoint", "/api/interop/generate"),
+    }
 
 @router.get("/ui/interop/dashboard", response_class=HTMLResponse)
 async def dashboard(request: Request):
-    return templates.TemplateResponse("ui/interop/skills.html", {"request": request})
+    return templates.TemplateResponse("ui/interop/skills.html", {"request": request, "urls": _ui_urls(request)})
 
 
 @router.get("/ui/interop/skills", response_class=HTMLResponse)
 async def interop_skills(request: Request):
-    return templates.TemplateResponse("ui/interop/skills.html", {"request": request})
+    return templates.TemplateResponse("ui/interop/skills.html", {"request": request, "urls": _ui_urls(request)})
 
 
 @router.get("/ui/interop/pipeline", response_class=HTMLResponse)
 async def interop_pipeline(request: Request):
-    return templates.TemplateResponse("ui/interop/pipeline.html", {"request": request})
+    return templates.TemplateResponse("ui/interop/pipeline.html", {"request": request, "urls": _ui_urls(request)})
 
 
 @router.get("/ui/interop/history", response_class=HTMLResponse)
@@ -33,7 +59,22 @@ async def history(request: Request):
     root = Path("out/interop")
     files = sorted(root.glob("*/active/*.json"), reverse=True)
     items = [p.as_posix() for p in files]
-    return templates.TemplateResponse("interop/history.html", {"request": request, "items": items})
+    return templates.TemplateResponse("interop/history.html", {"request": request, "items": items, "urls": _ui_urls(request)})
+
+
+@router.get("/ui/interop/logs/content", response_class=HTMLResponse)
+async def interop_logs_content(request: Request, limit: int = 200):
+    lines = tail_debug_lines(limit)
+    ts = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
+    ctx = {
+        "request": request,
+        "lines": lines,
+        "limit": limit,
+        "log_path": str(LOG_FILE),
+        "enabled": is_debug_enabled(),
+        "refreshed": ts,
+    }
+    return templates.TemplateResponse("ui/interop/_debug_log_content.html", ctx)
 
 
 @router.get("/ui/interop/history/view")
@@ -52,11 +93,42 @@ async def history_view(path: str):
 # Pure-HTML fallback: when JS is disabled, the form posts here and we render a page.
 @router.post("/ui/interop/generate", response_class=HTMLResponse)
 async def ui_generate(request: Request):
+    log_debug_event(
+        "ui.generate.invoke",
+        method=request.method,
+        path=request.url.path,
+        query=request.url.query,
+        hx=request.headers.get("hx-request"),
+        accept=request.headers.get("accept"),
+        referer=request.headers.get("referer"),
+        content_type=request.headers.get("content-type"),
+    )
     body = await parse_any_request(request)
-    resp = generate_messages(body)
+    log_debug_event(
+        "ui.generate.body",
+        keys=";".join(sorted(body.keys())),
+        trigger=body.get("trigger"),
+        template=body.get("template_relpath"),
+        count=body.get("count"),
+    )
+    try:
+        resp = generate_messages(body)
+    except HTTPException as exc:
+        log_debug_event(
+            "ui.generate.error",
+            status=exc.status_code,
+            detail=getattr(exc, "detail", ""),
+        )
+        raise
     text = resp.body.decode("utf-8") if hasattr(resp, "body") else str(resp)
     accept = (request.headers.get("accept") or "").lower()
     hx = (request.headers.get("hx-request") or "").lower() == "true"
+    log_debug_event(
+        "ui.generate.result",
+        hx=hx,
+        accept=accept,
+        bytes=len(text.encode("utf-8", errors="ignore")),
+    )
     if hx or "text/plain" in accept:
         return PlainTextResponse(text, media_type="text/plain")
     return templates.TemplateResponse(

@@ -20,6 +20,11 @@ from silhouette_core.interop.hl7_mutate import (
 from silhouette_core.interop.deid import deidentify_message
 from silhouette_core.interop.validate_workbook import validate_message
 from .interop_gen import generate_messages, _find_template_by_trigger
+from api.debug_log import log_debug_event
+
+
+def _log(event: str, **fields):
+    log_debug_event(f"interop.{event}", **fields)
 
 router = APIRouter()
 
@@ -145,6 +150,7 @@ def _enumerate_samples(version: str, q: str | None = None, limit: int = 200) -> 
         })
         if len(items) >= limit:
             break
+    _log("samples.enumerated", version=version, query=q or "", limit=limit, returned=len(items))
     return items
 
 
@@ -199,18 +205,29 @@ def list_hl7_samples(
     limit: int = Query(200, ge=1, le=2000),
 ):
     """JSON list of sample entries for the UI to render."""
-    data = _enumerate_samples(version, q=q, limit=limit)
+    _log("samples.list", version=version, query=q or "", limit=limit)
+    try:
+        data = _enumerate_samples(version, q=q, limit=limit)
+    except HTTPException as exc:
+        _log("samples.list.error", version=version, query=q or "", limit=limit, error=str(exc))
+        data = []
+    else:
+        _log("samples.list.done", version=version, query=q or "", returned=len(data))
     return {"version": version, "count": len(data), "items": data}
 
 
 @router.get("/api/interop/sample", response_class=PlainTextResponse)
 def get_hl7_sample(relpath: str = Query(..., description="Relative path under templates/hl7")):
     """Return sample file text by relative path (e.g., 'hl7-v2-4/ADT_A01.hl7')."""
+    _log("samples.fetch", relpath=relpath)
     try:
         p = _assert_rel_under_templates(relpath)
     except FileNotFoundError:
+        _log("samples.fetch.missing", relpath=relpath)
         raise HTTPException(status_code=404, detail="Sample not found")
-    return PlainTextResponse(p.read_text(encoding="utf-8", errors="ignore"))
+    text = p.read_text(encoding="utf-8", errors="ignore")
+    _log("samples.fetch.done", relpath=relpath, bytes=len(text.encode("utf-8", errors="ignore")))
+    return PlainTextResponse(text)
 
 
 @router.get("/ui/interop/samples", response_class=HTMLResponse)
@@ -220,10 +237,14 @@ def render_hl7_samples_partial(
     q: str | None = Query(None),
     limit: int = Query(200, ge=1, le=2000),
 ):
+    _log("samples.partial", version=version, query=q or "", limit=limit)
     try:
         items = _enumerate_samples(version, q=q, limit=limit)
     except HTTPException:
         items = []
+        _log("samples.partial.error", version=version, query=q or "", limit=limit)
+    else:
+        _log("samples.partial.done", version=version, query=q or "", returned=len(items))
     return templates.TemplateResponse(
         "ui/interop/_sample_list.html",
         {"request": request, "items": items},
@@ -233,10 +254,12 @@ def render_hl7_samples_partial(
 @router.get("/api/interop/triggers", response_class=JSONResponse)
 def triggers_json(version: str = Query("hl7-v2-4")):
     """JSON trigger list for typeahead; dedup by trigger."""
+    _log("triggers.list", version=version)
     try:
         items = _enumerate_samples(version, q=None, limit=5000)
     except HTTPException:
         items = []
+        _log("triggers.list.error", version=version)
     seen = set()
     out = []
     for it in items:
@@ -249,6 +272,7 @@ def triggers_json(version: str = Query("hl7-v2-4")):
             "description": it.get("description", ""),
             "relpath": it.get("relpath", ""),
         })
+    _log("triggers.list.done", version=version, returned=len(out))
     return {"version": version, "items": out}
 
 
@@ -258,10 +282,12 @@ def render_trigger_options(
     version: str = Query("hl7-v2-4"),
 ):
     """Returns <option> list for trigger selects based on templates/hl7/<version>."""
+    _log("triggers.partial", version=version)
     try:
         raw = _enumerate_samples(version, q=None, limit=5000)
     except HTTPException:
         raw = []
+        _log("triggers.partial.error", version=version)
     # Deduplicate and sort by trigger code
     seen: set[str] = set()
     items: list[dict[str, str]] = []
@@ -272,6 +298,7 @@ def render_trigger_options(
         seen.add(trig)
         items.append({"trigger": trig, "description": it.get("description", "")})
     items = sorted(items, key=lambda x: x["trigger"])
+    _log("triggers.partial.done", version=version, returned=len(items))
     return templates.TemplateResponse(
         "ui/interop/_trigger_options.html",
         {"request": request, "items": items},
@@ -283,8 +310,15 @@ async def ui_deidentify(text: str = Form(...), seed: Optional[int] = Form(None))
     """
     HTML-friendly De-Identify: returns <pre> with scrubbed HL7 (no JSON body).
     """
-    out = deidentify_message(text, seed=seed if seed not in ("", None) else None)
+    clean_seed = seed if seed not in ("", None) else None
+    _log(
+        "ui.deidentify",
+        input_bytes=len((text or "").encode("utf-8", errors="ignore")),
+        seed=clean_seed,
+    )
+    out = deidentify_message(text, seed=clean_seed)
     html = f"<pre class='codepane'>{_esc(out)}</pre>"
+    _log("ui.deidentify.done", output_bytes=len(out.encode("utf-8", errors="ignore")))
     return HTMLResponse(html)
 
 
@@ -293,6 +327,11 @@ async def ui_validate(text: str = Form(...), profile: Optional[str] = Form(None)
     """
     HTML-friendly Validate: returns a small list of errors/warnings with OK/FAIL chip.
     """
+    _log(
+        "ui.validate",
+        profile=profile or "",
+        input_bytes=len((text or "").encode("utf-8", errors="ignore")),
+    )
     res = validate_message(text, profile=profile)
     badge = "<span class='chip'>OK</span>" if res.get("ok") else "<span class='chip'>Issues</span>"
     errs = "".join(f"<li>{_esc(e)}</li>" for e in res.get("errors", []))
@@ -302,6 +341,12 @@ async def ui_validate(text: str = Form(...), profile: Optional[str] = Form(None)
         "<div class='mt'><strong>Errors</strong><ul>" + (errs or "<li>None</li>") + "</ul></div>",
         "<div class='mt'><strong>Warnings</strong><ul class='muted'>" + (warns or "<li>None</li>") + "</ul></div>",
     ]
+    _log(
+        "ui.validate.done",
+        ok=bool(res.get("ok")),
+        errors=len(res.get("errors", [])),
+        warnings=len(res.get("warnings", [])),
+    )
     return HTMLResponse("".join(html))
 
 
@@ -310,11 +355,14 @@ def api_preview(relpath: str = Query(...)):
     """
     Small HTML preview for a sample: used by the Finder to avoid raw JSON.
     """
+    _log("samples.preview", relpath=relpath)
     try:
         p = _assert_rel_under_templates(relpath)
     except FileNotFoundError:
+        _log("samples.preview.missing", relpath=relpath)
         raise HTTPException(status_code=404, detail="Sample not found")
     txt = p.read_text(encoding="utf-8", errors="ignore")
+    _log("samples.preview.done", relpath=relpath, bytes=len(txt.encode("utf-8", errors="ignore")))
     return HTMLResponse(f"<pre class='codepane'>{_esc(txt)}</pre>")
 
 @router.get("/interop/triggers/csv")

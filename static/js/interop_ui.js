@@ -10,6 +10,29 @@
 
   function q(id) { return document.getElementById(id); }
 
+  function sendDebugEvent(name, payload) {
+    try {
+      const body = JSON.stringify({
+        event: name,
+        ts: new Date().toISOString(),
+        ...(payload || {}),
+      });
+      if (navigator.sendBeacon) {
+        const blob = new Blob([body], { type: "application/json" });
+        navigator.sendBeacon("/api/diag/debug/event", blob);
+      } else if (window.fetch) {
+        fetch("/api/diag/debug/event", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body,
+          keepalive: true,
+        });
+      }
+    } catch (err) {
+      /* ignore */
+    }
+  }
+
   function saveVisible() {
     const toggles = Array.from(document.querySelectorAll(".feature-toggle"));
     const state = {};
@@ -39,8 +62,88 @@
     document.querySelectorAll("[data-feature]").forEach(el => el.hidden = on ? true : el.hidden && false);
   }
 
+  function setTemplateHint(prefix, relpath) {
+    const hint = q(prefix + "-template-hint");
+    if (!hint) return;
+    const empty = hint.dataset ? hint.dataset.empty || "" : "";
+    if (relpath) {
+      hint.textContent = `Selected template: ${relpath}`;
+      hint.classList.remove("muted");
+    } else {
+      hint.textContent = empty || "No template selected.";
+      if (!hint.classList.contains("muted")) hint.classList.add("muted");
+    }
+  }
+
+  function syncTemplateRelpath(prefix) {
+    const input = q(prefix + "-trigger-typed");
+    const hidden = q(prefix + "-template-relpath");
+    const dl = q(prefix + "-trigger-datalist");
+    if (!input || !hidden || !dl) {
+      return;
+    }
+    const want = (input.value || "").toUpperCase().trim();
+    const options = dl.options ? Array.from(dl.options) : Array.from(dl.querySelectorAll("option"));
+    if (!options.length) {
+      setTemplateHint(prefix, hidden.value || "");
+      return;
+    }
+    let rel = "";
+    if (want) {
+      for (const opt of options) {
+        const v = (opt.value || "").toUpperCase().trim();
+        if (v === want) {
+          rel = opt.dataset && opt.dataset.relpath ? opt.dataset.relpath : "";
+          if (!rel && opt.getAttribute) {
+            rel = opt.getAttribute("data-relpath") || "";
+          }
+          break;
+        }
+      }
+    }
+    hidden.value = rel;
+    setTemplateHint(prefix, rel);
+    if (hidden && hidden.dataset) {
+      const prev = hidden.dataset.prevRelpath || "";
+      if (rel && rel !== prev) {
+        hidden.dataset.prevRelpath = rel;
+        sendDebugEvent("interop.template.resolved", { prefix, trigger: want, relpath: rel });
+      } else if (!rel) {
+        hidden.dataset.prevRelpath = "";
+      }
+    }
+  }
+
+  function useSample(prefix, payload) {
+    const data = payload || {};
+    const versionSel = q(prefix + "-version") || q("gen-version");
+    if (versionSel && data.version) {
+      versionSel.value = data.version;
+      if (versionSel.dataset && versionSel.dataset.hxRefreshTarget) {
+        versionSel.dispatchEvent(new Event("change", { bubbles: true }));
+      }
+    }
+    const triggerInput = q(prefix + "-trigger-typed");
+    if (triggerInput && data.trigger) {
+      triggerInput.value = data.trigger;
+    }
+    const hidden = q(prefix + "-template-relpath");
+    if (hidden && data.relpath) {
+      hidden.value = data.relpath;
+    }
+    setTemplateHint(prefix, data.relpath || "");
+    syncTemplateRelpath(prefix);
+    sendDebugEvent("interop.sample.use", {
+      prefix,
+      relpath: data.relpath || "",
+      trigger: data.trigger || "",
+      version: data.version || "",
+    });
+  }
+
   function setPrimaryVersion(v) {
     try { localStorage.setItem(LS_PRIMARY_VER, v); } catch {}
+    sendDebugEvent("interop.version.set", { version: v });
     document.querySelectorAll(".hl7-version-select").forEach(sel => {
       if (sel && sel.value !== v) sel.value = v;
       if (sel.dataset.hxRefreshTarget) {
@@ -67,6 +170,7 @@
     // clear and tag with version to avoid races
     dl.innerHTML = "";
     dl.dataset.ver = version;
+    sendDebugEvent("interop.datalist.load", { prefix, version });
     try {
       const r = await fetch(`/api/interop/triggers?version=${encodeURIComponent(version)}`, {cache: "no-cache"});
       const data = await r.json();
@@ -78,11 +182,16 @@
         const opt = document.createElement("option");
         opt.value = trig;
         opt.label = it.description ? `${it.trigger} — ${it.description}` : it.trigger;
+        if (it.relpath) {
+          opt.dataset.relpath = it.relpath;
+        }
         dl.appendChild(opt);
       });
+      sendDebugEvent("interop.datalist.loaded", { prefix, version, count: (data.items || []).length });
     } catch (e) {
-      // swallow
+      sendDebugEvent("interop.datalist.error", { prefix, version, message: e && e.message ? e.message : String(e) });
     }
+    syncTemplateRelpath(prefix);
   }
 
   async function fillTemplates(prefix) {
@@ -90,6 +199,7 @@
     const version = versionSel ? versionSel.value : getPrimaryVersion();
     try {
       // endpoint caps limit at 2000, so stay within that bound
+      sendDebugEvent("interop.templates.load", { prefix, version });
       const r = await fetch(`/api/interop/samples?version=${encodeURIComponent(version)}&limit=2000`, {cache: "no-cache"});
       const data = await r.json();
       const dl = q(prefix + "-template-datalist");
@@ -102,8 +212,9 @@
         opt.label = label;
         dl.appendChild(opt);
       });
+      sendDebugEvent("interop.templates.loaded", { prefix, version, count: (data.items || []).length });
     } catch (e) {
-      // swallow
+      sendDebugEvent("interop.templates.error", { prefix, version, message: e && e.message ? e.message : String(e) });
     }
   }
 
@@ -158,7 +269,10 @@
     syncTyped,
     fillDatalist,
     fillTemplates,
+    syncTemplateRelpath,
+    useSample,
     setPrimaryVersion,
-    getPrimaryVersion
+    getPrimaryVersion,
+    sendDebugEvent,
   };
 })();
