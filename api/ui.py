@@ -1123,7 +1123,16 @@ def ui_skills_index(request: Request):
     return templates.TemplateResponse("ui/skills_index.html", {"request": request, "skills": _load_skills()})
 
 
-def _home_debug_context(request: Request, limit: int = 50) -> dict:
+def _sanitize_target_id(value: str | None) -> str:
+    if not value:
+        return "home-debug-log"
+    cleaned = "".join(ch for ch in value if ch.isalnum() or ch in "-_:")
+    return cleaned or "home-debug-log"
+
+
+def _home_debug_context(
+    request: Request, limit: int = 50, target_id: str | None = None
+) -> dict:
     try:
         limit_int = int(limit)
     except (TypeError, ValueError):
@@ -1132,6 +1141,7 @@ def _home_debug_context(request: Request, limit: int = 50) -> dict:
     lines = tail_debug_lines(limit_int)
     recent_count = min(5, len(lines))
     recent = list(reversed(lines[-recent_count:])) if recent_count else []
+    safe_target = _sanitize_target_id(target_id)
     return {
         "request": request,
         "enabled": is_debug_enabled(),
@@ -1140,12 +1150,13 @@ def _home_debug_context(request: Request, limit: int = 50) -> dict:
         "limit": limit_int,
         "total": len(lines),
         "refreshed": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC"),
+        "target_id": safe_target,
     }
 
 
 @router.get("/ui/home/debug-log", response_class=HTMLResponse)
-async def ui_home_debug_log(request: Request, limit: int = 50):
-    ctx = _home_debug_context(request, limit)
+async def ui_home_debug_log(request: Request, limit: int = 50, target: str | None = None):
+    ctx = _home_debug_context(request, limit, target)
     return templates.TemplateResponse("ui/_debug_alerts.html", ctx)
 
 
@@ -1154,13 +1165,14 @@ async def ui_home_debug_log_update(request: Request):
     form = await request.form()
     action = (form.get("action") or "refresh").strip().lower()
     limit = form.get("limit") or form.get("tail") or form.get("count") or 50
+    target = form.get("target")
     if action == "enable":
         set_debug_enabled(True)
     elif action == "disable":
         set_debug_enabled(False)
     elif action == "toggle":
         toggle_debug_enabled()
-    ctx = _home_debug_context(request, limit)
+    ctx = _home_debug_context(request, limit, target)
     return templates.TemplateResponse("ui/_debug_alerts.html", ctx)
 
 
