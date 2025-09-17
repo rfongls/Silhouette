@@ -2,7 +2,7 @@ import json
 import logging
 import sys
 from pathlib import Path
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, HTTPException
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
@@ -167,6 +167,18 @@ async def _log_request_validation(request: Request, exc: RequestValidationError)
         },
         status_code=422,
     )
+
+
+@app.exception_handler(HTTPException)
+async def _http_exc_logger(request: Request, exc: HTTPException):
+    logging.getLogger("silhouette.http").info(
+        "HTTPException: %s %s -> %s detail=%r",
+        request.method,
+        request.url.path,
+        exc.status_code,
+        getattr(exc, "detail", None),
+    )
+    return JSONResponse({"detail": exc.detail}, status_code=exc.status_code)
 
 
 @app.get("/", include_in_schema=False)

@@ -1,4 +1,5 @@
 import html as _html
+from pathlib import Path
 from typing import Any, Dict
 from fastapi import APIRouter, FastAPI, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse
@@ -14,6 +15,22 @@ from api.debug_log import (
 )
 
 router = APIRouter()
+_HTTP_LOG = Path("out/interop/server_http.log")
+
+
+def _tail_file(path: Path, limit: int) -> list[str]:
+    if limit <= 0:
+        return []
+    try:
+        with path.open("r", encoding="utf-8", errors="replace") as fh:
+            lines = fh.readlines()
+    except FileNotFoundError:
+        return []
+    except Exception:
+        return []
+    if not lines:
+        return []
+    return [line.rstrip("\n") for line in lines[-limit:]]
 
 @router.post("/api/diag/echo")
 async def echo(request: Request):
@@ -60,11 +77,19 @@ async def list_routes(request: Request):
 
 @router.get("/api/diag/logs")
 async def get_debug_logs(limit: int = 200, format: str = "json"):
-    lines = tail_debug_lines(limit)
+    try:
+        limit_value = int(limit or 200)
+    except (TypeError, ValueError):
+        limit_value = 200
+    limit_value = max(1, min(2000, limit_value))
+    gen_lines = tail_debug_lines(limit_value)
+    http_lines = _tail_file(_HTTP_LOG, limit_value)
+    lines = (http_lines + gen_lines)[-limit_value:]
     payload = {
         "lines": lines,
-        "limit": limit,
+        "limit": limit_value,
         "path": str(LOG_FILE),
+        "http_path": str(_HTTP_LOG),
         "count": len(lines),
         "enabled": is_debug_enabled(),
     }
