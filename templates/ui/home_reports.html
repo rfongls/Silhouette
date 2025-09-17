@@ -1,5 +1,6 @@
 {% extends "layout.html" %}
 {% block content %}
+{% set root = request.scope.get('root_path', '') %}
 <section class="hero">
   <h1 class="title">Reports</h1>
   <p class="subtitle">High-level view across skills</p>
@@ -49,12 +50,12 @@
   <div class="card">
     <h3>HL7 → FHIR Pipeline</h3>
     <p class="muted">Translate HL7 to FHIR (and optionally POST). Uses your selected tools and local CLI if present.</p>
-    <div class="mt"><a class="btn" href="/ui/interop/pipeline">Open Pipeline</a></div>
+    <div class="mt"><a class="btn" href="{{ root }}/ui/interop/pipeline">Open Pipeline</a></div>
   </div>
   <div class="card">
     <h3>Recent Activity</h3>
     <div id="recent-activity-log"
-         hx-get="/ui/home/debug-log?limit=20&target=recent-activity-log"
+         hx-get="{{ root }}/ui/home/debug-log?limit=20&target=recent-activity-log"
          hx-trigger="load, every 15s"
          hx-target="this"
          hx-swap="outerHTML">
@@ -68,7 +69,7 @@
     <h3>Alerts & Issues</h3>
     <div id="home-debug-log"
          class="muted"
-         hx-get="/ui/home/debug-log"
+         hx-get="{{ root }}/ui/home/debug-log"
          hx-trigger="load"
          hx-target="this"
          hx-swap="outerHTML">

@@ -1,26 +1,27 @@
 {% extends "layout.html" %}
 {% block extra_head %}
-<link rel="stylesheet" href="/static/css/interop_extras.css" />
-<script type="module" src="/static/js/interop_ui.js"></script>
+<link rel="stylesheet" href="{{ request.url_for('static', path='css/interop_extras.css') }}" />
+<script type="module" src="{{ request.url_for('static', path='js/interop_ui.js') }}"></script>
 {% endblock %}
 {% block content %}
 {% if urls is not defined %}
   {% set urls = {} %}
 {% endif %}
-<p class="micro"><a href="/ui/home">← Back to Home</a></p>
+{% set root = request.scope.get('root_path', '') %}
+<p class="micro"><a href="{{ root }}/ui/home">← Back to Home</a></p>
 <h2>Interoperability Dashboard</h2>
 <div class="row gap mt">
   <label><input type="checkbox" id="view-reports-toggle" /> Reports view</label>
   <label><input type="checkbox" class="feature-toggle" data-target="deid" checked/> De-ID</label>
   <label><input type="checkbox" class="feature-toggle" data-target="validate" checked/> Validate</label>
 </div>
-<div hx-get="/interop/summary" hx-trigger="load, every 10s" hx-target="#interop-kpi-wrap" hx-swap="innerHTML"></div>
+<div hx-get="{{ root }}/interop/summary" hx-trigger="load, every 10s" hx-target="#interop-kpi-wrap" hx-swap="innerHTML"></div>
 <div id="interop-kpi-wrap"></div>
 <div class="grid">
   <section class="card">
     <h3>HL7 Sample Finder</h3>
     <form id="sample-search" class="row gap"
-          hx-get="/ui/interop/samples"
+          hx-get="{{ root }}/ui/interop/samples"
           hx-target="#sample-results"
           hx-swap="innerHTML"
           hx-trigger="keyup changed delay:250ms, change from:#sample-version">
@@ -36,7 +37,7 @@
     </form>
 
     <div id="sample-results"
-         hx-get="/ui/interop/samples"
+         hx-get="{{ root }}/ui/interop/samples"
          hx-vals='{"version":"hl7-v2-4"}'
          hx-trigger="load"
          hx-target="this"
@@ -66,25 +67,25 @@
   <div class="card">
     <h3>HL7 → FHIR Pipeline</h3>
     <p class="muted">Select/Generate → Analyze → Translate → (optional) POST</p>
-    <a class="btn" href="/ui/interop/pipeline">Open Pipeline</a>
+    <a class="btn" href="{{ root }}/ui/interop/pipeline">Open Pipeline</a>
   </div>
 
   <div class="card">
     <h3>Trigger Descriptions</h3>
-    <a class="btn btn-xs" href="/interop/triggers/csv">Download CSV</a>
-    <div id="trigger-admin" class="mt" hx-get="/ui/interop/trigger-admin" hx-trigger="load" hx-target="this" hx-swap="innerHTML"></div>
+    <a class="btn btn-xs" href="{{ root }}/interop/triggers/csv">Download CSV</a>
+    <div id="trigger-admin" class="mt" hx-get="{{ root }}/ui/interop/trigger-admin" hx-trigger="load" hx-target="this" hx-swap="innerHTML"></div>
   </div>
   <div class="card">
     <h3>Quick Start</h3>
     <p class="muted">One-click pipeline: Draft example HL7 → FHIR Translate → Validate. No listener required.</p>
-    <form action="/interop/quickstart" method="post"
-          hx-post="/interop/quickstart"
+    <form action="{{ root }}/interop/quickstart" method="post"
+          hx-post="{{ root }}/interop/quickstart"
           hx-target="#pipeline-result"
           hx-swap="innerHTML">
       <div class="row gap">
         <label class="label">Version</label>
         <select name="version" class="input hl7-version-select" id="qs-version" data-hx-refresh-target="1"
-          hx-get="/ui/interop/triggers"
+          hx-get="{{ root }}/ui/interop/triggers"
           hx-target="#qs-trigger"
           hx-trigger="load, change"
           onchange="window.InteropUI.fillDatalist('qs')">
@@ -95,7 +96,7 @@
         <label class="label">Trigger</label>
         <div class="row gap">
           <select name="trigger" class="input" id="qs-trigger"
-                hx-get="/ui/interop/triggers"
+                hx-get="{{ root }}/ui/interop/triggers"
                 hx-target="#qs-trigger"
                 hx-trigger="load, change from:#qs-version"
                 hx-include="#qs-version">
@@ -112,7 +113,7 @@
         <label><input type="checkbox" name="deidentify" /> De-identify</label>
       </div>
       <button type="submit">Run Pipeline</button>
-      <button type="button" hx-post="/interop/demo/seed" hx-target="#pipeline-demo" hx-swap="innerHTML">Load Demo</button>
+      <button type="button" hx-post="{{ root }}/interop/demo/seed" hx-target="#pipeline-demo" hx-swap="innerHTML">Load Demo</button>
     </form>
     <div id="pipeline-demo" class="muted"></div>
     <div id="pipeline-result" class="result"></div>

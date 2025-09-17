@@ -1,13 +1,14 @@
 {% extends "layout.html" %}
 {% block extra_head %}
-<link rel="stylesheet" href="/static/css/interop_extras.css" />
-<script type="module" src="/static/js/interop_ui.js"></script>
+<link rel="stylesheet" href="{{ request.url_for('static', path='css/interop_extras.css') }}" />
+<script type="module" src="{{ request.url_for('static', path='js/interop_ui.js') }}"></script>
 {% endblock %}
 {% block content %}
 {% if urls is not defined %}
   {% set urls = {} %}
 {% endif %}
-<p class="micro"><a href="/ui/home">← Back to Home</a></p>
+{% set root = request.scope.get('root_path', '') %}
+<p class="micro"><a href="{{ root }}/ui/home">← Back to Home</a></p>
 <h2>Interoperability Skills</h2>
 <div class="grid">
   {% include "ui/interop/_generate_panel.html" %}
@@ -18,7 +19,7 @@
   <section class="card">
     <h3>HL7 → FHIR Pipeline</h3>
     <p class="muted">Translate HL7 to FHIR (and optionally POST). Uses your selected tools and local CLI if present.</p>
-    <a class="btn" href="/ui/interop/pipeline">Open Pipeline</a>
+    <a class="btn" href="{{ root }}/ui/interop/pipeline">Open Pipeline</a>
   </section>
 </div>
 {% endblock %}

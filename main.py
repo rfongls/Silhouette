@@ -15,6 +15,7 @@ from api.interop_gen import router as interop_gen_router, try_generate_on_valida
 from api.admin import router as admin_router
 from api.diag import router as diag_router
 from api.http_logging import install_http_logging
+from api.diag_fallback import ensure_diagnostics
 
 app = FastAPI()
 app.mount("/static", StaticFiles(directory="static"), name="static")
@@ -31,6 +32,7 @@ for r in (
     app.include_router(r)
 
 install_http_logging(app)
+ensure_diagnostics(app)
 
 
 @app.exception_handler(RequestValidationError)

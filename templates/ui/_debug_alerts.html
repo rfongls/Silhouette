@@ -1,26 +1,27 @@
 {% set toggle_label = 'Disable debugging' if enabled else 'Enable debugging' %}
 {% set target_id = target_id or 'home-debug-log' %}
+{% set root = request.scope.get('root_path', '') %}
 <div id="{{ target_id }}"
      class="stack gap-sm"
-     hx-get="/ui/home/debug-log?limit={{ limit }}&target={{ target_id }}"
+     hx-get="{{ root }}/ui/home/debug-log?limit={{ limit }}&target={{ target_id }}"
      hx-trigger="load, every 10s"
      hx-target="#{{ target_id }}"
      hx-swap="outerHTML">
   <div class="row gap-sm wrap align-center">
     <span class="chip {{ 'chip-success' if enabled else 'chip-muted' }}">Debug {{ 'ON' if enabled else 'OFF' }}</span>
-    <form class="row gap-xs" hx-post="/ui/home/debug-log" hx-target="#{{ target_id }}" hx-swap="outerHTML">
+    <form class="row gap-xs" hx-post="{{ root }}/ui/home/debug-log" hx-target="#{{ target_id }}" hx-swap="outerHTML">
       <input type="hidden" name="action" value="{{ 'disable' if enabled else 'enable' }}" />
       <input type="hidden" name="limit" value="{{ limit }}" />
       <input type="hidden" name="target" value="{{ target_id }}" />
       <button class="btn btn-xs" type="submit">{{ toggle_label }}</button>
     </form>
-    <form class="row gap-xs" hx-post="/ui/home/debug-log" hx-target="#{{ target_id }}" hx-swap="outerHTML">
+    <form class="row gap-xs" hx-post="{{ root }}/ui/home/debug-log" hx-target="#{{ target_id }}" hx-swap="outerHTML">
       <input type="hidden" name="action" value="refresh" />
       <input type="hidden" name="limit" value="{{ limit }}" />
       <input type="hidden" name="target" value="{{ target_id }}" />
       <button class="btn btn-xs" type="submit">Refresh now</button>
     </form>
-    <a class="btn btn-xs" href="/api/diag/logs?format=text" target="_blank" rel="noopener">Open full log</a>
+    <a class="btn btn-xs" href="{{ root }}/api/diag/logs?format=text" target="_blank" rel="noopener">Open full log</a>
   </div>
   <div class="muted micro">Last updated {{ refreshed }} • showing last {{ total }} (limit {{ limit }})</div>
   {% if not enabled %}

@@ -1,23 +1,24 @@
 {% extends "layout.html" %}
 {% block extra_head %}
-<link rel="stylesheet" href="/static/css/interop_extras.css" />
-<script type="module" src="/static/js/interop_ui.js"></script>
+<link rel="stylesheet" href="{{ request.url_for('static', path='css/interop_extras.css') }}" />
+<script type="module" src="{{ request.url_for('static', path='js/interop_ui.js') }}"></script>
 {% endblock %}
 {% block content %}
-<p class="micro"><a href="/ui/home">← Back to Home</a></p>
+{% set root = request.scope.get('root_path', '') %}
+<p class="micro"><a href="{{ root }}/ui/home">← Back to Home</a></p>
 <h2>HL7 → FHIR Pipeline</h2>
 <p class="muted">Select or generate HL7, analyze it, translate to FHIR, and optionally POST to an endpoint.</p>
 
 <section class="card">
   <form id="pipe-form"
-        hx-post="/api/interop/pipeline/run"
+        hx-post="{{ root }}/api/interop/pipeline/run"
         hx-trigger="submit"
         hx-target="#pipe-out"
         hx-swap="innerHTML">
     <div class="row gap">
       <label>Version</label>
       <select name="version" class="input hl7-version-select" id="pipe-version" data-hx-refresh-target="1"
-              hx-get="/ui/interop/triggers"
+              hx-get="{{ root }}/ui/interop/triggers"
               hx-target="#pipe-trigger-select"
               hx-vals='{"version": document.getElementById("pipe-version").value}'
               hx-trigger="load, change"
