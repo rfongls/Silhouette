@@ -1,12 +1,13 @@
 <section class="card">
   <h3>Generate Messages</h3>
 <!-- Form uses HTMX (API) and falls back to HTML (UI) when JS is disabled -->
+{% set root = request.scope.get('root_path', '') %}
 <form id="gen-form"
       method="post"
-      action="{{ urls.ui_generate | default('/ui/interop/generate', true) }}"
+      action="{{ urls.ui_generate | default(root ~ '/ui/interop/generate', true) }}"
       autocomplete="off"
       novalidate
-      hx-post="{{ urls.ui_generate | default('/ui/interop/generate', true) }}"
+      hx-post="{{ urls.api_generate | default(root ~ '/api/interop/generate', true) }}"
       hx-target="#gen-output"
       hx-swap="textContent"
       hx-headers='{"Accept":"text/plain"}'>
