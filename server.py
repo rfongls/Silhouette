@@ -56,6 +56,14 @@ def _clip_bytes(data: bytes, limit: int = 2000) -> str:
         return text
     return text[:limit] + f"…(+{len(text) - limit})"
 
+_TEXTUAL_CONTENT_PREFIXES = (
+    "text/",
+    "application/json",
+    "application/xml",
+    "application/javascript",
+    "application/problem+json",
+)
+
 
 def _safe_json_preview(data: bytes) -> str:
     if not data:
@@ -94,9 +102,32 @@ async def http_action_logger(request: Request, call_next):
         elapsed_ms = int(1000 * (time.time() - start))
         http_logger.exception("Action=%s Response=<exception> ms=%s", action, elapsed_ms)
         raise
+    content_type = ""
+    if hasattr(response, "headers") and response.headers is not None:
+        content_type = response.headers.get("content-type") or ""
+    lowered_ctype = content_type.lower()
+    is_textual = not lowered_ctype or any(
+        lowered_ctype.startswith(prefix) for prefix in _TEXTUAL_CONTENT_PREFIXES
+    )
+    skip_reason = None
+    if request.url.path.startswith("/static"):
+        skip_reason = "static"
+    elif not is_textual:
+        skip_reason = "binary"
+
+    if skip_reason:
+        elapsed_ms = int(1000 * (time.time() - start))
+        http_logger.info(
+            "Action=%s Response={status:%s, ms:%s, preview:<skipped %s>}",
+            action,
+            response.status_code,
+            elapsed_ms,
+            skip_reason,
+        )
+        return response
 
     body = b""
-    if hasattr(response, "body_iterator"):
+    if hasattr(response, "body_iterator") and response.body_iterator is not None:
         async for chunk in response.body_iterator:
             body += chunk
     elif hasattr(response, "body"):
@@ -104,11 +135,12 @@ async def http_action_logger(request: Request, call_next):
             body = bytes(response.body)
         elif isinstance(response.body, str):
             body = response.body.encode("utf-8", errors="replace")
-
+    headers = dict(response.headers) if hasattr(response, "headers") else {}
+    headers.pop("content-length", None)
     new_response = StarletteResponse(
         content=body,
         status_code=response.status_code,
-        headers=list(response.headers.items()),
+        headers=headers,
         media_type=response.media_type,
         background=response.background,
     )
