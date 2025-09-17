@@ -1,3 +1,4 @@
+import json
 import logging
 import sys
 from pathlib import Path
@@ -5,7 +6,7 @@ from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
-from starlette.responses import RedirectResponse
+from starlette.responses import RedirectResponse, Response as StarletteResponse
 from api.interop import router as interop_router
 from api.interop_gen import router as interop_gen_router, try_generate_on_validation_error
 from api.security import router as security_router
@@ -17,6 +18,9 @@ from api.http_logging import install_http_logging
 from api.diag_fallback import ensure_diagnostics
 
 logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+_HTTP_LOG_PATH = Path("out/interop/server_http.log")
 
 logger = logging.getLogger(__name__)
 
@@ -34,10 +38,9 @@ for r in (
 ):
     app.include_router(r)
 app.mount("/static", StaticFiles(directory="static"), name="static")
-
+install_http_logging(app, log_path=_HTTP_LOG_PATH)
 install_http_logging(app, log_path=_HTTP_LOG_PATH)
 ensure_diagnostics(app, http_log_path=_HTTP_LOG_PATH)
-
 
 def _preview_bytes(data: bytes | None, limit: int = 160) -> str:
     if not data:
