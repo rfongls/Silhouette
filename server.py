@@ -56,7 +56,6 @@ def _clip_bytes(data: bytes, limit: int = 2000) -> str:
         return text
     return text[:limit] + f"…(+{len(text) - limit})"
 
-
 _TEXTUAL_CONTENT_PREFIXES = (
     "text/",
     "application/json",
@@ -103,7 +102,6 @@ async def http_action_logger(request: Request, call_next):
         elapsed_ms = int(1000 * (time.time() - start))
         http_logger.exception("Action=%s Response=<exception> ms=%s", action, elapsed_ms)
         raise
-
     content_type = ""
     if hasattr(response, "headers") and response.headers is not None:
         content_type = response.headers.get("content-type") or ""
@@ -137,7 +135,6 @@ async def http_action_logger(request: Request, call_next):
             body = bytes(response.body)
         elif isinstance(response.body, str):
             body = response.body.encode("utf-8", errors="replace")
-
     headers = dict(response.headers) if hasattr(response, "headers") else {}
     headers.pop("content-length", None)
     new_response = StarletteResponse(
