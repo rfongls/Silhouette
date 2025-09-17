@@ -1,6 +1,7 @@
+import html as _html
 from typing import Any, Dict
 from fastapi import APIRouter, FastAPI, HTTPException, Request
-from fastapi.responses import JSONResponse, PlainTextResponse
+from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse
 
 from api.debug_log import (
     LOG_FILE,
@@ -67,7 +68,11 @@ async def get_debug_logs(limit: int = 200, format: str = "json"):
         "count": len(lines),
         "enabled": is_debug_enabled(),
     }
-    if format.lower() in {"text", "plain", "txt"}:
+    fmt = (format or "json").lower()
+    if fmt in {"html", "htm"}:
+        escaped = "\n".join(_html.escape(line) for line in lines)
+        return HTMLResponse(f"<pre class='scrollbox small'>{escaped}</pre>")
+    if fmt in {"text", "plain", "txt"}:
         text = "\n".join(lines)
         if text:
             text += "\n"
