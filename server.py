@@ -64,6 +64,29 @@ _TEXTUAL_CONTENT_PREFIXES = (
     "application/problem+json",
 )
 
+_REDACT_KEYS = {
+    "password",
+    "token",
+    "authorization",
+    "api_key",
+    "access_token",
+    "refresh_token",
+}
+
+
+def _redact_secrets(value):
+    if isinstance(value, dict):
+        redacted = {}
+        for key, inner in value.items():
+            if key and key.lower() in _REDACT_KEYS:
+                redacted[key] = "***REDACTED***"
+            else:
+                redacted[key] = _redact_secrets(inner)
+        return redacted
+    if isinstance(value, list):
+        return [_redact_secrets(v) for v in value]
+    return value
+
 
 def _safe_json_preview(data: bytes) -> str:
     if not data:
@@ -72,6 +95,7 @@ def _safe_json_preview(data: bytes) -> str:
         parsed = json.loads(data.decode("utf-8"))
     except Exception:
         return _clip_bytes(data)
+    parsed = _redact_secrets(parsed)
     try:
         return json.dumps(parsed)[:2000]
     except Exception:
