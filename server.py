@@ -1,5 +1,6 @@
 import logging
 import sys
+from pathlib import Path
 from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import JSONResponse
@@ -12,8 +13,13 @@ from api.ui import router as ui_router
 from api.ui_interop import router as ui_interop_router
 from api.ui_security import router as ui_security_router
 from api.diag import router as diag_router
+from api.http_logging import install_http_logging
 
 logging.basicConfig(level=logging.INFO)
+
+logger = logging.getLogger(__name__)
+
+_HTTP_LOG_PATH = Path("out/interop/server_http.log")
 
 app = FastAPI(title="Silhouette Core Interop")
 for r in (
@@ -28,7 +34,8 @@ for r in (
     app.include_router(r)
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
-logger = logging.getLogger(__name__)
+install_http_logging(app, log_path=_HTTP_LOG_PATH)
+
 
 def _preview_bytes(data: bytes | None, limit: int = 160) -> str:
     if not data:
