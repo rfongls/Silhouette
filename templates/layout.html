@@ -3,19 +3,19 @@
 <head>
   <meta charset="utf-8" />
   <title>Silhouette UI</title>
-  <link rel="stylesheet" href="/static/css/app.css" />
-  <link rel="stylesheet" href="/static/css/dashboard.css" />
+  <link rel="stylesheet" href="{{ request.url_for('static', path='css/app.css') }}" />
+  <link rel="stylesheet" href="{{ request.url_for('static', path='css/dashboard.css') }}" />
   {% block extra_head %}{% endblock %}
-  <script src="/static/htmx.min.js"></script>
-  <script type="module" src="/static/js/examples.js"></script>
-  <script type="module" src="/static/js/nav.js"></script>
+  <script src="{{ request.url_for('static', path='htmx.min.js') }}"></script>
+  <script type="module" src="{{ request.url_for('static', path='js/examples.js') }}"></script>
+  <script type="module" src="{{ request.url_for('static', path='js/nav.js') }}"></script>
 </head>
 <body>
   <header class="topbar">
-    <div class="brand">Silhouette</div>
+    <a class="brand" href="{{ request.url_for('ui_home') }}">Silhouette</a>
     <nav class="mainnav">
-      <a href="/ui/home" data-nav="reports">Reports</a>
-      <a href="/ui/skills" data-nav="skills">Skills</a>
+      <a href="{{ request.url_for('ui_home') }}" data-nav="reports">Reports</a>
+      <a href="{{ request.url_for('ui_skills_index') }}" data-nav="skills">Skills</a>
     </nav>
   </header>
   <main>
@@ -37,16 +37,22 @@
     // Expose globally so partials can call it after actions
     window.refreshKPI = refreshKPI;
 
+    var ROOT = {{ request.scope.get('root_path', '') | tojson }};
+    function withRoot(path){
+      if (!path) return ROOT;
+      return ROOT + path;
+    }
+
     document.addEventListener('DOMContentLoaded', function(){
       // Interop KPI
       if (document.querySelector('#interop-kpi-wrap')) {
-        refreshKPI('#interop-kpi-wrap','/interop/summary');
-        setInterval(function(){ refreshKPI('#interop-kpi-wrap','/interop/summary'); }, 10000);
+        refreshKPI('#interop-kpi-wrap', withRoot('/interop/summary'));
+        setInterval(function(){ refreshKPI('#interop-kpi-wrap', withRoot('/interop/summary')); }, 10000);
       }
       // Security KPI
       if (document.querySelector('#kpi-wrap')) {
-        refreshKPI('#kpi-wrap','/security/summary');
-        setInterval(function(){ refreshKPI('#kpi-wrap','/security/summary'); }, 10000);
+        refreshKPI('#kpi-wrap', withRoot('/security/summary'));
+        setInterval(function(){ refreshKPI('#kpi-wrap', withRoot('/security/summary')); }, 10000);
       }
     });
   })();
