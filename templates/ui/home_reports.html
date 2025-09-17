@@ -55,10 +55,10 @@
   <div class="card">
     <h3>Recent Activity</h3>
     <div id="recent-activity-log"
-         hx-get="{{ root }}/ui/home/debug-log?limit=20&target=recent-activity-log"
+         hx-get="{{ root }}/api/diag/logs?limit=120&format=html"
          hx-trigger="load, every 15s"
          hx-target="this"
-         hx-swap="outerHTML">
+         hx-swap="innerHTML">
       <div class="muted small">Loading recent activity…</div>
     </div>
   </div>

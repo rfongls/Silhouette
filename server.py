@@ -26,6 +26,10 @@ logger = logging.getLogger(__name__)
 
 _HTTP_LOG_PATH = Path("out/interop/server_http.log")
 
+logger = logging.getLogger(__name__)
+
+_HTTP_LOG_PATH = Path("out/interop/server_http.log")
+
 app = FastAPI(title="Silhouette Core Interop")
 for r in (
     ui_router,
@@ -38,7 +42,6 @@ for r in (
 ):
     app.include_router(r)
 app.mount("/static", StaticFiles(directory="static"), name="static")
-install_http_logging(app, log_path=_HTTP_LOG_PATH)
 install_http_logging(app, log_path=_HTTP_LOG_PATH)
 ensure_diagnostics(app, http_log_path=_HTTP_LOG_PATH)
 
@@ -68,24 +71,15 @@ async def _trace_requests(request: Request, call_next):
         flush=True,
     )
     resp = await call_next(request)
-    resp_body: bytes | None = None
-    preview = ""
-    if hasattr(resp, "body") and isinstance(resp.body, (bytes, bytearray)):
-        resp_body = bytes(resp.body)
-        preview = _preview_bytes(resp_body)
-    elif hasattr(resp, "body") and isinstance(resp.body, str):
-        resp_body = resp.body.encode("utf-8", errors="replace")
-        preview = _preview_bytes(resp_body)
-    else:
-        preview = "<stream>"
+    # Do not consume resp.body_iterator here; http_logging middleware already
+    # captures and replays bodies safely. Simply log the status and content type
+    # to avoid draining streamed responses.
     print(
-        "[TRACE] -> %s %s bytes=%s ctype=%s preview=%s"
+        "[TRACE] -> %s %s ctype=%s"
         % (
             resp.status_code,
             request.url.path,
-            len(resp_body) if resp_body is not None else "stream",
             resp.headers.get("content-type"),
-            preview,
         ),
         flush=True,
     )
