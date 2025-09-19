@@ -15,7 +15,8 @@ from api.debug_log import (
 )
 
 router = APIRouter()
-_HTTP_LOG = Path("out/interop/server_http.log")
+_BASE_DIR = Path(__file__).resolve().parents[1]
+_HTTP_LOG = _BASE_DIR / "out" / "interop" / "server_http.log"
 
 
 def _tail_file(path: Path, limit: int) -> list[str]:
