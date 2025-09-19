@@ -12,6 +12,7 @@ import inspect
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse, PlainTextResponse
+from starlette.datastructures import UploadFile
 from silhouette_core.interop.hl7_mutate import (
     enrich_clinical_fields,
     ensure_unique_fields,
@@ -20,6 +21,7 @@ from silhouette_core.interop.hl7_mutate import (
 from silhouette_core.interop.deid import deidentify_message
 from silhouette_core.interop.mllp import send_mllp_batch
 from silhouette_core.interop.validate_workbook import validate_message
+from api.activity_log import log_activity
 from api.debug_log import log_debug_message
 
 router = APIRouter()
@@ -54,55 +56,110 @@ this_file = os.path.abspath(inspect.getfile(sys.modules[__name__]))
 print(f"[interop_gen] using file: {this_file}", file=sys.stderr)
 
 
+def _coerce_scalar(value: Any) -> Any:
+    """Return a scalar when lists only contain a single value."""
+    if isinstance(value, list) and len(value) == 1:
+        return value[0]
+    return value
+
+
 async def parse_any_request(request: Request) -> dict:
-    """Parse JSON, x-www-form-urlencoded, multipart, or query into a dict."""
-    from urllib.parse import parse_qs
+    """Parse JSON, multipart, urlencoded, or query data into a dict."""
     ctype = (request.headers.get("content-type") or "").lower()
+    try:
+        query = dict(request.query_params)
+    except KeyError:
+        query = {}
     raw = await request.body()
+    query_string = request.scope.get("query_string", b"")
+    if isinstance(query_string, bytes):
+        query_text = query_string.decode("latin-1", errors="ignore")
+    else:
+        query_text = str(query_string)
     _debug_log(
         "parse_any_request.start",
         method=request.method,
         path=request.url.path,
-        query=request.url.query,
+        query=query_text,
         ctype=ctype,
         content_length=request.headers.get("content-length"),
         hx=request.headers.get("hx-request"),
         raw_preview=_preview(raw),
     )
-    body: dict = {}
-    # JSON
-    if raw and "json" in ctype:
+
+    body: dict[str, Any] = {}
+
+    if raw and ("application/json" in ctype or "text/json" in ctype):
         try:
             parsed = json.loads(raw.decode("utf-8"))
             if isinstance(parsed, dict):
-                body = parsed
+                body = dict(parsed)
         except Exception:
             body = {}
-    # urlencoded or raw key=value
-    if not body and raw:
-        try:
-            q = parse_qs(raw.decode("utf-8", errors="ignore"))
-            body = {k: v[-1] for k, v in q.items()} if q else {}
-        except Exception:
-            body = {}
-    # multipart/form-data
-    if not body:
+
+    if not body and "multipart/form-data" in ctype:
         try:
             form = await request.form()
-            body = {k: form.get(k) for k in form.keys()} if form else {}
+            data: dict[str, Any] = {}
+            for key, value in form.multi_items():
+                if isinstance(value, UploadFile):
+                    data.setdefault(key, value.filename)
+                else:
+                    data.setdefault(key, value)
+            for key, value in query.items():
+                data.setdefault(key, value)
+            body = {k: _coerce_scalar(v) for k, v in data.items()}
         except Exception:
             body = {}
-    # query params
-    if not body:
-        qp = request.query_params
-        body = {k: qp.get(k) for k in qp.keys()}
-    # friendly default: auto-enable deidentify for batches
+
+    if not body and "application/x-www-form-urlencoded" in ctype:
+        try:
+            form = await request.form()
+            body = {key: form.get(key) for key in form.keys()} if form else {}
+        except Exception:
+            body = {}
+
+    if not body and raw:
+        try:
+            parsed = parse_qs(raw.decode("utf-8", errors="replace"), keep_blank_values=True)
+            body = {k: _coerce_scalar(v) for k, v in parsed.items()}
+        except Exception:
+            body = {}
+
+    for key, value in query.items():
+        body.setdefault(key, value)
+
+    if "count" in body:
+        try:
+            body["count"] = int(body["count"])
+        except Exception:
+            pass
+
+    if not body.get("trigger"):
+        rel = str(body.get("template_relpath") or "").strip()
+        if rel:
+            stem = Path(rel).stem
+            if stem:
+                body["trigger"] = stem
+
     try:
-        cnt = int(body.get("count", 1)) if str(body.get("count", "").strip()) else 1
+        cnt_value = body.get("count", 1)
+        if isinstance(cnt_value, str):
+            cnt = int(cnt_value) if cnt_value.strip() else 1
+        else:
+            cnt = int(cnt_value)
     except Exception:
         cnt = 1
-    if cnt > 1 and ("deidentify" not in body or str(body.get("deidentify", "").strip()) == ""):
+    deid_value = body.get("deidentify")
+    missing_deidentify = "deidentify" not in body
+    if not missing_deidentify:
+        if deid_value is None:
+            missing_deidentify = True
+        elif isinstance(deid_value, str):
+            missing_deidentify = deid_value.strip() == ""
+    if cnt > 1 and missing_deidentify:
         body["deidentify"] = True
+
     _debug_log("parse_any_request.done", parsed_body=body)
     return body
 
@@ -256,6 +313,14 @@ def generate_messages(body: dict):
     )
     out = "\n".join(msgs) + ("\n" if msgs else "")
     _debug_log("generate_messages.response_ready", bytes=len(out))
+    template_name = Path(rel).name if rel else "inline"
+    log_activity(
+        "generate",
+        version=version,
+        trigger=trig or "",
+        count=count,
+        template=template_name,
+    )
     return PlainTextResponse(out, media_type="text/plain", headers={"Cache-Control": "no-store"})
 
 @router.post("/api/interop/generate", response_class=PlainTextResponse)
@@ -326,7 +391,9 @@ async def api_deidentify(request: Request):
         seed_int = int(seed) if seed not in (None, "") else None
     except Exception:
         seed_int = None
-    out = deidentify_message(text, seed=seed_int)
+    text_value = text if isinstance(text, str) else str(text)
+    out = deidentify_message(text_value, seed=seed_int)
+    log_activity("deidentify", length=len(text_value), mode=body.get("mode") or "")
     return JSONResponse({"text": out})
 
 
@@ -337,6 +404,12 @@ async def api_validate(request: Request):
     text = body.get("text", "")
     profile = body.get("profile")
     results = validate_message(text, profile=profile)
+    log_activity(
+        "validate",
+        version=body.get("version") or "",
+        workbook=bool(body.get("workbook")),
+        profile=profile or "",
+    )
     return JSONResponse(results)
 
 
@@ -360,4 +433,11 @@ async def api_mllp_send(request: Request):
     if not messages_list:
         raise HTTPException(status_code=400, detail="No messages parsed from input")
     acks = send_mllp_batch(host, port, messages_list, timeout=timeout)
+    log_activity(
+        "mllp_send",
+        host=host,
+        port=port,
+        messages=len(messages_list),
+        timeout=timeout,
+    )
     return JSONResponse({"sent": len(messages_list), "acks": acks})
