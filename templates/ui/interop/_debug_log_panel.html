@@ -3,21 +3,21 @@
   <h3>Generator Debug Log</h3>
   <p class="muted small">Live tail of the HL7 generator debug output. Useful for tracing request payloads and template resolution.</p>
   <form class="row gap small" id="debug-log-settings"
-        hx-get="{{ root }}/ui/interop/logs/content"
+        hx-get="/api/diag/logs"
         hx-target="#interop-debug-log"
-        hx-trigger="submit">
+        hx-trigger="submit"
+        hx-vals='{"format":"text"}'>
     <label class="label small" for="debug-log-limit">Tail</label>
     <input class="input input-xs" type="number" id="debug-log-limit" name="limit" value="200" min="20" max="2000" step="20" />
     <button class="btn btn-xs" type="submit">Refresh</button>
     <a class="btn btn-xs" href="{{ root }}/api/diag/logs?format=text" target="_blank" rel="noopener">Open full log</a>
   </form>
-  <div id="interop-debug-log"
+  <pre id="interop-debug-log"
        class="codepane small mt"
-       hx-get="{{ root }}/ui/interop/logs/content"
+       hx-get="/api/diag/logs"
        hx-trigger="load, every 5s"
        hx-target="this"
-       hx-swap="innerHTML"
-       hx-include="#debug-log-settings">
-    <div class="muted small">Loading recent debug entries…</div>
-  </div>
+       hx-swap="textContent"
+       hx-include="#debug-log-settings"
+       hx-vals='{"format":"text"}'>Loading recent debug entries…</pre>
 </section>

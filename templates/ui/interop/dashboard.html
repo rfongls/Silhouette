@@ -9,7 +9,15 @@
 {% endif %}
 {% set root = request.scope.get('root_path', '') %}
 <p class="micro"><a href="{{ root }}/ui/home">← Back to Home</a></p>
-<h2>Interoperability Dashboard</h2>
+<div class="row between items-center">
+  <h2>Interoperability Dashboard</h2>
+  <div id="debug-toggle"
+       hx-get="/api/diag/debug/state/snippet"
+       hx-trigger="load, every 30s"
+       hx-swap="outerHTML">
+    <span class="muted small">Loading debug toggle…</span>
+  </div>
+</div>
 <div class="row gap mt">
   <label><input type="checkbox" id="view-reports-toggle" /> Reports view</label>
   <label><input type="checkbox" class="feature-toggle" data-target="deid" checked/> De-ID</label>
@@ -62,7 +70,24 @@
   {% include "ui/interop/_generate_panel.html" %}
   {% include "ui/interop/_deid_panel.html" %}
   {% include "ui/interop/_validate_panel.html" %}
-  {% include "ui/interop/_debug_log_panel.html" %}
+  <section class="card">
+    <h3>Recent Activity</h3>
+    <div id="interop-activity"
+         hx-get="/api/diag/activity?format=html&limit=20"
+         hx-trigger="load, every 15s"
+         hx-swap="outerHTML">
+      <div class="muted small">Loading recent activity…</div>
+    </div>
+  </section>
+  <section class="card">
+    <h3>Alerts &amp; Issues</h3>
+    <div id="interop-debug-log"
+         hx-get="{{ root }}/ui/home/debug-log?target=interop-debug-log"
+         hx-trigger="load, every 20s"
+         hx-swap="outerHTML">
+      <div class="muted small">Loading generator diagnostics…</div>
+    </div>
+  </section>
   {% include "ui/interop/_mllp_panel.html" %}
   <div class="card">
     <h3>HL7 → FHIR Pipeline</h3>
