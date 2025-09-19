@@ -6,7 +6,9 @@ from pathlib import Path
 from threading import Lock
 from typing import Any, Iterable, List, Tuple
 
-LOG_FILE = Path("out/interop/generator_debug.log")
+_BASE_DIR = Path(__file__).resolve().parents[1]
+LOG_DIR = _BASE_DIR / "out" / "interop"
+LOG_FILE = LOG_DIR / "generator_debug.log"
 _MAX_BUFFER = 2000
 
 _buffer: deque[str] = deque(maxlen=_MAX_BUFFER)

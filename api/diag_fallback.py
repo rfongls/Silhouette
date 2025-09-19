@@ -10,8 +10,9 @@ from starlette.responses import HTMLResponse, JSONResponse, Response as Starlett
 
 __all__ = ["ensure_diagnostics"]
 
-_HTTP_LOG_DEFAULT = Path("out/interop/server_http.log")
-_GENERATOR_LOG = Path("out/interop/generator_debug.log")
+_BASE_DIR = Path(__file__).resolve().parents[1]
+_HTTP_LOG_DEFAULT = _BASE_DIR / "out" / "interop" / "server_http.log"
+_GENERATOR_LOG = _BASE_DIR / "out" / "interop" / "generator_debug.log"
 
 
 def _route_exists(app: FastAPI, path: str, methods: Iterable[str]) -> bool:
