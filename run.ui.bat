@@ -8,3 +8,4 @@ set PYTHONPATH=%CD%
 python run_dynamic.py --app server:app --host 127.0.0.1 --port 8000 --reload
 popd
 endlocal
+
