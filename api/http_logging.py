@@ -12,6 +12,9 @@ from starlette.responses import Response as StarletteResponse
 
 __all__ = ["install_http_logging"]
 
+_BASE_DIR = Path(__file__).resolve().parents[1]
+_DEFAULT_HTTP_LOG_PATH = _BASE_DIR / "out" / "interop" / "server_http.log"
+
 _TEXTUAL_CONTENT_PREFIXES = (
     "text/",
     "application/json",
@@ -81,6 +84,16 @@ def _should_skip_logging(path: str, content_type: str | None) -> str | None:
 
 def _ensure_logger(log_path: Path | str | None) -> logging.Logger:
     logger = logging.getLogger("silhouette.http")
+    if not any(
+        isinstance(handler, logging.StreamHandler) and not isinstance(handler, logging.FileHandler)
+        for handler in logger.handlers
+    ):
+        stream_handler = logging.StreamHandler()
+        stream_handler.setLevel(logging.INFO)
+        stream_handler.setFormatter(
+            logging.Formatter("%(asctime)s %(name)s %(levelname)s %(message)s")
+        )
+        logger.addHandler(stream_handler)
     if log_path is not None:
         path = Path(log_path)
         try:
@@ -102,7 +115,7 @@ def _ensure_logger(log_path: Path | str | None) -> logging.Logger:
 def install_http_logging(
     app: FastAPI,
     *,
-    log_path: Path | str | None = Path("out/interop/server_http.log"),
+    log_path: Path | str | None = _DEFAULT_HTTP_LOG_PATH,
 ) -> None:
     """Attach the shared HTTP logging middleware to *app*.
 
@@ -115,6 +128,7 @@ def install_http_logging(
         return
 
     http_logger = _ensure_logger(log_path)
+    http_logger.info("HTTP logging middleware installed; log_path=%s", str(log_path))
 
     async def http_action_logger(request: Request, call_next):
         start = time.time()

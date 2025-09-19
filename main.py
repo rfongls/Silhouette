@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+from pathlib import Path
 
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.exceptions import RequestValidationError
@@ -18,6 +19,11 @@ from api.admin import router as admin_router
 from api.diag import router as diag_router
 from api.http_logging import install_http_logging
 from api.diag_fallback import ensure_diagnostics
+from api.debug_log import log_debug_event
+
+logger = logging.getLogger(__name__)
+_BASE_DIR = Path(__file__).resolve().parent
+_HTTP_LOG_PATH = _BASE_DIR / "out" / "interop" / "server_http.log"
 
 app = FastAPI()
 app.mount("/static", StaticFiles(directory="static"), name="static")
@@ -33,8 +39,8 @@ for r in (
 ):
     app.include_router(r)
 
-install_http_logging(app)
-ensure_diagnostics(app)
+install_http_logging(app, log_path=_HTTP_LOG_PATH)
+ensure_diagnostics(app, http_log_path=_HTTP_LOG_PATH)
 
 
 @app.exception_handler(RequestValidationError)
@@ -67,3 +73,11 @@ async def _http_exc_logger(request: Request, exc: HTTPException):
 @app.get("/", include_in_schema=False)
 def _root():
     return RedirectResponse("/ui/home", status_code=307)
+
+
+@app.on_event("startup")
+async def _prime_debug_log():
+    try:
+        log_debug_event("startup", message="main app boot complete")
+    except Exception as exc:
+        logger.warning("could not prime generator_debug.log: %s", exc)
