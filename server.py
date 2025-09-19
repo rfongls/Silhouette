@@ -16,13 +16,20 @@ from api.ui_security import router as ui_security_router
 from api.diag import router as diag_router
 from api.http_logging import install_http_logging
 from api.diag_fallback import ensure_diagnostics
+from api.debug_log import log_debug_event
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-_HTTP_LOG_PATH = Path("out/interop/server_http.log")
+_BASE_DIR = Path(__file__).resolve().parent
+_HTTP_LOG_PATH = _BASE_DIR / "out" / "interop" / "server_http.log"
 
-app = FastAPI(title="Silhouette Core Interop")
+app = FastAPI(
+    title="Silhouette Core Interop",
+    openapi_url=None,
+    docs_url=None,
+    redoc_url=None,
+)
 for r in (
     ui_router,
     ui_interop_router,
@@ -136,6 +143,11 @@ async def _route_sanity_check():
             "[WARN] POST /ui/interop/generate missing — HTML (no-JS) fallback will 404; HTMX/API path still works.",
             file=sys.stderr,
         )
+
+    try:
+        log_debug_event("startup", message="server boot complete")
+    except Exception as exc:
+        logger.warning("could not prime generator_debug.log: %s", exc)
 
 
 @app.exception_handler(RequestValidationError)
