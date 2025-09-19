@@ -20,6 +20,7 @@ from silhouette_core.interop.hl7_mutate import (
 from silhouette_core.interop.deid import deidentify_message
 from silhouette_core.interop.validate_workbook import validate_message
 from .interop_gen import generate_messages, _find_template_by_trigger
+from api.activity_log import log_activity
 from api.debug_log import log_debug_event
 
 
@@ -35,6 +36,7 @@ async def run_tool(tool: str, request: Request):
     Catch-all tool executor. Accept any body shape (JSON/form/multipart/query)
     and fail cleanly without raising FastAPI's JSON dict validator.
     """
+    log_activity("tool.exec", tool=tool)
     try:
         ctype = (request.headers.get("content-type") or "").lower()
         raw = await request.body()
@@ -1105,6 +1107,12 @@ async def run_pipeline(request: Request):
     deidentify = _to_bool(body.get("deidentify"), False)
     post_fhir = _to_bool(body.get("post_fhir"), False)
     fhir_endpoint = body.get("fhir_endpoint")
+
+    log_activity(
+        "pipeline.run",
+        steps=len(body.get("steps", [])) if isinstance(body.get("steps"), list) else 0,
+        dry_run=bool(body.get("dry_run")),
+    )
 
     if version not in VALID_VERSIONS:
         raise HTTPException(400, f"Unknown version '{version}'")
