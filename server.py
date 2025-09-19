@@ -24,7 +24,12 @@ logger = logging.getLogger(__name__)
 _BASE_DIR = Path(__file__).resolve().parent
 _HTTP_LOG_PATH = _BASE_DIR / "out" / "interop" / "server_http.log"
 
-app = FastAPI(title="Silhouette Core Interop")
+app = FastAPI(
+    title="Silhouette Core Interop",
+    openapi_url=None,
+    docs_url=None,
+    redoc_url=None,
+)
 for r in (
     ui_router,
     ui_interop_router,

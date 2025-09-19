@@ -21,11 +21,16 @@ from api.http_logging import install_http_logging
 from api.diag_fallback import ensure_diagnostics
 from api.debug_log import log_debug_event
 
+
 logger = logging.getLogger(__name__)
 _BASE_DIR = Path(__file__).resolve().parent
 _HTTP_LOG_PATH = _BASE_DIR / "out" / "interop" / "server_http.log"
 
-app = FastAPI()
+app = FastAPI(
+    openapi_url=None,
+    docs_url=None,
+    redoc_url=None,
+)
 app.mount("/static", StaticFiles(directory="static"), name="static")
 for r in (
     ui_router,
