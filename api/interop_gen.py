@@ -281,8 +281,18 @@ async def generate_messages_get(request: Request):
 
 @router.post("/api/interop/generate/plain", response_class=PlainTextResponse)
 async def generate_messages_plain(request: Request):
-    # Stable alias for tests/tools; shares the same robust parser.
-    return await generate_messages_endpoint(request)
+    _debug_log(
+        "generate_messages_plain.invoke",
+        method=request.method,
+        path=request.url.path,
+        query=request.url.query,
+        hx=request.headers.get("hx-request"),
+        accept=request.headers.get("accept"),
+        referer=request.headers.get("referer"),
+    )
+    body = await parse_any_request(request)
+    _debug_log("generate_messages_plain.parsed_body", body=body)
+    return generate_messages(body)
 
 
 async def try_generate_on_validation_error(
