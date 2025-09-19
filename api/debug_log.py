@@ -8,6 +8,7 @@ from typing import Any, Iterable, List, Tuple
 
 _BASE_DIR = Path(__file__).resolve().parents[1]
 LOG_DIR = _BASE_DIR / "out" / "interop"
+LOG_DIR.mkdir(parents=True, exist_ok=True)
 LOG_FILE = LOG_DIR / "generator_debug.log"
 _MAX_BUFFER = 2000
 
