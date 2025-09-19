@@ -8,6 +8,7 @@
       autocomplete="off"
       novalidate
       hx-post="{{ urls.api_generate | default(root ~ '/api/interop/generate', true) }}"
+      hx-encoding="application/x-www-form-urlencoded"
       hx-target="#gen-output"
       hx-swap="textContent"
       hx-headers='{"Accept":"text/plain"}'>
