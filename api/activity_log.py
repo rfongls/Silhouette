@@ -51,8 +51,8 @@ def log_activity(event: str, **fields: Any) -> None:
 
 
 def tail_activity_lines(limit: int = 100) -> List[str]:
-    if limit <= len(_buffer):
-        with _lock:
+    with _lock:
+        if limit <= len(_buffer):
             return list(_buffer)[-limit:]
     try:
         with ACTIVITY_FILE.open("r", encoding="utf-8", errors="replace") as handle:

@@ -158,13 +158,36 @@ async def _extract_payload(request: Request) -> Dict[str, Any]:
     return body
 
 
+def _choose_format(format: str | None, request: Request | None = None) -> str:
+    if format:
+        return (format or "json").lower()
+    if request is not None:
+        accept = (request.headers.get("accept") or "").lower()
+        if "text/html" in accept:
+            return "html"
+    return "json"
+
+
+def _debug_state_response(enabled: bool, fmt: str, *, action: str | None = None):
+    if fmt in {"html", "htm"}:
+        label = "ON" if enabled else "OFF"
+        cls = "chip" + ("" if enabled else " muted")
+        return HTMLResponse(f"<span id='debug-state' class='{cls}'>Debug {label}</span>")
+    payload: Dict[str, Any] = {"enabled": enabled}
+    if action is not None:
+        payload["action"] = action
+    return JSONResponse(payload)
+
+
 @router.get("/api/diag/debug/state")
-async def get_debug_state():
-    return JSONResponse({"enabled": is_debug_enabled()})
+async def get_debug_state(format: str | None = None):
+    enabled = is_debug_enabled()
+    fmt = _choose_format(format)
+    return _debug_state_response(enabled, fmt)
 
 
 @router.post("/api/diag/debug/state/{action}")
-async def mutate_debug_state(action: str):
+async def mutate_debug_state(action: str, request: Request, format: str | None = None):
     action = (action or "").strip().lower()
     if action == "enable":
         set_debug_enabled(True)
@@ -174,7 +197,9 @@ async def mutate_debug_state(action: str):
         toggle_debug_enabled()
     else:
         raise HTTPException(status_code=400, detail="Unknown debug action")
-    return JSONResponse({"enabled": is_debug_enabled(), "action": action})
+    enabled = is_debug_enabled()
+    fmt = _choose_format(format, request)
+    return _debug_state_response(enabled, fmt, action=action)
 
 
 @router.post("/api/diag/debug/event")
