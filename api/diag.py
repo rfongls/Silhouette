@@ -13,6 +13,7 @@ from api.debug_log import (
     tail_debug_lines,
     toggle_debug_enabled,
 )
+from api.activity_log import ACTIVITY_FILE, tail_activity_lines
 
 router = APIRouter()
 _BASE_DIR = Path(__file__).resolve().parents[1]
@@ -93,6 +94,33 @@ async def get_debug_logs(limit: int = 200, format: str = "json"):
         "http_path": str(_HTTP_LOG),
         "count": len(lines),
         "enabled": is_debug_enabled(),
+    }
+    fmt = (format or "json").lower()
+    if fmt in {"html", "htm"}:
+        escaped = "\n".join(_html.escape(line) for line in lines)
+        return HTMLResponse(f"<pre class='scrollbox small'>{escaped}</pre>")
+    if fmt in {"text", "plain", "txt"}:
+        text = "\n".join(lines)
+        if text:
+            text += "\n"
+        return PlainTextResponse(text or "", media_type="text/plain")
+    return JSONResponse(payload)
+
+
+@router.get("/api/diag/activity")
+async def get_activity(limit: int = 50, format: str = "json"):
+    try:
+        limit_value = int(limit or 50)
+    except (TypeError, ValueError):
+        limit_value = 50
+    limit_value = max(1, min(1000, limit_value))
+    lines = tail_activity_lines(limit_value)
+    payload = {
+        "lines": lines,
+        "limit": limit_value,
+        "path": str(ACTIVITY_FILE),
+        "count": len(lines),
+        "enabled": True,
     }
     fmt = (format or "json").lower()
     if fmt in {"html", "htm"}:

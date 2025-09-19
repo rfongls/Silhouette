@@ -10,6 +10,8 @@ from typing import Any
 from fastapi import FastAPI, Request
 from starlette.responses import Response as StarletteResponse
 
+from api.debug_log import is_debug_enabled
+
 __all__ = ["install_http_logging"]
 
 _BASE_DIR = Path(__file__).resolve().parents[1]
@@ -131,6 +133,8 @@ def install_http_logging(
     http_logger.info("HTTP logging middleware installed; log_path=%s", str(log_path))
 
     async def http_action_logger(request: Request, call_next):
+        if not is_debug_enabled():
+            return await call_next(request)
         start = time.time()
         raw_body = await request.body()
 

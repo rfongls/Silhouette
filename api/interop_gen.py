@@ -21,6 +21,7 @@ from silhouette_core.interop.hl7_mutate import (
 from silhouette_core.interop.deid import deidentify_message
 from silhouette_core.interop.mllp import send_mllp_batch
 from silhouette_core.interop.validate_workbook import validate_message
+from api.activity_log import log_activity
 from api.debug_log import log_debug_message
 
 router = APIRouter()
@@ -312,6 +313,14 @@ def generate_messages(body: dict):
     )
     out = "\n".join(msgs) + ("\n" if msgs else "")
     _debug_log("generate_messages.response_ready", bytes=len(out))
+    template_name = Path(rel).name if rel else "inline"
+    log_activity(
+        "generate",
+        version=version,
+        trigger=trig or "",
+        count=count,
+        template=template_name,
+    )
     return PlainTextResponse(out, media_type="text/plain", headers={"Cache-Control": "no-store"})
 
 @router.post("/api/interop/generate", response_class=PlainTextResponse)
@@ -382,7 +391,9 @@ async def api_deidentify(request: Request):
         seed_int = int(seed) if seed not in (None, "") else None
     except Exception:
         seed_int = None
-    out = deidentify_message(text, seed=seed_int)
+    text_value = text if isinstance(text, str) else str(text)
+    out = deidentify_message(text_value, seed=seed_int)
+    log_activity("deidentify", length=len(text_value), mode=body.get("mode") or "")
     return JSONResponse({"text": out})
 
 
@@ -393,6 +404,12 @@ async def api_validate(request: Request):
     text = body.get("text", "")
     profile = body.get("profile")
     results = validate_message(text, profile=profile)
+    log_activity(
+        "validate",
+        version=body.get("version") or "",
+        workbook=bool(body.get("workbook")),
+        profile=profile or "",
+    )
     return JSONResponse(results)
 
 
@@ -416,4 +433,11 @@ async def api_mllp_send(request: Request):
     if not messages_list:
         raise HTTPException(status_code=400, detail="No messages parsed from input")
     acks = send_mllp_batch(host, port, messages_list, timeout=timeout)
+    log_activity(
+        "mllp_send",
+        host=host,
+        port=port,
+        messages=len(messages_list),
+        timeout=timeout,
+    )
     return JSONResponse({"sent": len(messages_list), "acks": acks})
