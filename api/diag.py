@@ -134,6 +134,27 @@ async def get_activity(limit: int = 50, format: str = "json"):
     return JSONResponse(payload)
 
 
+def _render_toggle_snippet_html(enabled: bool) -> str:
+    if enabled:
+        label = "Debug: ON"
+        action = "disable"
+        cta = "Turn off"
+        chip_cls = "chip"
+    else:
+        label = "Debug: OFF"
+        action = "enable"
+        cta = "Turn on"
+        chip_cls = "chip muted"
+    return (
+        "<div id='debug-toggle' class='row gap items-center'>"
+        f"<span class='{chip_cls}'>{_html.escape(label)}</span>"
+        f"<button class='btn btn-xs' type='button' "
+        f"hx-post='/api/diag/debug/state/{action}' "
+        "hx-target='#debug-toggle' hx-swap='outerHTML'>"
+        f"{_html.escape(cta)}</button></div>"
+    )
+
+
 def _coerce_payload(data: Any) -> Dict[str, Any]:
     if isinstance(data, dict):
         return {k: v for k, v in data.items()}
@@ -168,7 +189,9 @@ def _choose_format(format: str | None, request: Request | None = None) -> str:
     return "json"
 
 
-def _debug_state_response(enabled: bool, fmt: str, *, action: str | None = None):
+def _debug_state_response(
+    enabled: bool, fmt: str, *, action: str | None = None
+):
     if fmt in {"html", "htm"}:
         label = "ON" if enabled else "OFF"
         cls = "chip" + ("" if enabled else " muted")
@@ -186,6 +209,15 @@ async def get_debug_state(format: str | None = None):
     return _debug_state_response(enabled, fmt)
 
 
+@router.get("/api/diag/debug/state/snippet")
+async def debug_toggle_snippet(request: Request, format: str | None = None):
+    enabled = is_debug_enabled()
+    fmt = _choose_format(format, request)
+    if fmt in {"html", "htm"}:
+        return HTMLResponse(_render_toggle_snippet_html(enabled))
+    return _debug_state_response(enabled, fmt)
+
+
 @router.post("/api/diag/debug/state/{action}")
 async def mutate_debug_state(action: str, request: Request, format: str | None = None):
     action = (action or "").strip().lower()
@@ -199,6 +231,8 @@ async def mutate_debug_state(action: str, request: Request, format: str | None =
         raise HTTPException(status_code=400, detail="Unknown debug action")
     enabled = is_debug_enabled()
     fmt = _choose_format(format, request)
+    if fmt in {"html", "htm"}:
+        return HTMLResponse(_render_toggle_snippet_html(enabled))
     return _debug_state_response(enabled, fmt, action=action)
 
 

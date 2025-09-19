@@ -9,7 +9,15 @@
 {% endif %}
 {% set root = request.scope.get('root_path', '') %}
 <p class="micro"><a href="{{ root }}/ui/home">← Back to Home</a></p>
-<h2>Interoperability Dashboard</h2>
+<div class="row between items-center">
+  <h2>Interoperability Dashboard</h2>
+  <div id="debug-toggle"
+       hx-get="/api/diag/debug/state/snippet"
+       hx-trigger="load, every 30s"
+       hx-swap="outerHTML">
+    <span class="muted small">Loading debug toggle…</span>
+  </div>
+</div>
 <div class="row gap mt">
   <label><input type="checkbox" id="view-reports-toggle" /> Reports view</label>
   <label><input type="checkbox" class="feature-toggle" data-target="deid" checked/> De-ID</label>
@@ -84,7 +92,7 @@
   <section class="card">
     <h3>Recent Activity</h3>
     <div id="interop-activity"
-         hx-get="{{ root }}/api/diag/activity?format=html&limit=20"
+         hx-get="/api/diag/activity?format=html&limit=20"
          hx-trigger="load, every 15s"
          hx-swap="outerHTML">
       <div class="muted small">Loading recent activity…</div>
