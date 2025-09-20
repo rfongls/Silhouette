@@ -4,22 +4,37 @@
     <div class="toolbar"></div>
   </div>
   <div class="card-body">
-{% set root = request.scope.get('root_path', '') %}
+  {% set root = request.scope.get('root_path', '') %}
+  <textarea class="input block mono" id="deid-text" name="text" rows="10" form="deid-form" placeholder="Paste HL7 to de-identify"></textarea>
   <form id="deid-form"
         method="post"
         action="{{ urls.ui_deidentify | default(root ~ '/ui/interop/deidentify', true) }}"
         autocomplete="off"
         novalidate
+        class="row gap mt"
         hx-post="{{ urls.api_deidentify | default(root ~ '/api/interop/deidentify', true) }}"
+        hx-encoding="application/x-www-form-urlencoded"
+        hx-include="#deid-text,#deid-seed"
+        hx-headers='{"Accept":"text/plain"}'
         hx-target="#deid-output"
-        hx-swap="innerHTML">
-    <textarea class="input" id="deid-text" name="text" rows="10" placeholder="Paste HL7 to de-identify"></textarea>
-    <div class="row gap mt">
-      <input class="input" type="number" name="seed" placeholder="seed (optional)"/>
-      <button class="btn">De‑identify</button>
-    </div>
+        hx-swap="textContent">
+    <input class="input" id="deid-seed" name="seed" type="text" placeholder="seed (optional)"/>
+    <button class="btn" type="submit">De‑identify</button>
   </form>
-  <div id="deid-output" class="mt"></div>
+  <div id="deid-report"
+       class="mt"
+       hx-post="{{ urls.api_deidentify_summary | default(root ~ '/api/interop/deidentify/summary', true) }}"
+       hx-include="#deid-text,#deid-seed"
+       hx-trigger="htmx:afterRequest from:#deid-form"
+       hx-target="#deid-report"
+       hx-headers='{"Accept":"text/html"}'
+       hx-swap="outerHTML">
+    <details class="mini-report">
+      <summary>De-identification report</summary>
+      <div class="muted small">Run de-identify to see what fields changed.</div>
+    </details>
+  </div>
+  <pre id="deid-output" class="mt codepane limit10 scrollbox"></pre>
   <div class="action-cards">
     <div class="action-card">
       <h4>Run Next Pipeline → Validate</h4>
