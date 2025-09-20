@@ -48,11 +48,19 @@
 .card .card-body {
   margin-top: .5rem;
 }
+.card.collapsed {
+  overflow: hidden;
+}
 .card.collapsed .card-body {
   display: none;
 }
 .card.collapsed .card-header {
   opacity: .95;
+}
+.card.highlight {
+  box-shadow: var(--shadow, 0 2px 10px rgba(0,0,0,.08)),
+              0 0 0 2px var(--accent-bg, #eef6ff) inset,
+              0 0 0 1px var(--accent, #2276e3);
 }
 
 /* Full-width Generate card on load */
@@ -78,12 +86,18 @@
 .scrollbox.tall {
   max-height: 16rem;
 }
-.codepane {
+.codepane,
+pre#gen-output {
+  background: var(--bg-weak, #f8f9fb);
+  border: 1px solid var(--border, #d7d7d7);
+  border-radius: .5rem;
+  padding: .75rem;
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
   font-size: .9rem;
   line-height: 1.35;
-  white-space: pre-wrap;
-  min-height: 8rem;
+  max-height: 18rem;
+  overflow: auto;
+  white-space: pre;
 }
 
 /* Accent action cards inside each stage */
@@ -105,6 +119,42 @@
 }
 .action-card .btn {
   margin-top: .5rem;
+}
+
+/* Compact action chips inside Generate card */
+.toolbar-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: .5rem;
+  margin-top: .75rem;
+}
+.toolbar-cards .action-card {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: .75rem .75rem;
+  border-radius: .5rem;
+  border: 1px solid var(--border, #d7d7d7);
+  background: var(--card, #ffffff);
+  color: var(--text, #1a1a1a);
+  cursor: pointer;
+  text-align: center;
+  user-select: none;
+  font-weight: 500;
+}
+.toolbar-cards .action-card:hover {
+  background: var(--bg-weak, #f8f9fb);
+}
+.toolbar-cards .action-card.primary {
+  background: var(--accent-bg, #eef6ff);
+  color: var(--accent-ink, #0b4db8);
+  border-color: var(--accent, #2276e3);
+  font-weight: 600;
+}
+.toolbar-cards .action-card.outline {
+  color: var(--accent-ink, #0b4db8);
+  border-color: var(--accent, #2276e3);
+  background: var(--card, #ffffff);
 }
 
 /* Optional toolbar for per-card actions */

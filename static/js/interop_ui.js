@@ -218,6 +218,37 @@
     // Reserved for future parity between select + datalist inputs.
   }
 
+  const FEATURE_IDS = {
+    gen: 'card-gen',
+    deid: 'card-deid',
+    val: 'card-validate',
+    validate: 'card-validate',
+    mllp: 'card-mllp'
+  };
+
+  function normalizedFeatureKey(feature) {
+    if (feature === 'validate') return 'val';
+    return feature;
+  }
+
+  function cardEl(feature) {
+    const id = FEATURE_IDS[feature] || `card-${feature}`;
+    return byId(id);
+  }
+
+  function expandCard(feature, highlight) {
+    const card = cardEl(feature);
+    if (!card) return;
+    card.classList.remove('collapsed');
+    if (highlight) {
+      card.classList.add('highlight');
+      setTimeout(() => card.classList.remove('highlight'), 900);
+    }
+    try {
+      card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } catch (_) {}
+  }
+
   function setActivePill(feature) {
     const pills = document.querySelectorAll('#interop-feature-bar .feature-pill');
     pills.forEach(p => {
@@ -226,15 +257,17 @@
     });
   }
   function collapseAll() {
-    ['gen', 'deid', 'val', 'mllp'].forEach(k => {
-      const card = byId(k + '-card');
+    const seen = new Set();
+    Object.values(FEATURE_IDS).forEach(id => {
+      if (!id || seen.has(id)) return;
+      seen.add(id);
+      const card = byId(id);
       if (card) card.classList.add('collapsed');
     });
   }
-  function expand(feature) {
-    const card = byId(feature + '-card');
-    if (card) card.classList.remove('collapsed');
-    setActivePill(feature);
+  function expand(feature, highlight) {
+    expandCard(feature, highlight);
+    setActivePill(normalizedFeatureKey(feature));
   }
   function showFeature(feature) {
     collapseAll();
@@ -309,45 +342,79 @@
     return r.json();
   }
 
-  async function runDeidFromGenerate() {
-    const hl7 = getGenText();
-    if (!hl7) {
-      alert('Please generate a message first.');
-      return;
+  function copyFromGenerate(target) {
+    const normalized = normalizedFeatureKey(target);
+    const text = getGenText();
+    const selectors = {
+      deid: '#deid-text',
+      val: '#val-text',
+      validate: '#val-text',
+      mllp: '#mllp-messages'
+    };
+    const selector = selectors[normalized] || selectors[target];
+    if (selector) {
+      const ta = document.querySelector(selector);
+      if (ta && text) {
+        ta.value = text;
+        ta.dispatchEvent(new Event('input', { bubbles: true }));
+      }
     }
-    try {
-      const data = await postJSON('/api/interop/deidentify', { text: hl7 });
-      const outText = data && data.text ? data.text : '';
-      setDeidText(outText);
-      collapseAll();
-      expand('deid');
-      sendDebugEvent('interop.flow.deid_from_generate', { ok: true, bytes: outText.length });
-    } catch (err) {
-      alert('De‑Identify failed: ' + err.message);
-      sendDebugEvent('interop.flow.deid_from_generate', { ok: false, error: String(err) });
-    }
+    sendDebugEvent('interop.generate.copy', { target: normalized, hasText: !!text });
+    return text;
   }
 
-  async function runValidateFromGenerate() {
-    const hl7 = getGenText();
-    if (!hl7) {
+  function openManual(target) {
+    const normalized = normalizedFeatureKey(target);
+    const text = copyFromGenerate(target);
+    collapseAll();
+    expand(normalized, true);
+    sendDebugEvent('interop.generate.manual_open', { target: normalized, hasText: !!text });
+  }
+
+  function runNextDeid() {
+    const text = getGenText();
+    if (!text) {
       alert('Please generate a message first.');
+      expand('gen');
       return;
     }
-    try {
-      const data = await postJSON('/api/interop/validate', { text: hl7 });
-      setValText(hl7);
-      const out = byId('val-output');
-      if (out) {
-        out.textContent = JSON.stringify(data, null, 2);
-      }
-      collapseAll();
-      expand('val');
-      sendDebugEvent('interop.flow.validate_from_generate', { ok: true });
-    } catch (err) {
-      alert('Validate failed: ' + err.message);
-      sendDebugEvent('interop.flow.validate_from_generate', { ok: false, error: String(err) });
+    copyFromGenerate('deid');
+    collapseAll();
+    expand('deid', true);
+    const form = byId('deid-form') || document.querySelector('form#deid-form');
+    const triggered = !!form;
+    if (form) {
+      if (typeof form.requestSubmit === 'function') form.requestSubmit();
+      else form.submit();
     }
+    sendDebugEvent('interop.flow.deid_from_generate', { queued: triggered, mode: 'form', bytes: text.length });
+  }
+
+  function runValidationFromGen() {
+    const text = getGenText();
+    if (!text) {
+      alert('Please generate a message first.');
+      expand('gen');
+      return;
+    }
+    copyFromGenerate('validate');
+    collapseAll();
+    expand('val', true);
+    const form = byId('val-form') || document.querySelector('form#val-form');
+    const triggered = !!form;
+    if (form) {
+      if (typeof form.requestSubmit === 'function') form.requestSubmit();
+      else form.submit();
+    }
+    sendDebugEvent('interop.flow.validate_from_generate', { queued: triggered, mode: 'form', bytes: text.length });
+  }
+
+  function runDeidFromGenerate() {
+    runNextDeid();
+  }
+
+  function runValidateFromGenerate() {
+    runValidationFromGen();
   }
 
   async function runValidateFromDeid() {
@@ -404,6 +471,21 @@
     }
   }
 
+  function runFullFhirFromGen() {
+    const text = getGenText();
+    if (!text) {
+      alert('Please generate a message first.');
+      expand('gen');
+      return;
+    }
+    try {
+      sessionStorage.setItem('sil.lastGen', text);
+      sessionStorage.setItem('interop.pipeline.input', text);
+    } catch (_) {}
+    sendDebugEvent('interop.flow.full_pipeline_from_generate', { bytes: text.length });
+    window.location.href = rootPath('/ui/interop/pipeline');
+  }
+
   async function runFullHl7PipelineFromMllp() {
     const hl7 = getMllpText();
     if (!hl7) {
@@ -454,18 +536,27 @@
       }
     });
 
-    const saved = (() => {
-      try { return sessionStorage.getItem('interop.pipeline.input') || ''; }
-      catch { return ''; }
-    })();
+    let saved = '';
+    let source = 'interop.pipeline.input';
+    try {
+      saved = sessionStorage.getItem('sil.lastGen') || '';
+      if (saved) {
+        source = 'sil.lastGen';
+      } else {
+        saved = sessionStorage.getItem('interop.pipeline.input') || '';
+      }
+    } catch { saved = ''; }
     if (saved) {
-      const inp = document.querySelector('#pipe-form textarea[name="text"], #pipeline-form textarea[name="text"], textarea#pipe-text');
-      if (inp) {
+      const inp = document.querySelector('#pipe-form textarea[name="text"], #pipeline-form textarea[name="text"], textarea#pipe-text, form[action$="/api/interop/pipeline/run"] textarea[name="text"]');
+      if (inp && !inp.value) {
         inp.value = saved;
         inp.dispatchEvent(new Event('input', { bubbles: true }));
       }
-      try { sessionStorage.removeItem('interop.pipeline.input'); } catch {}
-      sendDebugEvent('interop.pipeline.prefill_from_session', { bytes: saved.length });
+      try {
+        sessionStorage.removeItem('sil.lastGen');
+        sessionStorage.removeItem('interop.pipeline.input');
+      } catch {}
+      sendDebugEvent('interop.pipeline.prefill_from_session', { bytes: saved.length, source });
     }
   });
 
@@ -479,13 +570,18 @@
     getPrimaryVersion,
     sendDebugEvent,
     showFeature,
+    openManual,
+    runNextDeid,
+    runValidationFromGen,
     runDeidFromGenerate,
     runValidateFromGenerate,
     runValidateFromDeid,
     runMllpFrom,
+    runFullFhirFromGen,
     runFullHl7PipelineFromMllp,
     openPipelineWithText,
     getGenText,
+    copyFromGenerate,
     loadFileIntoTextarea,
   });
 })();
