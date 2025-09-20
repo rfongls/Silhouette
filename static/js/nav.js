@@ -1,156 +1,160 @@
-// Global navigation + theme handling (non-module, robust init)
-(function () {
-  const THEME_KEY = "silhouette.theme";
+// Settings pop-up + Theme switcher + "single hamburger" guard
+(() => {
+  'use strict';
+  const DOC = document;
 
-  function applyTheme(name) {
-    const theme = name === "dark" ? "dark" : "default";
-    const root = document.documentElement;
-    if (root) {
-      root.setAttribute("data-theme", theme);
-      root.dataset.theme = theme;
-    }
-    if (document.body) {
-      document.body.setAttribute("data-theme", theme);
-    }
+  const THEME_KEY = 'app.theme';
+  const VALID_THEMES = new Set(['default', 'dark']);
+
+  const qs = (selector, root = DOC) => root.querySelector(selector);
+  const qsa = (selector, root = DOC) => Array.from(root.querySelectorAll(selector));
+  let primaryTrigger = null;
+
+  function currentTheme() {
+    const stored = (() => {
+      try {
+        return localStorage.getItem(THEME_KEY);
+      } catch (err) {
+        return null;
+      }
+    })();
+    return stored && VALID_THEMES.has(stored) ? stored : 'default';
   }
 
-  // Apply saved theme ASAP
-  let initialTheme = "default";
-  try {
-    initialTheme = localStorage.getItem(THEME_KEY) || "default";
-  } catch (_) {
-    initialTheme = "default";
-  }
-  applyTheme(initialTheme);
-
-  function reflectThemeControls(theme) {
-    const dark = document.getElementById("theme-dark");
-    const def = document.getElementById("theme-default");
-    if (dark) dark.checked = theme === "dark";
-    if (def) def.checked = theme !== "dark";
-  }
-
-  function setTheme(name) {
-    const theme = name === "dark" ? "dark" : "default";
-    applyTheme(theme);
-    reflectThemeControls(theme);
+  function applyTheme(theme) {
+    const next = VALID_THEMES.has(theme) ? theme : 'default';
+    DOC.documentElement.setAttribute('data-theme', next);
     try {
-      localStorage.setItem(THEME_KEY, theme);
-    } catch (_) {
-      /* ignore */
+      localStorage.setItem(THEME_KEY, next);
+    } catch (err) {
+      // ignore persistence issues (private mode, etc.)
     }
+    qsa('[data-theme-choice]').forEach((btn) => {
+      const checked = btn.dataset.themeChoice === next;
+      btn.setAttribute('aria-checked', String(checked));
+    });
   }
 
-  function closeMenu(btn, panel, backdrop) {
-    if (panel) {
-      panel.classList.remove("open");
-      panel.hidden = true;
+  function ensureSingleHamburger() {
+    const triggers = qsa('#app-hamburger, #hamburger-btn, .hamburger-btn, [data-role="hamburger"]');
+    if (triggers.length > 1) {
+      triggers.slice(1).forEach((el) => {
+        el.style.display = 'none';
+        el.setAttribute('data-hidden-duplicate', 'true');
+      });
     }
-    if (btn) {
-      btn.setAttribute("aria-expanded", "false");
+    return triggers[0] || null;
+  }
+
+  function buildMenu() {
+    let menu = qs('#app-menu');
+    if (!menu) {
+      menu = DOC.createElement('div');
+      menu.id = 'app-menu';
+      menu.className = 'app-menu';
+      menu.setAttribute('role', 'menu');
+      menu.setAttribute('hidden', '');
+      menu.setAttribute('aria-hidden', 'true');
+      menu.innerHTML = `
+        <div class="menu-heading">Settings</div>
+        <div class="menu-divider"></div>
+        <div class="menu-heading">Theme</div>
+        <div class="menu-row">
+          <button type="button" class="menu-item" role="menuitemradio"
+                  data-theme-choice="default" aria-checked="false">Default</button>
+          <button type="button" class="menu-item" role="menuitemradio"
+                  data-theme-choice="dark" aria-checked="false">Dark</button>
+        </div>
+      `;
+      DOC.body.appendChild(menu);
+    }
+
+    let backdrop = qs('#menu-backdrop');
+    if (!backdrop) {
+      backdrop = DOC.createElement('div');
+      backdrop.id = 'menu-backdrop';
+      backdrop.setAttribute('hidden', '');
+      DOC.body.appendChild(backdrop);
+    }
+
+    menu.addEventListener('click', (event) => {
+      const btn = event.target.closest('[data-theme-choice]');
+      if (!btn) {
+        return;
+      }
+      applyTheme(btn.dataset.themeChoice);
+      hideMenu();
+    });
+
+    backdrop.addEventListener('click', hideMenu);
+    DOC.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') {
+        hideMenu();
+      }
+    });
+
+    return menu;
+  }
+
+  function showMenu() {
+    const menu = qs('#app-menu');
+    const backdrop = qs('#menu-backdrop');
+    if (menu) {
+      menu.removeAttribute('hidden');
+      menu.classList.add('open');
+      menu.setAttribute('aria-hidden', 'false');
+      const firstItem = menu.querySelector('[data-theme-choice]');
+      if (firstItem && typeof firstItem.focus === 'function') {
+        firstItem.focus();
+      }
     }
     if (backdrop) {
-      backdrop.hidden = true;
+      backdrop.removeAttribute('hidden');
     }
-    if (document.body) {
-      document.body.classList.remove("menu-open");
+    if (primaryTrigger) {
+      primaryTrigger.setAttribute('aria-expanded', 'true');
     }
   }
 
-  function openMenu(btn, panel, backdrop) {
-    if (panel) {
-      panel.hidden = false;
-      requestAnimationFrame(() => panel.classList.add("open"));
-    }
-    if (btn) {
-      btn.setAttribute("aria-expanded", "true");
+  function hideMenu() {
+    const menu = qs('#app-menu');
+    const backdrop = qs('#menu-backdrop');
+    const wasOpen = menu && !menu.hasAttribute('hidden');
+    if (menu) {
+      menu.classList.remove('open');
+      menu.setAttribute('hidden', '');
+      menu.setAttribute('aria-hidden', 'true');
     }
     if (backdrop) {
-      backdrop.hidden = false;
+      backdrop.setAttribute('hidden', '');
     }
-    if (document.body) {
-      document.body.classList.add("menu-open");
+    if (primaryTrigger && wasOpen) {
+      primaryTrigger.setAttribute('aria-expanded', 'false');
+      if (typeof primaryTrigger.focus === 'function') {
+        primaryTrigger.focus();
+      }
     }
   }
 
-  function bindOnce(target, event, handler, flagKey) {
-    if (!target) return;
-    const key = flagKey || `__navBound_${event}`;
-    if (target[key]) return;
-    target.addEventListener(event, handler);
-    target[key] = true;
+  function toggleMenu() {
+    const menu = qs('#app-menu');
+    if (!menu || menu.hasAttribute('hidden')) {
+      showMenu();
+    } else {
+      hideMenu();
+    }
   }
 
-  function init() {
-    const btn = document.getElementById("menu-button");
-    const panel = document.getElementById("menu-panel");
-    const backdrop = document.getElementById("menu-backdrop");
-
-    let saved = "default";
-    try {
-      saved = localStorage.getItem(THEME_KEY) || "default";
-    } catch (_) {
-      saved = "default";
-    }
-    reflectThemeControls(saved);
-
-    if (btn && panel) {
-      bindOnce(
-        btn,
-        "click",
-        (event) => {
-          event.preventDefault();
-          const isOpen = btn.getAttribute("aria-expanded") === "true";
-          if (isOpen) {
-            closeMenu(btn, panel, backdrop);
-          } else {
-            openMenu(btn, panel, backdrop);
-          }
-        },
-        "__navClickBound"
-      );
-    }
-
-    bindOnce(
-      backdrop,
-      "click",
-      () => closeMenu(btn, panel, backdrop),
-      "__navClickBound"
-    );
-
-    if (!document.__navEscBound) {
-      document.addEventListener("keydown", (event) => {
-        if (event.key === "Escape") {
-          closeMenu(btn, panel, backdrop);
-        }
+  DOC.addEventListener('DOMContentLoaded', () => {
+    primaryTrigger = ensureSingleHamburger();
+    buildMenu();
+    applyTheme(currentTheme());
+    if (primaryTrigger) {
+      primaryTrigger.setAttribute('aria-expanded', 'false');
+      primaryTrigger.addEventListener('click', (event) => {
+        event.preventDefault();
+        toggleMenu();
       });
-      document.__navEscBound = true;
     }
-
-    if (panel && !panel.__navClickBound) {
-      panel.addEventListener("click", (event) => {
-        const link = event.target.closest("a.menu-link");
-        if (link) {
-          closeMenu(btn, panel, backdrop);
-          return;
-        }
-        const themeRadio = event.target.closest('input[name="theme"]');
-        if (themeRadio) {
-          setTheme(themeRadio.value);
-        }
-      });
-      panel.addEventListener("change", (event) => {
-        const themeRadio = event.target.closest('input[name="theme"]');
-        if (themeRadio) {
-          setTheme(themeRadio.value);
-        }
-      });
-      panel.__navClickBound = true;
-    }
-
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", init, { once: true });
-  } else {
-    init();
-  }
+  });
 })();

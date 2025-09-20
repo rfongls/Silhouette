@@ -8,41 +8,54 @@
   {% set urls = {} %}
 {% endif %}
 {% set root = request.scope.get('root_path', '') %}
-<p class="micro"><a href="{{ root }}/ui/home">← Back to Home</a></p>
-<div class="row mb" style="justify-content: space-between; align-items: center;">
-  <h2>Interoperability</h2>
-  <div id="debug-state-badge"
-       hx-get="{{ root }}/api/diag/debug/state?format=html"
-       hx-trigger="load"
-       hx-target="#debug-state-badge"
-       hx-swap="outerHTML">
-    <span class="micro muted">Loading debug switch…</span>
-  </div>
-</div>
-<div class="feature-bar" id="interop-feature-bar">
-  <button class="feature-pill active" data-feature="gen">Generate Message</button>
-  <button class="feature-pill" data-feature="deid">De‑Identify Message</button>
-  <button class="feature-pill" data-feature="val">Validate Message</button>
-  <button class="feature-pill" data-feature="mllp">Transport (MLLP)</button>
-  <button class="feature-pill" data-feature="pipe">HL7 → FHIR Pipeline</button>
+
+<h2>Interoperability</h2>
+<div id="debug-state-badge"
+     class="micro muted"
+     hx-get="{{ root }}/api/diag/debug/state?format=html"
+     hx-trigger="load"
+     hx-target="#debug-state-badge"
+     hx-swap="outerHTML">Loading debug switch…</div>
+
+<div class="feature-tabs mt" id="interop-feature-bar">
+  <button class="tab feature-pill active" data-open-card="card-gen" data-feature="gen">Generate Message</button>
+  <button class="tab feature-pill" data-open-card="card-deid" data-feature="deid">De‑Identify Message</button>
+  <button class="tab feature-pill" data-open-card="card-validate" data-feature="val">Validate Message</button>
+  <button class="tab feature-pill" data-open-card="card-mllp" data-feature="mllp">Transport (MLLP)</button>
 </div>
 
-<div class="interop-grid">
-  {% include "ui/interop/_generate_panel.html" %}
-  {% include "ui/interop/_deid_panel.html" %}
-  {% include "ui/interop/_validate_panel.html" %}
-  {% include "ui/interop/_mllp_panel.html" %}
-  {% include "ui/interop/_debug_log_panel.html" %}
-</div>
-<div class="card">
-  <div class="card-header">
-    <h3 class="card-title">HL7 → FHIR Pipeline</h3>
-  </div>
+<details id="card-gen" class="card collapsible" open>
+  <summary>Generate Message <span class="minimax"></span></summary>
   <div class="card-body">
-    <p class="muted">Translate HL7 to FHIR (and optionally POST). Uses your selected tools and local CLI if present.</p>
-    <a class="btn" href="{{ root }}/ui/interop/pipeline">Open Pipeline</a>
+    {% include "ui/interop/_generate_panel.html" %}
   </div>
-</div>
+</details>
 
-<div id="pipeline-output-global" class="mt"></div>
+<details id="card-deid" class="card collapsible">
+  <summary>De‑Identify Message <span class="minimax"></span></summary>
+  <div class="card-body">
+    {% include "ui/interop/_deid_panel.html" %}
+  </div>
+</details>
+
+<details id="card-validate" class="card collapsible">
+  <summary>Validate Message <span class="minimax"></span></summary>
+  <div class="card-body">
+    {% include "ui/interop/_validate_panel.html" %}
+  </div>
+</details>
+
+<details id="card-mllp" class="card collapsible">
+  <summary>Transport (MLLP) &amp; FHIR Options <span class="minimax"></span></summary>
+  <div class="card-body">
+    {% include "ui/interop/_mllp_panel.html" %}
+  </div>
+</details>
+
+<details id="card-debug" class="card collapsible">
+  <summary>Generator Debug Log <span class="minimax"></span></summary>
+  <div class="card-body">
+    {% include "ui/interop/_debug_log_panel.html" %}
+  </div>
+</details>
 {% endblock %}
