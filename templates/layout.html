@@ -1,7 +1,8 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
   <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Silhouette UI</title>
   <meta name="root-path" content="{{ request.scope.get('root_path', '') }}" />
   <link rel="stylesheet" href="{{ request.url_for('static', path='css/app.css') }}" />
@@ -12,17 +13,48 @@
 </head>
 <body data-root="{{ request.scope.get('root_path', '') }}">
   <header class="topbar">
-    <div class="topbar-left">
-      <button type="button" class="menu-toggle" id="menu-toggle" aria-label="Open menu" aria-expanded="false">
-        <span class="menu-icon" aria-hidden="true"></span>
-      </button>
-      <a class="brand" href="{{ request.url_for('ui_home') }}">Silhouette</a>
-    </div>
+    <a class="brand" href="{{ request.url_for('ui_home') }}">Silhouette</a>
     <nav class="mainnav">
       <a href="{{ request.url_for('ui_home') }}" data-nav="reports">Reports</a>
       <a href="{{ request.url_for('ui_skills_index') }}" data-nav="skills">Skills</a>
     </nav>
+    <div class="topbar-spacer"></div>
+    <button id="menu-button"
+            class="hamburger"
+            aria-label="Open menu"
+            aria-controls="menu-panel"
+            aria-expanded="false"
+            type="button">
+      <svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true">
+        <path d="M3 6h18v2H3zM3 11h18v2H3zM3 16h18v2H3z" />
+      </svg>
+    </button>
   </header>
+
+  <div id="menu-backdrop" class="menu-backdrop" hidden></div>
+
+  <aside id="menu-panel" class="menu-panel" hidden>
+    <nav class="menu-sections">
+      <div class="menu-group">
+        <div class="menu-title">Navigate</div>
+        <a class="menu-link" href="{{ request.url_for('ui_home') }}">Skills (Home)</a>
+        <a class="menu-link" href="{{ request.scope.get('root_path', '') }}/ui/security/dashboard">Cybersecurity Skill</a>
+        <a class="menu-link" href="{{ request.scope.get('root_path', '') }}/ui/interop/skills">Interoperability Skill</a>
+      </div>
+      <div class="menu-group">
+        <div class="menu-title">Theme</div>
+        <label class="menu-radio">
+          <input type="radio" name="theme" id="theme-default" value="default" />
+          <span>Default</span>
+        </label>
+        <label class="menu-radio">
+          <input type="radio" name="theme" id="theme-dark" value="dark" />
+          <span>Dark</span>
+        </label>
+      </div>
+    </nav>
+  </aside>
+
   <main>
     {% block content %}{% endblock %}
   </main>
