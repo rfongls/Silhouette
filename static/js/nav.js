@@ -1,247 +1,122 @@
+// Global navigation: hamburger drawer and theme switching
+// Works under sub-path deployments (root_path) and injects a hamburger if one is missing.
+
 (function(){
-  const STORAGE_KEY = 'silhouette.theme';
-  const rootPath = () => (document.body && document.body.dataset && document.body.dataset.root) || window.ROOT || '';
-  const rootUrl = (path) => {
-    if (!path) return rootPath();
-    if (/^https?:\/\//i.test(path)) return path;
-    return `${rootPath()}${path}`;
-  };
+  const ROOT =
+    (document.body && document.body.dataset && document.body.dataset.root) ||
+    (document.querySelector('meta[name="root-path"]')?.content) ||
+    '';
+  const HOME_PATH = '/ui/home';
+  const INTEROP_PATH = '/ui/interop/skills';
+  // If your Cybersecurity UI lives elsewhere, adjust this path:
+  const SECURITY_PATH = '/ui/security';
 
-  function markActive(){
-    const path = location.pathname;
-    const map = [
-      {sel:'[data-nav="reports"]', match:/^\/ui\/home\/?$/},
-      {sel:'[data-nav="skills"]', match:/^\/ui\/skills\/?/},
-    ];
-    map.forEach((m) => {
-      const a = document.querySelector(m.sel);
-      if (!a) return;
-      if (m.match.test(path)) a.classList.add('active');
-    });
+  function rootUrl(p){ return (ROOT || '') + p; }
+
+  function ensureDrawer(){
+    let dr = document.getElementById('app-drawer');
+    if (dr) return dr;
+    dr = document.createElement('div');
+    dr.id = 'app-drawer';
+    dr.setAttribute('hidden', '');
+    dr.innerHTML = `
+      <div class="drawer-backdrop" data-close="1"></div>
+      <aside class="drawer-panel" role="dialog" aria-label="Application menu">
+        <nav class="drawer-menu">
+          <a class="drawer-item" href="${rootUrl(HOME_PATH)}">Skills</a>
+          <a class="drawer-item" href="${rootUrl(SECURITY_PATH)}">Cybersecurity Skill</a>
+          <a class="drawer-item" href="${rootUrl(INTEROP_PATH)}">Interoperability Skill</a>
+          <div class="drawer-section">Themes</div>
+          <label class="drawer-item"><input type="radio" name="__theme" value="default"> Default</label>
+          <label class="drawer-item"><input type="radio" name="__theme" value="dark"> Dark</label>
+        </nav>
+      </aside>
+    `;
+    document.body.appendChild(dr);
+    return dr;
   }
 
-  let menuButton;
-  let drawer;
-  let backdrop;
-  let closeButton;
-  let themeSelect;
-  let menuOpen = false;
-  let focusRestore = null;
-
-  function ensureMenuElements(){
-    const body = document.body;
-    if (!body) return;
-    if (!menuButton || !body.contains(menuButton)) {
-      menuButton = document.getElementById('menu-toggle');
-    }
-    if (!drawer || !body.contains(drawer)) {
-      drawer = document.getElementById('app-drawer');
-    }
-    if (!backdrop || !body.contains(backdrop)) {
-      backdrop = document.getElementById('app-menu-backdrop');
-    }
-    if (!closeButton || !body.contains(closeButton)) {
-      closeButton = document.getElementById('menu-close');
-    }
-    if (!themeSelect || !body.contains(themeSelect)) {
-      themeSelect = document.getElementById('theme-select');
-    }
+  function ensureHamburger(){
+    // Try to find an existing menu button
+    let btn = document.querySelector('#hamburger, .hamburger, .menu-toggle, [data-role="hamburger"]');
+    if (btn) return btn;
+    // Inject one into the topbar if not present
+    btn = document.createElement('button');
+    btn.id = 'hamburger';
+    btn.className = 'menu-btn';
+    btn.type = 'button';
+    btn.setAttribute('aria-label', 'Open menu');
+    btn.setAttribute('aria-expanded', 'false');
+    btn.innerHTML = '<span class="menu-icon"></span>';
+    const bar = document.querySelector('.topbar') || document.body;
+    bar.insertBefore(btn, bar.firstChild);
+    return btn;
   }
 
-  function setMenuState(open){
-    ensureMenuElements();
-    if (!drawer) return;
-    if (open) {
-      if (menuOpen) return;
-      menuOpen = true;
-      focusRestore = document.activeElement;
-      menuButton && menuButton.setAttribute('aria-expanded', 'true');
-      backdrop && backdrop.removeAttribute('hidden');
-      drawer.removeAttribute('hidden');
-      drawer.removeAttribute('aria-hidden');
-      requestAnimationFrame(() => drawer.classList.add('open'));
-      document.body.classList.add('menu-open');
-      const focusTarget = themeSelect || drawer;
-      setTimeout(() => {
-        if (focusTarget && typeof focusTarget.focus === 'function') {
-          focusTarget.focus({ preventScroll: true });
-        }
-      }, 120);
-      document.addEventListener('keydown', onKeyDown);
-    } else {
-      if (!menuOpen) return;
-      menuOpen = false;
-      menuButton && menuButton.setAttribute('aria-expanded', 'false');
-      document.body.classList.remove('menu-open');
-      const finish = () => {
-        drawer && drawer.setAttribute('hidden', '');
-        drawer && drawer.setAttribute('aria-hidden', 'true');
-        backdrop && backdrop.setAttribute('hidden', '');
-      };
-      if (drawer.classList.contains('open')) {
-        drawer.classList.remove('open');
-        drawer.addEventListener('transitionend', finish, { once: true });
-        setTimeout(() => finish(), 260);
-      } else {
-        finish();
-      }
-      document.removeEventListener('keydown', onKeyDown);
-      if (focusRestore && typeof focusRestore.focus === 'function') {
-        focusRestore.focus({ preventScroll: true });
-      } else if (menuButton) {
-        menuButton.focus();
-      }
-      focusRestore = null;
-    }
+  function setTheme(theme){
+    const t = (theme === 'dark') ? 'dark' : 'default';
+    document.body.setAttribute('data-theme', t);
+    try { localStorage.setItem('sil.theme', t); } catch(_) {}
+    // Reflect in radios if present
+    const radios = document.querySelectorAll('input[name="__theme"]');
+    radios.forEach(r => { r.checked = (r.value === t); });
   }
-
-  function onKeyDown(event){
-    if (event.key === 'Escape') {
-      event.preventDefault();
-      setMenuState(false);
-    }
-  }
-
-  function setupMenu(){
-    ensureMenuElements();
-
-    const bind = (el, evt, handler, key) => {
-      if (!el) return;
-      const flag = key || `navBound${evt}`;
-      if (el.dataset && el.dataset[flag]) return;
-      el.addEventListener(evt, handler);
-      if (el.dataset) el.dataset[flag] = '1';
-    };
-
-    bind(menuButton, 'click', (event) => {
-      if (event) event.preventDefault();
-      setMenuState(!menuOpen);
-    }, 'menuToggle');
-    bind(closeButton, 'click', (event) => {
-      if (event) event.preventDefault();
-      setMenuState(false);
-    }, 'menuClose');
-    bind(backdrop, 'click', () => setMenuState(false), 'menuBackdrop');
-    document.addEventListener('keyup', (event) => {
-      if (event.key === 'm' && (event.ctrlKey || event.metaKey)) {
-        event.preventDefault();
-        setMenuState(!menuOpen);
-      }
-    });
-
-    if (themeSelect) {
-      bind(themeSelect, 'change', (event) => {
-        applyTheme(event && event.target && event.target.value);
-      }, 'menuTheme');
-    }
-  }
-
-  function renderSkills(skills){
-    const list = document.getElementById('menu-skills');
-    if (!list) return;
-    list.innerHTML = '';
-    const items = Array.isArray(skills) ? skills : [];
-    if (!items.length) {
-      const li = document.createElement('li');
-      li.className = 'menu-empty muted';
-      li.textContent = 'No additional skills available';
-      list.appendChild(li);
-      return;
-    }
-    items.forEach((skill) => {
-      if (!skill) return;
-      const li = document.createElement('li');
-      li.className = 'menu-skill';
-      const link = document.createElement('a');
-      const name = skill.name || skill.id || 'Skill';
-      link.href = rootUrl(skill.dashboard || '#');
-      link.textContent = name;
-      if (skill.desc) {
-        const small = document.createElement('small');
-        small.textContent = skill.desc;
-        link.appendChild(small);
-      }
-      link.addEventListener('click', () => setMenuState(false));
-      li.appendChild(link);
-      list.appendChild(li);
-    });
-  }
-
-  async function loadSkills(){
-    const list = document.getElementById('menu-skills');
-    if (!list) return;
-    try {
-      const response = await fetch(rootUrl('/api/ui/skills'));
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      const data = await response.json();
-      renderSkills(data);
-    } catch (err) {
-      const li = document.createElement('li');
-      li.className = 'menu-empty muted';
-      li.textContent = 'Unable to load skills';
-      list.innerHTML = '';
-      list.appendChild(li);
-      console.warn('Failed to load skills', err);
-    }
-  }
-
-  function getStoredTheme(){
-    try {
-      return localStorage.getItem(STORAGE_KEY) || '';
-    } catch (err) {
-      return '';
-    }
-  }
-
-  function applyTheme(theme, persist = true){
-    const root = document.documentElement;
-    const normalized = theme === 'dark' || theme === 'light' ? theme : 'system';
-    if (normalized === 'system') {
-      root.removeAttribute('data-theme');
-      root.style.colorScheme = '';
-      if (persist) {
-        try { localStorage.removeItem(STORAGE_KEY); } catch (err) { /* ignore */ }
-      }
-    } else {
-      root.setAttribute('data-theme', normalized);
-      root.style.colorScheme = normalized;
-      if (persist) {
-        try { localStorage.setItem(STORAGE_KEY, normalized); } catch (err) { /* ignore */ }
-      }
-    }
-    if (themeSelect && themeSelect.value !== normalized) {
-      themeSelect.value = normalized;
-    }
-  }
-
   function initTheme(){
-    ensureMenuElements();
-    const stored = getStoredTheme();
-    const theme = stored === 'dark' || stored === 'light' ? stored : 'system';
-    applyTheme(theme, false);
-    if (themeSelect) themeSelect.value = theme;
+    let t = null;
+    try { t = localStorage.getItem('sil.theme'); } catch(_) {}
+    setTheme(t || 'default');
+  }
+  function bindThemeRadios(container){
+    const radios = container.querySelectorAll('input[name="__theme"]');
+    radios.forEach(r => r.addEventListener('change', () => setTheme(r.value)));
+  }
 
-    const media = window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : null;
-    if (media) {
-      const update = () => {
-        if (!getStoredTheme()) {
-          applyTheme('system', false);
-        }
-      };
-      if (typeof media.addEventListener === 'function') media.addEventListener('change', update);
-      else if (typeof media.addListener === 'function') media.addListener(update);
+  function openDrawer(){
+    const dr = ensureDrawer();
+    dr.removeAttribute('hidden');
+    requestAnimationFrame(() => dr.classList.add('open'));
+    document.body.classList.add('drawer-open');
+    const hb = document.querySelector('#hamburger, .hamburger, .menu-toggle, [data-role="hamburger"]');
+    if (hb) hb.setAttribute('aria-expanded','true');
+  }
+  function closeDrawer(){
+    const dr = document.getElementById('app-drawer');
+    if (!dr) return;
+    const panel = dr.querySelector('.drawer-panel');
+    let done = false;
+    const finish = () => {
+      if (done) return;
+      done = true;
+      dr.setAttribute('hidden','');
+      document.body.classList.remove('drawer-open');
+    };
+    dr.classList.remove('open');
+    if (panel) {
+      panel.addEventListener('transitionend', finish, { once: true });
+      setTimeout(finish, 320);
+    } else {
+      finish();
     }
+    const hb = document.querySelector('#hamburger, .hamburger, .menu-toggle, [data-role="hamburger"]');
+    if (hb) hb.setAttribute('aria-expanded','false');
   }
 
-  function onReady(fn){
-    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', fn);
-    else fn();
-  }
-
-  onReady(() => {
-    markActive();
-    setupMenu();
+  document.addEventListener('DOMContentLoaded', () => {
+    const btn = ensureHamburger();
+    const drawer = ensureDrawer();
     initTheme();
-    loadSkills();
+    bindThemeRadios(drawer);
+    btn.addEventListener('click', () => {
+      const isOpen = drawer && drawer.classList.contains('open');
+      if (isOpen) closeDrawer(); else openDrawer();
+    });
+    drawer.addEventListener('click', (e) => {
+      if (e.target && e.target.dataset && e.target.dataset.close === '1') {
+        closeDrawer();
+      }
+    });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') closeDrawer();
+    });
   });
 })();
