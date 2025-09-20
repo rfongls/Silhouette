@@ -19,41 +19,7 @@
       <a href="{{ request.url_for('ui_skills_index') }}" data-nav="skills">Skills</a>
     </nav>
     <div class="topbar-spacer"></div>
-    <button id="menu-button"
-            class="hamburger"
-            aria-label="Open menu"
-            aria-controls="menu-panel"
-            aria-expanded="false"
-            type="button">
-      <svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true">
-        <path d="M3 6h18v2H3zM3 11h18v2H3zM3 16h18v2H3z" />
-      </svg>
-    </button>
   </header>
-
-  <div id="menu-backdrop" class="menu-backdrop" hidden></div>
-
-  <aside id="menu-panel" class="menu-panel" hidden>
-    <nav class="menu-sections">
-      <div class="menu-group">
-        <div class="menu-title">Navigate</div>
-        <a class="menu-link" href="{{ request.url_for('ui_home') }}">Skills (Home)</a>
-        <a class="menu-link" href="{{ request.scope.get('root_path', '') }}/ui/security/dashboard">Cybersecurity Skill</a>
-        <a class="menu-link" href="{{ request.scope.get('root_path', '') }}/ui/interop/skills">Interoperability Skill</a>
-      </div>
-      <div class="menu-group">
-        <div class="menu-title">Theme</div>
-        <label class="menu-radio">
-          <input type="radio" name="theme" id="theme-default" value="default" />
-          <span>Default</span>
-        </label>
-        <label class="menu-radio">
-          <input type="radio" name="theme" id="theme-dark" value="dark" />
-          <span>Dark</span>
-        </label>
-      </div>
-    </nav>
-  </aside>
 
   <main>
     {% block content %}{% endblock %}
@@ -95,6 +61,24 @@
     });
   })();
   </script>
-  <script defer src="{{ request.url_for('static', path='js/nav.js') }}"></script>
+  <script type="module" src="{{ request.url_for('static', path='js/menu.js') }}"></script>
+
+  {# Global app menu (hamburger + popover) #}
+  {% set root = request.scope.get('root_path', '') %}
+  <button id="hamburger-btn" aria-label="Open menu" aria-controls="app-menu" aria-expanded="false">
+    <span class="hamburger-icon" aria-hidden="true"></span>
+  </button>
+  <div id="menu-backdrop" hidden></div>
+  <nav id="app-menu" class="app-menu" hidden aria-hidden="true">
+    <ul>
+      <li><a class="menu-item" href="{{ root }}/ui/home">Skills</a></li>
+      <li><a class="menu-item" href="{{ root }}/ui/security/dashboard">Cybersecurity Skill</a></li>
+      <li><a class="menu-item" href="{{ root }}/ui/interop/skills">Interoperability Skill</a></li>
+      <li class="menu-divider"></li>
+      <li class="menu-heading">Theme</li>
+      <li><button class="menu-item" type="button" data-theme-choice="default">Default</button></li>
+      <li><button class="menu-item" type="button" data-theme-choice="dark">Dark</button></li>
+    </ul>
+  </nav>
 </body>
 </html>
