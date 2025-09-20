@@ -110,32 +110,52 @@ a:hover {
   flex: 1;
 }
 
+#menu-button.hamburger {
+  border: none !important;
+  background: transparent !important;
+  color: var(--topbar-ink) !important;
+  box-shadow: none !important;
+  appearance: none;
+}
+
 .hamburger {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   width: 40px;
   height: 40px;
-  border: none;
-  background: transparent;
-  color: var(--topbar-ink);
   border-radius: 0.75rem;
   cursor: pointer;
   transition: background 0.15s ease;
+  color: var(--topbar-ink);
 }
 
 .hamburger:hover {
   background: rgba(148, 163, 184, 0.12);
 }
 
+#menu-button.hamburger:focus-visible,
 .hamburger:focus-visible {
   outline: none;
   box-shadow: var(--focus-ring);
 }
 
+#menu-button.hamburger svg,
 .hamburger svg {
   display: block;
   fill: currentColor;
+}
+
+#menu-panel[hidden] {
+  display: none !important;
+}
+
+#menu-panel.open {
+  display: block;
+}
+
+#menu-backdrop[hidden] {
+  display: none !important;
 }
 
 .menu-backdrop {

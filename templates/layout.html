@@ -95,6 +95,6 @@
     });
   })();
   </script>
-  <script type="module" src="{{ request.url_for('static', path='js/nav.js') }}"></script>
+  <script defer src="{{ request.url_for('static', path='js/nav.js') }}"></script>
 </body>
 </html>

@@ -1,4 +1,4 @@
-// Global navigation + theme handling
+// Global navigation + theme handling (non-module, robust init)
 (function () {
   const THEME_KEY = "silhouette.theme";
 
@@ -14,13 +14,14 @@
     }
   }
 
-  // Apply saved theme as early as possible
+  // Apply saved theme ASAP
+  let initialTheme = "default";
   try {
-    const saved = localStorage.getItem(THEME_KEY) || "default";
-    applyTheme(saved);
+    initialTheme = localStorage.getItem(THEME_KEY) || "default";
   } catch (_) {
-    applyTheme("default");
+    initialTheme = "default";
   }
+  applyTheme(initialTheme);
 
   function reflectThemeControls(theme) {
     const dark = document.getElementById("theme-dark");
@@ -51,7 +52,9 @@
     if (backdrop) {
       backdrop.hidden = true;
     }
-    document.body && document.body.classList.remove("menu-open");
+    if (document.body) {
+      document.body.classList.remove("menu-open");
+    }
   }
 
   function openMenu(btn, panel, backdrop) {
@@ -65,46 +68,66 @@
     if (backdrop) {
       backdrop.hidden = false;
     }
-    document.body && document.body.classList.add("menu-open");
+    if (document.body) {
+      document.body.classList.add("menu-open");
+    }
   }
 
-  document.addEventListener("DOMContentLoaded", () => {
+  function bindOnce(target, event, handler, flagKey) {
+    if (!target) return;
+    const key = flagKey || `__navBound_${event}`;
+    if (target[key]) return;
+    target.addEventListener(event, handler);
+    target[key] = true;
+  }
+
+  function init() {
     const btn = document.getElementById("menu-button");
     const panel = document.getElementById("menu-panel");
     const backdrop = document.getElementById("menu-backdrop");
 
-    const saved = (() => {
-      try {
-        return localStorage.getItem(THEME_KEY) || "default";
-      } catch (_) {
-        return "default";
-      }
-    })();
+    let saved = "default";
+    try {
+      saved = localStorage.getItem(THEME_KEY) || "default";
+    } catch (_) {
+      saved = "default";
+    }
     reflectThemeControls(saved);
 
     if (btn && panel) {
-      btn.addEventListener("click", (e) => {
-        e.preventDefault();
-        const isOpen = btn.getAttribute("aria-expanded") === "true";
-        if (isOpen) {
+      bindOnce(
+        btn,
+        "click",
+        (event) => {
+          event.preventDefault();
+          const isOpen = btn.getAttribute("aria-expanded") === "true";
+          if (isOpen) {
+            closeMenu(btn, panel, backdrop);
+          } else {
+            openMenu(btn, panel, backdrop);
+          }
+        },
+        "__navClickBound"
+      );
+    }
+
+    bindOnce(
+      backdrop,
+      "click",
+      () => closeMenu(btn, panel, backdrop),
+      "__navClickBound"
+    );
+
+    if (!document.__navEscBound) {
+      document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape") {
           closeMenu(btn, panel, backdrop);
-        } else {
-          openMenu(btn, panel, backdrop);
         }
       });
+      document.__navEscBound = true;
     }
 
-    if (backdrop) {
-      backdrop.addEventListener("click", () => closeMenu(btn, panel, backdrop));
-    }
-
-    document.addEventListener("keydown", (event) => {
-      if (event.key === "Escape") {
-        closeMenu(btn, panel, backdrop);
-      }
-    });
-
-    if (panel) {
+    if (panel && !panel.__navClickBound) {
       panel.addEventListener("click", (event) => {
         const link = event.target.closest("a.menu-link");
         if (link) {
@@ -116,13 +139,18 @@
           setTheme(themeRadio.value);
         }
       });
-
       panel.addEventListener("change", (event) => {
         const themeRadio = event.target.closest('input[name="theme"]');
         if (themeRadio) {
           setTheme(themeRadio.value);
         }
       });
+      panel.__navClickBound = true;
     }
-  });
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", init, { once: true });
+  } else {
+    init();
+  }
 })();
