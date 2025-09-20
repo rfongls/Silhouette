@@ -573,12 +573,88 @@
     window.location.href = rootPath('/ui/interop/pipeline');
   }
 
+  // --- Run-next tray visibility -------------------------------------------------
+  const OUTPUT_SELECTORS = [
+    '#gen-output',
+    '[data-role="gen-output"]',
+    '#generated-message',
+    '#hl7-output',
+    '.gen-output',
+    'textarea[name="gen-output"]',
+    'textarea[name="message"]',
+  ];
+
+  function findGenerateOutput() {
+    for (const sel of OUTPUT_SELECTORS) {
+      const el = document.querySelector(sel);
+      if (el) return el;
+    }
+    const fallbacks = document.querySelectorAll('#generate-panel, [data-panel="generate"], section.generate, .card-generate');
+    for (const panel of fallbacks) {
+      const el = panel.querySelector('textarea, pre, output, code');
+      if (el) return el;
+    }
+    return null;
+  }
+
+  function findRunTray() {
+    return (
+      document.getElementById('gen-run-tray') ||
+      document.querySelector('[data-role="gen-run-tray"]') ||
+      document.querySelector('.action-tray')
+    );
+  }
+
+  function trayTextOf(el) {
+    if (!el) return '';
+    if ('value' in el) return String(el.value || '').trim();
+    return String(el.textContent || '').trim();
+  }
+
+  function toggleRunTray(show) {
+    const tray = findRunTray();
+    if (!tray) return;
+    if (show) {
+      tray.hidden = false;
+      tray.classList.remove('hidden');
+    } else {
+      tray.hidden = true;
+      tray.classList.add('hidden');
+    }
+  }
+
+  function updateRunTray() {
+    const out = findGenerateOutput();
+    const has = out && trayTextOf(out).length > 0;
+    toggleRunTray(has);
+  }
+
+  function initRunTrayWatcher() {
+    toggleRunTray(false);
+    const out = findGenerateOutput();
+    if (out) {
+      if ('value' in out) out.addEventListener('input', updateRunTray);
+      const observer = new MutationObserver(updateRunTray);
+      observer.observe(out, { childList: true, characterData: true, subtree: true });
+    }
+    const genBtn = document.querySelector('#generate-btn, [data-action="generate"], button[name="generate"]');
+    if (genBtn) {
+      genBtn.addEventListener('click', () => {
+        setTimeout(updateRunTray, 50);
+        setTimeout(updateRunTray, 500);
+        setTimeout(updateRunTray, 1500);
+      });
+    }
+  }
+
   document.addEventListener('DOMContentLoaded', () => {
     setPrimaryVersion(getPrimaryVersion());
     fillDatalist('qs');
     fillDatalist('ds');
     fillDatalist('gen');
     fillDatalist('pipe');
+
+    initRunTrayWatcher();
 
     document.body.addEventListener('htmx:afterSwap', (e) => {
       if (!e || !e.target) return;

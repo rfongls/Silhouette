@@ -458,16 +458,14 @@ select:focus {
   background: var(--bg-weak);
   overflow: auto;
 }
-
-/* === Settings popover (replaces drawer UX) === */
-:root { --menu-shadow: 0 8px 30px rgba(0, 0, 0, 0.08); }
-
+/* === Settings popover (replaces old drawer UX) === */
+:root { --menu-shadow: 0 8px 30px rgba(0,0,0,.08); }
 .app-menu {
   position: fixed;
   top: 60px;
   right: 12px;
   z-index: 1000;
-  background: var(--card, #ffffff);
+  background: var(--card, #fff);
   border: 1px solid var(--border, #e5e7eb);
   border-radius: 10px;
   box-shadow: var(--card-shadow, var(--menu-shadow));
@@ -476,65 +474,51 @@ select:focus {
   transform: translateY(-8px);
   opacity: 0;
   pointer-events: none;
-  transition: transform 0.15s ease, opacity 0.15s ease;
+  transition: transform .15s ease, opacity .15s ease;
 }
-
 .app-menu.open {
   transform: translateY(0);
   opacity: 1;
   pointer-events: auto;
 }
-
 .app-menu .menu-heading {
-  font-size: 0.8rem;
+  font-size: .8rem;
   color: var(--muted, #6b7280);
-  padding: 0.25rem 0.75rem;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+  padding: .25rem .75rem;
 }
-
 .app-menu .menu-divider {
   border-top: 1px solid var(--border, #e5e7eb);
-  margin: 0.35rem 0 0.45rem;
+  margin: .5rem 0;
 }
-
 .app-menu .menu-row {
   display: flex;
-  gap: 0.5rem;
-  padding: 0.35rem 0.5rem 0.25rem;
+  gap: .5rem;
+  padding: .35rem .5rem 0.25rem;
 }
-
 .app-menu .menu-item {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.35rem;
+  display: block;
   width: 100%;
+  text-align: left;
+  padding: .6rem .75rem;
   border: none;
-  border-radius: 0.75rem;
   background: transparent;
   color: var(--text, #111827);
-  padding: 0.55rem 0.65rem;
-  font: inherit;
+  border-radius: 8px;
   cursor: pointer;
-  transition: background-color 0.15s ease;
 }
+.app-menu .menu-item:hover { background: var(--bg-weak, #f3f4f6); }
+.app-menu .menu-item[aria-checked="true"] { font-weight: 700; }
+#menu-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,.25); z-index: 999; }
+#menu-backdrop[hidden] { display: none; }
 
-.app-menu .menu-item:hover {
-  background: var(--bg-weak, #f3f4f6);
+.hamburger-btn {
+  background: transparent;
+  border: none;
+  padding: .4rem;
+  border-radius: .5rem;
+  cursor: pointer;
 }
+.hamburger-btn:hover { background: var(--bg-weak, #f3f4f6); }
 
-.app-menu .menu-item[aria-checked="true"] {
-  font-weight: 700;
-}
-
-#menu-backdrop {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.25);
-  z-index: 999;
-}
-
-#menu-backdrop[hidden] {
-  display: none;
-}
+/* Utility used by JS to force-hide elements without relying on app CSS */
+.hidden { display: none !important; }

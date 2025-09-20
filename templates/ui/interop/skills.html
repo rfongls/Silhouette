@@ -1,28 +1,29 @@
 {% extends "layout.html" %}
 {% block extra_head %}
 <link rel="stylesheet" href="{{ request.url_for('static', path='css/interop_extras.css') }}" />
-<script type="module" src="{{ request.url_for('static', path='js/interop_ui.js') }}"></script>
 {% endblock %}
 {% block content %}
 {% if urls is not defined %}
   {% set urls = {} %}
 {% endif %}
 {% set root = request.scope.get('root_path', '') %}
-
-<h2>Interoperability</h2>
-<div id="debug-state-badge"
-     class="micro muted"
-     hx-get="{{ root }}/api/diag/debug/state?format=html"
-     hx-trigger="load"
-     hx-target="#debug-state-badge"
-     hx-swap="outerHTML">Loading debug switch…</div>
-
-<div class="feature-tabs mt" id="interop-feature-bar">
-  <button class="tab feature-pill active" data-open-card="card-gen" data-feature="gen">Generate Message</button>
-  <button class="tab feature-pill" data-open-card="card-deid" data-feature="deid">De‑Identify Message</button>
-  <button class="tab feature-pill" data-open-card="card-validate" data-feature="val">Validate Message</button>
-  <button class="tab feature-pill" data-open-card="card-mllp" data-feature="mllp">Transport (MLLP)</button>
+<p class="micro"><a href="{{ root }}/ui/home">← Back to Home</a></p>
+<div class="row mb" style="justify-content: space-between; align-items: center;">
+  <h2>Interoperability</h2>
+  <div id="debug-state-badge"
+       hx-get="{{ root }}/api/diag/debug/state?format=html"
+      hx-trigger="load"
+      hx-target="#debug-state-badge"
+      hx-swap="outerHTML">
+    <span class="micro muted">Loading debug switch…</span>
+  </div>
 </div>
+<nav class="feature-tabs">
+  <a class="tab active" href="{{ root }}/ui/interop/generate">Generate Message</a>
+  <a class="tab" href="{{ root }}/ui/interop/deid">De‑Identify Message</a>
+  <a class="tab" href="{{ root }}/ui/interop/validate">Validate Message</a>
+  <a class="tab" href="{{ root }}/ui/interop/mllp">Transport (MLLP)</a>
+</nav>
 
 <details id="card-gen" class="card collapsible" open>
   <summary>Generate Message <span class="minimax"></span></summary>

@@ -80,3 +80,13 @@ details.card .card-body { padding: 0 1.1rem 1.1rem; }
 
 /* Utility */
 .textarea-output { width: 100%; min-height: 10.5rem; max-height: 22rem; overflow: auto; }
+
+/* File input tight spacing */
+.file-row {
+  display: flex;
+  gap: .5rem;
+  align-items: center;
+}
+.file-row input[type=file] {
+  max-width: 22rem;
+}
