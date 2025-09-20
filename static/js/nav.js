@@ -37,8 +37,8 @@
   }
 
   function ensureHamburger(){
-    // Try to find an existing menu button
-    let btn = document.querySelector('#hamburger, .hamburger, .menu-toggle, [data-role="hamburger"]');
+    // Try to find an existing menu button/link
+    let btn = document.querySelector('#hamburger, a.hamburger, button.hamburger, .menu-toggle, [data-role="hamburger"]');
     if (btn) return btn;
     // Inject one into the topbar if not present
     btn = document.createElement('button');
@@ -51,6 +51,24 @@
     const bar = document.querySelector('.topbar') || document.body;
     bar.insertBefore(btn, bar.firstChild);
     return btn;
+  }
+
+  function normalizeHamburgerVisual(btn){
+    if (!btn) return;
+    btn.classList.add('menu-btn');
+    if (!btn.getAttribute('aria-label')) {
+      btn.setAttribute('aria-label', 'Open menu');
+    }
+    if (!btn.getAttribute('aria-expanded')) {
+      btn.setAttribute('aria-expanded', 'false');
+    }
+    if (btn.tagName && btn.tagName.toLowerCase() === 'a') {
+      btn.setAttribute('href', '#');
+      btn.addEventListener('click', (e) => e.preventDefault());
+    }
+    if (!btn.querySelector('.menu-icon')) {
+      btn.innerHTML = '<span class="menu-icon"></span>';
+    }
   }
 
   function setTheme(theme){
@@ -76,7 +94,7 @@
     dr.removeAttribute('hidden');
     requestAnimationFrame(() => dr.classList.add('open'));
     document.body.classList.add('drawer-open');
-    const hb = document.querySelector('#hamburger, .hamburger, .menu-toggle, [data-role="hamburger"]');
+    const hb = document.querySelector('#hamburger, a.hamburger, button.hamburger, .menu-toggle, [data-role="hamburger"]');
     if (hb) hb.setAttribute('aria-expanded','true');
   }
   function closeDrawer(){
@@ -97,16 +115,18 @@
     } else {
       finish();
     }
-    const hb = document.querySelector('#hamburger, .hamburger, .menu-toggle, [data-role="hamburger"]');
+    const hb = document.querySelector('#hamburger, a.hamburger, button.hamburger, .menu-toggle, [data-role="hamburger"]');
     if (hb) hb.setAttribute('aria-expanded','false');
   }
 
   document.addEventListener('DOMContentLoaded', () => {
     const btn = ensureHamburger();
+    normalizeHamburgerVisual(btn);
     const drawer = ensureDrawer();
     initTheme();
     bindThemeRadios(drawer);
-    btn.addEventListener('click', () => {
+    btn.addEventListener('click', (e) => {
+      if (e) e.preventDefault();
       const isOpen = drawer && drawer.classList.contains('open');
       if (isOpen) closeDrawer(); else openDrawer();
     });
