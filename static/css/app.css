@@ -184,6 +184,7 @@ a:hover {
 
 .app-drawer.open .drawer-backdrop {
   opacity: 1;
+  transform: translateY(0);
 }
 
 .drawer-nav ul {
