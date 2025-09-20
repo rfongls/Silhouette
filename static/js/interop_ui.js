@@ -262,12 +262,36 @@
       if (e && e.target && e.target.id === "ds-trigger-select") fillDatalist("ds");
       if (e && e.target && e.target.id === "pipe-trigger-select") fillDatalist("pipe");
     });
+
+    injectPipelinePresetUI();
   });
 
+  // Shared pipeline presets used across dashboard + standalone pipeline page.
   const PIPELINE_PRESETS = {
-    "local-2575": { host: "127.0.0.1", port: 2575, timeout: 5, includeFhir: false },
-    "docker-2575": { host: "localhost", port: 2575, timeout: 5, includeFhir: false },
-    "partner-a": { host: "10.0.0.10", port: 2575, timeout: 10, includeFhir: true, fhirEndpoint: "https://partner-a.example/fhir" },
+    "local-2575": {
+      host: "127.0.0.1",
+      port: 2575,
+      timeout: 5,
+      includeFhir: false,
+      fhirEndpoint: "http://127.0.0.1:8080/fhir",
+      postFhir: false,
+    },
+    "docker-2575": {
+      host: "localhost",
+      port: 2575,
+      timeout: 5,
+      includeFhir: false,
+      fhirEndpoint: "http://localhost:8080/fhir",
+      postFhir: false,
+    },
+    "partner-a": {
+      host: "10.0.0.10",
+      port: 2575,
+      timeout: 10,
+      includeFhir: true,
+      fhirEndpoint: "https://partner-a.example/fhir",
+      postFhir: true,
+    },
   };
 
   function applyPreset(key) {
@@ -277,12 +301,20 @@
     const timeout = q("mllp-timeout");
     const toggle = q("run-pipeline-fhir");
     const postToggle = q("run-pipeline-fhir-post");
+    const pipelineEndpoint =
+      document.getElementById("pipeline-fhir-endpoint") ||
+      document.getElementById("fhir-endpoint") ||
+      document.querySelector('input[name="fhir_endpoint"]');
+    const pipelinePost =
+      document.getElementById("pipeline-post-fhir") ||
+      document.querySelector('input[name="post_fhir"][type="checkbox"]');
     if (!preset) {
       if (toggle) {
         toggle.checked = false;
         if (toggle.dataset) delete toggle.dataset.endpoint;
       }
       if (postToggle) postToggle.checked = false;
+      if (pipelinePost) pipelinePost.checked = false;
       sendDebugEvent("interop.pipeline.preset.clear", {});
       return;
     }
@@ -291,15 +323,24 @@
     if (timeout && preset.timeout !== undefined) timeout.value = preset.timeout;
     if (toggle) {
       toggle.checked = !!preset.includeFhir;
-      if (toggle.dataset) {
-        if (preset.fhirEndpoint) {
-          toggle.dataset.endpoint = preset.fhirEndpoint;
-        } else {
-          delete toggle.dataset.endpoint;
-        }
-      }
-      if (!preset.includeFhir && postToggle) {
-        postToggle.checked = false;
+    }
+    if (postToggle) {
+      postToggle.checked = !!(preset.includeFhir && preset.postFhir);
+    }
+    if (pipelineEndpoint && preset.fhirEndpoint !== undefined) {
+      pipelineEndpoint.value = preset.fhirEndpoint || "";
+    }
+    if (pipelinePost) {
+      pipelinePost.checked = !!preset.postFhir;
+    }
+    const endpointValue =
+      (pipelineEndpoint && pipelineEndpoint.value) ||
+      (preset.fhirEndpoint || "");
+    if (toggle && toggle.dataset) {
+      if (endpointValue) {
+        toggle.dataset.endpoint = endpointValue;
+      } else {
+        delete toggle.dataset.endpoint;
       }
     }
     const out = q("pipeline-output");
@@ -310,15 +351,39 @@
     sendDebugEvent("interop.pipeline.preset", {
       key,
       includeFhir: !!preset.includeFhir,
-      hasEndpoint: !!preset.fhirEndpoint,
+      postFhir: !!preset.postFhir,
+      hasEndpoint: !!endpointValue,
     });
+  }
+
+  function injectPipelinePresetUI() {
+    const form =
+      document.getElementById("pipe-form") ||
+      document.getElementById("pipeline-form") ||
+      document.querySelector('form[action$="/api/interop/pipeline/run"]');
+    if (!form || document.getElementById("pipeline-preset-standalone")) {
+      return;
+    }
+    const wrap = document.createElement("div");
+    wrap.className = "row gap mb";
+    wrap.innerHTML =
+      '<label class="label small" for="pipeline-preset-standalone">Preset</label>' +
+      '<select id="pipeline-preset-standalone" class="input" style="max-width:22rem">' +
+      '  <option value="">— Select preset —</option>' +
+      '  <option value="local-2575">Local MLLP (127.0.0.1:2575)</option>' +
+      '  <option value="docker-2575">Docker MLLP (localhost:2575)</option>' +
+      '  <option value="partner-a">Partner Sandbox A (+FHIR)</option>' +
+      "</select>" +
+      '<span class="micro muted">Prefills FHIR endpoint (and POST) on this page; also used on the Generate/MLLP cards.</span>';
+    form.insertBefore(wrap, form.firstChild);
   }
 
   document.addEventListener("change", (e) => {
     if (!e || !e.target) return;
-    if (e.target.id === "pipeline-preset") {
+    const id = e.target.id;
+    if (id === "pipeline-preset" || id === "pipeline-preset-standalone") {
       applyPreset(e.target.value);
-    } else if (e.target.id === "run-pipeline-fhir" && !e.target.checked) {
+    } else if (id === "run-pipeline-fhir" && !e.target.checked) {
       const postToggle = q("run-pipeline-fhir-post");
       if (postToggle) postToggle.checked = false;
     }

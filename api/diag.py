@@ -119,6 +119,29 @@ async def get_debug_logs(request: Request, limit: int = 200, format: str = "json
     return JSONResponse(payload)
 
 
+def _render_debug_badge_html(enabled: bool, target: str = "debug-state-badge") -> str:
+    """Return a compact HTMX-friendly badge that toggles debug state."""
+    next_action = "disable" if enabled else "enable"
+    label = "Debug ON" if enabled else "Debug OFF"
+    button_class = "btn small success" if enabled else "btn small"
+    target_id = (target or "debug-state-badge").strip() or "debug-state-badge"
+    escaped_target = _html.escape(target_id, quote=True)
+    refresh_js = (
+        "htmx.ajax('/api/diag/debug/state?format=html',"
+        "{target:'#%s',swap:'outerHTML'})" % escaped_target
+    )
+    parts = [
+        f"<span id='{escaped_target}'>",
+        f"<button class='{button_class}' ",
+        f"hx-post='/api/diag/debug/state/{next_action}' ",
+        'hx-headers=\'{"Accept":"application/json"}\' ',
+        f"hx-on::afterRequest=\"{refresh_js}\">",
+        f"{_html.escape(label)}</button>",
+        "</span>",
+    ]
+    return "".join(parts)
+
+
 @router.get("/api/diag/activity")
 async def get_activity(limit: int = 50, format: str = "json"):
     try:
@@ -144,27 +167,6 @@ async def get_activity(limit: int = 50, format: str = "json"):
             text += "\n"
         return PlainTextResponse(text or "", media_type="text/plain")
     return JSONResponse(payload)
-
-
-def _render_toggle_snippet_html(enabled: bool, target: str = "debug-toggle") -> str:
-    if enabled:
-        label = "Debug: ON"
-        action = "disable"
-        cta = "Turn off"
-        chip_cls = "chip"
-    else:
-        label = "Debug: OFF"
-        action = "enable"
-        cta = "Turn on"
-        chip_cls = "chip muted"
-    return (
-        f"<div id='debug-toggle' class='row gap items-center' data-target='{_html.escape(target)}'>"
-        f"<span class='{chip_cls}'>{_html.escape(label)}</span>"
-        f"<button class='btn btn-xs' type='button' "
-        f"hx-post='/api/diag/debug/state/{action}' "
-        "hx-target='#debug-toggle' hx-swap='outerHTML'>"
-        f"{_html.escape(cta)}</button></div>"
-    )
 
 
 def _coerce_payload(data: Any) -> Dict[str, Any]:
@@ -205,9 +207,7 @@ def _debug_state_response(
     enabled: bool, fmt: str, *, action: str | None = None
 ):
     if fmt in {"html", "htm"}:
-        label = "ON" if enabled else "OFF"
-        cls = "chip" + ("" if enabled else " muted")
-        return HTMLResponse(f"<span id='debug-state' class='{cls}'>Debug {label}</span>")
+        return HTMLResponse(_render_debug_badge_html(enabled))
     payload: Dict[str, Any] = {"enabled": enabled}
     if action is not None:
         payload["action"] = action
@@ -218,7 +218,7 @@ def _debug_state_response(
 async def get_debug_toggle_snippet(target: str = "interop-debug-log"):
     """Return the toggle button HTML snippet. Used by UI pages via HTMX."""
     enabled = is_debug_enabled()
-    return HTMLResponse(_render_toggle_snippet_html(enabled, target))
+    return HTMLResponse(_render_debug_badge_html(enabled, target))
 
 
 @router.get("/api/diag/debug/state")
@@ -250,8 +250,8 @@ async def mutate_debug_state(action: str, request: Request, format: str | None =
                 form = None
             if form is not None:
                 target_param = form.get("target")
-        target_id = (target_param or "debug-toggle").strip() or "debug-toggle"
-        return HTMLResponse(_render_toggle_snippet_html(enabled, target_id))
+        target_id = (target_param or "debug-state-badge").strip() or "debug-state-badge"
+        return HTMLResponse(_render_debug_badge_html(enabled, target_id))
     return _debug_state_response(enabled, fmt, action=action)
 
 

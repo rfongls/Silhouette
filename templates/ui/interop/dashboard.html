@@ -9,38 +9,20 @@
 {% endif %}
 {% set root = request.scope.get('root_path', '') %}
 <p class="micro"><a href="{{ root }}/ui/home">← Back to Home</a></p>
-<div class="row between items-center">
+<div class="row mb" style="justify-content: space-between; align-items: center;">
   <h2>Interoperability Dashboard</h2>
-  <div id="debug-toggle"
-       hx-get="/api/diag/debug/state/snippet"
-       hx-trigger="load, every 30s"
+  <div id="debug-state-badge"
+       hx-get="{{ root }}/api/diag/debug/state?format=html"
+       hx-trigger="load"
+       hx-target="#debug-state-badge"
        hx-swap="outerHTML">
-    <span class="muted small">Loading debug toggle…</span>
+    <span class="micro muted">Loading debug switch…</span>
   </div>
 </div>
 <div class="row gap mt">
   <label><input type="checkbox" id="view-reports-toggle" /> Reports view</label>
   <label><input type="checkbox" class="feature-toggle" data-target="deid" checked/> De-ID</label>
   <label><input type="checkbox" class="feature-toggle" data-target="validate" checked/> Validate</label>
-</div>
-<div class="row gap mt">
-  <div
-    id="debug-state"
-    hx-get="{{ root }}/api/diag/debug/state?format=html"
-    hx-trigger="load"
-    hx-swap="outerHTML">Loading debug state…</div>
-  <form class="inline"
-        hx-post="{{ root }}/api/diag/debug/state/enable"
-        hx-target="#debug-state"
-        hx-swap="outerHTML">
-    <button class="btn" type="submit">Enable Debug</button>
-  </form>
-  <form class="inline"
-        hx-post="{{ root }}/api/diag/debug/state/disable"
-        hx-target="#debug-state"
-        hx-swap="outerHTML">
-    <button class="btn" type="submit">Disable Debug</button>
-  </form>
 </div>
 <div hx-get="{{ root }}/interop/summary" hx-trigger="load, every 10s" hx-target="#interop-kpi-wrap" hx-swap="innerHTML"></div>
 <div id="interop-kpi-wrap"></div>

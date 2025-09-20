@@ -9,13 +9,15 @@
 {% endif %}
 {% set root = request.scope.get('root_path', '') %}
 <p class="micro"><a href="{{ root }}/ui/home">← Back to Home</a></p>
-<h2>Interoperability Skills</h2>
-<div id="debug-toggle"
-     class="row gap mb"
-     hx-get="{{ root }}/api/diag/debug/state/snippet"
-     hx-trigger="load"
-     hx-swap="outerHTML">
-  <span class="muted small">Loading debug toggle…</span>
+<div class="row mb" style="justify-content: space-between; align-items: center;">
+  <h2>Interoperability Skills</h2>
+  <div id="debug-state-badge"
+       hx-get="{{ root }}/api/diag/debug/state?format=html"
+       hx-trigger="load"
+       hx-target="#debug-state-badge"
+       hx-swap="outerHTML">
+    <span class="micro muted">Loading debug switch…</span>
+  </div>
 </div>
 <div class="grid">
   {% include "ui/interop/_generate_panel.html" %}
