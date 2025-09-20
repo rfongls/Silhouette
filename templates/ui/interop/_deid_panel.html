@@ -1,41 +1,32 @@
-<section class="card collapsed" id="card-deid">
-  <div class="card-header">
-    <h3 class="card-title">De‑Identify Message</h3>
-    <div class="toolbar"></div>
-  </div>
-  <div class="card-body">
 {% set root = request.scope.get('root_path', '') %}
-  <form id="deid-form"
-        method="post"
-        action="{{ urls.ui_deidentify | default(root ~ '/ui/interop/deidentify', true) }}"
-        autocomplete="off"
-        novalidate
-        hx-post="{{ urls.api_deidentify | default(root ~ '/api/interop/deidentify', true) }}"
-        hx-target="#deid-output"
-        hx-swap="innerHTML">
-    <textarea class="input" id="deid-text" name="text" rows="10" placeholder="Paste HL7 to de-identify"></textarea>
-    <div class="row gap mt">
-      <input class="input" type="number" name="seed" placeholder="seed (optional)"/>
-      <button class="btn">De‑identify</button>
-    </div>
-  </form>
-  <div id="deid-output" class="mt"></div>
-  <div class="action-cards">
-    <div class="action-card">
-      <h4>Run Next Pipeline → Validate</h4>
-      <p class="micro muted">Send the de‑identified HL7 into Validate.</p>
-      <button class="btn" type="button" onclick="window.InteropUI.runValidateFromDeid()">Run Validate</button>
-    </div>
-    <div class="action-card">
-      <h4>Run MLLP Pipeline</h4>
-      <p class="micro muted">Send the de‑identified HL7 using the MLLP settings.</p>
-      <button class="btn" type="button" onclick="window.InteropUI.runMllpFrom('deid')">Send via MLLP</button>
-    </div>
-    <div class="action-card">
-      <h4>Run Full FHIR Pipeline</h4>
-      <p class="micro muted">Open HL7→FHIR pipeline with this de‑identified HL7.</p>
-      <button class="btn" type="button" onclick="window.InteropUI.openPipelineWithText(document.getElementById('deid-text').value)">Open HL7→FHIR</button>
-    </div>
+<form id="deid-form"
+      method="post"
+      hx-post="{{ root }}/api/interop/deidentify"
+      hx-headers='{"Accept":"application/json"}'
+      hx-target="#deid-report"
+      hx-swap="none"
+      hx-on::afterRequest="window.InteropUI.onDeidResponse(event)">
+  <textarea id="deid-text" name="text" class="input textarea-output" placeholder="Paste HL7 to de-identify"></textarea>
+  <div class="row gap mt">
+    <input class="input" id="deid-seed" name="seed" placeholder="seed (optional)" />
+    <button id="deid-run" class="btn" type="submit">De‑identify</button>
   </div>
+</form>
+<details id="deid-mini-report" class="mini-report" open>
+  <summary>Change report</summary>
+  <div id="deid-report" class="small muted">Awaiting result…</div>
+</details>
+<div class="action-tray mt">
+  <div class="action-card" onclick="window.InteropUI.runNextFromDeid('validate')">
+    <strong>Run Next Pipeline → Validate</strong>
+    <small>Use the de‑identified HL7 for validation.</small>
   </div>
-</section>
+  <div class="action-card" onclick="window.InteropUI.runNextFromDeid('mllp')">
+    <strong>Run MLLP Pipeline</strong>
+    <small>Prefill the MLLP card with the de‑identified message.</small>
+  </div>
+  <div class="action-card" onclick="window.InteropUI.runTo('fhir')">
+    <strong>Run Full FHIR Pipeline → HL7 → FHIR</strong>
+    <small>Open the transport card with FHIR translation enabled.</small>
+  </div>
+</div>

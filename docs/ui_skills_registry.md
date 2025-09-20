@@ -88,7 +88,7 @@ skills:
 - **Shared assets**  
   - Base spacing/layout: `/static/css/dashboard.css`
   - Interop add-ons & utility styles: `/static/css/interop_extras.css`
-  - Minimal nav highlighting: `/static/js/nav.js`
+  - Menu + theme toggle: `/static/js/nav.js`
   - Interop UI helpers (toggles, datalists): `/static/js/interop_ui.js`
 
 ---
@@ -137,7 +137,7 @@ templates/
 static/
   css/dashboard.css           # spacing/theme hooks for dashboards
   css/interop_extras.css      # card/gap utilities
-  js/nav.js                   # nav highlighting
+  js/nav.js                   # global menu + theme switcher
   js/interop_ui.js            # feature toggles & interop typeahead datalists
 ```
 

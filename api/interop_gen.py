@@ -11,7 +11,8 @@ import sys
 import inspect
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import JSONResponse, PlainTextResponse
+import html as _html
+from fastapi.responses import JSONResponse, PlainTextResponse, HTMLResponse
 from starlette.datastructures import UploadFile
 from silhouette_core.interop.hl7_mutate import (
     enrich_clinical_fields,
@@ -379,6 +380,86 @@ async def try_generate_on_validation_error(
         _debug_log("validation_fallback.failed", path=path)
         return None
 
+def _wants_text_plain(request: Request) -> bool:
+    """Return True when client prefers text/plain (or ?format=txt)."""
+    accept = (request.headers.get("accept") or "").lower()
+    if "text/plain" in accept:
+        return True
+    qs = (request.url.query or "").lower()
+    return ("format=txt" in qs) or ("format=text" in qs) or ("format=plain" in qs)
+
+
+def _field_label(seg: str, idx: int) -> str:
+    NAMES = {
+        "PID": {
+            3: "Patient Identifier List",
+            5: "Patient Name",
+            7: "Date/Time of Birth",
+            8: "Administrative Sex",
+            11: "Patient Address",
+            13: "Phone Number - Home",
+            18: "Patient Account Number",
+        },
+        "PV1": {
+            2: "Patient Class",
+            3: "Assigned Patient Location",
+            7: "Attending Doctor",
+            19: "Visit Number",
+        },
+        "NK1": {2: "Name", 3: "Relationship", 4: "Address", 5: "Phone"},
+        "DG1": {3: "Diagnosis Code", 6: "Diagnosis Type"},
+        "AL1": {3: "Allergen", 4: "Allergen Type"},
+        "IN1": {3: "Insurance Plan", 4: "Insurance Company", 36: "Policy Number"},
+    }
+    title = NAMES.get(seg, {}).get(idx, "")
+    return f"{seg}-{idx}" + (f" ({title})" if title else "")
+
+
+def _summarize_hl7_changes(orig: str, deid: str) -> list[dict[str, Any]]:
+    """Very small, segment/field delta summary for common segments."""
+
+    def _lines(s: str) -> list[str]:
+        return [ln for ln in re.split(r"\r?\n", s or "") if ln.strip()]
+
+    a, b = _lines(orig), _lines(deid)
+    n = min(len(a), len(b))
+    out: list[dict[str, Any]] = []
+    for i in range(n):
+        fa = a[i].split("|")
+        fb = b[i].split("|")
+        seg = (fa[0] if fa else "UNK")[:3]
+        m = max(len(fa), len(fb))
+        for idx in range(1, m):
+            va = fa[idx] if idx < len(fa) else ""
+            vb = fb[idx] if idx < len(fb) else ""
+            if va != vb:
+                out.append(
+                    {
+                        "segment": seg,
+                        "field": idx,
+                        "label": _field_label(seg, idx),
+                        "before": va,
+                        "after": vb,
+                    }
+                )
+    return out
+
+
+def _render_deid_summary_html(changes: list[dict[str, Any]]) -> str:
+    count = len(changes)
+    if not count:
+        return "<details class='mini-report'><summary>No de-identifiable fields changed</summary></details>"
+    lis = "".join(
+        f"<li><code>{_html.escape(c['label'])}</code></li>" for c in changes[:200]
+    )
+    return (
+        f"<details class='mini-report' open>"
+        f"<summary>De-identified fields: {count}</summary>"
+        f"<ul class='compact'>{lis}</ul>"
+        f"</details>"
+    )
+
+
 @router.post("/api/interop/deidentify")
 async def api_deidentify(request: Request):
     """De-identify text; accept JSON, form, multipart, or query."""
@@ -393,8 +474,45 @@ async def api_deidentify(request: Request):
         seed_int = None
     text_value = text if isinstance(text, str) else str(text)
     out = deidentify_message(text_value, seed=seed_int)
-    log_activity("deidentify", length=len(text_value), mode=body.get("mode") or "")
-    return JSONResponse({"text": out})
+    changes = _summarize_hl7_changes(text_value, out)
+    log_activity(
+        "deidentify",
+        length=len(text_value),
+        mode=body.get("mode") or "",
+        changed=len(changes),
+    )
+    if _wants_text_plain(request):
+        return PlainTextResponse(
+            out, media_type="text/plain", headers={"Cache-Control": "no-store"}
+        )
+    json_changes = [
+        {
+            "field": c.get("label") or f"{c.get('segment','')}-{c.get('field','')}",
+            "before": c.get("before", ""),
+            "after": c.get("after", ""),
+        }
+        for c in changes
+    ]
+    return JSONResponse({"text": out, "changes": json_changes})
+
+
+@router.post("/api/interop/deidentify/summary")
+async def api_deidentify_summary(request: Request):
+    """Return a compact HTML (or JSON) report of fields changed by de-identification."""
+    body = await parse_any_request(request)
+    text = body.get("text") or ""
+    seed = body.get("seed")
+    try:
+        seed_int = int(seed) if seed not in (None, "") else None
+    except Exception:
+        seed_int = None
+    src = text if isinstance(text, str) else str(text)
+    deid = deidentify_message(src, seed=seed_int)
+    changes = _summarize_hl7_changes(src, deid)
+    accept = (request.headers.get("accept") or "").lower()
+    if "text/html" in accept:
+        return HTMLResponse(_render_deid_summary_html(changes))
+    return JSONResponse({"count": len(changes), "changes": changes})
 
 
 @router.post("/api/interop/validate")
