@@ -9,7 +9,7 @@
         method="post"
         action="{{ urls.ui_validate | default(root ~ '/ui/interop/validate', true) }}"
         novalidate
-        hx-post="{{ urls.ui_validate | default(root ~ '/ui/interop/validate', true) }}"
+        hx-post="{{ urls.api_validate | default(root ~ '/api/interop/validate', true) }}"
         hx-target="#val-output"
         hx-swap="innerHTML">
     <textarea class="input" id="val-text" name="text" rows="10" placeholder="Paste HL7 to validate"></textarea>

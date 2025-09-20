@@ -9,9 +9,25 @@
   function q(id) { return document.getElementById(id); }
   function byId(id) { return document.getElementById(id); }
   function textValue(el) { return (el && (el.innerText || el.textContent) || "").trim(); }
+  function resolveRootBase() {
+    const body = typeof document !== "undefined" ? document.body : null;
+    if (body && body.dataset && typeof body.dataset.root === "string") {
+      return body.dataset.root;
+    }
+    const meta = typeof document !== "undefined" ? document.querySelector('meta[name="root-path"]') : null;
+    if (meta && typeof meta.getAttribute === "function") {
+      const val = meta.getAttribute("content");
+      if (typeof val === "string") return val;
+    }
+    if (typeof window !== "undefined" && typeof window.ROOT === "string") {
+      return window.ROOT;
+    }
+    return "";
+  }
+
   function rootPath(path) {
-    const baseRaw = (typeof window !== "undefined" && typeof window.ROOT === "string") ? window.ROOT : "";
-    const base = baseRaw && baseRaw !== "/" ? baseRaw.replace(/\/+$/, "") : baseRaw;
+    const baseRaw = resolveRootBase();
+    const base = baseRaw && baseRaw !== "/" ? baseRaw.replace(/\/+$/, "") : (baseRaw === "/" ? "" : baseRaw);
     if (!path) return base || "";
     const suffix = path.startsWith("/") ? path : "/" + path.replace(/^\/+/, "");
     return (base || "") + suffix;

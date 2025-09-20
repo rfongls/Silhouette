@@ -10,7 +10,7 @@
         action="{{ urls.ui_deidentify | default(root ~ '/ui/interop/deidentify', true) }}"
         autocomplete="off"
         novalidate
-        hx-post="{{ urls.ui_deidentify | default(root ~ '/ui/interop/deidentify', true) }}"
+        hx-post="{{ urls.api_deidentify | default(root ~ '/api/interop/deidentify', true) }}"
         hx-target="#deid-output"
         hx-swap="innerHTML">
     <textarea class="input" id="deid-text" name="text" rows="10" placeholder="Paste HL7 to de-identify"></textarea>
