@@ -122,7 +122,6 @@
       setMenuState(false);
     }, 'menuClose');
     bind(backdrop, 'click', () => setMenuState(false), 'menuBackdrop');
-
     document.addEventListener('keyup', (event) => {
       if (event.key === 'm' && (event.ctrlKey || event.metaKey)) {
         event.preventDefault();
