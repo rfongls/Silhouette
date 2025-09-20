@@ -1,17 +1,41 @@
-<section class="card" data-feature="deid">
-  <h3>De-Identify</h3>
+<section class="card collapsed" id="deid-card">
+  <div class="card-header">
+    <h3 class="card-title">De‑Identify Message</h3>
+    <div class="toolbar"></div>
+  </div>
+  <div class="card-body">
+{% set root = request.scope.get('root_path', '') %}
   <form id="deid-form"
         method="post"
-        action="{{ urls.ui_deidentify | default('/ui/interop/deidentify', true) }}"
-        hx-post="{{ urls.ui_deidentify | default('/ui/interop/deidentify', true) }}"
-        hx-trigger="submit"
+        action="{{ urls.ui_deidentify | default(root ~ '/ui/interop/deidentify', true) }}"
+        autocomplete="off"
+        novalidate
+        hx-post="{{ urls.ui_deidentify | default(root ~ '/ui/interop/deidentify', true) }}"
         hx-target="#deid-output"
         hx-swap="innerHTML">
-    <textarea class="input grow" id="deid-text" name="text" rows="8" placeholder="Paste HL7 here..."></textarea>
+    <textarea class="input" id="deid-text" name="text" rows="10" placeholder="Paste HL7 to de-identify"></textarea>
     <div class="row gap mt">
       <input class="input" type="number" name="seed" placeholder="seed (optional)"/>
-      <button class="btn">De-Identify</button>
+      <button class="btn">De‑identify</button>
     </div>
   </form>
-  <div id="deid-output" class="codepane mt muted">Output will appear here…</div>
+  <div id="deid-output" class="mt"></div>
+  <div class="action-cards">
+    <div class="action-card">
+      <h4>Run Next Pipeline → Validate</h4>
+      <p class="micro muted">Send the de‑identified HL7 into Validate.</p>
+      <button class="btn" type="button" onclick="window.InteropUI.runValidateFromDeid()">Run Validate</button>
+    </div>
+    <div class="action-card">
+      <h4>Run MLLP Pipeline</h4>
+      <p class="micro muted">Send the de‑identified HL7 using the MLLP settings.</p>
+      <button class="btn" type="button" onclick="window.InteropUI.runMllpFrom('deid')">Send via MLLP</button>
+    </div>
+    <div class="action-card">
+      <h4>Run Full FHIR Pipeline</h4>
+      <p class="micro muted">Open HL7→FHIR pipeline with this de‑identified HL7.</p>
+      <button class="btn" type="button" onclick="window.InteropUI.openPipelineWithText(document.getElementById('deid-text').value)">Open HL7→FHIR</button>
+    </div>
+  </div>
+  </div>
 </section>

@@ -10,7 +10,7 @@
 {% set root = request.scope.get('root_path', '') %}
 <p class="micro"><a href="{{ root }}/ui/home">← Back to Home</a></p>
 <div class="row mb" style="justify-content: space-between; align-items: center;">
-  <h2>Interoperability Skills</h2>
+  <h2>Interoperability</h2>
   <div id="debug-state-badge"
        hx-get="{{ root }}/api/diag/debug/state?format=html"
        hx-trigger="load"
@@ -19,16 +19,30 @@
     <span class="micro muted">Loading debug switch…</span>
   </div>
 </div>
-<div class="grid">
+<div class="feature-bar" id="interop-feature-bar">
+  <button class="feature-pill active" data-feature="gen">Generate Message</button>
+  <button class="feature-pill" data-feature="deid">De‑Identify Message</button>
+  <button class="feature-pill" data-feature="val">Validate Message</button>
+  <button class="feature-pill" data-feature="mllp">Transport (MLLP)</button>
+  <button class="feature-pill" data-feature="pipe">HL7 → FHIR Pipeline</button>
+</div>
+
+<div class="interop-grid">
   {% include "ui/interop/_generate_panel.html" %}
   {% include "ui/interop/_deid_panel.html" %}
   {% include "ui/interop/_validate_panel.html" %}
-  {% include "ui/interop/_debug_log_panel.html" %}
   {% include "ui/interop/_mllp_panel.html" %}
-  <section class="card">
-    <h3>HL7 → FHIR Pipeline</h3>
+  {% include "ui/interop/_debug_log_panel.html" %}
+</div>
+<div class="card">
+  <div class="card-header">
+    <h3 class="card-title">HL7 → FHIR Pipeline</h3>
+  </div>
+  <div class="card-body">
     <p class="muted">Translate HL7 to FHIR (and optionally POST). Uses your selected tools and local CLI if present.</p>
     <a class="btn" href="{{ root }}/ui/interop/pipeline">Open Pipeline</a>
-  </section>
+  </div>
 </div>
+
+<div id="pipeline-output-global" class="mt"></div>
 {% endblock %}
