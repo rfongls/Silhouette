@@ -1,28 +1,44 @@
-<section class="card">
-  <h3>Transport — MLLP</h3>
+<section class="card collapsed" id="mllp-card">
+  <div class="card-header">
+    <h3 class="card-title">Transport (MLLP)</h3>
+    <div class="toolbar"></div>
+  </div>
+  <div class="card-body">
+{% set root = request.scope.get('root_path', '') %}
   <form id="mllp-form"
-        hx-post="/api/interop/mllp/send"
-        hx-encoding="json"
-        hx-trigger="submit"
-        hx-target="#mllp-output"
+        method="post"
+        action="{{ root }}/api/interop/mllp/send"
+        novalidate
+        hx-post="{{ root }}/api/interop/mllp/send"
+        hx-target="#mllp-out"
         hx-swap="innerHTML">
-    <div class="row gap mb">
-      <label class="label small" for="pipeline-preset">Preset</label>
-      <select id="pipeline-preset" class="input" style="max-width: 22rem">
-        <option value="">— Select preset —</option>
-        <option value="local-2575">Local MLLP (127.0.0.1:2575)</option>
-        <option value="docker-2575">Docker MLLP (localhost:2575)</option>
-        <option value="partner-a">Partner Sandbox A (10.0.0.10:2575, +FHIR hop)</option>
-      </select>
-      <span class="micro muted">Choosing a preset fills Host/Port/Timeout and toggles the FHIR hop.</span>
-    </div>
     <div class="row gap">
-      <input class="input" id="mllp-host" name="host" placeholder="localhost" value="127.0.0.1"/>
-      <input class="input" id="mllp-port" name="port" type="number" value="2575"/>
-      <input class="input" id="mllp-timeout" name="timeout" type="number" step="0.5" value="5" placeholder="Timeout (sec)"/>
+      <input class="input" id="mllp-host" name="host" type="text" placeholder="host (e.g., 127.0.0.1)" value="127.0.0.1" />
+      <input class="input" id="mllp-port" name="port" type="number" placeholder="port (e.g., 2575)" value="2575" />
+      <input class="input" id="mllp-timeout" name="timeout" type="number" step="0.1" placeholder="timeout (s)" value="5" />
     </div>
-    <textarea class="input grow mt" id="mllp-messages" name="messages" rows="6" placeholder="One or more HL7 messages separated by blank lines"></textarea>
-    <button class="btn mt">Send</button>
+    <div class="file-row mt">
+      <input id="mllp-file" type="file" accept=".hl7,.txt" />
+      <button class="btn" type="button" onclick="window.InteropUI.loadFileIntoTextarea('mllp-file','mllp-messages')">Load file</button>
+      <span class="micro muted">You can also paste your HL7 below.</span>
+    </div>
+    <textarea class="input mt" id="mllp-messages" name="messages" rows="10" placeholder="Paste one or more HL7 messages to send (blank line separates)"></textarea>
+    <div class="row gap mt">
+      <button class="btn">Send via MLLP</button>
+    </div>
   </form>
-  <pre id="mllp-output" class="codepane mt">ACKs will appear here…</pre>
+  <div id="mllp-out" class="mt scrollbox codepane"></div>
+  <div class="action-cards">
+    <div class="action-card">
+      <h4>Run Full HL7 Pipeline</h4>
+      <p class="micro muted">Generate → (optional) De‑ID → Validate → MLLP using current MLLP settings.</p>
+      <button class="btn" type="button" onclick="window.InteropUI.runFullHl7PipelineFromMllp()">Run Full HL7 Pipeline</button>
+    </div>
+    <div class="action-card">
+      <h4>Run Full FHIR Pipeline</h4>
+      <p class="micro muted">Open HL7→FHIR with the content currently in MLLP textarea.</p>
+      <button class="btn" type="button" onclick="window.InteropUI.openPipelineWithText(document.getElementById('mllp-messages').value)">Open HL7→FHIR</button>
+    </div>
+  </div>
+  </div>
 </section>

@@ -1,17 +1,35 @@
-<section class="card" data-feature="validate">
-  <h3>Validate (Profile)</h3>
+<section class="card collapsed" id="val-card">
+  <div class="card-header">
+    <h3 class="card-title">Validate Message</h3>
+    <div class="toolbar"></div>
+  </div>
+  <div class="card-body">
+{% set root = request.scope.get('root_path', '') %}
   <form id="val-form"
         method="post"
-        action="{{ urls.ui_validate | default('/ui/interop/validate', true) }}"
-        hx-post="{{ urls.ui_validate | default('/ui/interop/validate', true) }}"
-        hx-trigger="submit"
+        action="{{ urls.ui_validate | default(root ~ '/ui/interop/validate', true) }}"
+        novalidate
+        hx-post="{{ urls.api_validate | default(root ~ '/api/interop/validate', true) }}"
         hx-target="#val-output"
         hx-swap="innerHTML">
-    <textarea class="input grow" id="val-text" name="text" rows="8" placeholder="Paste HL7…"></textarea>
+    <textarea class="input" id="val-text" name="text" rows="10" placeholder="Paste HL7 to validate"></textarea>
     <div class="row gap mt">
-      <input class="input" type="text" name="profile" placeholder="profile name (optional)"/>
+      <input class="input" type="text" name="profile" placeholder="profile (optional)"/>
       <button class="btn">Validate</button>
     </div>
   </form>
-  <div id="val-output" class="mt muted">Result will appear here…</div>
+  <div id="val-output" class="mt scrollbox codepane"></div>
+  <div class="action-cards">
+    <div class="action-card">
+      <h4>Run MLLP Pipeline</h4>
+      <p class="micro muted">Send this HL7 using the MLLP settings.</p>
+      <button class="btn" type="button" onclick="window.InteropUI.runMllpFrom('val')">Send via MLLP</button>
+    </div>
+    <div class="action-card">
+      <h4>Run Full FHIR Pipeline</h4>
+      <p class="micro muted">Open HL7→FHIR pipeline with this validated HL7.</p>
+      <button class="btn" type="button" onclick="window.InteropUI.openPipelineWithText(document.getElementById('val-text').value)">Open HL7→FHIR</button>
+    </div>
+  </div>
+  </div>
 </section>
