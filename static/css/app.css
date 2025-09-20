@@ -122,7 +122,7 @@ a:hover {
   position: fixed;
   top: 14px;
   right: 14px;
-  z-index: 2000;
+  z-index: 9999;
   width: 42px;
   height: 42px;
   border: 1px solid var(--menu-border);
@@ -134,6 +134,7 @@ a:hover {
   box-shadow: 0 2px 6px var(--hamburger-ring);
   padding: 0;
   cursor: pointer;
+  appearance: none;
 }
 
 #hamburger-btn:focus-visible {
@@ -170,7 +171,7 @@ a:hover {
   position: fixed;
   inset: 0;
   background: transparent;
-  z-index: 1999;
+  z-index: 9998;
 }
 
 #menu-backdrop[hidden] {
@@ -188,7 +189,7 @@ a:hover {
   border-radius: 12px;
   box-shadow: var(--menu-shadow);
   padding: 8px;
-  z-index: 2001;
+  z-index: 10000;
   opacity: 0;
   transform: translateY(-6px);
   transition: opacity 0.12s ease, transform 0.12s ease;
