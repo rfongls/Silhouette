@@ -3,7 +3,6 @@
 (() => {
   'use strict';
   const DOC = document;
-
   const THEME_KEY = 'app.theme';
   const VALID_THEMES = new Set(['default', 'dark']);
 
@@ -68,6 +67,13 @@
       backdrop.setAttribute('hidden', '');
       DOC.body.appendChild(backdrop);
     }
+    if (primaryTrigger && wasOpen) {
+      primaryTrigger.setAttribute('aria-expanded', 'false');
+      if (typeof primaryTrigger.focus === 'function') {
+        primaryTrigger.focus();
+      }
+    }
+  }
 
     // Theme selection
     menu.addEventListener('click', (e) => {

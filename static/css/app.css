@@ -460,7 +460,6 @@ select:focus {
 }
 /* === Settings popover (replaces old drawer UX) === */
 :root { --menu-shadow: 0 8px 30px rgba(0,0,0,.08); }
-
 .app-menu {
   position: fixed;
   top: 60px;
