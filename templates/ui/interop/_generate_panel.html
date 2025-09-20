@@ -60,6 +60,12 @@
     </div>
   </form>
   <pre id="gen-output" class="codepane muted mt">Select / type a template above and press Generate.</pre>
+  <div class="row gap mt">
+    <button type="button" class="btn" onclick="window.InteropUI.copyFromGenerate('deid')">Send to De-ID</button>
+    <button type="button" class="btn" onclick="window.InteropUI.copyFromGenerate('validate')">Send to Validate</button>
+    <button type="button" class="btn" onclick="window.InteropUI.copyFromGenerate('mllp')">Send to MLLP</button>
+    <label class="micro"><input type="checkbox" id="run-pipeline"> Run through pipeline (De-ID → Validate → MLLP)</label>
+  </div>
   <noscript>
     <p class="muted mt">JavaScript is disabled. Submitting will open a results page.</p>
   </noscript>

@@ -264,6 +264,67 @@
     });
   });
 
+  function getGenText() {
+    const el = document.getElementById("gen-output");
+    return (el && (el.innerText || el.textContent) || "").trim();
+  }
+
+  function copyFromGenerate(target) {
+    const text = getGenText();
+    if (!text) return;
+    const map = { deid: "#deid-text", validate: "#val-text", mllp: "#mllp-messages" };
+    const ta = document.querySelector(map[target]);
+    if (ta) {
+      ta.value = text;
+      ta.dispatchEvent(new Event("input", { bubbles: true }));
+    }
+    sendDebugEvent("interop.generate.copy", { target, hasText: !!text });
+    if (target === "deid") {
+      const run = document.getElementById("run-pipeline");
+      if (run && run.checked) {
+        const form = document.getElementById("deid-form");
+        if (form && form.requestSubmit) {
+          form.requestSubmit();
+        } else if (form) {
+          form.submit();
+        }
+      }
+    }
+  }
+
+  document.addEventListener("htmx:afterSwap", (e) => {
+    if (!e || !e.target) return;
+    const run = document.getElementById("run-pipeline");
+    if (!run || !run.checked) return;
+    if (e.target.id === "deid-output") {
+      const text = (e.target.innerText || e.target.textContent || "").trim();
+      if (!text) return;
+      const vta = document.querySelector("#val-text");
+      if (vta) {
+        vta.value = text;
+        vta.dispatchEvent(new Event("input", { bubbles: true }));
+      }
+      const ml = document.querySelector("#mllp-messages");
+      if (ml) {
+        ml.value = text;
+        ml.dispatchEvent(new Event("input", { bubbles: true }));
+      }
+      const vf = document.getElementById("val-form");
+      if (vf && vf.requestSubmit) {
+        vf.requestSubmit();
+      } else if (vf) {
+        vf.submit();
+      }
+    } else if (e.target.id === "validate-output") {
+      const mf = document.getElementById("mllp-form");
+      if (mf && mf.requestSubmit) {
+        mf.requestSubmit();
+      } else if (mf) {
+        mf.submit();
+      }
+    }
+  });
+
   // expose a tiny API
   window.InteropUI = {
     syncTyped,
@@ -274,5 +335,6 @@
     setPrimaryVersion,
     getPrimaryVersion,
     sendDebugEvent,
+    copyFromGenerate,
   };
 })();
