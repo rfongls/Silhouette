@@ -28,7 +28,28 @@
   let menuOpen = false;
   let focusRestore = null;
 
+  function ensureMenuElements(){
+    const body = document.body;
+    if (!body) return;
+    if (!menuButton || !body.contains(menuButton)) {
+      menuButton = document.getElementById('menu-toggle');
+    }
+    if (!drawer || !body.contains(drawer)) {
+      drawer = document.getElementById('app-drawer');
+    }
+    if (!backdrop || !body.contains(backdrop)) {
+      backdrop = document.getElementById('app-menu-backdrop');
+    }
+    if (!closeButton || !body.contains(closeButton)) {
+      closeButton = document.getElementById('menu-close');
+    }
+    if (!themeSelect || !body.contains(themeSelect)) {
+      themeSelect = document.getElementById('theme-select');
+    }
+  }
+
   function setMenuState(open){
+    ensureMenuElements();
     if (!drawer) return;
     if (open) {
       if (menuOpen) return;
@@ -37,6 +58,7 @@
       menuButton && menuButton.setAttribute('aria-expanded', 'true');
       backdrop && backdrop.removeAttribute('hidden');
       drawer.removeAttribute('hidden');
+      drawer.removeAttribute('aria-hidden');
       requestAnimationFrame(() => drawer.classList.add('open'));
       document.body.classList.add('menu-open');
       const focusTarget = themeSelect || drawer;
@@ -53,6 +75,7 @@
       document.body.classList.remove('menu-open');
       const finish = () => {
         drawer && drawer.setAttribute('hidden', '');
+        drawer && drawer.setAttribute('aria-hidden', 'true');
         backdrop && backdrop.setAttribute('hidden', '');
       };
       if (drawer.classList.contains('open')) {
@@ -80,16 +103,25 @@
   }
 
   function setupMenu(){
-    menuButton = document.getElementById('menu-toggle');
-    drawer = document.getElementById('app-drawer');
-    backdrop = document.getElementById('app-menu-backdrop');
-    closeButton = document.getElementById('menu-close');
-    themeSelect = document.getElementById('theme-select');
+    ensureMenuElements();
 
-    if (menuButton) menuButton.addEventListener('click', () => setMenuState(!menuOpen));
-    if (closeButton) closeButton.addEventListener('click', () => setMenuState(false));
-    if (backdrop) backdrop.addEventListener('click', () => setMenuState(false));
+    const bind = (el, evt, handler, key) => {
+      if (!el) return;
+      const flag = key || `navBound${evt}`;
+      if (el.dataset && el.dataset[flag]) return;
+      el.addEventListener(evt, handler);
+      if (el.dataset) el.dataset[flag] = '1';
+    };
 
+    bind(menuButton, 'click', (event) => {
+      if (event) event.preventDefault();
+      setMenuState(!menuOpen);
+    }, 'menuToggle');
+    bind(closeButton, 'click', (event) => {
+      if (event) event.preventDefault();
+      setMenuState(false);
+    }, 'menuClose');
+    bind(backdrop, 'click', () => setMenuState(false), 'menuBackdrop');
     document.addEventListener('keyup', (event) => {
       if (event.key === 'm' && (event.ctrlKey || event.metaKey)) {
         event.preventDefault();
@@ -98,9 +130,9 @@
     });
 
     if (themeSelect) {
-      themeSelect.addEventListener('change', (event) => {
-        applyTheme(event.target && event.target.value);
-      });
+      bind(themeSelect, 'change', (event) => {
+        applyTheme(event && event.target && event.target.value);
+      }, 'menuTheme');
     }
   }
 
@@ -183,6 +215,7 @@
   }
 
   function initTheme(){
+    ensureMenuElements();
     const stored = getStoredTheme();
     const theme = stored === 'dark' || stored === 'light' ? stored : 'system';
     applyTheme(theme, false);
