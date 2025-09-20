@@ -433,7 +433,15 @@ def _summarize_hl7_changes(orig: str, deid: str) -> list[dict[str, Any]]:
             va = fa[idx] if idx < len(fa) else ""
             vb = fb[idx] if idx < len(fb) else ""
             if va != vb:
-                out.append({"segment": seg, "field": idx, "label": _field_label(seg, idx)})
+                out.append(
+                    {
+                        "segment": seg,
+                        "field": idx,
+                        "label": _field_label(seg, idx),
+                        "before": va,
+                        "after": vb,
+                    }
+                )
     return out
 
 
@@ -466,12 +474,45 @@ async def api_deidentify(request: Request):
         seed_int = None
     text_value = text if isinstance(text, str) else str(text)
     out = deidentify_message(text_value, seed=seed_int)
-    log_activity("deidentify", length=len(text_value), mode=body.get("mode") or "")
+    changes = _summarize_hl7_changes(text_value, out)
+    log_activity(
+        "deidentify",
+        length=len(text_value),
+        mode=body.get("mode") or "",
+        changed=len(changes),
+    )
     if _wants_text_plain(request):
         return PlainTextResponse(
             out, media_type="text/plain", headers={"Cache-Control": "no-store"}
         )
-    return JSONResponse({"text": out})
+    json_changes = [
+        {
+            "field": c.get("label") or f"{c.get('segment','')}-{c.get('field','')}",
+            "before": c.get("before", ""),
+            "after": c.get("after", ""),
+        }
+        for c in changes
+    ]
+    return JSONResponse({"text": out, "changes": json_changes})
+
+
+@router.post("/api/interop/deidentify/summary")
+async def api_deidentify_summary(request: Request):
+    """Return a compact HTML (or JSON) report of fields changed by de-identification."""
+    body = await parse_any_request(request)
+    text = body.get("text") or ""
+    seed = body.get("seed")
+    try:
+        seed_int = int(seed) if seed not in (None, "") else None
+    except Exception:
+        seed_int = None
+    src = text if isinstance(text, str) else str(text)
+    deid = deidentify_message(src, seed=seed_int)
+    changes = _summarize_hl7_changes(src, deid)
+    accept = (request.headers.get("accept") or "").lower()
+    if "text/html" in accept:
+        return HTMLResponse(_render_deid_summary_html(changes))
+    return JSONResponse({"count": len(changes), "changes": changes})
 
 
 @router.post("/api/interop/deidentify/summary")

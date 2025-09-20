@@ -239,10 +239,18 @@
   function expandCard(feature, highlight) {
     const card = cardEl(feature);
     if (!card) return;
-    card.classList.remove('collapsed');
-    if (highlight) {
-      card.classList.add('highlight');
-      setTimeout(() => card.classList.remove('highlight'), 900);
+    if (card.tagName === 'DETAILS') {
+      card.open = true;
+      if (highlight) {
+        card.classList.add('highlight');
+        setTimeout(() => card.classList.remove('highlight'), 900);
+      }
+    } else {
+      card.classList.remove('collapsed');
+      if (highlight) {
+        card.classList.add('highlight');
+        setTimeout(() => card.classList.remove('highlight'), 900);
+      }
     }
     try {
       card.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -250,10 +258,11 @@
   }
 
   function setActivePill(feature) {
-    const pills = document.querySelectorAll('#interop-feature-bar .feature-pill');
+    const pills = document.querySelectorAll('#interop-feature-bar .feature-pill, .feature-tabs .tab');
     pills.forEach(p => {
-      if (p.dataset.feature === feature) p.classList.add('active');
-      else p.classList.remove('active');
+      const featureMatch = p.dataset && p.dataset.feature === feature;
+      const openMatch = p.dataset && p.dataset.openCard === (FEATURE_IDS[feature] || feature);
+      if (featureMatch || openMatch) p.classList.add('active'); else p.classList.remove('active');
     });
   }
   function collapseAll() {
@@ -262,7 +271,12 @@
       if (!id || seen.has(id)) return;
       seen.add(id);
       const card = byId(id);
-      if (card) card.classList.add('collapsed');
+      if (!card) return;
+      if (card.tagName === 'DETAILS') {
+        card.open = false;
+      } else {
+        card.classList.add('collapsed');
+      }
     });
   }
   function expand(feature, highlight) {
@@ -275,39 +289,36 @@
   }
 
   document.addEventListener('click', (e) => {
-    const pill = e.target.closest('.feature-pill');
+    const pill = e.target.closest('.feature-pill, .feature-tabs .tab');
     if (!pill || !pill.dataset) return;
-    const feature = pill.dataset.feature;
+    const feature = pill.dataset.feature || pill.dataset.openCard;
     if (!feature) return;
+    if (FEATURE_IDS[feature]) {
+      showFeature(feature);
+      sendDebugEvent('interop.feature.show', { feature });
+      return;
+    }
+    if (feature === 'card-gen' || feature === 'card-deid' || feature === 'card-validate' || feature === 'card-mllp') {
+      collapseAll();
+      const idFeature = Object.keys(FEATURE_IDS).find(key => FEATURE_IDS[key] === feature);
+      expand(idFeature || feature);
+      return;
+    }
     if (feature === 'pipe') {
       window.location.href = rootPath('/ui/interop/pipeline');
       sendDebugEvent('interop.feature.navigate', { feature });
       return;
     }
-    showFeature(feature);
-    sendDebugEvent('interop.feature.show', { feature });
   });
 
-  function renderPre(targetId, text) {
-    const host = byId(targetId);
-    if (!host) return;
-    const pre = document.createElement('pre');
-    pre.className = 'codepane scrollbox tall';
-    pre.textContent = text || '';
-    host.innerHTML = '';
-    host.appendChild(pre);
-  }
-
   function getGenText() { return textValue(byId('gen-output')); }
-  function setDeidText(v) {
+  function getDeidText() {
+    const pre = byId('deid-output');
+    const fromPre = pre ? (pre.textContent || pre.innerText || '').trim() : '';
+    if (fromPre) return fromPre;
     const ta = byId('deid-text');
-    if (ta) {
-      ta.value = v || '';
-      ta.dispatchEvent(new Event('input', { bubbles: true }));
-    }
-    renderPre('deid-output', v || '');
+    return ta ? ta.value : '';
   }
-  function getDeidText() { const ta = byId('deid-text'); return ta ? ta.value : ''; }
   function setValText(v) {
     const ta = byId('val-text');
     if (ta) {
@@ -372,41 +383,11 @@
   }
 
   function runNextDeid() {
-    const text = getGenText();
-    if (!text) {
-      alert('Please generate a message first.');
-      expand('gen');
-      return;
-    }
-    copyFromGenerate('deid');
-    collapseAll();
-    expand('deid', true);
-    const form = byId('deid-form') || document.querySelector('form#deid-form');
-    const triggered = !!form;
-    if (form) {
-      if (typeof form.requestSubmit === 'function') form.requestSubmit();
-      else form.submit();
-    }
-    sendDebugEvent('interop.flow.deid_from_generate', { queued: triggered, mode: 'form', bytes: text.length });
+    runTo('deid');
   }
 
   function runValidationFromGen() {
-    const text = getGenText();
-    if (!text) {
-      alert('Please generate a message first.');
-      expand('gen');
-      return;
-    }
-    copyFromGenerate('validate');
-    collapseAll();
-    expand('val', true);
-    const form = byId('val-form') || document.querySelector('form#val-form');
-    const triggered = !!form;
-    if (form) {
-      if (typeof form.requestSubmit === 'function') form.requestSubmit();
-      else form.submit();
-    }
-    sendDebugEvent('interop.flow.validate_from_generate', { queued: triggered, mode: 'form', bytes: text.length });
+    runTo('validate');
   }
 
   function runDeidFromGenerate() {
@@ -418,25 +399,7 @@
   }
 
   async function runValidateFromDeid() {
-    const hl7 = getDeidText();
-    if (!hl7) {
-      alert('No de‑identified HL7 yet.');
-      return;
-    }
-    try {
-      const data = await postJSON('/api/interop/validate', { text: hl7 });
-      setValText(hl7);
-      const out = byId('val-output');
-      if (out) {
-        out.textContent = JSON.stringify(data, null, 2);
-      }
-      collapseAll();
-      expand('val');
-      sendDebugEvent('interop.flow.validate_from_deid', { ok: true });
-    } catch (err) {
-      alert('Validate failed: ' + err.message);
-      sendDebugEvent('interop.flow.validate_from_deid', { ok: false, error: String(err) });
-    }
+    runNextFromDeid('validate');
   }
 
   async function runMllpFrom(source) {
@@ -510,6 +473,90 @@
     }
   }
 
+  function escapeHtml(str) {
+    return String(str || '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  function openCard(id) {
+    if (!id) return;
+    collapseAll();
+    const card = typeof id === 'string' ? document.getElementById(id) : id;
+    if (!card) return;
+    if (card.tagName === 'DETAILS') {
+      card.open = true;
+    } else {
+      card.classList.remove('collapsed');
+    }
+    const featureKey = Object.keys(FEATURE_IDS).find(key => FEATURE_IDS[key] === (card.id || id));
+    if (featureKey) {
+      setActivePill(normalizedFeatureKey(featureKey));
+    }
+  }
+
+  function runTo(target) {
+    const normalizedTarget = target === 'fhir' ? 'mllp' : target;
+    const normalized = normalizedFeatureKey(normalizedTarget);
+    const text = getGenText();
+    if (!text) {
+      alert('Please generate a message first.');
+      expand('gen');
+      return;
+    }
+    copyFromGenerate(normalizedTarget);
+    if (target === 'fhir') {
+      const toggle = byId('run-pipeline-fhir');
+      if (toggle) toggle.checked = true;
+      const post = byId('run-pipeline-fhir-post');
+      if (post) post.checked = true;
+    }
+    if (normalized === 'deid') {
+      const mini = document.querySelector('#deid-report details, details.mini-report');
+      if (mini && typeof mini.open === 'boolean') {
+        mini.open = true;
+      }
+    }
+    collapseAll();
+    expand(normalized, true);
+  }
+
+  function runNextFromDeid(next) {
+    const hl7 = (getDeidText() || '').trim();
+    if (!hl7) {
+      alert('Run de-identify first.');
+      expand('deid');
+      return;
+    }
+    if (next === 'validate') {
+      setValText(hl7);
+      collapseAll();
+      expand('val', true);
+    } else if (next === 'mllp') {
+      const ta = byId('mllp-messages');
+      if (ta) {
+        ta.value = hl7;
+        ta.dispatchEvent(new Event('input', { bubbles: true }));
+      }
+      collapseAll();
+      expand('mllp', true);
+    }
+  }
+
+  function onGenerateComplete(evt) {
+    const tray = byId('gen-run-tray');
+    const text = getGenText();
+    if (tray) {
+      tray.classList.toggle('hidden', !text);
+    }
+    if (text) {
+      setActivePill('gen');
+    }
+  }
+
   function openPipelineWithText(text) {
     try { sessionStorage.setItem('interop.pipeline.input', text || ''); } catch {}
     window.location.href = rootPath('/ui/interop/pipeline');
@@ -570,12 +617,15 @@
     getPrimaryVersion,
     sendDebugEvent,
     showFeature,
+    openCard,
     openManual,
+    runTo,
     runNextDeid,
     runValidationFromGen,
     runDeidFromGenerate,
     runValidateFromGenerate,
     runValidateFromDeid,
+    runNextFromDeid,
     runMllpFrom,
     runFullFhirFromGen,
     runFullHl7PipelineFromMllp,
@@ -583,5 +633,6 @@
     getGenText,
     copyFromGenerate,
     loadFileIntoTextarea,
+    onGenerateComplete,
   });
 })();
