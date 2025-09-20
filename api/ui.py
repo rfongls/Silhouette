@@ -6,7 +6,7 @@ from pathlib import Path
 
 import yaml
 from fastapi import APIRouter, Form, Request
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from starlette.templating import Jinja2Templates
 
 from api.debug_log import (
@@ -60,6 +60,12 @@ def _load_skills() -> list[dict]:
             }
         )
     return norm
+
+
+@router.get("/api/ui/skills", response_class=JSONResponse, include_in_schema=False)
+def api_skills_registry():
+    """Expose enabled skills for navigation menus."""
+    return JSONResponse(_load_skills())
 
 @router.get("/", include_in_schema=False)
 def root():

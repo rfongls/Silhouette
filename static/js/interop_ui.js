@@ -1,14 +1,37 @@
-// Lightweight UI helpers for Interop dashboard
-// - Manage Features vs Reports view
-// - Populate trigger or template typeaheads for various panels
-// - Maintain a primary HL7 version shared across panels
+// Enhanced interoperability UI helpers
+// - Populate trigger typeaheads across panels
+// - Coordinate feature cards + pipeline transitions
+// - Maintain shared HL7 version + sample utilities
 
 (function () {
-  const LS_FEATURES = "interop.features.visible";
-  const LS_REPORTS = "interop.view.reports";
   const LS_PRIMARY_VER = "interop.primary.version";
 
   function q(id) { return document.getElementById(id); }
+  function byId(id) { return document.getElementById(id); }
+  function textValue(el) { return (el && (el.innerText || el.textContent) || "").trim(); }
+  function resolveRootBase() {
+    const body = typeof document !== "undefined" ? document.body : null;
+    if (body && body.dataset && typeof body.dataset.root === "string") {
+      return body.dataset.root;
+    }
+    const meta = typeof document !== "undefined" ? document.querySelector('meta[name="root-path"]') : null;
+    if (meta && typeof meta.getAttribute === "function") {
+      const val = meta.getAttribute("content");
+      if (typeof val === "string") return val;
+    }
+    if (typeof window !== "undefined" && typeof window.ROOT === "string") {
+      return window.ROOT;
+    }
+    return "";
+  }
+
+  function rootPath(path) {
+    const baseRaw = resolveRootBase();
+    const base = baseRaw && baseRaw !== "/" ? baseRaw.replace(/\/+$/, "") : (baseRaw === "/" ? "" : baseRaw);
+    if (!path) return base || "";
+    const suffix = path.startsWith("/") ? path : "/" + path.replace(/^\/+/, "");
+    return (base || "") + suffix;
+  }
 
   function sendDebugEvent(name, payload) {
     try {
@@ -17,11 +40,12 @@
         ts: new Date().toISOString(),
         ...(payload || {}),
       });
+      const url = rootPath("/api/diag/debug/event");
       if (navigator.sendBeacon) {
         const blob = new Blob([body], { type: "application/json" });
-        navigator.sendBeacon("/api/diag/debug/event", blob);
+        navigator.sendBeacon(url, blob);
       } else if (window.fetch) {
-        fetch("/api/diag/debug/event", {
+        fetch(url, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body,
@@ -31,35 +55,6 @@
     } catch (err) {
       /* ignore */
     }
-  }
-
-  function saveVisible() {
-    const toggles = Array.from(document.querySelectorAll(".feature-toggle"));
-    const state = {};
-    toggles.forEach(t => state[t.dataset.target] = t.checked);
-    localStorage.setItem(LS_FEATURES, JSON.stringify(state));
-    applyVisible(state);
-  }
-  function loadVisible() {
-    try { return JSON.parse(localStorage.getItem(LS_FEATURES) || "{}"); }
-    catch { return {}; }
-  }
-  function applyVisible(state) {
-    Object.entries(state).forEach(([k, v]) => {
-      document.querySelectorAll(`[data-feature="${k}"]`).forEach(el => el.hidden = !v);
-    });
-  }
-  function saveReportsMode(on) {
-    localStorage.setItem(LS_REPORTS, on ? "1" : "0");
-    applyReportsMode(on);
-  }
-  function loadReportsMode() {
-    return localStorage.getItem(LS_REPORTS) === "1";
-  }
-  function applyReportsMode(on) {
-    // In a real split, we'd hide feature cards and show report cards.
-    // For now, only hide elements with [data-feature] when reports is ON.
-    document.querySelectorAll("[data-feature]").forEach(el => el.hidden = on ? true : el.hidden && false);
   }
 
   function setTemplateHint(prefix, relpath) {
@@ -146,11 +141,10 @@
     sendDebugEvent("interop.version.set", { version: v });
     document.querySelectorAll(".hl7-version-select").forEach(sel => {
       if (sel && sel.value !== v) sel.value = v;
-      if (sel.dataset.hxRefreshTarget) {
+      if (sel.dataset && sel.dataset.hxRefreshTarget) {
         sel.dispatchEvent(new Event("change", { bubbles: true }));
       }
     });
-    // refresh typeaheads
     try {
       fillDatalist("qs");
       fillDatalist("ds");
@@ -159,22 +153,25 @@
     } catch {}
   }
   function getPrimaryVersion() {
-    return localStorage.getItem(LS_PRIMARY_VER) || "hl7-v2-4";
+    try {
+      return localStorage.getItem(LS_PRIMARY_VER) || "hl7-v2-4";
+    } catch {
+      return "hl7-v2-4";
+    }
   }
 
-  async function fillDatalist(prefix) {  // e.g. prefix === 'gen'
+  async function fillDatalist(prefix) {
     const versionSel = q(prefix + "-version") || q("sample-version") || q("gen-version");
     const version = versionSel ? versionSel.value : getPrimaryVersion();
-    const dl = q(prefix + "-trigger-datalist");  // e.g., gen-trigger-datalist
+    const dl = q(prefix + "-trigger-datalist");
     if (!dl) return;
-    // clear and tag with version to avoid races
     dl.innerHTML = "";
     dl.dataset.ver = version;
     sendDebugEvent("interop.datalist.load", { prefix, version });
     try {
-      const r = await fetch(`/api/interop/triggers?version=${encodeURIComponent(version)}`, {cache: "no-cache"});
+      const r = await fetch(rootPath(`/api/interop/triggers?version=${encodeURIComponent(version)}`), { cache: "no-cache" });
       const data = await r.json();
-      const seen = new Set(); // de-dupe by trigger (per version)
+      const seen = new Set();
       (data.items || []).forEach(it => {
         const trig = (it.trigger || "").toUpperCase().trim();
         if (!trig || seen.has(trig)) return;
@@ -198,9 +195,8 @@
     const versionSel = q(prefix + "-version") || q("sample-version") || q("gen-version");
     const version = versionSel ? versionSel.value : getPrimaryVersion();
     try {
-      // endpoint caps limit at 2000, so stay within that bound
       sendDebugEvent("interop.templates.load", { prefix, version });
-      const r = await fetch(`/api/interop/samples?version=${encodeURIComponent(version)}&limit=2000`, {cache: "no-cache"});
+      const r = await fetch(rootPath(`/api/interop/samples?version=${encodeURIComponent(version)}&limit=2000`), { cache: "no-cache" });
       const data = await r.json();
       const dl = q(prefix + "-template-datalist");
       if (!dl) return;
@@ -219,316 +215,261 @@
   }
 
   function syncTyped(prefix) {
-    // For now, a pure datalist only (no backing <select>) is used on Generate.
-    // Kept for parity with other panels if you re-add a <select> later.
+    // Reserved for future parity between select + datalist inputs.
   }
 
-  // wire up after load
-  window.addEventListener("DOMContentLoaded", () => {
-    // Feature toggles
-    const initial = loadVisible();
-    if (Object.keys(initial).length) applyVisible(initial);
-    document.querySelectorAll(".feature-toggle").forEach(t => {
-      if (initial.hasOwnProperty(t.dataset.target)) t.checked = !!initial[t.dataset.target];
-      t.addEventListener("change", saveVisible);
+  function setActivePill(feature) {
+    const pills = document.querySelectorAll('#interop-feature-bar .feature-pill');
+    pills.forEach(p => {
+      if (p.dataset.feature === feature) p.classList.add('active');
+      else p.classList.remove('active');
     });
-    // Reports toggle
-    const rep = q("view-reports-toggle");
-    if (rep) {
-      rep.checked = loadReportsMode();
-      applyReportsMode(rep.checked);
-      rep.addEventListener("change", () => saveReportsMode(rep.checked));
+  }
+  function collapseAll() {
+    ['gen', 'deid', 'val', 'mllp'].forEach(k => {
+      const card = byId(k + '-card');
+      if (card) card.classList.add('collapsed');
+    });
+  }
+  function expand(feature) {
+    const card = byId(feature + '-card');
+    if (card) card.classList.remove('collapsed');
+    setActivePill(feature);
+  }
+  function showFeature(feature) {
+    collapseAll();
+    expand(feature);
+  }
+
+  document.addEventListener('click', (e) => {
+    const pill = e.target.closest('.feature-pill');
+    if (!pill || !pill.dataset) return;
+    const feature = pill.dataset.feature;
+    if (!feature) return;
+    if (feature === 'pipe') {
+      window.location.href = rootPath('/ui/interop/pipeline');
+      sendDebugEvent('interop.feature.navigate', { feature });
+      return;
     }
-    // Global version chip clicks
-    document.body.addEventListener("click", (e) => {
+    showFeature(feature);
+    sendDebugEvent('interop.feature.show', { feature });
+  });
+
+  function renderPre(targetId, text) {
+    const host = byId(targetId);
+    if (!host) return;
+    const pre = document.createElement('pre');
+    pre.className = 'codepane scrollbox tall';
+    pre.textContent = text || '';
+    host.innerHTML = '';
+    host.appendChild(pre);
+  }
+
+  function getGenText() { return textValue(byId('gen-output')); }
+  function setDeidText(v) {
+    const ta = byId('deid-text');
+    if (ta) {
+      ta.value = v || '';
+      ta.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+    renderPre('deid-output', v || '');
+  }
+  function getDeidText() { const ta = byId('deid-text'); return ta ? ta.value : ''; }
+  function setValText(v) {
+    const ta = byId('val-text');
+    if (ta) {
+      ta.value = v || '';
+      ta.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+  }
+  function getValText() { const ta = byId('val-text'); return ta ? ta.value : ''; }
+  function getMllpText() { const ta = byId('mllp-messages'); return ta ? ta.value : ''; }
+
+  async function loadFileIntoTextarea(fileInputId, textareaId) {
+    const inp = byId(fileInputId);
+    const ta = byId(textareaId);
+    if (!inp || !ta || !inp.files || !inp.files.length) return;
+    const file = inp.files[0];
+    const text = await file.text();
+    ta.value = text;
+    ta.dispatchEvent(new Event('input', { bubbles: true }));
+    sendDebugEvent('interop.mllp.file_loaded', { name: file.name, bytes: text.length });
+    showFeature('mllp');
+  }
+
+  async function postJSON(path, payload) {
+    const r = await fetch(rootPath(path), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: JSON.stringify(payload || {}),
+    });
+    if (!r.ok) {
+      throw new Error('HTTP ' + r.status);
+    }
+    return r.json();
+  }
+
+  async function runDeidFromGenerate() {
+    const hl7 = getGenText();
+    if (!hl7) {
+      alert('Please generate a message first.');
+      return;
+    }
+    try {
+      const data = await postJSON('/api/interop/deidentify', { text: hl7 });
+      const outText = data && data.text ? data.text : '';
+      setDeidText(outText);
+      collapseAll();
+      expand('deid');
+      sendDebugEvent('interop.flow.deid_from_generate', { ok: true, bytes: outText.length });
+    } catch (err) {
+      alert('De‑Identify failed: ' + err.message);
+      sendDebugEvent('interop.flow.deid_from_generate', { ok: false, error: String(err) });
+    }
+  }
+
+  async function runValidateFromGenerate() {
+    const hl7 = getGenText();
+    if (!hl7) {
+      alert('Please generate a message first.');
+      return;
+    }
+    try {
+      const data = await postJSON('/api/interop/validate', { text: hl7 });
+      setValText(hl7);
+      const out = byId('val-output');
+      if (out) {
+        out.textContent = JSON.stringify(data, null, 2);
+      }
+      collapseAll();
+      expand('val');
+      sendDebugEvent('interop.flow.validate_from_generate', { ok: true });
+    } catch (err) {
+      alert('Validate failed: ' + err.message);
+      sendDebugEvent('interop.flow.validate_from_generate', { ok: false, error: String(err) });
+    }
+  }
+
+  async function runValidateFromDeid() {
+    const hl7 = getDeidText();
+    if (!hl7) {
+      alert('No de‑identified HL7 yet.');
+      return;
+    }
+    try {
+      const data = await postJSON('/api/interop/validate', { text: hl7 });
+      setValText(hl7);
+      const out = byId('val-output');
+      if (out) {
+        out.textContent = JSON.stringify(data, null, 2);
+      }
+      collapseAll();
+      expand('val');
+      sendDebugEvent('interop.flow.validate_from_deid', { ok: true });
+    } catch (err) {
+      alert('Validate failed: ' + err.message);
+      sendDebugEvent('interop.flow.validate_from_deid', { ok: false, error: String(err) });
+    }
+  }
+
+  async function runMllpFrom(source) {
+    let hl7 = '';
+    if (source === 'deid') hl7 = getDeidText();
+    else if (source === 'val') hl7 = getValText();
+    else hl7 = getGenText();
+    if (!hl7) {
+      alert('No HL7 content to send.');
+      return;
+    }
+    const host = (byId('mllp-host') && byId('mllp-host').value || '').trim();
+    const port = parseInt(byId('mllp-port') && byId('mllp-port').value || '0', 10) || 0;
+    const timeout = parseFloat(byId('mllp-timeout') && byId('mllp-timeout').value || '5') || 5;
+    if (!host || !port) {
+      alert('Please fill MLLP host and port.');
+      showFeature('mllp');
+      return;
+    }
+    try {
+      const data = await postJSON('/api/interop/mllp/send', { host, port, timeout, messages: hl7 });
+      const out = byId('mllp-out');
+      if (out) {
+        out.textContent = JSON.stringify(data, null, 2);
+      }
+      collapseAll();
+      expand('mllp');
+      sendDebugEvent('interop.flow.mllp_send', { ok: true, sent: data && data.sent });
+    } catch (err) {
+      alert('MLLP send failed: ' + err.message);
+      sendDebugEvent('interop.flow.mllp_send', { ok: false, error: String(err) });
+    }
+  }
+
+  async function runFullHl7PipelineFromMllp() {
+    const hl7 = getMllpText();
+    if (!hl7) {
+      alert('Paste or load HL7 first.');
+      return;
+    }
+    try {
+      const form = new FormData();
+      form.set('version', getPrimaryVersion());
+      form.set('text', hl7);
+      form.set('ensure_unique', 'on');
+      const out = byId('pipeline-output-global');
+      const resp = await fetch(rootPath('/api/interop/pipeline/run'), { method: 'POST', body: form });
+      const html = await resp.text();
+      if (out) {
+        out.innerHTML = html;
+      }
+      sendDebugEvent('interop.flow.full_hl7_pipeline_from_mllp', { ok: resp.ok });
+    } catch (err) {
+      alert('Pipeline failed: ' + err.message);
+      sendDebugEvent('interop.flow.full_hl7_pipeline_from_mllp', { ok: false, error: String(err) });
+    }
+  }
+
+  function openPipelineWithText(text) {
+    try { sessionStorage.setItem('interop.pipeline.input', text || ''); } catch {}
+    window.location.href = rootPath('/ui/interop/pipeline');
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    setPrimaryVersion(getPrimaryVersion());
+    fillDatalist('qs');
+    fillDatalist('ds');
+    fillDatalist('gen');
+    fillDatalist('pipe');
+
+    document.body.addEventListener('htmx:afterSwap', (e) => {
+      if (!e || !e.target) return;
+      if (e.target.id === 'qs-trigger') fillDatalist('qs');
+      if (e.target.id === 'ds-trigger-select') fillDatalist('ds');
+      if (e.target.id === 'pipe-trigger-select') fillDatalist('pipe');
+    });
+
+    document.body.addEventListener('click', (e) => {
       const chip = e.target.closest('.chip-version');
       if (chip && chip.dataset && chip.dataset.version) {
         setPrimaryVersion(chip.dataset.version);
       }
     });
 
-    // Initialize version selects
-    setPrimaryVersion(getPrimaryVersion());
-
-    // seed datalists
-    fillDatalist("qs");
-    fillDatalist("ds");
-    fillDatalist("gen");
-    fillDatalist("pipe");
-
-    // refresh datalists after HTMX replaces the trigger <select>s
-    document.body.addEventListener("htmx:afterSwap", (e) => {
-      if (e && e.target && e.target.id === "qs-trigger") fillDatalist("qs");
-      if (e && e.target && e.target.id === "ds-trigger-select") fillDatalist("ds");
-      if (e && e.target && e.target.id === "pipe-trigger-select") fillDatalist("pipe");
-    });
-
-    injectPipelinePresetUI();
-  });
-
-  // Shared pipeline presets used across dashboard + standalone pipeline page.
-  const PIPELINE_PRESETS = {
-    "local-2575": {
-      host: "127.0.0.1",
-      port: 2575,
-      timeout: 5,
-      includeFhir: false,
-      fhirEndpoint: "http://127.0.0.1:8080/fhir",
-      postFhir: false,
-    },
-    "docker-2575": {
-      host: "localhost",
-      port: 2575,
-      timeout: 5,
-      includeFhir: false,
-      fhirEndpoint: "http://localhost:8080/fhir",
-      postFhir: false,
-    },
-    "partner-a": {
-      host: "10.0.0.10",
-      port: 2575,
-      timeout: 10,
-      includeFhir: true,
-      fhirEndpoint: "https://partner-a.example/fhir",
-      postFhir: true,
-    },
-  };
-
-  function applyPreset(key) {
-    const preset = PIPELINE_PRESETS[key];
-    const host = q("mllp-host");
-    const port = q("mllp-port");
-    const timeout = q("mllp-timeout");
-    const toggle = q("run-pipeline-fhir");
-    const postToggle = q("run-pipeline-fhir-post");
-    const pipelineEndpoint =
-      document.getElementById("pipeline-fhir-endpoint") ||
-      document.getElementById("fhir-endpoint") ||
-      document.querySelector('input[name="fhir_endpoint"]');
-    const pipelinePost =
-      document.getElementById("pipeline-post-fhir") ||
-      document.querySelector('input[name="post_fhir"][type="checkbox"]');
-    if (!preset) {
-      if (toggle) {
-        toggle.checked = false;
-        if (toggle.dataset) delete toggle.dataset.endpoint;
+    const saved = (() => {
+      try { return sessionStorage.getItem('interop.pipeline.input') || ''; }
+      catch { return ''; }
+    })();
+    if (saved) {
+      const inp = document.querySelector('#pipe-form textarea[name="text"], #pipeline-form textarea[name="text"], textarea#pipe-text');
+      if (inp) {
+        inp.value = saved;
+        inp.dispatchEvent(new Event('input', { bubbles: true }));
       }
-      if (postToggle) postToggle.checked = false;
-      if (pipelinePost) pipelinePost.checked = false;
-      sendDebugEvent("interop.pipeline.preset.clear", {});
-      return;
-    }
-    if (host && preset.host !== undefined) host.value = preset.host;
-    if (port && preset.port !== undefined) port.value = preset.port;
-    if (timeout && preset.timeout !== undefined) timeout.value = preset.timeout;
-    if (toggle) {
-      toggle.checked = !!preset.includeFhir;
-    }
-    if (postToggle) {
-      postToggle.checked = !!(preset.includeFhir && preset.postFhir);
-    }
-    if (pipelineEndpoint && preset.fhirEndpoint !== undefined) {
-      pipelineEndpoint.value = preset.fhirEndpoint || "";
-    }
-    if (pipelinePost) {
-      pipelinePost.checked = !!preset.postFhir;
-    }
-    const endpointValue =
-      (pipelineEndpoint && pipelineEndpoint.value) ||
-      (preset.fhirEndpoint || "");
-    if (toggle && toggle.dataset) {
-      if (endpointValue) {
-        toggle.dataset.endpoint = endpointValue;
-      } else {
-        delete toggle.dataset.endpoint;
-      }
-    }
-    const out = q("pipeline-output");
-    if (out && out.closest && preset.includeFhir) {
-      const wrap = out.closest("details");
-      if (wrap) wrap.open = true;
-    }
-    sendDebugEvent("interop.pipeline.preset", {
-      key,
-      includeFhir: !!preset.includeFhir,
-      postFhir: !!preset.postFhir,
-      hasEndpoint: !!endpointValue,
-    });
-  }
-
-  function injectPipelinePresetUI() {
-    const form =
-      document.getElementById("pipe-form") ||
-      document.getElementById("pipeline-form") ||
-      document.querySelector('form[action$="/api/interop/pipeline/run"]');
-    if (!form || document.getElementById("pipeline-preset-standalone")) {
-      return;
-    }
-    const wrap = document.createElement("div");
-    wrap.className = "row gap mb";
-    wrap.innerHTML =
-      '<label class="label small" for="pipeline-preset-standalone">Preset</label>' +
-      '<select id="pipeline-preset-standalone" class="input" style="max-width:22rem">' +
-      '  <option value="">— Select preset —</option>' +
-      '  <option value="local-2575">Local MLLP (127.0.0.1:2575)</option>' +
-      '  <option value="docker-2575">Docker MLLP (localhost:2575)</option>' +
-      '  <option value="partner-a">Partner Sandbox A (+FHIR)</option>' +
-      "</select>" +
-      '<span class="micro muted">Prefills FHIR endpoint (and POST) on this page; also used on the Generate/MLLP cards.</span>';
-    form.insertBefore(wrap, form.firstChild);
-  }
-
-  document.addEventListener("change", (e) => {
-    if (!e || !e.target) return;
-    const id = e.target.id;
-    if (id === "pipeline-preset" || id === "pipeline-preset-standalone") {
-      applyPreset(e.target.value);
-    } else if (id === "run-pipeline-fhir" && !e.target.checked) {
-      const postToggle = q("run-pipeline-fhir-post");
-      if (postToggle) postToggle.checked = false;
+      try { sessionStorage.removeItem('interop.pipeline.input'); } catch {}
+      sendDebugEvent('interop.pipeline.prefill_from_session', { bytes: saved.length });
     }
   });
 
-  function getGenText() {
-    const el = document.getElementById("gen-output");
-    return (el && (el.innerText || el.textContent) || "").trim();
-  }
-
-  function copyFromGenerate(target) {
-    const text = getGenText();
-    if (!text) return;
-    const map = { deid: "#deid-text", validate: "#val-text", mllp: "#mllp-messages" };
-    const ta = document.querySelector(map[target]);
-    if (ta) {
-      ta.value = text;
-      ta.dispatchEvent(new Event("input", { bubbles: true }));
-    }
-    sendDebugEvent("interop.generate.copy", { target, hasText: !!text });
-    if (target === "deid") {
-      const run = document.getElementById("run-pipeline");
-      if (run && run.checked) {
-        const form = document.getElementById("deid-form");
-        if (form && form.requestSubmit) {
-          form.requestSubmit();
-        } else if (form) {
-          form.submit();
-        }
-      }
-    }
-  }
-
-  async function runFhirPipeline(hl7) {
-    if (!hl7) {
-      const outEmpty = q("pipeline-output");
-      if (outEmpty) {
-        outEmpty.classList.remove("muted");
-        outEmpty.textContent = "Pipeline error: no HL7 content available.";
-      }
-      sendDebugEvent("interop.pipeline.fhir.error", { message: "no hl7 content" });
-      return;
-    }
-    const out = q("pipeline-output");
-    if (out) {
-      out.classList.remove("muted");
-      out.textContent = "Running HL7→FHIR pipeline…";
-      if (out.closest) {
-        const wrap = out.closest("details");
-        if (wrap) wrap.open = true;
-      }
-    }
-    if (!window.fetch) {
-      if (out) out.textContent = "Pipeline error: fetch() is not available in this browser.";
-      sendDebugEvent("interop.pipeline.fhir.error", { message: "fetch unsupported" });
-      return;
-    }
-    const postToggle = q("run-pipeline-fhir-post");
-    const toggle = q("run-pipeline-fhir");
-    const wantPost = !!(postToggle && postToggle.checked);
-    const endpoint = toggle && toggle.dataset ? toggle.dataset.endpoint || "" : "";
-    sendDebugEvent("interop.pipeline.fhir.start", { post: wantPost, hasEndpoint: !!endpoint });
-    const payload = { text: hl7, post_fhir: wantPost };
-    if (endpoint) payload.fhir_endpoint = endpoint;
-    try {
-      const resp = await fetch("/api/interop/pipeline/run", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json, text/plain, text/html",
-        },
-        body: JSON.stringify(payload),
-      });
-      const ctype = resp.headers.get("content-type") || "";
-      let message = "";
-      if (ctype.includes("application/json")) {
-        const data = await resp.json();
-        message = JSON.stringify(data, null, 2);
-      } else {
-        const text = await resp.text();
-        if (ctype.includes("text/html")) {
-          try {
-            const parser = new DOMParser();
-            const doc = parser.parseFromString(text, "text/html");
-            message = doc && doc.body && doc.body.textContent ? doc.body.textContent.trim() : text;
-          } catch (err) {
-            message = text;
-          }
-        } else {
-          message = text;
-        }
-      }
-      if (out) out.textContent = message || "(no response)";
-      sendDebugEvent("interop.pipeline.fhir.done", { ok: resp.ok, status: resp.status });
-    } catch (err) {
-      const msg = err && err.message ? err.message : String(err);
-      if (out) out.textContent = "Pipeline error: " + msg;
-      sendDebugEvent("interop.pipeline.fhir.error", { message: msg });
-    }
-  }
-
-  document.addEventListener("htmx:afterSwap", (e) => {
-    if (!e || !e.target) return;
-    if (e.target.id === "deid-output") {
-      const run = q("run-pipeline");
-      if (!run || !run.checked) return;
-      const text = (e.target.innerText || e.target.textContent || "").trim();
-      if (!text) return;
-      const vta = document.querySelector("#val-text");
-      if (vta) {
-        vta.value = text;
-        vta.dispatchEvent(new Event("input", { bubbles: true }));
-      }
-      const ml = document.querySelector("#mllp-messages");
-      if (ml) {
-        ml.value = text;
-        ml.dispatchEvent(new Event("input", { bubbles: true }));
-      }
-      const vf = document.getElementById("val-form");
-      if (vf && vf.requestSubmit) {
-        vf.requestSubmit();
-      } else if (vf) {
-        vf.submit();
-      }
-    } else if (e.target.id === "val-output" || e.target.id === "validate-output") {
-      const run = q("run-pipeline");
-      if (!run || !run.checked) return;
-      const useFhir = !!(q("run-pipeline-fhir") && q("run-pipeline-fhir").checked);
-      const text = (q("val-text") && q("val-text").value ? q("val-text").value : "").trim();
-      if (!text) return;
-      if (useFhir) {
-        runFhirPipeline(text);
-      } else {
-        const mf = document.getElementById("mllp-form");
-        if (mf && mf.requestSubmit) {
-          mf.requestSubmit();
-        } else if (mf) {
-          mf.submit();
-        }
-      }
-    }
-  });
-
-  // expose a tiny API
-  window.InteropUI = {
+  window.InteropUI = Object.assign(window.InteropUI || {}, {
     syncTyped,
     fillDatalist,
     fillTemplates,
@@ -537,7 +478,14 @@
     setPrimaryVersion,
     getPrimaryVersion,
     sendDebugEvent,
-    copyFromGenerate,
-    applyPreset,
-  };
+    showFeature,
+    runDeidFromGenerate,
+    runValidateFromGenerate,
+    runValidateFromDeid,
+    runMllpFrom,
+    runFullHl7PipelineFromMllp,
+    openPipelineWithText,
+    getGenText,
+    loadFileIntoTextarea,
+  });
 })();

@@ -1,3 +1,4 @@
+/* extra styles for interoperability UI */
 .card { padding:14px; border-radius:14px; box-shadow:0 2px 10px rgba(0,0,0,.08); background:#fff; }
 .row.gap { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
 .input { padding:6px 8px; border:1px solid #ddd; border-radius:8px; min-width:10rem; }
@@ -5,11 +6,123 @@
 .btn { padding:6px 10px; border-radius:8px; border:1px solid #ccc; background:#f8f8f8; cursor:pointer; }
 .btn:hover { background:#f1f1f1; }
 .mt { margin-top:12px; }
-.codepane { border:1px solid #eee; border-radius:8px; padding:8px; min-height:140px; background:#fafafa; overflow:auto; }
-/* responsive grid with comfortable gaps */
 .grid { display:grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap:16px; }
 .grid2 { display:grid; grid-template-columns: 1fr 1fr; gap:12px; }
 .chip { display:inline-block; padding:2px 8px; border:1px solid #ddd; border-radius:999px; background:#fafafa; font-size:.85rem; }
 .muted { color:#666; }
-/* Reports view hides feature cards via JS by toggling data-feature visibility */
 [hidden] { display:none !important; }
+
+/* Feature bar (pills under the page title) */
+.feature-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .5rem;
+  margin: .25rem 0 1rem 0;
+}
+.feature-pill {
+  border: 1px solid var(--border, #d7d7d7);
+  background: var(--bg-weak, #f8f9fb);
+  border-radius: 999px;
+  padding: .35rem .85rem;
+  cursor: pointer;
+  font-size: .875rem;
+}
+.feature-pill.active {
+  background: var(--accent-bg, #eef6ff);
+  border-color: var(--accent, #2276e3);
+  color: var(--accent-ink, #0b4db8);
+  font-weight: 600;
+}
+
+/* Card sections with header/body for collapse/expand */
+.card .card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .5rem;
+  margin-bottom: .25rem;
+}
+.card .card-title {
+  margin: 0;
+}
+.card .card-body {
+  margin-top: .5rem;
+}
+.card.collapsed .card-body {
+  display: none;
+}
+.card.collapsed .card-header {
+  opacity: .95;
+}
+
+/* Full-width Generate card on load */
+.interop-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+}
+@media (min-width: 980px) {
+  .interop-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Scrollable output areas */
+.scrollbox {
+  border: 1px solid var(--border, #d7d7d7);
+  background: #fff;
+  padding: .5rem .75rem;
+  border-radius: .25rem;
+  overflow: auto;
+}
+.scrollbox.tall {
+  max-height: 16rem;
+}
+.codepane {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+  font-size: .9rem;
+  line-height: 1.35;
+  white-space: pre-wrap;
+  min-height: 8rem;
+}
+
+/* Accent action cards inside each stage */
+.action-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
+  gap: .75rem;
+  margin-top: .75rem;
+}
+.action-card {
+  border-radius: .5rem;
+  padding: .75rem 1rem;
+  border: 1px solid var(--accent, #2276e3);
+  background: var(--accent-bg, #eef6ff);
+}
+.action-card h4 {
+  margin: 0 0 .25rem 0;
+  font-size: 1rem;
+}
+.action-card .btn {
+  margin-top: .5rem;
+}
+
+/* Optional toolbar for per-card actions */
+.toolbar {
+  display: flex;
+  gap: .5rem;
+  align-items: center;
+}
+.toolbar .chip {
+  font-size: .75rem;
+}
+
+/* File input tight spacing */
+.file-row {
+  display: flex;
+  gap: .5rem;
+  align-items: center;
+}
+.file-row input[type=file] {
+  max-width: 22rem;
+}
