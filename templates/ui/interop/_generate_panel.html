@@ -37,17 +37,23 @@
   <div class="mt"><button class="btn" type="submit">Generate</button></div>
 </form>
 <pre id="gen-output" class="textarea-output codepane mt" aria-live="polite" aria-label="Generated HL7 output"></pre>
-<div id="gen-run-tray" class="action-tray hidden" hidden>
-  <div class="action-card" onclick="window.InteropUI.runTo('deid')">
-    <strong>Run Next Pipeline → De‑identify</strong>
-    <small>Prefill the De‑identify card with this message.</small>
+<div id="gen-run-tray" class="action-tray" hidden>
+  <div class="action-tray-header">
+    <h4>Run next pipeline step</h4>
+    <p>Select a follow-up task to continue the workflow.</p>
   </div>
-  <div class="action-card" onclick="window.InteropUI.runTo('validate')">
-    <strong>Run Validation Pipeline → Validate</strong>
-    <small>Send the generated HL7 to the Validate card.</small>
-  </div>
-  <div class="action-card" onclick="window.InteropUI.runTo('fhir')">
-    <strong>Run Full FHIR Pipeline → HL7 → FHIR</strong>
-    <small>Open the MLLP card with FHIR translation enabled.</small>
+  <div class="action-cards">
+    <a class="action-card" href="#" onclick="window.InteropUI.runTo('deid'); return false;">
+      <strong>🔒 De‑identify</strong>
+      <small>Prefill the De‑identify card with this message.</small>
+    </a>
+    <a class="action-card" href="#" onclick="window.InteropUI.runTo('validate'); return false;">
+      <strong>✓ Validate</strong>
+      <small>Send the generated HL7 to the Validate card.</small>
+    </a>
+    <a class="action-card" href="#" onclick="window.InteropUI.runTo('fhir'); return false;">
+      <strong>🔄 HL7 → FHIR</strong>
+      <small>Open the MLLP card with FHIR translation enabled.</small>
+    </a>
   </div>
 </div>

@@ -18,11 +18,12 @@
     <span class="micro muted">Loading debug switch…</span>
   </div>
 </div>
-<nav class="feature-tabs">
-  <a class="tab active" href="{{ root }}/ui/interop/generate">Generate Message</a>
-  <a class="tab" href="{{ root }}/ui/interop/deid">De‑Identify Message</a>
-  <a class="tab" href="{{ root }}/ui/interop/validate">Validate Message</a>
-  <a class="tab" href="{{ root }}/ui/interop/mllp">Transport (MLLP)</a>
+<nav class="module-nav" id="interop-feature-bar">
+  <button class="module-btn active" type="button" data-feature="gen">⚡ Generate</button>
+  <button class="module-btn" type="button" data-feature="deid">🔒 De‑identify</button>
+  <button class="module-btn" type="button" data-feature="val">✓ Validate</button>
+  <button class="module-btn" type="button" data-feature="mllp">📤 MLLP Send</button>
+  <a class="module-btn" data-feature="pipe" href="{{ root }}/ui/interop/pipeline">→ Full Pipeline</a>
 </nav>
 
 <details id="card-gen" class="card collapsible" open>

@@ -258,7 +258,7 @@
   }
 
   function setActivePill(feature) {
-    const pills = document.querySelectorAll('#interop-feature-bar .feature-pill, .feature-tabs .tab');
+    const pills = document.querySelectorAll('#interop-feature-bar .feature-pill, .feature-tabs .tab, .module-nav .module-btn');
     pills.forEach(p => {
       const featureMatch = p.dataset && p.dataset.feature === feature;
       const openMatch = p.dataset && p.dataset.openCard === (FEATURE_IDS[feature] || feature);
@@ -289,7 +289,7 @@
   }
 
   document.addEventListener('click', (e) => {
-    const pill = e.target.closest('.feature-pill, .feature-tabs .tab');
+    const pill = e.target.closest('.feature-pill, .feature-tabs .tab, .module-nav .module-btn');
     if (!pill || !pill.dataset) return;
     const feature = pill.dataset.feature || pill.dataset.openCard;
     if (!feature) return;
@@ -529,13 +529,8 @@
     if (!tray) {
       return;
     }
-    if (show) {
-      tray.classList.remove('hidden');
-      tray.removeAttribute('hidden');
-    } else {
-      tray.classList.add('hidden');
-      tray.setAttribute('hidden', '');
-    }
+    tray.hidden = !show;
+    tray.classList.toggle('visible', !!show);
   }
 
   function runNextFromDeid(next) {
@@ -614,13 +609,8 @@
   function toggleRunTray(show) {
     const tray = findRunTray();
     if (!tray) return;
-    if (show) {
-      tray.hidden = false;
-      tray.classList.remove('hidden');
-    } else {
-      tray.hidden = true;
-      tray.classList.add('hidden');
-    }
+    tray.hidden = !show;
+    tray.classList.toggle('visible', !!show);
   }
 
   function updateRunTray() {

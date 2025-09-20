@@ -1,128 +1,115 @@
 // static/js/nav.js
-// Settings pop-up + Theme switcher + "single hamburger" guard
+// Settings side-drawer (single hamburger) + Theme manager
 (() => {
   'use strict';
   const DOC = document;
-  const THEME_KEY = 'app.theme';
-  const VALID_THEMES = new Set(['default', 'dark']);
 
-  const qs  = (s, root = DOC) => root.querySelector(s);
-  const qsa = (s, root = DOC) => Array.from(root.querySelectorAll(s));
+  const THEME_KEY = 'theme';
+  const VALID = new Set(['default', 'dark', 'high-contrast', 'professional']);
 
-  function currentTheme() {
-    const t = localStorage.getItem(THEME_KEY);
-    return VALID_THEMES.has(t) ? t : 'default';
+  const qs = (sel, root = DOC) => root.querySelector(sel);
+  const qsa = (sel, root = DOC) => Array.from(root.querySelectorAll(sel));
+
+  function getTheme() {
+    const stored = localStorage.getItem(THEME_KEY);
+    return VALID.has(stored) ? stored : 'default';
   }
 
   function applyTheme(theme) {
-    if (!VALID_THEMES.has(theme)) theme = 'default';
-    DOC.documentElement.setAttribute('data-theme', theme);
-    localStorage.setItem(THEME_KEY, theme);
-    // reflect in menu
-    qsa('[data-theme-choice]').forEach(btn => {
-      const checked = btn.dataset.themeChoice === theme;
-      btn.setAttribute('aria-checked', String(checked));
+    const value = VALID.has(theme) ? theme : 'default';
+    DOC.documentElement.setAttribute('data-theme', value);
+    localStorage.setItem(THEME_KEY, value);
+    qsa('input[name="theme"][type="radio"]').forEach((radio) => {
+      radio.checked = radio.value === value;
     });
   }
 
   function ensureSingleHamburger() {
-    // Support multiple possible IDs/classes; keep the first, hide the rest.
-    const triggers = qsa('#app-hamburger, #hamburger-btn, .hamburger-btn, [data-role="hamburger"]');
+    const triggers = qsa('#hamburger-toggle, #app-hamburger, .hamburger-btn, [data-role="hamburger"]');
     if (triggers.length > 1) {
-      triggers.slice(1).forEach(el => {
+      triggers.slice(1).forEach((el) => {
         el.style.display = 'none';
-        el.setAttribute('data-hidden-duplicate', 'true');
+        el.dataset.hiddenDuplicate = 'true';
       });
     }
     return triggers[0] || null;
   }
 
-  function buildMenu() {
-    if (qs('#app-menu')) return qs('#app-menu');
+  function bindDrawer() {
+    const drawer = qs('#hamburger-menu');
+    const overlay = qs('#overlay');
+    const trigger = ensureSingleHamburger();
+    const closeBtn = qs('#close-hamburger');
 
-    const menu = DOC.createElement('div');
-    menu.id = 'app-menu';
-    menu.className = 'app-menu';
-    menu.setAttribute('role', 'menu');
-    menu.setAttribute('hidden', '');
-
-    menu.innerHTML = `
-      <div class="menu-heading">Settings</div>
-      <div class="menu-divider"></div>
-      <div class="menu-heading">Theme</div>
-      <div class="menu-row">
-        <button type="button" class="menu-item" role="menuitemradio"
-                data-theme-choice="default" aria-checked="false">Default</button>
-        <button type="button" class="menu-item" role="menuitemradio"
-                data-theme-choice="dark" aria-checked="false">Dark</button>
-      </div>
-    `;
-
-    DOC.body.appendChild(menu);
-
-    let backdrop = qs('#menu-backdrop');
-    if (!backdrop) {
-      backdrop = DOC.createElement('div');
-      backdrop.id = 'menu-backdrop';
-      backdrop.setAttribute('hidden', '');
-      DOC.body.appendChild(backdrop);
+    function openDrawer() {
+      if (drawer) {
+        drawer.classList.add('open');
+        drawer.setAttribute('aria-hidden', 'false');
+      }
+      if (overlay) overlay.classList.add('active');
+      DOC.body.style.overflow = 'hidden';
+      if (trigger) trigger.setAttribute('aria-expanded', 'true');
     }
-    if (primaryTrigger && wasOpen) {
-      primaryTrigger.setAttribute('aria-expanded', 'false');
-      if (typeof primaryTrigger.focus === 'function') {
-        primaryTrigger.focus();
+
+    function closeDrawer() {
+      if (drawer) {
+        drawer.classList.remove('open');
+        drawer.setAttribute('aria-hidden', 'true');
+      }
+      if (overlay) overlay.classList.remove('active');
+      DOC.body.style.overflow = '';
+      if (trigger) trigger.setAttribute('aria-expanded', 'false');
+    }
+
+    function toggleDrawer() {
+      if (!drawer) return;
+      if (drawer.classList.contains('open')) {
+        closeDrawer();
+      } else {
+        openDrawer();
       }
     }
-  }
 
-    // Theme selection
-    menu.addEventListener('click', (e) => {
-      const btn = e.target.closest('[data-theme-choice]');
-      if (!btn) return;
-      applyTheme(btn.dataset.themeChoice);
-      hideMenu();
+    if (trigger) {
+      trigger.addEventListener('click', (event) => {
+        event.preventDefault();
+        toggleDrawer();
+      });
+    }
+    if (closeBtn) {
+      closeBtn.addEventListener('click', (event) => {
+        event.preventDefault();
+        closeDrawer();
+      });
+    }
+    if (overlay) {
+      overlay.addEventListener('click', closeDrawer);
+    }
+    DOC.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') {
+        closeDrawer();
+      }
     });
 
-    // Dismiss
-    backdrop.addEventListener('click', hideMenu);
-    DOC.addEventListener('keydown', (e) => { if (e.key === 'Escape') hideMenu(); });
-
-    return menu;
+    qsa('input[name="theme"][type="radio"]').forEach((radio) => {
+      radio.addEventListener('change', (event) => {
+        if (event.target.checked) {
+          applyTheme(event.target.value);
+        }
+      });
+    });
   }
 
-  function showMenu() {
-    const menu = qs('#app-menu');
-    const backdrop = qs('#menu-backdrop');
-    if (menu) {
-      menu.removeAttribute('hidden');
-      menu.classList.add('open');
-    }
-    if (backdrop) backdrop.removeAttribute('hidden');
-  }
-
-  function hideMenu() {
-    const menu = qs('#app-menu');
-    const backdrop = qs('#menu-backdrop');
-    if (menu) {
-      menu.classList.remove('open');
-      menu.setAttribute('hidden', '');
-    }
-    if (backdrop) backdrop.setAttribute('hidden', '');
-  }
-
-  function toggleMenu() {
-    const menu = qs('#app-menu');
-    if (!menu) return showMenu();
-    menu.hasAttribute('hidden') ? showMenu() : hideMenu();
+  // Apply theme as early as possible
+  try {
+    applyTheme(getTheme());
+  } catch (_) {
+    /* ignore */
   }
 
   DOC.addEventListener('DOMContentLoaded', () => {
-    const trigger = ensureSingleHamburger();
-    buildMenu();
-    applyTheme(currentTheme());
-    if (trigger) trigger.addEventListener('click', (e) => {
-      e.preventDefault();
-      toggleMenu();
-    });
+    bindDrawer();
+    // Ensure drawer radios reflect stored theme
+    applyTheme(getTheme());
   });
 })();
