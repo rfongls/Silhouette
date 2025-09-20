@@ -13,12 +13,47 @@
 </head>
 <body data-root="{{ request.scope.get('root_path', '') }}">
   <header class="topbar">
-    <a class="brand" href="{{ request.url_for('ui_home') }}">Silhouette</a>
+    <div class="topbar-left">
+      <button type="button" class="menu-toggle" id="menu-toggle" aria-expanded="false" aria-controls="app-drawer" aria-label="Open menu">
+        <span class="menu-icon" aria-hidden="true"></span>
+      </button>
+      <a class="brand" href="{{ request.url_for('ui_home') }}">Silhouette</a>
+    </div>
     <nav class="mainnav">
       <a href="{{ request.url_for('ui_home') }}" data-nav="reports">Reports</a>
       <a href="{{ request.url_for('ui_skills_index') }}" data-nav="skills">Skills</a>
     </nav>
   </header>
+  <div class="menu-backdrop" id="app-menu-backdrop" hidden></div>
+  <aside class="app-drawer" id="app-drawer" role="dialog" aria-modal="true" aria-labelledby="app-drawer-title" tabindex="-1" hidden>
+    <div class="drawer-header">
+      <h2 class="drawer-title" id="app-drawer-title">Menu</h2>
+      <button type="button" class="drawer-close" id="menu-close" aria-label="Close menu">&times;</button>
+    </div>
+    <section class="drawer-section">
+      <h3>Theme</h3>
+      <label class="drawer-label" for="theme-select">Choose appearance</label>
+      <select id="theme-select" class="drawer-select">
+        <option value="system">System</option>
+        <option value="light">Light</option>
+        <option value="dark">Dark</option>
+      </select>
+      <p class="drawer-hint muted">Switch between light and dark modes. System follows your device settings.</p>
+    </section>
+    <section class="drawer-section">
+      <h3>Skills</h3>
+      <ul class="drawer-links" id="menu-skills">
+        <li class="menu-empty muted">Loading skills…</li>
+      </ul>
+    </section>
+    <section class="drawer-section">
+      <h3>Quick links</h3>
+      <ul class="drawer-links">
+        <li><a href="{{ request.url_for('ui_home') }}">Reports Home</a></li>
+        <li><a href="{{ request.url_for('ui_skills_index') }}">Skills Index</a></li>
+      </ul>
+    </section>
+  </aside>
   <main>
     {% block content %}{% endblock %}
   </main>
