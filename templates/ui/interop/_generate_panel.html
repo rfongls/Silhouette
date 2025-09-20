@@ -1,5 +1,9 @@
-<section class="card">
-  <h3>Generate Messages</h3>
+<section class="card" id="gen-card">
+  <div class="card-header">
+    <h3 class="card-title">Generate Message</h3>
+    <div class="toolbar"></div>
+  </div>
+  <div class="card-body">
 <!-- Form uses HTMX (API) and falls back to HTML (UI) when JS is disabled -->
 {% set root = request.scope.get('root_path', '') %}
 <form id="gen-form"
@@ -22,7 +26,6 @@
         <option value="hl7-v2-5">HL7 v2.5</option>
       </select>
       <label>Template</label>
-      <!-- Single field: dropdown + type-ahead -->
       <input class="input grow"
              id="gen-trigger-typed"
              name="trigger"
@@ -38,41 +41,39 @@
     <p id="gen-template-hint" class="muted small mt" data-empty="No template selected.">No template selected.</p>
 
     <div class="row gap mt">
-      <input class="input" type="number" name="count" min="1" max="10000" value="25" />
-      <!-- seed is optional -->
-      <input class="input" type="number" name="seed" placeholder="seed (optional)"/>
-    </div>
-
-    <div class="row gap mt">
+      <input class="input" type="number" name="count" id="gen-count" min="1" max="10000" placeholder="count (default 1)" />
+      <input class="input" type="number" name="seed" id="gen-seed" placeholder="seed (optional)"/>
       <label><input type="checkbox" name="ensure_unique" checked/> Unique IDs</label>
       <label><input type="checkbox" name="include_clinical"/> Enrich clinical (DG1/AL1)</label>
       <label><input type="checkbox" name="deidentify"/> De-identify</label>
     </div>
 
     <div class="row gap mt">
-      <button
-        type="submit"
-        id="btn-generate"
-        class="btn btn-primary"
-        onclick="this.form.count.value=Math.max(1, parseInt(this.form.count.value||'1'));">
-        Generate
-      </button>
+      <button type="submit" id="btn-generate" class="btn btn-primary">Generate</button>
     </div>
   </form>
-  <pre id="gen-output" class="codepane muted mt">Select / type a template above and press Generate.</pre>
-  <div class="row gap mt">
-    <button type="button" class="btn" onclick="window.InteropUI.copyFromGenerate('deid')">Send to De-ID</button>
-    <button type="button" class="btn" onclick="window.InteropUI.copyFromGenerate('validate')">Send to Validate</button>
-    <button type="button" class="btn" onclick="window.InteropUI.copyFromGenerate('mllp')">Send to MLLP</button>
-    <label class="micro"><input type="checkbox" id="run-pipeline"> Run through pipeline</label>
-    <label class="micro"><input type="checkbox" id="run-pipeline-fhir"> Include HL7→FHIR hop</label>
-    <label class="micro"><input type="checkbox" id="run-pipeline-fhir-post"> POST FHIR</label>
+  <div class="mt">
+    <pre id="gen-output" class="codepane scrollbox tall" aria-label="Generated HL7 output"></pre>
   </div>
-  <details class="mt">
-    <summary class="micro">Pipeline results (for HL7→FHIR)</summary>
-    <pre id="pipeline-output" class="codepane small muted">(results will appear here when the FHIR hop is used)</pre>
-  </details>
+  <div class="action-cards">
+    <div class="action-card">
+      <h4>Run Next Pipeline → De‑Identify</h4>
+      <p class="micro muted">Use the generated HL7 as input to De‑Identify.</p>
+      <button class="btn" type="button" onclick="window.InteropUI.runDeidFromGenerate()">Run De‑Identify</button>
+    </div>
+    <div class="action-card">
+      <h4>Run Validation Pipeline → Validate</h4>
+      <p class="micro muted">Send the generated HL7 to Validate and review results.</p>
+      <button class="btn" type="button" onclick="window.InteropUI.runValidateFromGenerate()">Run Validate</button>
+    </div>
+    <div class="action-card">
+      <h4>Run Full FHIR Pipeline → HL7→FHIR</h4>
+      <p class="micro muted">Open the HL7→FHIR pipeline, prefilled with your generated HL7.</p>
+      <button class="btn" type="button" onclick="window.InteropUI.openPipelineWithText(window.InteropUI.getGenText())">Open HL7→FHIR</button>
+    </div>
+  </div>
   <noscript>
     <p class="muted mt">JavaScript is disabled. Submitting will open a results page.</p>
   </noscript>
+  </div>
 </section>
