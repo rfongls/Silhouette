@@ -6,6 +6,8 @@ import re
 from urllib.parse import parse_qs
 import json
 import logging
+import time
+import uuid
 import os
 import sys
 import inspect
@@ -24,6 +26,7 @@ from silhouette_core.interop.mllp import send_mllp_batch
 from silhouette_core.interop.validate_workbook import validate_message
 from api.activity_log import log_activity
 from api.debug_log import log_debug_message
+from api.metrics import record_event
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -241,6 +244,7 @@ def generate_messages(body: dict):
     used by the HTTP endpoint below and by internal callers such as the
     pipeline runner."""
     _debug_log("generate_messages.start", body=body)
+    start_ts = time.time()
     version = body.get("version", "hl7-v2-4")
     if version not in VALID_VERSIONS:
         raise HTTPException(400, f"Unknown version '{version}'")
@@ -322,6 +326,24 @@ def generate_messages(body: dict):
         count=count,
         template=template_name,
     )
+    msg_id = str(uuid.uuid4())
+    elapsed_ms = int((time.time() - start_ts) * 1000)
+    try:
+        record_event(
+            {
+                "stage": "generate",
+                "msg_id": msg_id,
+                "hl7_type": trig or "",
+                "hl7_version": version,
+                "status": "success",
+                "elapsed_ms": elapsed_ms,
+                "count": len(msgs),
+                "template": template_name,
+                "size_bytes": len(out.encode("utf-8", errors="ignore")),
+            }
+        )
+    except Exception:
+        logger.debug("metrics.record_event_failed", exc_info=True)
     return PlainTextResponse(out, media_type="text/plain", headers={"Cache-Control": "no-store"})
 
 @router.post("/api/interop/generate", response_class=PlainTextResponse)
