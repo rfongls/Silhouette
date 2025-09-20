@@ -147,7 +147,6 @@
       });
       panel.__navClickBound = true;
     }
-  }
 
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", init, { once: true });
