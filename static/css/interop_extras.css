@@ -100,6 +100,28 @@ pre#gen-output {
   white-space: pre;
 }
 
+.limit10 {
+  max-height: 13.5em;
+}
+
+.mini-report {
+  margin-top: .25rem;
+}
+
+.mini-report > summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.mini-report ul.compact {
+  margin: .4rem 0 0;
+  padding-left: 1.2rem;
+}
+
+.mini-report .muted {
+  color: var(--muted-fg, #666);
+}
+
 /* Accent action cards inside each stage */
 .action-cards {
   display: grid;
