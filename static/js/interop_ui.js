@@ -264,6 +264,66 @@
     });
   });
 
+  const PIPELINE_PRESETS = {
+    "local-2575": { host: "127.0.0.1", port: 2575, timeout: 5, includeFhir: false },
+    "docker-2575": { host: "localhost", port: 2575, timeout: 5, includeFhir: false },
+    "partner-a": { host: "10.0.0.10", port: 2575, timeout: 10, includeFhir: true, fhirEndpoint: "https://partner-a.example/fhir" },
+  };
+
+  function applyPreset(key) {
+    const preset = PIPELINE_PRESETS[key];
+    const host = q("mllp-host");
+    const port = q("mllp-port");
+    const timeout = q("mllp-timeout");
+    const toggle = q("run-pipeline-fhir");
+    const postToggle = q("run-pipeline-fhir-post");
+    if (!preset) {
+      if (toggle) {
+        toggle.checked = false;
+        if (toggle.dataset) delete toggle.dataset.endpoint;
+      }
+      if (postToggle) postToggle.checked = false;
+      sendDebugEvent("interop.pipeline.preset.clear", {});
+      return;
+    }
+    if (host && preset.host !== undefined) host.value = preset.host;
+    if (port && preset.port !== undefined) port.value = preset.port;
+    if (timeout && preset.timeout !== undefined) timeout.value = preset.timeout;
+    if (toggle) {
+      toggle.checked = !!preset.includeFhir;
+      if (toggle.dataset) {
+        if (preset.fhirEndpoint) {
+          toggle.dataset.endpoint = preset.fhirEndpoint;
+        } else {
+          delete toggle.dataset.endpoint;
+        }
+      }
+      if (!preset.includeFhir && postToggle) {
+        postToggle.checked = false;
+      }
+    }
+    const out = q("pipeline-output");
+    if (out && out.closest && preset.includeFhir) {
+      const wrap = out.closest("details");
+      if (wrap) wrap.open = true;
+    }
+    sendDebugEvent("interop.pipeline.preset", {
+      key,
+      includeFhir: !!preset.includeFhir,
+      hasEndpoint: !!preset.fhirEndpoint,
+    });
+  }
+
+  document.addEventListener("change", (e) => {
+    if (!e || !e.target) return;
+    if (e.target.id === "pipeline-preset") {
+      applyPreset(e.target.value);
+    } else if (e.target.id === "run-pipeline-fhir" && !e.target.checked) {
+      const postToggle = q("run-pipeline-fhir-post");
+      if (postToggle) postToggle.checked = false;
+    }
+  });
+
   function getGenText() {
     const el = document.getElementById("gen-output");
     return (el && (el.innerText || el.textContent) || "").trim();
@@ -292,11 +352,79 @@
     }
   }
 
+  async function runFhirPipeline(hl7) {
+    if (!hl7) {
+      const outEmpty = q("pipeline-output");
+      if (outEmpty) {
+        outEmpty.classList.remove("muted");
+        outEmpty.textContent = "Pipeline error: no HL7 content available.";
+      }
+      sendDebugEvent("interop.pipeline.fhir.error", { message: "no hl7 content" });
+      return;
+    }
+    const out = q("pipeline-output");
+    if (out) {
+      out.classList.remove("muted");
+      out.textContent = "Running HL7→FHIR pipeline…";
+      if (out.closest) {
+        const wrap = out.closest("details");
+        if (wrap) wrap.open = true;
+      }
+    }
+    if (!window.fetch) {
+      if (out) out.textContent = "Pipeline error: fetch() is not available in this browser.";
+      sendDebugEvent("interop.pipeline.fhir.error", { message: "fetch unsupported" });
+      return;
+    }
+    const postToggle = q("run-pipeline-fhir-post");
+    const toggle = q("run-pipeline-fhir");
+    const wantPost = !!(postToggle && postToggle.checked);
+    const endpoint = toggle && toggle.dataset ? toggle.dataset.endpoint || "" : "";
+    sendDebugEvent("interop.pipeline.fhir.start", { post: wantPost, hasEndpoint: !!endpoint });
+    const payload = { text: hl7, post_fhir: wantPost };
+    if (endpoint) payload.fhir_endpoint = endpoint;
+    try {
+      const resp = await fetch("/api/interop/pipeline/run", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json, text/plain, text/html",
+        },
+        body: JSON.stringify(payload),
+      });
+      const ctype = resp.headers.get("content-type") || "";
+      let message = "";
+      if (ctype.includes("application/json")) {
+        const data = await resp.json();
+        message = JSON.stringify(data, null, 2);
+      } else {
+        const text = await resp.text();
+        if (ctype.includes("text/html")) {
+          try {
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(text, "text/html");
+            message = doc && doc.body && doc.body.textContent ? doc.body.textContent.trim() : text;
+          } catch (err) {
+            message = text;
+          }
+        } else {
+          message = text;
+        }
+      }
+      if (out) out.textContent = message || "(no response)";
+      sendDebugEvent("interop.pipeline.fhir.done", { ok: resp.ok, status: resp.status });
+    } catch (err) {
+      const msg = err && err.message ? err.message : String(err);
+      if (out) out.textContent = "Pipeline error: " + msg;
+      sendDebugEvent("interop.pipeline.fhir.error", { message: msg });
+    }
+  }
+
   document.addEventListener("htmx:afterSwap", (e) => {
     if (!e || !e.target) return;
-    const run = document.getElementById("run-pipeline");
-    if (!run || !run.checked) return;
     if (e.target.id === "deid-output") {
+      const run = q("run-pipeline");
+      if (!run || !run.checked) return;
       const text = (e.target.innerText || e.target.textContent || "").trim();
       if (!text) return;
       const vta = document.querySelector("#val-text");
@@ -315,12 +443,21 @@
       } else if (vf) {
         vf.submit();
       }
-    } else if (e.target.id === "validate-output") {
-      const mf = document.getElementById("mllp-form");
-      if (mf && mf.requestSubmit) {
-        mf.requestSubmit();
-      } else if (mf) {
-        mf.submit();
+    } else if (e.target.id === "val-output" || e.target.id === "validate-output") {
+      const run = q("run-pipeline");
+      if (!run || !run.checked) return;
+      const useFhir = !!(q("run-pipeline-fhir") && q("run-pipeline-fhir").checked);
+      const text = (q("val-text") && q("val-text").value ? q("val-text").value : "").trim();
+      if (!text) return;
+      if (useFhir) {
+        runFhirPipeline(text);
+      } else {
+        const mf = document.getElementById("mllp-form");
+        if (mf && mf.requestSubmit) {
+          mf.requestSubmit();
+        } else if (mf) {
+          mf.submit();
+        }
       }
     }
   });
@@ -336,5 +473,6 @@
     getPrimaryVersion,
     sendDebugEvent,
     copyFromGenerate,
+    applyPreset,
   };
 })();
