@@ -524,6 +524,20 @@
     expand(normalized, true);
   }
 
+  function setRunTrayVisibility(show) {
+    const tray = byId('gen-run-tray');
+    if (!tray) {
+      return;
+    }
+    if (show) {
+      tray.classList.remove('hidden');
+      tray.removeAttribute('hidden');
+    } else {
+      tray.classList.add('hidden');
+      tray.setAttribute('hidden', '');
+    }
+  }
+
   function runNextFromDeid(next) {
     const hl7 = (getDeidText() || '').trim();
     if (!hl7) {
@@ -547,11 +561,8 @@
   }
 
   function onGenerateComplete(evt) {
-    const tray = byId('gen-run-tray');
     const text = getGenText();
-    if (tray) {
-      tray.classList.toggle('hidden', !text);
-    }
+    setRunTrayVisibility(!!text);
     if (text) {
       setActivePill('gen');
     }
@@ -605,6 +616,18 @@
       } catch {}
       sendDebugEvent('interop.pipeline.prefill_from_session', { bytes: saved.length, source });
     }
+
+    setRunTrayVisibility(!!getGenText());
+    const genOutput = byId('gen-output');
+    if (genOutput) {
+      if ('value' in genOutput) {
+        genOutput.addEventListener('input', () => setRunTrayVisibility(!!getGenText()));
+      }
+      if (typeof MutationObserver !== 'undefined') {
+        const observer = new MutationObserver(() => setRunTrayVisibility(!!getGenText()));
+        observer.observe(genOutput, { childList: true, characterData: true, subtree: true });
+      }
+    }
   });
 
   window.InteropUI = Object.assign(window.InteropUI || {}, {
@@ -634,5 +657,6 @@
     copyFromGenerate,
     loadFileIntoTextarea,
     onGenerateComplete,
+    setRunTrayVisibility,
   });
 })();

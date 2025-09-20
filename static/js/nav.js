@@ -1,60 +1,160 @@
-export {};
+// Settings pop-up + Theme switcher + "single hamburger" guard
+(() => {
+  'use strict';
+  const DOC = document;
 
-(function () {
-  const html = document.documentElement;
-  const drawer = document.getElementById('app-drawer');
-  const hamburger = document.getElementById('app-hamburger');
-  const backdrop = document.getElementById('drawer-backdrop');
-  if (!drawer || !hamburger || !backdrop) {
-    return;
-  }
+  const THEME_KEY = 'app.theme';
+  const VALID_THEMES = new Set(['default', 'dark']);
 
-  function setOpen(open) {
-    drawer.classList.toggle('open', !!open);
-    drawer.setAttribute('aria-hidden', open ? 'false' : 'true');
-    hamburger.setAttribute('aria-expanded', open ? 'true' : 'false');
-    if (open) {
-      const first = drawer.querySelector('a,button');
-      if (first && typeof first.focus === 'function') {
-        first.focus();
-      }
-    } else if (typeof hamburger.focus === 'function') {
-      hamburger.focus();
-    }
-  }
+  const qs = (selector, root = DOC) => root.querySelector(selector);
+  const qsa = (selector, root = DOC) => Array.from(root.querySelectorAll(selector));
+  let primaryTrigger = null;
 
-  hamburger.addEventListener('click', () => {
-    setOpen(!drawer.classList.contains('open'));
-  });
-
-  backdrop.addEventListener('click', () => setOpen(false));
-
-  document.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape') {
-      setOpen(false);
-    }
-  });
-
-  const savedTheme = (() => {
-    try {
-      return localStorage.getItem('silhouette.theme') || 'default';
-    } catch (err) {
-      return 'default';
-    }
-  })();
-  if (savedTheme) {
-    html.setAttribute('data-theme', savedTheme);
-  }
-
-  document.querySelectorAll('[data-theme-choice]').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      const next = btn.getAttribute('data-theme-choice') || 'default';
-      html.setAttribute('data-theme', next);
+  function currentTheme() {
+    const stored = (() => {
       try {
-        localStorage.setItem('silhouette.theme', next);
+        return localStorage.getItem(THEME_KEY);
       } catch (err) {
-        /* ignore persistence errors */
+        return null;
+      }
+    })();
+    return stored && VALID_THEMES.has(stored) ? stored : 'default';
+  }
+
+  function applyTheme(theme) {
+    const next = VALID_THEMES.has(theme) ? theme : 'default';
+    DOC.documentElement.setAttribute('data-theme', next);
+    try {
+      localStorage.setItem(THEME_KEY, next);
+    } catch (err) {
+      // ignore persistence issues (private mode, etc.)
+    }
+    qsa('[data-theme-choice]').forEach((btn) => {
+      const checked = btn.dataset.themeChoice === next;
+      btn.setAttribute('aria-checked', String(checked));
+    });
+  }
+
+  function ensureSingleHamburger() {
+    const triggers = qsa('#app-hamburger, #hamburger-btn, .hamburger-btn, [data-role="hamburger"]');
+    if (triggers.length > 1) {
+      triggers.slice(1).forEach((el) => {
+        el.style.display = 'none';
+        el.setAttribute('data-hidden-duplicate', 'true');
+      });
+    }
+    return triggers[0] || null;
+  }
+
+  function buildMenu() {
+    let menu = qs('#app-menu');
+    if (!menu) {
+      menu = DOC.createElement('div');
+      menu.id = 'app-menu';
+      menu.className = 'app-menu';
+      menu.setAttribute('role', 'menu');
+      menu.setAttribute('hidden', '');
+      menu.setAttribute('aria-hidden', 'true');
+      menu.innerHTML = `
+        <div class="menu-heading">Settings</div>
+        <div class="menu-divider"></div>
+        <div class="menu-heading">Theme</div>
+        <div class="menu-row">
+          <button type="button" class="menu-item" role="menuitemradio"
+                  data-theme-choice="default" aria-checked="false">Default</button>
+          <button type="button" class="menu-item" role="menuitemradio"
+                  data-theme-choice="dark" aria-checked="false">Dark</button>
+        </div>
+      `;
+      DOC.body.appendChild(menu);
+    }
+
+    let backdrop = qs('#menu-backdrop');
+    if (!backdrop) {
+      backdrop = DOC.createElement('div');
+      backdrop.id = 'menu-backdrop';
+      backdrop.setAttribute('hidden', '');
+      DOC.body.appendChild(backdrop);
+    }
+
+    menu.addEventListener('click', (event) => {
+      const btn = event.target.closest('[data-theme-choice]');
+      if (!btn) {
+        return;
+      }
+      applyTheme(btn.dataset.themeChoice);
+      hideMenu();
+    });
+
+    backdrop.addEventListener('click', hideMenu);
+    DOC.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') {
+        hideMenu();
       }
     });
+
+    return menu;
+  }
+
+  function showMenu() {
+    const menu = qs('#app-menu');
+    const backdrop = qs('#menu-backdrop');
+    if (menu) {
+      menu.removeAttribute('hidden');
+      menu.classList.add('open');
+      menu.setAttribute('aria-hidden', 'false');
+      const firstItem = menu.querySelector('[data-theme-choice]');
+      if (firstItem && typeof firstItem.focus === 'function') {
+        firstItem.focus();
+      }
+    }
+    if (backdrop) {
+      backdrop.removeAttribute('hidden');
+    }
+    if (primaryTrigger) {
+      primaryTrigger.setAttribute('aria-expanded', 'true');
+    }
+  }
+
+  function hideMenu() {
+    const menu = qs('#app-menu');
+    const backdrop = qs('#menu-backdrop');
+    const wasOpen = menu && !menu.hasAttribute('hidden');
+    if (menu) {
+      menu.classList.remove('open');
+      menu.setAttribute('hidden', '');
+      menu.setAttribute('aria-hidden', 'true');
+    }
+    if (backdrop) {
+      backdrop.setAttribute('hidden', '');
+    }
+    if (primaryTrigger && wasOpen) {
+      primaryTrigger.setAttribute('aria-expanded', 'false');
+      if (typeof primaryTrigger.focus === 'function') {
+        primaryTrigger.focus();
+      }
+    }
+  }
+
+  function toggleMenu() {
+    const menu = qs('#app-menu');
+    if (!menu || menu.hasAttribute('hidden')) {
+      showMenu();
+    } else {
+      hideMenu();
+    }
+  }
+
+  DOC.addEventListener('DOMContentLoaded', () => {
+    primaryTrigger = ensureSingleHamburger();
+    buildMenu();
+    applyTheme(currentTheme());
+    if (primaryTrigger) {
+      primaryTrigger.setAttribute('aria-expanded', 'false');
+      primaryTrigger.addEventListener('click', (event) => {
+        event.preventDefault();
+        toggleMenu();
+      });
+    }
   });
 })();

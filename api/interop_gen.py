@@ -515,25 +515,6 @@ async def api_deidentify_summary(request: Request):
     return JSONResponse({"count": len(changes), "changes": changes})
 
 
-@router.post("/api/interop/deidentify/summary")
-async def api_deidentify_summary(request: Request):
-    """Return a compact HTML (or JSON) report of fields changed by de-identification."""
-    body = await parse_any_request(request)
-    text = body.get("text") or ""
-    seed = body.get("seed")
-    try:
-        seed_int = int(seed) if seed not in (None, "") else None
-    except Exception:
-        seed_int = None
-    src = text if isinstance(text, str) else str(text)
-    deid = deidentify_message(src, seed=seed_int)
-    changes = _summarize_hl7_changes(src, deid)
-    accept = (request.headers.get("accept") or "").lower()
-    if "text/html" in accept:
-        return HTMLResponse(_render_deid_summary_html(changes))
-    return JSONResponse({"count": len(changes), "changes": changes})
-
-
 @router.post("/api/interop/validate")
 async def api_validate(request: Request):
     """Validate HL7; accept JSON, form, multipart, or query."""
