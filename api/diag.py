@@ -1,6 +1,7 @@
 import html as _html
 from pathlib import Path
 from typing import Any, Dict
+from urllib.parse import quote_plus
 from fastapi import APIRouter, FastAPI, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse
 
@@ -78,7 +79,7 @@ async def list_routes(request: Request):
 
 
 @router.get("/api/diag/logs")
-async def get_debug_logs(limit: int = 200, format: str = "json"):
+async def get_debug_logs(request: Request, limit: int = 200, format: str = "json"):
     try:
         limit_value = int(limit or 200)
     except (TypeError, ValueError):
@@ -98,7 +99,18 @@ async def get_debug_logs(limit: int = 200, format: str = "json"):
     fmt = (format or "json").lower()
     if fmt in {"html", "htm"}:
         escaped = "\n".join(_html.escape(line) for line in lines)
-        return HTMLResponse(f"<pre class='scrollbox small'>{escaped}</pre>")
+        root = request.scope.get("root_path", "")
+        target = request.query_params.get("target") or "interop-debug-log"
+        hx_url = f"{root}/api/diag/logs?format=html&limit={limit_value}"
+        if target:
+            hx_url += f"&target={quote_plus(target)}"
+        return HTMLResponse(
+            "<pre id='{}' class='codepane small mt scrollbox' "
+            "hx-get='{}' hx-trigger='load, every 8s' hx-target='this' "
+            "hx-swap='outerHTML'>{}</pre>".format(
+                _html.escape(target), _html.escape(hx_url), escaped
+            )
+        )
     if fmt in {"text", "plain", "txt"}:
         text = "\n".join(lines)
         if text:
@@ -134,7 +146,7 @@ async def get_activity(limit: int = 50, format: str = "json"):
     return JSONResponse(payload)
 
 
-def _render_toggle_snippet_html(enabled: bool) -> str:
+def _render_toggle_snippet_html(enabled: bool, target: str = "debug-toggle") -> str:
     if enabled:
         label = "Debug: ON"
         action = "disable"
@@ -146,7 +158,7 @@ def _render_toggle_snippet_html(enabled: bool) -> str:
         cta = "Turn on"
         chip_cls = "chip muted"
     return (
-        "<div id='debug-toggle' class='row gap items-center'>"
+        f"<div id='debug-toggle' class='row gap items-center' data-target='{_html.escape(target)}'>"
         f"<span class='{chip_cls}'>{_html.escape(label)}</span>"
         f"<button class='btn btn-xs' type='button' "
         f"hx-post='/api/diag/debug/state/{action}' "
@@ -202,19 +214,17 @@ def _debug_state_response(
     return JSONResponse(payload)
 
 
+@router.get("/api/diag/debug/state/snippet", response_class=HTMLResponse)
+async def get_debug_toggle_snippet(target: str = "interop-debug-log"):
+    """Return the toggle button HTML snippet. Used by UI pages via HTMX."""
+    enabled = is_debug_enabled()
+    return HTMLResponse(_render_toggle_snippet_html(enabled, target))
+
+
 @router.get("/api/diag/debug/state")
 async def get_debug_state(format: str | None = None):
     enabled = is_debug_enabled()
     fmt = _choose_format(format)
-    return _debug_state_response(enabled, fmt)
-
-
-@router.get("/api/diag/debug/state/snippet")
-async def debug_toggle_snippet(request: Request, format: str | None = None):
-    enabled = is_debug_enabled()
-    fmt = _choose_format(format, request)
-    if fmt in {"html", "htm"}:
-        return HTMLResponse(_render_toggle_snippet_html(enabled))
     return _debug_state_response(enabled, fmt)
 
 
@@ -232,7 +242,16 @@ async def mutate_debug_state(action: str, request: Request, format: str | None =
     enabled = is_debug_enabled()
     fmt = _choose_format(format, request)
     if fmt in {"html", "htm"}:
-        return HTMLResponse(_render_toggle_snippet_html(enabled))
+        target_param = request.query_params.get("target")
+        if not target_param and request.method in {"POST", "PUT", "PATCH"}:
+            try:
+                form = await request.form()
+            except Exception:
+                form = None
+            if form is not None:
+                target_param = form.get("target")
+        target_id = (target_param or "debug-toggle").strip() or "debug-toggle"
+        return HTMLResponse(_render_toggle_snippet_html(enabled, target_id))
     return _debug_state_response(enabled, fmt, action=action)
 
 

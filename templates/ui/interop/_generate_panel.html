@@ -60,6 +60,18 @@
     </div>
   </form>
   <pre id="gen-output" class="codepane muted mt">Select / type a template above and press Generate.</pre>
+  <div class="row gap mt">
+    <button type="button" class="btn" onclick="window.InteropUI.copyFromGenerate('deid')">Send to De-ID</button>
+    <button type="button" class="btn" onclick="window.InteropUI.copyFromGenerate('validate')">Send to Validate</button>
+    <button type="button" class="btn" onclick="window.InteropUI.copyFromGenerate('mllp')">Send to MLLP</button>
+    <label class="micro"><input type="checkbox" id="run-pipeline"> Run through pipeline</label>
+    <label class="micro"><input type="checkbox" id="run-pipeline-fhir"> Include HL7→FHIR hop</label>
+    <label class="micro"><input type="checkbox" id="run-pipeline-fhir-post"> POST FHIR</label>
+  </div>
+  <details class="mt">
+    <summary class="micro">Pipeline results (for HL7→FHIR)</summary>
+    <pre id="pipeline-output" class="codepane small muted">(results will appear here when the FHIR hop is used)</pre>
+  </details>
   <noscript>
     <p class="muted mt">JavaScript is disabled. Submitting will open a results page.</p>
   </noscript>
