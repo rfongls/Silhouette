@@ -1,14 +1,248 @@
+:root {
+  color-scheme: light;
+  --bg: #ffffff;
+  --fg: #111111;
+  --text: var(--fg);
+  --muted: #6b7280;
+  --border: #e5e7eb;
+  --shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+  --topbar-bg: #ffffff;
+  --topbar-ink: var(--fg);
+  --menu-bg: #ffffff;
+  --menu-fg: var(--fg);
+  --menu-border: #e5e7eb;
+  --focus-ring: 0 0 0 3px rgba(15, 23, 42, 0.18);
+  --radius: 14px;
+  --gap: 16px;
+  --card: #ffffff;
+  --bg-weak: #f5f7fb;
+  --chip-bg: #fafafa;
+  --chip-border: #e2e2e2;
+  --accent: #2276e3;
+  --link: #0b4db8;
+  --link-hover: #07357f;
+}
+
+html[data-theme="dark"],
+body[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #0f1115;
+  --fg: #e6edf5;
+  --text: var(--fg);
+  --muted: #94a3b8;
+  --border: #2b3340;
+  --shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+  --topbar-bg: #11141c;
+  --topbar-ink: var(--fg);
+  --menu-bg: #161b27;
+  --menu-fg: var(--fg);
+  --menu-border: #2b3443;
+  --focus-ring: 0 0 0 3px rgba(148, 187, 233, 0.35);
+  --radius: 14px;
+  --gap: 16px;
+  --card: #161b27;
+  --bg-weak: #141a25;
+  --chip-bg: #202633;
+  --chip-border: #2f3541;
+  --accent: #4c8dff;
+  --link: #8cb8ff;
+  --link-hover: #c0d6ff;
+}
+
+html,
 body {
-  font-family: system-ui, sans-serif;
-  margin: 0;
   background: var(--bg);
   color: var(--text);
 }
-header {
+
+body {
+  font-family: system-ui, sans-serif;
+  margin: 0;
+}
+
+a {
+  color: var(--link);
+}
+
+a:hover {
+  color: var(--link-hover);
+}
+
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.75rem 1rem;
   background: var(--topbar-bg);
   color: var(--topbar-ink);
-  padding: 1rem;
+  border-bottom: 1px solid var(--border);
+  box-shadow: var(--shadow);
 }
+
+.brand {
+  font-weight: 700;
+  text-decoration: none;
+  color: var(--topbar-ink);
+  letter-spacing: 0.02em;
+}
+
+.mainnav {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.mainnav a {
+  text-decoration: none;
+  color: var(--topbar-ink);
+  opacity: 0.82;
+  font-weight: 500;
+}
+
+.mainnav a:hover {
+  opacity: 1;
+}
+
+.topbar-spacer {
+  flex: 1;
+}
+
+#menu-button.hamburger {
+  border: none !important;
+  background: transparent !important;
+  color: var(--topbar-ink) !important;
+  box-shadow: none !important;
+  appearance: none;
+}
+
+.hamburger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 0.75rem;
+  cursor: pointer;
+  transition: background 0.15s ease;
+  color: var(--topbar-ink);
+}
+
+.hamburger:hover {
+  background: rgba(148, 163, 184, 0.12);
+}
+
+#menu-button.hamburger:focus-visible,
+.hamburger:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+#menu-button.hamburger svg,
+.hamburger svg {
+  display: block;
+  fill: currentColor;
+}
+
+#menu-panel[hidden] {
+  display: none !important;
+}
+
+#menu-panel.open {
+  display: block;
+}
+
+#menu-backdrop[hidden] {
+  display: none !important;
+}
+
+.menu-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(1px);
+  z-index: 80;
+}
+
+.menu-panel {
+  position: fixed;
+  top: calc(56px + 0.35rem);
+  right: 1rem;
+  width: clamp(240px, 28vw, 320px);
+  max-height: min(70vh, 560px);
+  overflow: auto;
+  background: var(--menu-bg);
+  color: var(--menu-fg);
+  border: 1px solid var(--menu-border);
+  border-radius: 0.85rem;
+  box-shadow: var(--shadow);
+  z-index: 90;
+  transform: translateY(-8px);
+  opacity: 0;
+  transition: transform 0.14s ease-out, opacity 0.14s ease-out;
+}
+
+.menu-panel.open {
+  transform: translateY(0);
+  opacity: 1;
+}
+
+.menu-sections {
+  padding: 0.75rem;
+}
+
+.menu-group {
+  padding: 0.5rem 0.5rem 0.75rem;
+  border-bottom: 1px solid var(--menu-border);
+}
+
+.menu-group:last-child {
+  border-bottom: 0;
+}
+
+.menu-title {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin: 0 0 0.5rem;
+  color: var(--muted);
+}
+
+.menu-link {
+  display: block;
+  padding: 0.5rem 0.5rem;
+  border-radius: 0.6rem;
+  color: var(--menu-fg);
+  text-decoration: none;
+}
+
+.menu-link:hover {
+  background: color-mix(in oklab, var(--menu-fg) 10%, transparent);
+}
+
+.menu-radio {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.35rem 0.5rem;
+  border-radius: 0.6rem;
+}
+
+.menu-radio:hover {
+  background: color-mix(in oklab, var(--menu-fg) 10%, transparent);
+}
+
+@media (max-width: 640px) {
+  body.menu-open {
+    overflow: hidden;
+  }
+}
+
+/* ============================================
+   Existing styles …
+   ============================================ */
 main { padding: 1rem; }
 
 .grid {

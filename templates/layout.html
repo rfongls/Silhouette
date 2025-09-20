@@ -1,7 +1,8 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
   <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Silhouette UI</title>
   <meta name="root-path" content="{{ request.scope.get('root_path', '') }}" />
   <link rel="stylesheet" href="{{ request.url_for('static', path='css/app.css') }}" />
@@ -9,51 +10,51 @@
   {% block extra_head %}{% endblock %}
   <script src="{{ request.url_for('static', path='htmx.min.js') }}"></script>
   <script type="module" src="{{ request.url_for('static', path='js/examples.js') }}"></script>
-  <script type="module" src="{{ request.url_for('static', path='js/nav.js') }}"></script>
 </head>
 <body data-root="{{ request.scope.get('root_path', '') }}">
   <header class="topbar">
-    <div class="topbar-left">
-      <button type="button" class="menu-toggle" id="menu-toggle" aria-expanded="false" aria-controls="app-drawer" aria-label="Open menu">
-        <span class="menu-icon" aria-hidden="true"></span>
-      </button>
-      <a class="brand" href="{{ request.url_for('ui_home') }}">Silhouette</a>
-    </div>
+    <a class="brand" href="{{ request.url_for('ui_home') }}">Silhouette</a>
     <nav class="mainnav">
       <a href="{{ request.url_for('ui_home') }}" data-nav="reports">Reports</a>
       <a href="{{ request.url_for('ui_skills_index') }}" data-nav="skills">Skills</a>
     </nav>
+    <div class="topbar-spacer"></div>
+    <button id="menu-button"
+            class="hamburger"
+            aria-label="Open menu"
+            aria-controls="menu-panel"
+            aria-expanded="false"
+            type="button">
+      <svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true">
+        <path d="M3 6h18v2H3zM3 11h18v2H3zM3 16h18v2H3z" />
+      </svg>
+    </button>
   </header>
-  <div class="menu-backdrop" id="app-menu-backdrop" hidden></div>
-  <aside class="app-drawer" id="app-drawer" role="dialog" aria-modal="true" aria-labelledby="app-drawer-title" tabindex="-1" aria-hidden="true" hidden>
-    <div class="drawer-header">
-      <h2 class="drawer-title" id="app-drawer-title">Menu</h2>
-      <button type="button" class="drawer-close" id="menu-close" aria-label="Close menu">&times;</button>
-    </div>
-    <section class="drawer-section">
-      <h3>Theme</h3>
-      <label class="drawer-label" for="theme-select">Choose appearance</label>
-      <select id="theme-select" class="drawer-select">
-        <option value="system">System</option>
-        <option value="light">Light</option>
-        <option value="dark">Dark</option>
-      </select>
-      <p class="drawer-hint muted">Switch between light and dark modes. System follows your device settings.</p>
-    </section>
-    <section class="drawer-section">
-      <h3>Skills</h3>
-      <ul class="drawer-links" id="menu-skills">
-        <li class="menu-empty muted">Loading skills…</li>
-      </ul>
-    </section>
-    <section class="drawer-section">
-      <h3>Quick links</h3>
-      <ul class="drawer-links">
-        <li><a href="{{ request.url_for('ui_home') }}">Reports Home</a></li>
-        <li><a href="{{ request.url_for('ui_skills_index') }}">Skills Index</a></li>
-      </ul>
-    </section>
+
+  <div id="menu-backdrop" class="menu-backdrop" hidden></div>
+
+  <aside id="menu-panel" class="menu-panel" hidden>
+    <nav class="menu-sections">
+      <div class="menu-group">
+        <div class="menu-title">Navigate</div>
+        <a class="menu-link" href="{{ request.url_for('ui_home') }}">Skills (Home)</a>
+        <a class="menu-link" href="{{ request.scope.get('root_path', '') }}/ui/security/dashboard">Cybersecurity Skill</a>
+        <a class="menu-link" href="{{ request.scope.get('root_path', '') }}/ui/interop/skills">Interoperability Skill</a>
+      </div>
+      <div class="menu-group">
+        <div class="menu-title">Theme</div>
+        <label class="menu-radio">
+          <input type="radio" name="theme" id="theme-default" value="default" />
+          <span>Default</span>
+        </label>
+        <label class="menu-radio">
+          <input type="radio" name="theme" id="theme-dark" value="dark" />
+          <span>Dark</span>
+        </label>
+      </div>
+    </nav>
   </aside>
+
   <main>
     {% block content %}{% endblock %}
   </main>
@@ -94,5 +95,6 @@
     });
   })();
   </script>
+  <script defer src="{{ request.url_for('static', path='js/nav.js') }}"></script>
 </body>
 </html>
