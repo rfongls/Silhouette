@@ -10,6 +10,7 @@
   <link rel="stylesheet" href="{{ request.url_for('static', path='css/dashboard.css') }}" />
   {% block extra_head %}{% endblock %}
   <script src="{{ request.url_for('static', path='htmx.min.js') }}"></script>
+  <script type="module" src="{{ request.url_for('static', path='js/nav.js') }}"></script>
   <script type="module" src="{{ request.url_for('static', path='js/examples.js') }}"></script>
 </head>
 <body data-root="{{ request.scope.get('root_path', '') }}">
