@@ -1,10 +1,11 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="default">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Silhouette UI</title>
   <meta name="root-path" content="{{ request.scope.get('root_path', '') }}" />
+  <meta name="app-root" content="{{ request.scope.get('root_path', '') }}" />
   <link rel="stylesheet" href="{{ request.url_for('static', path='css/app.css') }}" />
   <link rel="stylesheet" href="{{ request.url_for('static', path='css/dashboard.css') }}" />
   {% block extra_head %}{% endblock %}
@@ -12,52 +13,68 @@
   <script type="module" src="{{ request.url_for('static', path='js/examples.js') }}"></script>
 </head>
 <body data-root="{{ request.scope.get('root_path', '') }}">
-  <header class="topbar">
-    <a class="brand" href="{{ request.url_for('ui_home') }}">Silhouette</a>
-    <nav class="mainnav">
-      <a href="{{ request.url_for('ui_home') }}" data-nav="reports">Reports</a>
-      <a href="{{ request.url_for('ui_skills_index') }}" data-nav="skills">Skills</a>
-    </nav>
-    <div class="topbar-spacer"></div>
-    <button id="menu-button"
-            class="hamburger"
-            aria-label="Open menu"
-            aria-controls="menu-panel"
-            aria-expanded="false"
-            type="button">
-      <svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true">
-        <path d="M3 6h18v2H3zM3 11h18v2H3zM3 16h18v2H3z" />
-      </svg>
-    </button>
+  {% set root = request.scope.get('root_path', '') %}
+  {% set current_path = request.url.path if request.url else '' %}
+  {% set home_url = request.url_for('ui_home') %}
+  {% set skills_url = request.url_for('ui_skills_index') %}
+  {% set home_path = root ~ '/ui/home' %}
+  {% set skills_path = root ~ '/ui/skills' %}
+  {% set interop_path = root ~ '/ui/interop' %}
+  {% set interop_url = root ~ '/ui/interop/skills' %}
+
+  <header class="top-nav">
+    <div class="nav-container">
+      <div class="nav-brand">
+        <a class="brand-text" href="{{ home_url }}">Silhouette</a>
+      </div>
+      <nav class="nav-main">
+        <a href="{{ home_url }}" class="nav-link {% if current_path.startswith(home_path) %}active{% endif %}">Home</a>
+        <a href="{{ skills_url }}" class="nav-link {% if current_path.startswith(skills_path) %}active{% endif %}">Skills</a>
+        <a href="{{ interop_url }}" class="nav-link {% if current_path.startswith(interop_path) %}active{% endif %}">Interoperability</a>
+      </nav>
+      <div class="nav-actions">
+        <button class="hamburger-btn" id="hamburger-toggle" aria-label="Open settings" aria-expanded="false">
+          <span class="hamburger-icon" aria-hidden="true"></span>
+        </button>
+      </div>
+    </div>
   </header>
 
-  <div id="menu-backdrop" class="menu-backdrop" hidden></div>
-
-  <aside id="menu-panel" class="menu-panel" hidden>
-    <nav class="menu-sections">
-      <div class="menu-group">
-        <div class="menu-title">Navigate</div>
-        <a class="menu-link" href="{{ request.url_for('ui_home') }}">Skills (Home)</a>
-        <a class="menu-link" href="{{ request.scope.get('root_path', '') }}/ui/security/dashboard">Cybersecurity Skill</a>
-        <a class="menu-link" href="{{ request.scope.get('root_path', '') }}/ui/interop/skills">Interoperability Skill</a>
+  <div id="overlay"></div>
+  <div class="hamburger-menu" id="hamburger-menu" aria-hidden="true">
+    <div class="hamburger-content">
+      <div class="hamburger-header">
+        <h3>Settings</h3>
+        <button class="close-hamburger" id="close-hamburger" aria-label="Close settings">×</button>
       </div>
-      <div class="menu-group">
-        <div class="menu-title">Theme</div>
-        <label class="menu-radio">
-          <input type="radio" name="theme" id="theme-default" value="default" />
-          <span>Default</span>
-        </label>
-        <label class="menu-radio">
-          <input type="radio" name="theme" id="theme-dark" value="dark" />
-          <span>Dark</span>
-        </label>
+      <div class="menu-section">
+        <h4>Theme</h4>
+        <div class="theme-selector">
+          <label class="theme-option">
+            <input type="radio" name="theme" value="default" checked />
+            <span class="theme-label">Default</span>
+          </label>
+          <label class="theme-option">
+            <input type="radio" name="theme" value="dark" />
+            <span class="theme-label">Dark</span>
+          </label>
+          <label class="theme-option">
+            <input type="radio" name="theme" value="high-contrast" />
+            <span class="theme-label">High Contrast</span>
+          </label>
+          <label class="theme-option">
+            <input type="radio" name="theme" value="professional" />
+            <span class="theme-label">Professional</span>
+          </label>
+        </div>
       </div>
-    </nav>
-  </aside>
+    </div>
+  </div>
 
   <main>
     {% block content %}{% endblock %}
   </main>
+
   <script>
   // --- Minimal KPI refresher (no-HTMX fallback) ---
   (function(){
@@ -95,6 +112,7 @@
     });
   })();
   </script>
-  <script defer src="{{ request.url_for('static', path='js/nav.js') }}"></script>
+  <script type="module" src="{{ request.url_for('static', path='js/nav.js') }}"></script>
+  <script type="module" src="{{ request.url_for('static', path='js/interop_ui.js') }}"></script>
 </body>
 </html>
