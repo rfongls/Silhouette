@@ -1,21 +1,18 @@
 {% set root = request.scope.get('root_path', '') %}
-<section class="card" data-feature="debug">
-  <h3>Generator Debug Log</h3>
-  <p class="muted small">Live tail of the HL7 generator debug output. Useful for tracing request payloads and template resolution.</p>
-  <form class="row gap small" id="debug-log-settings"
-        hx-get="{{ root }}/api/diag/logs?format=html&target=interop-debug-log"
-        hx-target="#interop-debug-log"
-        hx-trigger="submit">
-    <label class="label small" for="debug-log-limit">Tail</label>
-    <input class="input input-xs" type="number" id="debug-log-limit" name="limit" value="200" min="20" max="2000" step="20" />
-    <button class="btn btn-xs" type="submit">Refresh</button>
-    <a class="btn btn-xs" href="{{ root }}/api/diag/logs?format=html" target="_blank" rel="noopener">Open full log</a>
-  </form>
-  <pre id="interop-debug-log"
-       class="codepane small mt"
-       hx-get="{{ root }}/api/diag/logs?format=html&target=interop-debug-log"
-       hx-trigger="load, every 8s"
-       hx-target="this"
-       hx-swap="outerHTML"
-       hx-include="#debug-log-settings">Loading recent debug entries…</pre>
-</section>
+<p class="muted small">Live tail of the HL7 generator debug output. Useful for tracing request payloads and template resolution.</p>
+<form class="row gap small" id="debug-log-settings"
+      hx-get="{{ root }}/api/diag/logs?format=html&target=interop-debug-log"
+      hx-target="#interop-debug-log"
+      hx-trigger="submit">
+  <label class="label small" for="debug-log-limit">Tail</label>
+  <input class="input input-xs" type="number" id="debug-log-limit" name="limit" value="200" min="20" max="2000" step="20" />
+  <button class="btn btn-xs" type="submit">Refresh</button>
+  <a class="btn btn-xs" href="{{ root }}/api/diag/logs?format=html" target="_blank" rel="noopener">Open full log</a>
+</form>
+<pre id="interop-debug-log"
+     class="codepane small mt"
+     hx-get="{{ root }}/api/diag/logs?format=html&target=interop-debug-log"
+     hx-trigger="load, every 8s"
+     hx-target="this"
+     hx-swap="outerHTML"
+     hx-include="#debug-log-settings">Loading recent debug entries…</pre>

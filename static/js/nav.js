@@ -1,156 +1,122 @@
-// Global navigation + theme handling (non-module, robust init)
-(function () {
-  const THEME_KEY = "silhouette.theme";
+// static/js/nav.js
+// Settings pop-up + Theme switcher + "single hamburger" guard
+(() => {
+  'use strict';
+  const DOC = document;
 
-  function applyTheme(name) {
-    const theme = name === "dark" ? "dark" : "default";
-    const root = document.documentElement;
-    if (root) {
-      root.setAttribute("data-theme", theme);
-      root.dataset.theme = theme;
-    }
-    if (document.body) {
-      document.body.setAttribute("data-theme", theme);
-    }
+  const THEME_KEY = 'app.theme';
+  const VALID_THEMES = new Set(['default', 'dark']);
+
+  const qs  = (s, root = DOC) => root.querySelector(s);
+  const qsa = (s, root = DOC) => Array.from(root.querySelectorAll(s));
+
+  function currentTheme() {
+    const t = localStorage.getItem(THEME_KEY);
+    return VALID_THEMES.has(t) ? t : 'default';
   }
 
-  // Apply saved theme ASAP
-  let initialTheme = "default";
-  try {
-    initialTheme = localStorage.getItem(THEME_KEY) || "default";
-  } catch (_) {
-    initialTheme = "default";
-  }
-  applyTheme(initialTheme);
-
-  function reflectThemeControls(theme) {
-    const dark = document.getElementById("theme-dark");
-    const def = document.getElementById("theme-default");
-    if (dark) dark.checked = theme === "dark";
-    if (def) def.checked = theme !== "dark";
+  function applyTheme(theme) {
+    if (!VALID_THEMES.has(theme)) theme = 'default';
+    DOC.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem(THEME_KEY, theme);
+    // reflect in menu
+    qsa('[data-theme-choice]').forEach(btn => {
+      const checked = btn.dataset.themeChoice === theme;
+      btn.setAttribute('aria-checked', String(checked));
+    });
   }
 
-  function setTheme(name) {
-    const theme = name === "dark" ? "dark" : "default";
-    applyTheme(theme);
-    reflectThemeControls(theme);
-    try {
-      localStorage.setItem(THEME_KEY, theme);
-    } catch (_) {
-      /* ignore */
-    }
-  }
-
-  function closeMenu(btn, panel, backdrop) {
-    if (panel) {
-      panel.classList.remove("open");
-      panel.hidden = true;
-    }
-    if (btn) {
-      btn.setAttribute("aria-expanded", "false");
-    }
-    if (backdrop) {
-      backdrop.hidden = true;
-    }
-    if (document.body) {
-      document.body.classList.remove("menu-open");
-    }
-  }
-
-  function openMenu(btn, panel, backdrop) {
-    if (panel) {
-      panel.hidden = false;
-      requestAnimationFrame(() => panel.classList.add("open"));
-    }
-    if (btn) {
-      btn.setAttribute("aria-expanded", "true");
-    }
-    if (backdrop) {
-      backdrop.hidden = false;
-    }
-    if (document.body) {
-      document.body.classList.add("menu-open");
-    }
-  }
-
-  function bindOnce(target, event, handler, flagKey) {
-    if (!target) return;
-    const key = flagKey || `__navBound_${event}`;
-    if (target[key]) return;
-    target.addEventListener(event, handler);
-    target[key] = true;
-  }
-
-  function init() {
-    const btn = document.getElementById("menu-button");
-    const panel = document.getElementById("menu-panel");
-    const backdrop = document.getElementById("menu-backdrop");
-
-    let saved = "default";
-    try {
-      saved = localStorage.getItem(THEME_KEY) || "default";
-    } catch (_) {
-      saved = "default";
-    }
-    reflectThemeControls(saved);
-
-    if (btn && panel) {
-      bindOnce(
-        btn,
-        "click",
-        (event) => {
-          event.preventDefault();
-          const isOpen = btn.getAttribute("aria-expanded") === "true";
-          if (isOpen) {
-            closeMenu(btn, panel, backdrop);
-          } else {
-            openMenu(btn, panel, backdrop);
-          }
-        },
-        "__navClickBound"
-      );
-    }
-
-    bindOnce(
-      backdrop,
-      "click",
-      () => closeMenu(btn, panel, backdrop),
-      "__navClickBound"
-    );
-
-    if (!document.__navEscBound) {
-      document.addEventListener("keydown", (event) => {
-        if (event.key === "Escape") {
-          closeMenu(btn, panel, backdrop);
-        }
+  function ensureSingleHamburger() {
+    // Support multiple possible IDs/classes; keep the first, hide the rest.
+    const triggers = qsa('#app-hamburger, #hamburger-btn, .hamburger-btn, [data-role="hamburger"]');
+    if (triggers.length > 1) {
+      triggers.slice(1).forEach(el => {
+        el.style.display = 'none';
+        el.setAttribute('data-hidden-duplicate', 'true');
       });
-      document.__navEscBound = true;
     }
-
-    if (panel && !panel.__navClickBound) {
-      panel.addEventListener("click", (event) => {
-        const link = event.target.closest("a.menu-link");
-        if (link) {
-          closeMenu(btn, panel, backdrop);
-          return;
-        }
-        const themeRadio = event.target.closest('input[name="theme"]');
-        if (themeRadio) {
-          setTheme(themeRadio.value);
-        }
-      });
-      panel.addEventListener("change", (event) => {
-        const themeRadio = event.target.closest('input[name="theme"]');
-        if (themeRadio) {
-          setTheme(themeRadio.value);
-        }
-      });
-      panel.__navClickBound = true;
-    }
-
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", init, { once: true });
-  } else {
-    init();
+    return triggers[0] || null;
   }
+
+  function buildMenu() {
+    if (qs('#app-menu')) return qs('#app-menu');
+
+    const menu = DOC.createElement('div');
+    menu.id = 'app-menu';
+    menu.className = 'app-menu';
+    menu.setAttribute('role', 'menu');
+    menu.setAttribute('hidden', '');
+
+    menu.innerHTML = `
+      <div class="menu-heading">Settings</div>
+      <div class="menu-divider"></div>
+      <div class="menu-heading">Theme</div>
+      <div class="menu-row">
+        <button type="button" class="menu-item" role="menuitemradio"
+                data-theme-choice="default" aria-checked="false">Default</button>
+        <button type="button" class="menu-item" role="menuitemradio"
+                data-theme-choice="dark" aria-checked="false">Dark</button>
+      </div>
+    `;
+
+    DOC.body.appendChild(menu);
+
+    let backdrop = qs('#menu-backdrop');
+    if (!backdrop) {
+      backdrop = DOC.createElement('div');
+      backdrop.id = 'menu-backdrop';
+      backdrop.setAttribute('hidden', '');
+      DOC.body.appendChild(backdrop);
+    }
+
+    // Theme selection
+    menu.addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-theme-choice]');
+      if (!btn) return;
+      applyTheme(btn.dataset.themeChoice);
+      hideMenu();
+    });
+
+    // Dismiss
+    backdrop.addEventListener('click', hideMenu);
+    DOC.addEventListener('keydown', (e) => { if (e.key === 'Escape') hideMenu(); });
+
+    return menu;
+  }
+
+  function showMenu() {
+    const menu = qs('#app-menu');
+    const backdrop = qs('#menu-backdrop');
+    if (menu) {
+      menu.removeAttribute('hidden');
+      menu.classList.add('open');
+    }
+    if (backdrop) backdrop.removeAttribute('hidden');
+  }
+
+  function hideMenu() {
+    const menu = qs('#app-menu');
+    const backdrop = qs('#menu-backdrop');
+    if (menu) {
+      menu.classList.remove('open');
+      menu.setAttribute('hidden', '');
+    }
+    if (backdrop) backdrop.setAttribute('hidden', '');
+  }
+
+  function toggleMenu() {
+    const menu = qs('#app-menu');
+    if (!menu) return showMenu();
+    menu.hasAttribute('hidden') ? showMenu() : hideMenu();
+  }
+
+  DOC.addEventListener('DOMContentLoaded', () => {
+    const trigger = ensureSingleHamburger();
+    buildMenu();
+    applyTheme(currentTheme());
+    if (trigger) trigger.addEventListener('click', (e) => {
+      e.preventDefault();
+      toggleMenu();
+    });
+  });
 })();

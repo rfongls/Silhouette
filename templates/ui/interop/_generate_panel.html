@@ -1,80 +1,53 @@
-<section class="card" id="card-gen">
-  <div class="card-header">
-    <h3 class="card-title">Generate Message</h3>
-    <div class="toolbar"></div>
-  </div>
-  <div class="card-body">
-<!-- Form uses HTMX (API) and falls back to HTML (UI) when JS is disabled -->
 {% set root = request.scope.get('root_path', '') %}
-  <form id="gen-form"
-        method="post"
-        action="{{ urls.ui_generate | default(root ~ '/ui/interop/generate', true) }}"
-        autocomplete="off"
-        novalidate
-        hx-post="{{ urls.api_generate | default(root ~ '/api/interop/generate', true) }}"
-        hx-encoding="application/x-www-form-urlencoded"
-        hx-target="#gen-output"
-        hx-swap="textContent"
-        hx-headers='{"Accept":"text/plain"}'>
-    <div class="row gap">
-      <label>Version</label>
-      <select name="version" class="input hl7-version-select" id="gen-version"
-              data-hx-refresh-target="1"
-              onchange="window.InteropUI.fillDatalist('gen')">
-        <option value="hl7-v2-3">HL7 v2.3</option>
-        <option value="hl7-v2-4" selected>HL7 v2.4</option>
-        <option value="hl7-v2-5">HL7 v2.5</option>
-      </select>
-      <label>Template</label>
-      <input class="input grow"
-             id="gen-trigger-typed"
-             name="trigger"
-             list="gen-trigger-datalist"
-             placeholder="Type a trigger (e.g., ADT_A01)"
-             onfocus="window.InteropUI.fillDatalist('gen')"
-             oninput="window.InteropUI.syncTemplateRelpath('gen')"
-             onchange="window.InteropUI.syncTemplateRelpath('gen')"/>
-      <datalist id="gen-trigger-datalist"></datalist>
-      <input type="hidden" name="template_relpath" id="gen-template-relpath" />
-    </div>
-
-    <p id="gen-template-hint" class="muted small mt" data-empty="No template selected.">No template selected.</p>
-
-    <div class="row gap mt">
-      <input class="input" type="number" name="count" id="gen-count" min="1" max="10000" placeholder="count (default 1)" />
-      <input class="input" type="number" name="seed" id="gen-seed" placeholder="seed (optional)"/>
-      <label><input type="checkbox" name="ensure_unique" checked/> Unique IDs</label>
-      <label><input type="checkbox" name="include_clinical"/> Enrich clinical (DG1/AL1)</label>
-      <label><input type="checkbox" name="deidentify"/> De-identify</label>
-    </div>
-
-    <div class="row gap mt">
-      <button type="submit" id="btn-generate" class="btn btn-primary">Generate</button>
-    </div>
-    <div class="mt">
-      <pre id="gen-output" class="codepane" aria-live="polite" aria-label="Generated HL7 output"></pre>
-    </div>
-
-    <div class="toolbar-cards mt">
-      <div class="action-card outline" onclick="window.InteropUI.openManual('deid')">Open De‑Identify</div>
-      <div class="action-card outline" onclick="window.InteropUI.openManual('validate')">Open Validate</div>
-      <div class="action-card outline" onclick="window.InteropUI.openManual('mllp')">Open MLLP</div>
-    </div>
-
-    <div class="toolbar-cards mt">
-      <div class="action-card primary" onclick="window.InteropUI.runNextDeid()">
-        Run Next Pipeline → De‑identify
-      </div>
-      <div class="action-card primary" onclick="window.InteropUI.runValidationFromGen()">
-        Run Validation Pipeline → Validate
-      </div>
-      <div class="action-card primary" onclick="window.InteropUI.runFullFhirFromGen()">
-        Run Full FHIR Pipeline → HL7 → FHIR
-      </div>
-    </div>
-  </form>
-  <noscript>
-    <p class="muted mt">JavaScript is disabled. Submitting will open a results page.</p>
-  </noscript>
+<form id="gen-form"
+      method="post" autocomplete="off" novalidate
+      action="{{ urls.ui_generate | default(root ~ '/ui/interop/generate', true) }}"
+      hx-post="{{ urls.api_generate | default(root ~ '/api/interop/generate', true) }}"
+      hx-encoding="application/x-www-form-urlencoded"
+      hx-target="#gen-output"
+      hx-swap="textContent"
+      hx-headers='{"Accept":"text/plain"}'
+      hx-on::afterRequest="window.InteropUI.onGenerateComplete(event)">
+  <div class="row gap">
+    <label for="gen-version">Version</label>
+    <select name="version" class="input hl7-version-select" id="gen-version"
+            data-hx-refresh-target="1"
+            onchange="window.InteropUI.fillDatalist('gen')">
+      <option value="hl7-v2-3">HL7 v2.3</option>
+      <option value="hl7-v2-4" selected>HL7 v2.4</option>
+      <option value="hl7-v2-5">HL7 v2.5</option>
+    </select>
+    <label for="gen-trigger-typed">Template</label>
+    <input class="input grow" id="gen-trigger-typed" name="trigger" list="gen-trigger-datalist"
+           placeholder="Type a trigger (e.g., ADT_A01)"
+           onfocus="window.InteropUI.fillDatalist('gen')"
+           oninput="window.InteropUI.syncTemplateRelpath('gen')"
+           onchange="window.InteropUI.syncTemplateRelpath('gen')" />
+    <datalist id="gen-trigger-datalist"></datalist>
+    <input type="hidden" name="template_relpath" id="gen-template-relpath" />
   </div>
-</section>
+  <p id="gen-template-hint" class="muted small mt" data-empty="No template selected.">No template selected.</p>
+  <div class="row gap mt">
+    <input class="input" type="number" name="count" id="gen-count" min="1" max="10000" placeholder="count (default 1)" />
+    <input class="input" type="number" name="seed" id="gen-seed" placeholder="seed (optional)" />
+    <label><input type="checkbox" name="ensure_unique" checked /> Unique IDs</label>
+    <label><input type="checkbox" name="include_clinical" /> Enrich clinical (DG1/AL1)</label>
+    <label><input type="checkbox" name="deidentify" /> De‑identify</label>
+  </div>
+  <div class="mt"><button class="btn" type="submit">Generate</button></div>
+</form>
+<pre id="gen-output" class="textarea-output codepane mt" aria-live="polite" aria-label="Generated HL7 output"></pre>
+<div id="gen-run-tray" class="action-tray hidden" hidden>
+  <div class="action-card" onclick="window.InteropUI.runTo('deid')">
+    <strong>Run Next Pipeline → De‑identify</strong>
+    <small>Prefill the De‑identify card with this message.</small>
+  </div>
+  <div class="action-card" onclick="window.InteropUI.runTo('validate')">
+    <strong>Run Validation Pipeline → Validate</strong>
+    <small>Send the generated HL7 to the Validate card.</small>
+  </div>
+  <div class="action-card" onclick="window.InteropUI.runTo('fhir')">
+    <strong>Run Full FHIR Pipeline → HL7 → FHIR</strong>
+    <small>Open the MLLP card with FHIR translation enabled.</small>
+  </div>
+</div>
