@@ -90,10 +90,12 @@ def test_diag_debug_state_html_chip(monkeypatch, tmp_path):
     resp = client.get("/api/diag/debug/state", params={"format": "html"})
     assert resp.status_code == 200
     assert "Debug ON" in resp.text
+    assert "debug-state-badge" in resp.text
     debug_log.set_debug_enabled(False)
     resp = client.get("/api/diag/debug/state", params={"format": "html"})
     assert resp.status_code == 200
     assert "Debug OFF" in resp.text
+    assert "debug-state-badge" in resp.text
     debug_log.set_debug_enabled(True)
 
 
@@ -104,15 +106,15 @@ def test_diag_debug_state_toggle_returns_html_when_requested(monkeypatch, tmp_pa
         headers={"Accept": "text/html"},
     )
     assert resp.status_code == 200
-    assert "debug-toggle" in resp.text
-    assert "Debug: OFF" in resp.text
+    assert "debug-state-badge" in resp.text
+    assert "Debug OFF" in resp.text
     resp = client.post(
         "/api/diag/debug/state/enable",
         headers={"Accept": "text/html"},
     )
     assert resp.status_code == 200
-    assert "debug-toggle" in resp.text
-    assert "Debug: ON" in resp.text
+    assert "debug-state-badge" in resp.text
+    assert "Debug ON" in resp.text
 
 
 def test_debug_toggle_snippet_endpoint(monkeypatch, tmp_path):
@@ -120,8 +122,8 @@ def test_debug_toggle_snippet_endpoint(monkeypatch, tmp_path):
     debug_log.set_debug_enabled(True)
     resp = client.get("/api/diag/debug/state/snippet", headers={"Accept": "text/html"})
     assert resp.status_code == 200
-    assert "debug-toggle" in resp.text
-    assert "Debug: ON" in resp.text
+    assert "interop-debug-log" in resp.text
+    assert "Debug ON" in resp.text
 
 
 def test_diag_debug_event_endpoint(monkeypatch, tmp_path):

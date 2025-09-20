@@ -41,9 +41,9 @@
       <label><input type="checkbox" name="deidentify"/> De-identify</label>
     </div>
     <div class="row gap mt">
-      <label><input type="checkbox" name="post_fhir"/> Send FHIR</label>
-      <input class="input grow" id="fhir-endpoint" name="fhir_endpoint" placeholder="https://example.org/fhir (Bundle/Resource)"/>
-      <button class="btn" type="button" onclick="document.getElementById('fhir-endpoint').value='/api/fhir/dummy';">Use dummy</button>
+      <label><input type="checkbox" id="pipeline-post-fhir" name="post_fhir"/> Send FHIR</label>
+      <input class="input grow" id="pipeline-fhir-endpoint" name="fhir_endpoint" placeholder="https://example.org/fhir (Bundle/Resource)"/>
+      <button class="btn" type="button" onclick="document.getElementById('pipeline-fhir-endpoint').value='/api/fhir/dummy';">Use dummy</button>
     </div>
     <div class="row gap mt">
       <button class="btn">Run Pipeline</button>
