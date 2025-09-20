@@ -20,6 +20,45 @@ from api.debug_log import (
 router = APIRouter()
 templates = Jinja2Templates(directory="templates")
 
+# ---------------- Server-side pipeline presets ----------------
+PIPELINE_PRESETS = {
+    "local-2575": {
+        "label": "Local MLLP (127.0.0.1:2575)",
+        "host": "127.0.0.1",
+        "port": 2575,
+        "timeout": 5,
+        "fhir_endpoint": "http://127.0.0.1:8080/fhir",
+        "post_fhir": False,
+    },
+    "docker-2575": {
+        "label": "Docker MLLP (localhost:2575)",
+        "host": "localhost",
+        "port": 2575,
+        "timeout": 5,
+        "fhir_endpoint": "http://localhost:8080/fhir",
+        "post_fhir": False,
+    },
+    "partner-a": {
+        "label": "Partner Sandbox A (+FHIR)",
+        "host": "10.0.0.10",
+        "port": 2575,
+        "timeout": 10,
+        "fhir_endpoint": "https://sandbox.partner-a.example/fhir",
+        "post_fhir": True,
+    },
+}
+
+
+def _pipeline_defaults(preset_key: str | None) -> dict:
+    preset = PIPELINE_PRESETS.get((preset_key or "").strip()) or {}
+    return {
+        "host": preset.get("host", ""),
+        "port": preset.get("port", ""),
+        "timeout": preset.get("timeout", 5),
+        "fhir_endpoint": preset.get("fhir_endpoint", ""),
+        "post_fhir": bool(preset.get("post_fhir", False)),
+    }
+
 def _safe_url_for(request: Request, name: str, fallback: str) -> str:
     try:
         return request.url_for(name)
@@ -51,8 +90,18 @@ async def interop_skills(request: Request):
 
 
 @router.get("/ui/interop/pipeline", response_class=HTMLResponse)
-async def interop_pipeline(request: Request):
-    return templates.TemplateResponse("ui/interop/pipeline.html", {"request": request, "urls": _ui_urls(request)})
+async def interop_pipeline(request: Request, preset: str | None = None):
+    defaults = _pipeline_defaults(preset)
+    return templates.TemplateResponse(
+        "ui/interop/pipeline.html",
+        {
+            "request": request,
+            "urls": _ui_urls(request),
+            "presets": PIPELINE_PRESETS,
+            "preset_key": preset or "",
+            "defaults": defaults,
+        },
+    )
 
 
 @router.get("/ui/interop/history", response_class=HTMLResponse)
