@@ -37,6 +37,46 @@
         </div>
       </div>
     </section>
+
+    <section class="quick-launch mt">
+      <h2 class="text-h2">Activity &amp; reports</h2>
+      <div class="reports-grid">
+        <div class="report-card" style="grid-column: span 2;">
+          <h3 class="text-h3">Recent activity</h3>
+          <p class="text-body muted">Latest pipeline events across generate, de-identify, validate, translate, and MLLP.</p>
+          <div class="sample-results" id="recent_activity">
+            <div class="sample-row"><span class="muted">Loading…</span></div>
+          </div>
+        </div>
+        <div class="report-card" style="grid-column: span 2;">
+          <h3 class="text-h3">Issues &amp; activity</h3>
+          <p class="text-body muted">Failures, warnings, and retries surfaced within the selected window.</p>
+          <div class="sample-results" id="issues_activity">
+            <div class="sample-row"><span class="muted">Loading…</span></div>
+          </div>
+        </div>
+        <div class="report-card">
+          <h3 class="text-h3">Validation reports</h3>
+          <p class="text-body">Track validation runs, error distribution, and profile coverage.</p>
+          <div class="text-body" id="validate_stats">
+            <div class="muted">Loading…</div>
+          </div>
+          <div class="mt">
+            <a class="btn btn-secondary btn-sm" href="{{ request.url_for('ui_reports_validate') }}">Open validation</a>
+          </div>
+        </div>
+        <div class="report-card">
+          <h3 class="text-h3">MLLP &amp; ACKs</h3>
+          <p class="text-body">Monitor send attempts, ACK codes, and latency per destination.</p>
+          <div class="text-body" id="mllp_stats">
+            <div class="muted">Loading…</div>
+          </div>
+          <div class="mt">
+            <a class="btn btn-secondary btn-sm" href="{{ request.url_for('ui_reports_acks') }}">Open ACKs</a>
+          </div>
+        </div>
+      </div>
+    </section>
   </div>
 </section>
 <script type="module" src="{{ request.url_for('static', path='js/reports.js') }}"></script>
