@@ -3,7 +3,7 @@
 {% set req = request if request is defined else none %}
 {% set root = req.scope.get('root_path', '') if req else '' %}
 {% set current_path = req.url.path if req and req.url else '' %}
-{% macro static_url(asset) -%}{{ link_for(req, 'static', '/static/' ~ asset, path=asset) }}{%- endmacro %}
+{% set static_base = req.url_for('static', path='') if req else '/static/' %}
 {% set home_url = link_for(req, 'ui_home', '/ui/home') %}
 {% set skills_url = link_for(req, 'ui_skills_index', '/ui/skills') %}
 {% set interop_url = link_for(req, 'interop_skills', '/ui/interop/skills') %}
@@ -18,11 +18,11 @@
   <title>Silhouette UI</title>
   <meta name="root-path" content="{{ root }}" />
   <meta name="app-root" content="{{ root }}" />
-  <link rel="stylesheet" href="{{ static_url('css/app.css') }}" />
-  <link rel="stylesheet" href="{{ static_url('css/dashboard.css') }}" />
+  <link rel="stylesheet" href="{{ static_base }}css/app.css" />
+  <link rel="stylesheet" href="{{ static_base }}css/dashboard.css" />
   {% block extra_head %}{% endblock %}
-  <script src="{{ static_url('htmx.min.js') }}"></script>
-  <script type="module" src="{{ static_url('js/examples.js') }}"></script>
+  <script src="{{ static_base }}htmx.min.js"></script>
+  <script type="module" src="{{ static_base }}js/examples.js"></script>
 </head>
 <body data-root="{{ root }}">
 
@@ -114,9 +114,9 @@
     });
   })();
   </script>
-  <script src="{{ static_url('js/nav.js') }}" defer></script>
-  <script src="{{ static_url('js/pipeline_bus.js') }}" defer></script>
-  <script src="{{ static_url('js/pipeline_tray.js') }}" defer></script>
+  <script src="{{ static_base }}js/nav.js" defer></script>
+  <script src="{{ static_base }}js/pipeline_bus.js" defer></script>
+  <script src="{{ static_base }}js/pipeline_tray.js" defer></script>
   {% block extra_scripts %}{% endblock %}
 </body>
 </html>
