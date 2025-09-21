@@ -21,7 +21,7 @@ from skills.hl7_drafter import draft_message, send_message
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
-templates = Jinja2Templates(directory="templates")
+templates = Jinja2Templates(directory=str(Path("templates")))
 
 
 def _link_for(

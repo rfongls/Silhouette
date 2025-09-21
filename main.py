@@ -82,6 +82,12 @@ async def _http_exc_logger(request: Request, exc: HTTPException):
 @app.exception_handler(Exception)
 async def _log_unhandled_exception(request: Request, exc: Exception):
     logger.exception("Unhandled exception on %s", request.url)
+    # Echo the stack trace to stderr so local runs immediately surface the root cause.
+    import traceback
+    import sys
+
+    print(f"\n--- Unhandled exception on {request.url} ---", file=sys.stderr)
+    traceback.print_exc()
     return PlainTextResponse("Internal Server Error", status_code=500)
 
 
