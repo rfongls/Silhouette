@@ -39,3 +39,17 @@
 - Changelog: ../CHANGELOG.md
 - Compliance policy: ../COMPLIANCE.md
 - Customer license template: ../CUSTOMER_LICENSE_TEMPLATE.md
+
+# Silhouette — Logging, Reporting & Interop Pipelines
+
+This pack documents how Silhouette logs and reports HL7 ↔ FHIR pipeline activity using **SQLite** (WAL), with a thin audit API and reporting endpoints.
+
+**What’s included**
+- Data model and schema (message versions, runs/tasks, MLLP sends, errors)
+- Audit API (write + read)
+- Validate reporting + MLLP ACKs search
+- Pipeline run semantics & universal panel navigation
+- Operational runbooks (retention, requeue)
+- Security & privacy guardrails
+
+The UI patterns align with our **Skills Dashboard** and **Interoperability Dashboard** prototypes, so wording and states match the product. 

@@ -7,6 +7,7 @@ from urllib.parse import parse_qs
 from fastapi import APIRouter, UploadFile, File, Form, Request, Query, HTTPException
 from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse, StreamingResponse
 from starlette.templating import Jinja2Templates
+from api.ui import install_link_for
 try:
     import requests  # for optional FHIR reads
 except Exception:  # pragma: no cover - optional dependency
@@ -51,6 +52,7 @@ async def run_tool(tool: str, request: Request):
         pass
     raise HTTPException(status_code=404, detail=f"Unknown tool: {tool}")
 templates = Jinja2Templates(directory="templates")
+install_link_for(templates)
 OUT_ROOT = Path("out/interop")
 UI_OUT = OUT_ROOT / "ui"
 INDEX_PATH = UI_OUT / "index.json"

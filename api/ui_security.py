@@ -6,9 +6,11 @@ import json
 from fastapi import APIRouter, Request, HTTPException
 from fastapi.responses import HTMLResponse, PlainTextResponse
 from starlette.templating import Jinja2Templates
+from api.ui import install_link_for
 
 router = APIRouter()
 templates = Jinja2Templates(directory="templates")
+install_link_for(templates)
 
 
 @router.get("/ui/security/dashboard", response_class=HTMLResponse)

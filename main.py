@@ -13,7 +13,6 @@ from api.security import router as security_router
 from api.interop import router as interop_router
 from api.ui_security import router as ui_security_router
 from api.ui_interop import router as ui_interop_router
-from api.ui_reports import router as ui_reports_router
 from api.ui import router as ui_router
 from api.interop_gen import router as interop_gen_router, try_generate_on_validation_error
 from api.admin import router as admin_router
@@ -36,7 +35,6 @@ app = FastAPI(
 app.mount("/static", StaticFiles(directory="static"), name="static")
 for r in (
     ui_router,
-    ui_reports_router,
     ui_interop_router,
     ui_security_router,
     interop_gen_router,  # specific generator endpoint
