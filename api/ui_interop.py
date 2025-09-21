@@ -77,6 +77,12 @@ def _ui_urls(request: Request) -> dict[str, str]:
         "ui_validate":   _safe_url_for(request, "ui_validate",   "/ui/interop/validate"),
         # API endpoints (HTMX fast path):
         "api_generate":  _safe_url_for(request, "generate_messages_endpoint", "/api/interop/generate"),
+        "api_deidentify": _safe_url_for(request, "api_deidentify", "/api/interop/deidentify"),
+        "api_deidentify_summary": _safe_url_for(
+            request,
+            "api_deidentify_summary",
+            "/api/interop/deidentify/summary",
+        ),
     }
 
 @router.get("/ui/interop/dashboard", response_class=HTMLResponse)
