@@ -18,6 +18,7 @@ silhouette_clone_v*.zip
 # Runtime artifacts
 exports/
 reports/
+!templates/reports/
 memory_*.jsonl
 artifacts/
 .silhouette/

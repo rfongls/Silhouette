@@ -524,15 +524,6 @@
     expand(normalized, true);
   }
 
-  function setRunTrayVisibility(show) {
-    const tray = byId('gen-run-tray');
-    if (!tray) {
-      return;
-    }
-    tray.hidden = !show;
-    tray.classList.toggle('visible', !!show);
-  }
-
   function runNextFromDeid(next) {
     const hl7 = (getDeidText() || '').trim();
     if (!hl7) {
@@ -555,96 +546,72 @@
     }
   }
 
-  function onGenerateComplete(evt) {
+  function onGenerateComplete() {
     const text = getGenText();
-    setRunTrayVisibility(!!text);
     if (text) {
       setActivePill('gen');
     }
   }
 
+  function onDeidentifyComplete() {
+    const text = getDeidText();
+    if (text) {
+      setActivePill('deid');
+    }
+  }
+
+  function onValidateComplete() {
+    const text = getValText();
+    if (text) {
+      setActivePill('val');
+    }
+  }
+
+  function onMllpComplete() {
+    if (getMllpText()) {
+      setActivePill('mllp');
+    }
+  }
+
   function openPipelineWithText(text) {
     try { sessionStorage.setItem('interop.pipeline.input', text || ''); } catch {}
+    sendDebugEvent('interop.pipeline.open_with_text', { bytes: (text || '').length });
     window.location.href = rootPath('/ui/interop/pipeline');
   }
 
+  function openPipelineFrom(source) {
+    const normalized = (source || '').toLowerCase();
+    let text = '';
+    if (normalized === 'deid') {
+      text = getDeidText();
+    } else if (normalized === 'validate' || normalized === 'val') {
+      text = getValText();
+    } else if (normalized === 'mllp') {
+      text = getMllpText();
+    } else {
+      text = getGenText();
+    }
+
+    if (!text) {
+      alert('No HL7 content available. Generate or paste a message first.');
+      const map = { generate: 'gen', gen: 'gen', deid: 'deid', validate: 'val', val: 'val', mllp: 'mllp' };
+      const target = map[normalized] || 'gen';
+      collapseAll();
+      expand(target, true);
+      return;
+    }
+
+    sendDebugEvent('interop.pipeline.launch_from_panel', { source: normalized || 'generate', bytes: text.length });
+    openPipelineWithText(text);
+  }
+
   // --- Run-next tray visibility -------------------------------------------------
-  const OUTPUT_SELECTORS = [
-    '#gen-output',
-    '[data-role="gen-output"]',
-    '#generated-message',
-    '#hl7-output',
-    '.gen-output',
-    'textarea[name="gen-output"]',
-    'textarea[name="message"]',
-  ];
-
-  function findGenerateOutput() {
-    for (const sel of OUTPUT_SELECTORS) {
-      const el = document.querySelector(sel);
-      if (el) return el;
-    }
-    const fallbacks = document.querySelectorAll('#generate-panel, [data-panel="generate"], section.generate, .card-generate');
-    for (const panel of fallbacks) {
-      const el = panel.querySelector('textarea, pre, output, code');
-      if (el) return el;
-    }
-    return null;
-  }
-
-  function findRunTray() {
-    return (
-      document.getElementById('gen-run-tray') ||
-      document.querySelector('[data-role="gen-run-tray"]') ||
-      document.querySelector('.action-tray')
-    );
-  }
-
-  function trayTextOf(el) {
-    if (!el) return '';
-    if ('value' in el) return String(el.value || '').trim();
-    return String(el.textContent || '').trim();
-  }
-
-  function toggleRunTray(show) {
-    const tray = findRunTray();
-    if (!tray) return;
-    tray.hidden = !show;
-    tray.classList.toggle('visible', !!show);
-  }
-
-  function updateRunTray() {
-    const out = findGenerateOutput();
-    const has = out && trayTextOf(out).length > 0;
-    toggleRunTray(has);
-  }
-
-  function initRunTrayWatcher() {
-    toggleRunTray(false);
-    const out = findGenerateOutput();
-    if (out) {
-      if ('value' in out) out.addEventListener('input', updateRunTray);
-      const observer = new MutationObserver(updateRunTray);
-      observer.observe(out, { childList: true, characterData: true, subtree: true });
-    }
-    const genBtn = document.querySelector('#generate-btn, [data-action="generate"], button[name="generate"]');
-    if (genBtn) {
-      genBtn.addEventListener('click', () => {
-        setTimeout(updateRunTray, 50);
-        setTimeout(updateRunTray, 500);
-        setTimeout(updateRunTray, 1500);
-      });
-    }
-  }
-
   document.addEventListener('DOMContentLoaded', () => {
     setPrimaryVersion(getPrimaryVersion());
     fillDatalist('qs');
     fillDatalist('ds');
     fillDatalist('gen');
     fillDatalist('pipe');
-
-    initRunTrayWatcher();
 
     document.body.addEventListener('htmx:afterSwap', (e) => {
       if (!e || !e.target) return;
@@ -683,17 +650,6 @@
       sendDebugEvent('interop.pipeline.prefill_from_session', { bytes: saved.length, source });
     }
 
-    setRunTrayVisibility(!!getGenText());
-    const genOutput = byId('gen-output');
-    if (genOutput) {
-      if ('value' in genOutput) {
-        genOutput.addEventListener('input', () => setRunTrayVisibility(!!getGenText()));
-      }
-      if (typeof MutationObserver !== 'undefined') {
-        const observer = new MutationObserver(() => setRunTrayVisibility(!!getGenText()));
-        observer.observe(genOutput, { childList: true, characterData: true, subtree: true });
-      }
-    }
   });
 
   window.InteropUI = Object.assign(window.InteropUI || {}, {
@@ -718,11 +674,14 @@
     runMllpFrom,
     runFullFhirFromGen,
     runFullHl7PipelineFromMllp,
+    openPipelineFrom,
     openPipelineWithText,
     getGenText,
     copyFromGenerate,
     loadFileIntoTextarea,
     onGenerateComplete,
-    setRunTrayVisibility,
+    onDeidentifyComplete,
+    onValidateComplete,
+    onMllpComplete,
   });
 })();
