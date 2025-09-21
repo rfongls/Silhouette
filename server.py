@@ -2,6 +2,7 @@ import json
 import logging
 import sys
 from pathlib import Path
+import silhouette_core.compat.forwardref_shim  # noqa: F401  # ensure ForwardRef shim loads before FastAPI imports
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import JSONResponse

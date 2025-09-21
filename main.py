@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 from pathlib import Path
 
+import silhouette_core.compat.forwardref_shim  # noqa: F401  # ensure ForwardRef shim is active before FastAPI imports
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
