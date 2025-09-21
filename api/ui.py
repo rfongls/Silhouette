@@ -8,6 +8,7 @@ from pathlib import Path
 import yaml
 from fastapi import APIRouter, Form, Request
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
+from jinja2 import TemplateNotFound
 from starlette.templating import Jinja2Templates
 
 from api.debug_log import (
@@ -21,7 +22,7 @@ from skills.hl7_drafter import draft_message, send_message
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
-templates = Jinja2Templates(directory="templates")
+templates = Jinja2Templates(directory=str(Path("templates")))
 
 
 def _link_for(
@@ -95,6 +96,64 @@ def _load_skills() -> list[dict]:
     return norm
 
 
+HOME_TEMPLATE_CANDIDATES = [
+    "ui/home_reports.html",
+    "home/index.html",
+    "ui/home/index.html",
+    "home.html",
+    "ui/home.html",
+    "index.html",
+]
+
+
+def _first_existing_template(path_list: list[str]) -> str | None:
+    base = Path("templates")
+    for rel in path_list:
+        if (base / rel).exists():
+            return rel
+    return None
+
+
+def _home_diagnostic_page(missing_reason: str) -> str:
+    return f"""<!doctype html><html><head><meta charset=\"utf-8\">
+<title>Home (diagnostic)</title>
+<style>body{{font:14px system-ui;margin:24px;color:#111}}code{{background:#f6f8fa;padding:2px 4px;border-radius:4px}}</style>
+</head><body>
+  <h1>Home route loaded (diagnostic)</h1>
+  <p>This fallback renders when the expected Jinja template could not be used.</p>
+  <h3>What to do</h3>
+  <ol>
+    <li>Create one of these files under <code>templates/</code>:
+      <ul>
+        <li><code>home/index.html</code></li>
+        <li><code>ui/home/index.html</code></li>
+        <li><code>home.html</code> or <code>ui/home.html</code></li>
+        <li><code>ui/home_reports.html</code></li>
+      </ul>
+    </li>
+    <li>Ensure your handler passes <code>{{"request": request}}</code> to <code>TemplateResponse</code>.</li>
+    <li>Ensure the app is mounted with <code>name=\"static\"</code> so <code>url_for('static', ...)</code> works.</li>
+  </ol>
+  <p><strong>Reason:</strong> {missing_reason}</p>
+  <p><a href="/interop">Open Interoperability</a></p>
+</body></html>"""
+
+
+def _render_ui_home(request: Request) -> HTMLResponse:
+    target = _first_existing_template(HOME_TEMPLATE_CANDIDATES)
+    if not target:
+        return HTMLResponse(_home_diagnostic_page("No matching template file found."), status_code=200)
+
+    context = {"request": request, "skills": _load_skills()}
+    try:
+        return templates.TemplateResponse(target, context)
+    except TemplateNotFound as exc:
+        return HTMLResponse(_home_diagnostic_page(f"TemplateNotFound: {exc}"), status_code=200)
+    except Exception as exc:  # pragma: no cover - defensive guard
+        reason = f"Render error: {type(exc).__name__}: {exc}"
+        return HTMLResponse(_home_diagnostic_page(reason), status_code=200)
+
+
 @router.get("/api/ui/skills", response_class=JSONResponse, include_in_schema=False)
 def api_skills_registry():
     """Expose enabled skills for navigation menus."""
@@ -112,7 +171,7 @@ def ui_home(request: Request):
     Reports Home — high-level KPIs and recent activity.
     Uses registry + HTMX to pull skill-specific summaries.
     """
-    return templates.TemplateResponse("ui/home_reports.html", {"request": request, "skills": _load_skills()})
+    return _render_ui_home(request)
 
 
 @router.get("/reports", response_class=HTMLResponse, name="ui_reports")
@@ -191,7 +250,7 @@ def ui_home(request: Request):
     Reports Home — high-level KPIs and recent activity.
     Uses registry + HTMX to pull skill-specific summaries.
     """
-    return templates.TemplateResponse("ui/home_reports.html", {"request": request, "skills": _load_skills()})
+    return _render_ui_home(request)
 
 
 @router.get("/ui/skills", response_class=HTMLResponse)
@@ -256,7 +315,7 @@ def ui_home(request: Request):
     Reports Home — high-level KPIs and recent activity.
     Uses registry + HTMX to pull skill-specific summaries.
     """
-    return templates.TemplateResponse("ui/home_reports.html", {"request": request, "skills": _load_skills()})
+    return _render_ui_home(request)
 
 
 @router.get("/ui/skills", response_class=HTMLResponse)
@@ -321,7 +380,7 @@ def ui_home(request: Request):
     Reports Home — high-level KPIs and recent activity.
     Uses registry + HTMX to pull skill-specific summaries.
     """
-    return templates.TemplateResponse("ui/home_reports.html", {"request": request, "skills": _load_skills()})
+    return _render_ui_home(request)
 
 
 @router.get("/ui/skills", response_class=HTMLResponse)
@@ -386,7 +445,7 @@ def ui_home(request: Request):
     Reports Home — high-level KPIs and recent activity.
     Uses registry + HTMX to pull skill-specific summaries.
     """
-    return templates.TemplateResponse("ui/home_reports.html", {"request": request, "skills": _load_skills()})
+    return _render_ui_home(request)
 
 
 @router.get("/ui/skills", response_class=HTMLResponse)
@@ -451,7 +510,7 @@ def ui_home(request: Request):
     Reports Home — high-level KPIs and recent activity.
     Uses registry + HTMX to pull skill-specific summaries.
     """
-    return templates.TemplateResponse("ui/home_reports.html", {"request": request, "skills": _load_skills()})
+    return _render_ui_home(request)
 
 
 @router.get("/ui/skills", response_class=HTMLResponse)
@@ -516,7 +575,7 @@ def ui_home(request: Request):
     Reports Home — high-level KPIs and recent activity.
     Uses registry + HTMX to pull skill-specific summaries.
     """
-    return templates.TemplateResponse("ui/home_reports.html", {"request": request, "skills": _load_skills()})
+    return _render_ui_home(request)
 
 
 @router.get("/ui/skills", response_class=HTMLResponse)
@@ -581,7 +640,7 @@ def ui_home(request: Request):
     Reports Home — high-level KPIs and recent activity.
     Uses registry + HTMX to pull skill-specific summaries.
     """
-    return templates.TemplateResponse("ui/home_reports.html", {"request": request, "skills": _load_skills()})
+    return _render_ui_home(request)
 
 
 @router.get("/ui/skills", response_class=HTMLResponse)
@@ -646,7 +705,7 @@ def ui_home(request: Request):
     Reports Home — high-level KPIs and recent activity.
     Uses registry + HTMX to pull skill-specific summaries.
     """
-    return templates.TemplateResponse("ui/home_reports.html", {"request": request, "skills": _load_skills()})
+    return _render_ui_home(request)
 
 
 @router.get("/ui/skills", response_class=HTMLResponse)
@@ -711,7 +770,7 @@ def ui_home(request: Request):
     Reports Home — high-level KPIs and recent activity.
     Uses registry + HTMX to pull skill-specific summaries.
     """
-    return templates.TemplateResponse("ui/home_reports.html", {"request": request, "skills": _load_skills()})
+    return _render_ui_home(request)
 
 
 @router.get("/ui/skills", response_class=HTMLResponse)
@@ -776,7 +835,7 @@ def ui_home(request: Request):
     Reports Home — high-level KPIs and recent activity.
     Uses registry + HTMX to pull skill-specific summaries.
     """
-    return templates.TemplateResponse("ui/home_reports.html", {"request": request, "skills": _load_skills()})
+    return _render_ui_home(request)
 
 
 @router.get("/ui/skills", response_class=HTMLResponse)
@@ -841,7 +900,7 @@ def ui_home(request: Request):
     Reports Home — high-level KPIs and recent activity.
     Uses registry + HTMX to pull skill-specific summaries.
     """
-    return templates.TemplateResponse("ui/home_reports.html", {"request": request, "skills": _load_skills()})
+    return _render_ui_home(request)
 
 
 @router.get("/ui/skills", response_class=HTMLResponse)
@@ -906,7 +965,7 @@ def ui_home(request: Request):
     Reports Home — high-level KPIs and recent activity.
     Uses registry + HTMX to pull skill-specific summaries.
     """
-    return templates.TemplateResponse("ui/home_reports.html", {"request": request, "skills": _load_skills()})
+    return _render_ui_home(request)
 
 
 @router.get("/ui/skills", response_class=HTMLResponse)
@@ -971,7 +1030,7 @@ def ui_home(request: Request):
     Reports Home — high-level KPIs and recent activity.
     Uses registry + HTMX to pull skill-specific summaries.
     """
-    return templates.TemplateResponse("ui/home_reports.html", {"request": request, "skills": _load_skills()})
+    return _render_ui_home(request)
 
 
 @router.get("/ui/skills", response_class=HTMLResponse)
@@ -1036,7 +1095,7 @@ def ui_home(request: Request):
     Reports Home — high-level KPIs and recent activity.
     Uses registry + HTMX to pull skill-specific summaries.
     """
-    return templates.TemplateResponse("ui/home_reports.html", {"request": request, "skills": _load_skills()})
+    return _render_ui_home(request)
 
 
 @router.get("/ui/skills", response_class=HTMLResponse)
@@ -1101,7 +1160,7 @@ def ui_home(request: Request):
     Reports Home — high-level KPIs and recent activity.
     Uses registry + HTMX to pull skill-specific summaries.
     """
-    return templates.TemplateResponse("ui/home_reports.html", {"request": request, "skills": _load_skills()})
+    return _render_ui_home(request)
 
 
 @router.get("/ui/skills", response_class=HTMLResponse)
@@ -1166,7 +1225,7 @@ def ui_home(request: Request):
     Reports Home — high-level KPIs and recent activity.
     Uses registry + HTMX to pull skill-specific summaries.
     """
-    return templates.TemplateResponse("ui/home_reports.html", {"request": request, "skills": _load_skills()})
+    return _render_ui_home(request)
 
 
 @router.get("/ui/skills", response_class=HTMLResponse)
