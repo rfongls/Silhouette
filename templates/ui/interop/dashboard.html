@@ -9,23 +9,23 @@
 {% endif %}
 {% set root = request.scope.get('root_path', '') %}
 <p class="micro"><a href="{{ root }}/ui/home">← Back to Home</a></p>
-<div class="row mb" style="justify-content: space-between; align-items: center;">
+<div class="row mb" style="justify-content: space-between; align-items: center; gap: 1rem;">
   <h2>Interoperability Dashboard</h2>
-  <div id="debug-state-badge"
-       hx-get="{{ root }}/api/diag/debug/state?format=html"
-       hx-trigger="load"
-       hx-target="#debug-state-badge"
-       hx-swap="outerHTML">
-    <span class="micro muted">Loading debug switch…</span>
+  <div class="row gap" style="align-items: center;">
+    <a class="btn btn-secondary" href="{{ root }}/reports">View reports</a>
+    <div id="debug-state-badge"
+         hx-get="{{ root }}/api/diag/debug/state?format=html"
+         hx-trigger="load"
+         hx-target="#debug-state-badge"
+         hx-swap="outerHTML">
+      <span class="micro muted">Loading debug switch…</span>
+    </div>
   </div>
 </div>
 <div class="row gap mt">
-  <label><input type="checkbox" id="view-reports-toggle" /> Reports view</label>
   <label><input type="checkbox" class="feature-toggle" data-target="deid" checked/> De-ID</label>
   <label><input type="checkbox" class="feature-toggle" data-target="validate" checked/> Validate</label>
 </div>
-<div hx-get="{{ root }}/interop/summary" hx-trigger="load, every 10s" hx-target="#interop-kpi-wrap" hx-swap="innerHTML"></div>
-<div id="interop-kpi-wrap"></div>
 <div class="grid">
   <section class="card">
     <h3>HL7 Sample Finder</h3>

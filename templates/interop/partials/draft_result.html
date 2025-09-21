@@ -1,4 +1,3 @@
-{% if kpi %}<div id="interop-kpi-wrap" hx-swap-oob="true">{% include "interop/summary.html" %}</div>{% endif %}
 <div>
   <h4>Draft &amp; Send Result</h4>
   {% if payload.ack is defined %}
@@ -6,4 +5,3 @@
   {% endif %}
   <details><summary>Raw JSON</summary><pre>{{ payload | tojson(indent=2) }}</pre></details>
 </div>
-<script>window.refreshKPI&&refreshKPI('#interop-kpi-wrap','/interop/summary');</script>
