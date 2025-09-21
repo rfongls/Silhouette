@@ -22,6 +22,8 @@
   {% set skills_path = root ~ '/ui/skills' %}
   {% set interop_path = root ~ '/ui/interop' %}
   {% set interop_url = root ~ '/ui/interop/skills' %}
+  {% set reports_url = request.url_for('ui_reports') %}
+  {% set reports_path = root ~ '/reports' %}
 
   <header class="top-nav">
     <div class="nav-container">
@@ -32,6 +34,7 @@
         <a href="{{ home_url }}" class="nav-link {% if current_path.startswith(home_path) %}active{% endif %}">Home</a>
         <a href="{{ skills_url }}" class="nav-link {% if current_path.startswith(skills_path) %}active{% endif %}">Skills</a>
         <a href="{{ interop_url }}" class="nav-link {% if current_path.startswith(interop_path) %}active{% endif %}">Interoperability</a>
+        <a href="{{ reports_url }}" class="nav-link {% if current_path.startswith(reports_path) %}active{% endif %}">Reports</a>
       </nav>
       <div class="nav-actions">
         <button class="hamburger-btn" id="hamburger-toggle" aria-label="Open settings" aria-expanded="false">
@@ -100,11 +103,6 @@
     }
 
     document.addEventListener('DOMContentLoaded', function(){
-      // Interop KPI
-      if (document.querySelector('#interop-kpi-wrap')) {
-        refreshKPI('#interop-kpi-wrap', withRoot('/interop/summary'));
-        setInterval(function(){ refreshKPI('#interop-kpi-wrap', withRoot('/interop/summary')); }, 10000);
-      }
       // Security KPI
       if (document.querySelector('#kpi-wrap')) {
         refreshKPI('#kpi-wrap', withRoot('/security/summary'));
