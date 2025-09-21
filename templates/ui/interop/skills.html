@@ -3,12 +3,15 @@
 <link rel="stylesheet" href="{{ request.url_for('static', path='css/interop_extras.css') }}" />
 <script type="module" src="{{ request.url_for('static', path='js/interop_ui.js') }}"></script>
 {% endblock %}
+
+{% block extra_scripts %}
+<script src="{{ request.url_for('static', path='js/validate_panel.js') }}" defer></script>
+{% endblock %}
 {% block content %}
 {% if urls is not defined %}
   {% set urls = {} %}
 {% endif %}
 {% set root = request.scope.get('root_path', '') %}
-<p class="micro"><a href="{{ root }}/ui/home">← Back to Home</a></p>
 <div class="row mb" style="justify-content: space-between; align-items: center;">
   <h2>Interoperability</h2>
   <div id="debug-state-badge"
@@ -28,7 +31,7 @@
 </nav>
 
 <details id="card-gen" class="card collapsible" open>
-  <summary>Generate Message <span class="minimax"></span></summary>
+  <summary>Generate Messages <span class="minimax"></span></summary>
   <div class="card-body">
     {% include "ui/interop/_generate_panel.html" %}
   </div>
