@@ -81,6 +81,21 @@ def ui_home(request: Request):
     """
     return templates.TemplateResponse("ui/home_reports.html", {"request": request, "skills": _load_skills()})
 
+
+@router.get("/reports", response_class=HTMLResponse, name="ui_reports")
+def ui_reports(request: Request):
+    return templates.TemplateResponse("reports/index.html", {"request": request})
+
+
+@router.get("/reports/acks", response_class=HTMLResponse, name="ui_reports_acks")
+def ui_reports_acks(request: Request):
+    return templates.TemplateResponse("reports/acks.html", {"request": request})
+
+
+@router.get("/reports/validate", response_class=HTMLResponse, name="ui_reports_validate")
+def ui_reports_validate(request: Request):
+    return templates.TemplateResponse("reports/validate.html", {"request": request})
+
 @router.get("/ui/skills", response_class=HTMLResponse)
 def ui_skills_index(request: Request):
     """

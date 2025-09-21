@@ -11,7 +11,7 @@
 <div class="row mb" style="justify-content: space-between; align-items: center; gap: 1rem;">
   <h2>Interoperability Dashboard</h2>
   <div class="row gap" style="align-items: center;">
-    <a class="btn btn-secondary" href="{{ root }}/reports">View reports</a>
+    <a class="btn btn-secondary" href="{{ request.url_for('ui_reports') }}">View reports</a>
     <div id="debug-state-badge"
          hx-get="{{ root }}/api/diag/debug/state?format=html"
          hx-trigger="load"
