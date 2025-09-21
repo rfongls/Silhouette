@@ -218,7 +218,6 @@ async def search_events(
 
     return JSONResponse({"count": len(items), "items": items})
 
-
 @router.get("/validate_summary")
 async def validate_summary(window: int = 86400):
     con = _conn()
