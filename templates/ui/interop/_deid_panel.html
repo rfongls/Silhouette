@@ -9,7 +9,8 @@
 <form id="deid-form"
       class="row gap mt"
       method="post"
-      hx-post="{{ urls.ui_deidentify | default(root ~ '/api/interop/deidentify', true) }}"
+      action="{{ urls.ui_deidentify | default(root ~ '/ui/interop/deidentify', true) }}"
+      hx-post="{{ urls.api_deidentify | default(root ~ '/api/interop/deidentify', true) }}"
       hx-encoding="application/x-www-form-urlencoded"
       hx-include="#deid-text,#deid-seed"
       hx-headers='{"Accept":"text/plain"}'
@@ -21,7 +22,7 @@
 
 <div id="deid-report"
      class="mt"
-     hx-post="{{ root }}/api/interop/deidentify/summary"
+     hx-post="{{ urls.api_deidentify_summary | default(root ~ '/api/interop/deidentify/summary', true) }}"
      hx-include="#deid-text,#deid-seed"
      hx-trigger="htmx:afterRequest from:#deid-form"
      hx-headers='{"Accept":"text/html"}'

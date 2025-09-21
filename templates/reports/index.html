@@ -1,0 +1,43 @@
+{% extends "layout.html" %}
+{% block content %}
+<section class="dashboard">
+  <div class="dashboard-container">
+    <header class="dashboard-header">
+      <h1 class="text-h1">Reports &amp; Analytics</h1>
+      <p class="text-body">Operational KPIs for HL7 ↔ FHIR pipelines</p>
+    </header>
+
+    <div class="controls-section">
+      <label>Window</label>
+      <select id="window" class="input">
+        <option value="86400">Last 24h</option>
+        <option value="604800">Last 7d</option>
+        <option value="2592000">Last 30d</option>
+      </select>
+      <button class="btn" id="refresh">Refresh</button>
+    </div>
+
+    <div id="kpi-tiles" class="reports-grid">
+      <div class="report-card"><h3 class="text-h3">Messages (window)</h3><p class="text-h2" id="k_total">—</p></div>
+      <div class="report-card"><h3 class="text-h3">Success rate</h3><p class="text-h2" id="k_sr">—</p></div>
+      <div class="report-card"><h3 class="text-h3">Avg latency</h3><p class="text-h2" id="k_avg">—</p></div>
+      <div class="report-card"><h3 class="text-h3">Top HL7 types</h3><p class="text-body" id="k_types">—</p></div>
+    </div>
+
+    <section class="quick-launch mt">
+      <h2 class="text-h2">Breakdowns</h2>
+      <div class="skills-grid">
+        <div class="report-card">
+          <h3 class="text-h3">By stage</h3>
+          <pre class="codepane" id="by_stage">Loading…</pre>
+        </div>
+        <div class="report-card">
+          <h3 class="text-h3">By status</h3>
+          <pre class="codepane" id="by_status">Loading…</pre>
+        </div>
+      </div>
+    </section>
+  </div>
+</section>
+<script type="module" src="{{ request.url_for('static', path='js/reports.js') }}"></script>
+{% endblock %}

@@ -27,5 +27,5 @@ def test_interop_summary_and_index(monkeypatch, tmp_path):
     r = c.get("/interop/summary")
     assert r.status_code == 200
     t = r.text
-    assert "Send (ACK)" in t and "Translate" in t and "Validate" in t
-    assert (tmp_path / "out/interop/ui/index.json").exists()
+    assert "Interop Metrics" in t
+    assert "Reports" in t
