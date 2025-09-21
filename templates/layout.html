@@ -1,28 +1,30 @@
 <!DOCTYPE html>
 <html lang="en" data-theme="light">
+{% set req = request if request is defined else none %}
+{% set root = req.scope.get('root_path', '') if req else '' %}
+{% set current_path = req.url.path if req and req.url else '' %}
+{% set static_base = req.url_for('static', path='') if req else '/static/' %}
+{% set home_url = link_for(req, 'ui_home', '/ui/home') %}
+{% set skills_url = link_for(req, 'ui_skills_index', '/ui/skills') %}
+{% set interop_url = link_for(req, 'interop_skills', '/ui/interop/skills') %}
+{% set reports_url = link_for(req, 'ui_reports', '/reports') %}
+{% set home_path = root ~ '/ui/home' %}
+{% set skills_path = root ~ '/ui/skills' %}
+{% set interop_path = root ~ '/ui/interop' %}
+{% set reports_path = root ~ '/reports' %}
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Silhouette UI</title>
-  <meta name="root-path" content="{{ request.scope.get('root_path', '') }}" />
-  <meta name="app-root" content="{{ request.scope.get('root_path', '') }}" />
-  <link rel="stylesheet" href="{{ request.url_for('static', path='css/app.css') }}" />
-  <link rel="stylesheet" href="{{ request.url_for('static', path='css/dashboard.css') }}" />
+  <meta name="root-path" content="{{ root }}" />
+  <meta name="app-root" content="{{ root }}" />
+  <link rel="stylesheet" href="{{ static_base }}css/app.css" />
+  <link rel="stylesheet" href="{{ static_base }}css/dashboard.css" />
   {% block extra_head %}{% endblock %}
-  <script src="{{ request.url_for('static', path='htmx.min.js') }}"></script>
-  <script type="module" src="{{ request.url_for('static', path='js/examples.js') }}"></script>
+  <script src="{{ static_base }}htmx.min.js"></script>
+  <script type="module" src="{{ static_base }}js/examples.js"></script>
 </head>
-<body data-root="{{ request.scope.get('root_path', '') }}">
-  {% set root = request.scope.get('root_path', '') %}
-  {% set current_path = request.url.path if request.url else '' %}
-  {% set home_url = request.url_for('ui_home') %}
-  {% set skills_url = request.url_for('ui_skills_index') %}
-  {% set home_path = root ~ '/ui/home' %}
-  {% set skills_path = root ~ '/ui/skills' %}
-  {% set interop_path = root ~ '/ui/interop' %}
-  {% set interop_url = root ~ '/ui/interop/skills' %}
-  {% set reports_path = root ~ '/reports' %}
-  {% set reports_url = link_for(request, 'ui_reports', '/reports') %}
+<body data-root="{{ root }}">
 
   <header class="top-nav">
     <div class="nav-container">
@@ -96,7 +98,7 @@
     // Expose globally so partials can call it after actions
     window.refreshKPI = refreshKPI;
 
-    var ROOT = {{ request.scope.get('root_path', '') | tojson }};
+    var ROOT = {{ root | tojson }};
     try { window.ROOT = ROOT; } catch (e) { /* ignore */ }
     function withRoot(path){
       if (!path) return ROOT;
@@ -112,9 +114,9 @@
     });
   })();
   </script>
-  <script src="{{ request.url_for('static', path='js/nav.js') }}" defer></script>
-  <script src="{{ request.url_for('static', path='js/pipeline_bus.js') }}" defer></script>
-  <script src="{{ request.url_for('static', path='js/pipeline_tray.js') }}" defer></script>
+  <script src="{{ static_base }}js/nav.js" defer></script>
+  <script src="{{ static_base }}js/pipeline_bus.js" defer></script>
+  <script src="{{ static_base }}js/pipeline_tray.js" defer></script>
   {% block extra_scripts %}{% endblock %}
 </body>
 </html>
