@@ -1,84 +1,87 @@
 {% extends "layout.html" %}
 {% block content %}
 {% set root = request.scope.get('root_path', '') %}
-<section class="hero">
-  <h1 class="title">Reports</h1>
-  <p class="subtitle">High-level view across skills</p>
-</section>
-<section class="card">
-  <form class="row gap" onsubmit="location.href=this.dash.value; return false;">
-    <label class="label" for="home-skill-launcher">Quick launch</label>
-    <select class="input" name="dash" id="home-skill-launcher">
-      {% for s in (skills or []) if s.dashboard %}
-        <option value="{{ s.dashboard }}">{{ s.name }}</option>
-      {% endfor %}
-    </select>
-    <button class="btn" aria-label="Open selected skill">Open</button>
-  </form>
-  <div class="muted mt">Tip: You can also click “Open … Skill” on any KPI card below.</div>
-  <script>
-    (function(){
-      var KEY = "home.quicklaunch.skill";
-      var sel = document.getElementById("home-skill-launcher");
-      if (!sel) return;
-      try {
-        var saved = localStorage.getItem(KEY);
-        if (saved) {
-          for (var i=0;i<sel.options.length;i++){
-            if (sel.options[i].value === saved) { sel.selectedIndex = i; break; }
-          }
-        }
-        sel.addEventListener("change", function(){ localStorage.setItem(KEY, sel.value); });
-      } catch(e) {}
-    })();
-  </script>
-</section>
-<section class="grid grid-3">
-  {% for s in (skills or []) %}
-    <div class="card">
-      <h3>{{ s.name }} — KPIs</h3>
-      {% if s.summary_url %}
-      <div hx-get="{{ s.summary_url }}" hx-trigger="load, every 45s" hx-target="this" hx-swap="innerHTML"></div>
-      {% else %}
-      <div class="muted">No summary configured.</div>
-      {% endif %}
-      {% if s.dashboard %}
-      <div class="mt"><a class="btn" href="{{ s.dashboard }}">Open {{ s.name }} Skill</a></div>
-      {% endif %}
-    </div>
-  {% endfor %}
-  <div class="card">
-    <h3>HL7 → FHIR Pipeline</h3>
-    <p class="muted">Translate HL7 to FHIR (and optionally POST). Uses your selected tools and local CLI if present.</p>
-    <div class="mt"><a class="btn" href="{{ root }}/ui/interop/pipeline">Open Pipeline</a></div>
-  </div>
-  <div class="card">
-    <h3>Recent Activity</h3>
-    <div id="recent-activity-log"
-         hx-get="/api/diag/activity?format=html&limit=20"
-         hx-trigger="load, every 15s"
-         hx-target="this"
-         hx-swap="outerHTML">
-      <div class="muted small">Loading recent activity…</div>
-    </div>
-  </div>
-</section>
+<section class="dashboard">
+  <div class="dashboard-container">
+    <header class="dashboard-header">
+      <h1 class="text-h1">Home</h1>
+      <p class="text-body">Manage your skills and view reports across all modules</p>
+    </header>
 
-<section class="grid">
-  <div class="card">
-    <h3>Alerts & Issues</h3>
-    <div id="home-debug-log"
-         class="muted"
-         hx-get="{{ root }}/ui/home/debug-log"
-         hx-trigger="load"
-         hx-target="this"
-         hx-swap="outerHTML">
-      <div class="muted small">Loading generator diagnostics…</div>
-    </div>
-  </div>
-  <div class="card">
-    <h3>Trends</h3>
-    <div class="muted">Plug in charts when you’re ready (HTMX/JSON feed or static images).</div>
+    <section class="quick-launch">
+      <h2 class="text-h2">Select a Skill</h2>
+      <p class="text-body muted">Quick launch the tools you need.</p>
+      <div class="quick-launch-grid">
+        <select class="quick-select" id="skill-select">
+          <option value="cybersecurity">Cyber Security</option>
+          <option value="interoperability">Interoperability</option>
+        </select>
+        <a class="btn btn-primary" href="#" id="quick-open">Open Skill</a>
+      </div>
+    </section>
+
+    <section class="skills-overview">
+      <h2 class="text-h2">Available Skills</h2>
+      <div class="skills-grid">
+        <div class="skill-card" data-skill="interoperability">
+          <div class="skill-card-header">
+            <div class="skill-icon"><div class="skill-icon-svg">🔗</div></div>
+            <div>
+              <h3 class="skill-title">Interoperability</h3>
+              <p class="skill-description">HL7 → FHIR pipeline tools</p>
+            </div>
+          </div>
+          <div class="skill-card-actions">
+            <a class="btn btn-secondary btn-sm" href="{{ root }}/ui/interop/dashboard">View Details</a>
+            <a class="btn btn-primary btn-sm" href="{{ root }}/ui/interop/skills">Open Skill</a>
+          </div>
+        </div>
+        <div class="skill-card" data-skill="cybersecurity">
+          <div class="skill-card-header">
+            <div class="skill-icon"><div class="skill-icon-svg">🛡️</div></div>
+            <div>
+              <h3 class="skill-title">Cyber Security</h3>
+              <p class="skill-description">Threat, vuln, and compliance tooling</p>
+            </div>
+          </div>
+          <div class="skill-card-actions">
+            <a class="btn btn-secondary btn-sm" href="{{ root }}/ui/security/dashboard">View Details</a>
+            <a class="btn btn-primary btn-sm" href="{{ root }}/ui/security/dashboard">Open Skill</a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="reports-section">
+      <div class="reports-grid">
+        <div class="report-card">
+          <h3 class="text-h3">Recent activity</h3>
+          <p class="text-body">Latest actions and results across skills.</p>
+        </div>
+        <div class="report-card">
+          <h3 class="text-h3">Alerts &amp; Issues</h3>
+          <p class="text-body">Open items requiring attention.</p>
+        </div>
+        <div class="report-card">
+          <h3 class="text-h3">Trends</h3>
+          <p class="text-body">High‑level patterns and volumes.</p>
+        </div>
+        <div class="report-card">
+          <h3 class="text-h3">Reporting</h3>
+          <p class="text-body">Deep dive into ACKs, latency, and validations.</p>
+          <div style="margin-top: 12px;"><a class="btn btn-secondary btn-sm" href="{{ root }}/reports/acks">View Reports</a></div>
+        </div>
+      </div>
+    </section>
   </div>
 </section>
+<script>
+  document.getElementById('quick-open')?.addEventListener('click', (e) => {
+    e.preventDefault();
+    const v = document.getElementById('skill-select').value;
+    const rootPath = document.body?.dataset?.root || '';
+    const target = (v === 'cybersecurity') ? rootPath + '/ui/security/dashboard' : rootPath + '/ui/interop/skills';
+    window.location.href = target;
+  });
+</script>
 {% endblock %}
