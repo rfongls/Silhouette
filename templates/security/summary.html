@@ -1,10 +1,41 @@
 {% set k = kpi or {} %}
+{% set recon = k.get('recon', {}) %}
+{% set net = k.get('net', {}) %}
+{% set gate = k.get('gate', {}) %}
+{% set last_profile = (last_recon.get('profile') if last_recon else 'n/a') %}
 <section class="card">
   <h3>Security Summary</h3>
   <div class="row gap">
     <span class="chip">controls: <strong>{{ k.get('controls_mapped', 0) }}</strong></span>
     <span class="chip">evidence: <strong>{{ k.get('evidence_items', 0) }}</strong></span>
     <span class="chip">open findings: <strong>{{ k.get('findings_open', 0) }}</strong></span>
-    <span class="chip">last scan: <strong>{{ (last_recon or 'n/a') }}</strong></span>
+    <span class="chip">last scan: <strong>{{ last_profile }}</strong></span>
+  </div>
+  <div class="mt stack">
+    <div>
+      <h4>Recon</h4>
+      <p class="muted">
+        Services: <strong>{{ recon.get('services', 0) }}</strong>
+        · Ports: <strong>{{ recon.get('ports', 0) }}</strong>
+        · CVEs: <strong>{{ recon.get('cves', 0) }}</strong>
+        · Severities: <strong>{{ recon.get('sev', {}) }}</strong>
+      </p>
+    </div>
+    <div>
+      <h4>Netforensics</h4>
+      <p class="muted">
+        Alerts: <strong>{{ net.get('alerts', 0) }}</strong>
+        · Flows: <strong>{{ net.get('flows', 0) }}</strong>
+        · Packets: <strong>{{ net.get('packets', 0) }}</strong>
+      </p>
+    </div>
+    <div>
+      <h4>Gate</h4>
+      <p class="muted">
+        Allowed: <strong>{{ gate.get('allowed', 0) }}</strong>
+        · Total: <strong>{{ gate.get('total', 0) }}</strong>
+        · Last decision: <strong>{{ gate.get('last') or 'n/a' }}</strong>
+      </p>
+    </div>
   </div>
 </section>

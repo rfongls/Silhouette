@@ -7,6 +7,7 @@ from fastapi import APIRouter, Request, HTTPException
 from starlette.routing import NoMatchFound
 from fastapi.responses import HTMLResponse, PlainTextResponse
 from starlette.templating import Jinja2Templates
+from api.ui import install_link_for
 from api.interop_gen import generate_messages, parse_any_request
 from silhouette_core.interop.deid import deidentify_message
 from silhouette_core.interop.validate_workbook import validate_message
@@ -19,6 +20,7 @@ from api.debug_log import (
 
 router = APIRouter()
 templates = Jinja2Templates(directory="templates")
+install_link_for(templates)
 
 # ---------------- Server-side pipeline presets ----------------
 PIPELINE_PRESETS = {

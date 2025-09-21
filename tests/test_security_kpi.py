@@ -2,6 +2,7 @@ import json
 from pathlib import Path
 from fastapi.testclient import TestClient
 from starlette.templating import Jinja2Templates
+from api.ui import install_link_for
 from main import app
 import api.security as security
 
@@ -10,6 +11,7 @@ def test_security_summary_and_index(monkeypatch, tmp_path):
     repo_templates = Path(__file__).resolve().parents[1] / "templates"
     monkeypatch.chdir(tmp_path)
     security.templates = Jinja2Templates(directory=str(repo_templates))
+    install_link_for(security.templates)
     d = tmp_path / "out/security/ui/recon/active"
     d.mkdir(parents=True)
     obj = {

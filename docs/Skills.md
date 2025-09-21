@@ -74,3 +74,8 @@ Coordinates scans (e.g., Nmap + ZAP) and returns a report path.
 
 ### cyber_report_writer
 Consumes findings/controls data and emits a Markdown report path.
+
+## Related
+- Interop flow & trays → `docs/ui/interop-flow.md`
+- Reporting (Validate) → `docs/reporting/validate.md`
+- Reporting (ACKs) → `docs/reporting/mllp-acks.md`

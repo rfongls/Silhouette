@@ -1,6 +1,7 @@
 {% extends "layout.html" %}
 {% block content %}
 {% set root = request.scope.get('root_path', '') %}
+{% set reports_acks_url = link_for(request, 'ui_reports_acks', '/reports/acks') %}
 <section class="dashboard">
   <div class="dashboard-container">
     <header class="dashboard-header">
@@ -68,7 +69,7 @@
           <h3 class="text-h3">Reporting</h3>
           <p class="text-body">Deep dive into ACKs, latency, and validations.</p>
           <div class="mt">
-            <a class="btn btn-secondary btn-sm" href="{{ root }}/reports/acks">View Reports</a>
+            <a class="btn btn-secondary btn-sm" href="{{ reports_acks_url }}">View Reports</a>
           </div>
         </div>
       </div>
