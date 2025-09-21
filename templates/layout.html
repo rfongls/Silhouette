@@ -4,10 +4,10 @@
 {% set root = req.scope.get('root_path', '') if req else '' %}
 {% set static_base = req.url_for('static', path='') if req else '/static/' %}
 {% set current_path = req.url.path if req and req.url else '' %}
-{% set home_url = req.url_for('ui_home') if req else root ~ '/ui/home' %}
-{% set skills_url = req.url_for('ui_skills_index') if req else root ~ '/ui/skills' %}
-{% set interop_url = root ~ '/ui/interop/skills' %}
-{% set reports_url = link_for(req, 'ui_reports', '/reports') if req else root ~ '/reports' %}
+{% set home_url = link_for(req, 'ui_home', '/ui/home') %}
+{% set skills_url = link_for(req, 'ui_skills_index', '/ui/skills') %}
+{% set interop_url = link_for(req, 'interop_skills', '/ui/interop/skills') %}
+{% set reports_url = link_for(req, 'ui_reports', '/reports') %}
 {% set home_path = root ~ '/ui/home' %}
 {% set skills_path = root ~ '/ui/skills' %}
 {% set interop_path = root ~ '/ui/interop' %}

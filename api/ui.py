@@ -22,16 +22,25 @@ router = APIRouter()
 templates = Jinja2Templates(directory="templates")
 
 
-def _link_for(request: Request, name: str, default_path: str, **path_params) -> str:
+def _link_for(
+    request: Request | None,
+    name: str,
+    default_path: str = "",
+    **path_params,
+) -> str:
     """Best-effort url_for with fallback when the route isn't registered."""
+
+    fallback = default_path or "/"
+    if fallback and not fallback.startswith("/"):
+        fallback = "/" + fallback
+
+    if request is None:
+        return fallback
 
     try:
         return request.url_for(name, **path_params)
     except NoMatchFound:
         root = request.scope.get("root_path", "")
-        if default_path and not default_path.startswith("/"):
-            default_path = "/" + default_path
-        fallback = default_path or "/"
         return f"{root}{fallback}"
 
 
