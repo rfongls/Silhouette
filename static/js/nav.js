@@ -5,7 +5,7 @@
   const $ = (s, r = D) => r.querySelector(s);
   const $$ = (s, r = D) => Array.from(r.querySelectorAll(s));
   const THEME_KEY = 'theme';
-  const THEMES = new Set(['light', 'dark', 'high-contrast', 'professional']);
+  const THEMES = new Set(['light','dark','high-contrast','professional']);
 
   function applyTheme(theme) {
     if (!THEMES.has(theme)) theme = 'light';
@@ -69,7 +69,6 @@
         el.style.display = 'none';
       });
     }
-    return triggers[0] || null;
   }
 
   function bind() {
@@ -124,4 +123,8 @@
   } else {
     bind();
   }
+
+  // Early theme & reliable init
+  applyTheme(getTheme());
+  (D.readyState === 'loading') ? D.addEventListener('DOMContentLoaded', bind) : bind();
 })();
