@@ -1,12 +1,9 @@
 """Explicit /ui/home route that renders the existing dashboard template."""
 from __future__ import annotations
-
 from pathlib import Path
-
 from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
-
 from api.ui import install_link_for
 
 router = APIRouter()
