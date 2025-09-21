@@ -4,7 +4,7 @@
         method="post"
         action="{{ urls.ui_validate | default(root ~ '/ui/interop/validate', true) }}"
         hx-post="{{ urls.api_validate | default(root ~ '/api/interop/validate', true) }}"
-        hx-target="#validate-output"
+        hx-target="#validation-results"
         hx-swap="innerHTML"
         hx-on::afterSwap="window.InteropUI.onValidateComplete(event)">
     <textarea class="input textarea-output" id="val-text" name="text" placeholder="Paste HL7 to validate"></textarea>
@@ -13,26 +13,30 @@
       <button class="btn" type="submit" data-action="validate">Validate</button>
     </div>
   </form>
-  <div id="validate-output" class="scrollbox codepane mt small muted"></div>
+  <div class="form-row mt">
+    <div class="label">Validated against</div>
+    <div id="validate-target" class="small muted">—</div>
+  </div>
+  <div class="form-row mt">
+    <button class="btn btn-secondary btn-sm" id="print-validate-report" type="button">Print Report</button>
+  </div>
+  <div id="validation-results" class="scrollbox codepane mt small muted"></div>
 
   <div id="validate-run-tray" class="action-tray mt" hidden>
     <div class="action-tray-header">
       <h4>Validation finished</h4>
-      <p>Continue the pipeline or re-run checks.</p>
+      <p>Continue the pipeline or fix and re‑validate.</p>
     </div>
     <div class="action-cards">
-      <a class="action-card" href="#" onclick="window.InteropUI.openPipelineFrom('validate'); return false;">
-        <strong>🔄 HL7 → FHIR Pipeline</strong>
-        <small>Translate the validated message.</small>
-      </a>
-      <a class="action-card" href="#" onclick="window.InteropUI.runMllpFrom('val'); return false;">
-        <strong>📤 Send via MLLP</strong>
-        <small>Deliver downstream and view ACK.</small>
-      </a>
-      <a class="action-card" href="#" onclick="const ta=document.getElementById('val-text'); if(ta){ta.focus();} return false;">
-        <strong>↻ Edit &amp; Re-run</strong>
-        <small>Adjust the message, then click Validate again.</small>
-      </a>
+      <button class="action-card" type="button" data-next="validate">
+        <strong>↻ Edit &amp; Re‑Run</strong><small>Apply fixes and validate again.</small>
+      </button>
+      <button class="action-card" type="button" data-next="mllp">
+        <strong>📤 Send via MLLP</strong><small>Deliver and view ACK.</small>
+      </button>
+      <button class="action-card" type="button" data-next="fhir">
+        <strong>🔄 HL7 → FHIR</strong><small>Translate the validated message.</small>
+      </button>
     </div>
   </div>
 </section>

@@ -31,20 +31,17 @@
   <div id="mllp-run-tray" class="action-tray mt" hidden>
     <div class="action-tray-header">
       <h4>Transport complete</h4>
-      <p>Decide how to follow up after delivery.</p>
+      <p>Follow‑up actions.</p>
     </div>
     <div class="action-cards">
-      <a class="action-card" href="#" onclick="window.InteropUI.openPipelineFrom('mllp'); return false;">
-        <strong>🔄 HL7 → FHIR Pipeline</strong>
-        <small>Reuse this payload for analytics or APIs.</small>
-      </a>
-      <a class="action-card" href="#" onclick="const ta=document.getElementById('mllp-messages'); if(ta){ta.focus();} return false;">
-        <strong>↻ Re-send</strong>
-        <small>Adjust the payload or destination and try again.</small>
-      </a>
-      <a class="action-card" href="{{ root }}/reports">
-        <strong>📊 View reports</strong>
-        <small>Check ACK codes and latency trends.</small>
+      <button class="action-card" type="button" data-next="mllp">
+        <strong>↻ Re‑Send</strong><small>Try another destination.</small>
+      </button>
+      <button class="action-card" type="button" data-next="fhir">
+        <strong>🔄 HL7 → FHIR</strong><small>Translate for analytics.</small>
+      </button>
+      <a class="action-card" href="{{ root }}/reports/acks">
+        <strong>📊 View Reports</strong><small>ACK codes &amp; latency; search by MSH‑10.</small>
       </a>
     </div>
   </div>

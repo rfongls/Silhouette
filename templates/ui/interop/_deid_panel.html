@@ -1,6 +1,6 @@
 {% set root = request.scope.get('root_path', '') %}
 {% if urls is not defined %}{% set urls = {} %}{% endif %}
-{% set api_deidentify = urls.api_deidentify | default(root ~ '/api/interop/deidentify', true) %}
+{% set api_deidentify = (urls.api_deidentify | default(root ~ '/api/interop/deidentify', true)) | string %}
 {% if '?' in api_deidentify %}
   {% set api_deidentify_plain = api_deidentify ~ '&format=txt' %}
 {% else %}
@@ -49,18 +49,15 @@
       <p>Choose what to do with the de‑identified message.</p>
     </div>
     <div class="action-cards">
-      <a class="action-card" href="#" onclick="window.InteropUI.runNextFromDeid('validate'); return false;">
-        <strong>✓ Validate</strong>
-        <small>Ensure structural correctness.</small>
-      </a>
-      <a class="action-card" href="#" onclick="window.InteropUI.openPipelineFrom('deid'); return false;">
-        <strong>🔄 HL7 → FHIR Pipeline</strong>
-        <small>Launch the pipeline with the scrubbed HL7.</small>
-      </a>
-      <a class="action-card" href="#" onclick="window.InteropUI.runNextFromDeid('mllp'); return false;">
-        <strong>📤 Send via MLLP</strong>
-        <small>Prefill transport with this de‑identified message.</small>
-      </a>
+      <button class="action-card" type="button" data-next="validate">
+        <strong>✓ Validate</strong><small>Ensure structural correctness.</small>
+      </button>
+      <button class="action-card" type="button" data-next="mllp">
+        <strong>📤 Send via MLLP</strong><small>Deliver and view ACK.</small>
+      </button>
+      <button class="action-card" type="button" data-next="fhir">
+        <strong>🔄 HL7 → FHIR</strong><small>Translate for downstream apps.</small>
+      </button>
     </div>
   </div>
 </section>

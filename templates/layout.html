@@ -35,14 +35,16 @@
         <a href="{{ reports_path }}" class="nav-link {% if current_path.startswith(reports_path) %}active{% endif %}">Reports</a>
       </nav>
       <div class="nav-actions">
-        <button class="hamburger-btn" id="hamburger-toggle" aria-label="Open settings" aria-expanded="false">
+        <button class="hamburger-btn" id="hamburger-toggle"
+                onclick="window.SilhouetteMenuToggle && window.SilhouetteMenuToggle()"
+                aria-label="Open settings" aria-expanded="false">
           <span class="hamburger-icon" aria-hidden="true"></span>
         </button>
       </div>
     </div>
   </header>
 
-  <div id="overlay"></div>
+  <div class="overlay" id="overlay"></div>
   <div class="hamburger-menu" id="hamburger-menu" aria-hidden="true">
     <div class="hamburger-content">
       <div class="hamburger-header">
@@ -109,8 +111,9 @@
     });
   })();
   </script>
-  <script type="module" src="{{ request.url_for('static', path='js/nav.js') }}"></script>
-  <script type="module" src="{{ request.url_for('static', path='js/pipeline_tray.js') }}"></script>
+  <script src="{{ request.url_for('static', path='js/nav.js') }}" defer></script>
+  <script src="{{ request.url_for('static', path='js/pipeline_bus.js') }}" defer></script>
+  <script src="{{ request.url_for('static', path='js/pipeline_tray.js') }}" defer></script>
   {% block extra_scripts %}{% endblock %}
 </body>
 </html>

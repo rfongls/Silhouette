@@ -1,0 +1,49 @@
+{% extends "layout.html" %}
+{% block content %}
+<section class="dashboard">
+  <div class="dashboard-container">
+    <header class="dashboard-header">
+      <h1 class="text-h1">ACKs &amp; Transport</h1>
+      <p class="text-body">Search ACKs, view processing time, and link to associated messages.</p>
+    </header>
+
+    <div class="controls-section">
+      <div class="control-field">
+        <label for="since">Window</label>
+        <select id="since" class="input">
+          <option value="86400">Last 24h</option>
+          <option value="604800">Last 7d</option>
+          <option value="2592000">Last 30d</option>
+        </select>
+      </div>
+      <div class="control-field">
+        <label for="ack_code">ACK</label>
+        <select id="ack_code" class="input">
+          <option value="">All</option>
+          <option>AA</option>
+          <option>AE</option>
+          <option>AR</option>
+        </select>
+      </div>
+      <div class="control-field">
+        <label for="hl7_type">Type</label>
+        <input id="hl7_type" class="input" placeholder="e.g., ADT_A01" />
+      </div>
+      <div class="control-field">
+        <label for="msh10">MSH‑10</label>
+        <input id="msh10" class="input" placeholder="Message Control ID" />
+      </div>
+      <div class="control-field">
+        <label for="q">Text</label>
+        <input id="q" class="input" placeholder="Payload contains…" />
+      </div>
+      <button class="btn btn-primary control-submit" id="search">Search</button>
+    </div>
+
+    <div class="sample-results" id="results">
+      <div class="sample-row"><span class="muted">Run a search to see results…</span></div>
+    </div>
+  </div>
+</section>
+<script src="{{ request.url_for('static', path='js/reports_acks.js') }}" defer></script>
+{% endblock %}
