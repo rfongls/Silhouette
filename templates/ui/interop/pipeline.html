@@ -5,7 +5,6 @@
 {% endblock %}
 {% block content %}
 {% set root = request.scope.get('root_path', '') %}
-<p class="micro"><a href="{{ root }}/ui/home">← Back to Home</a></p>
 <h2>HL7 → FHIR Pipeline</h2>
 <form method="get" action="{{ root }}/ui/interop/pipeline" class="row gap mb small" autocomplete="off">
   <label for="pipeline-preset-standalone">Preset</label>
@@ -19,7 +18,7 @@
 </form>
 <p class="muted">Select or generate HL7, analyze it, translate to FHIR, and optionally POST to an endpoint.</p>
 
-<section class="card">
+<section class="card" id="translate-panel">
   <form id="pipe-form"
         method="post"
         action="{{ root }}/api/interop/pipeline/run"

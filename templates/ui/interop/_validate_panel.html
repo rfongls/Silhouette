@@ -18,20 +18,18 @@
   <div id="validate-run-tray" class="action-tray mt" hidden>
     <div class="action-tray-header">
       <h4>Validation finished</h4>
-      <p>Continue the pipeline or re-run checks.</p>
+      <p>Continue the pipeline or fix and re‑validate.</p>
     </div>
     <div class="action-cards">
-      <a class="action-card" href="#" onclick="window.InteropUI.openPipelineFrom('validate'); return false;">
-        <strong>🔄 HL7 → FHIR Pipeline</strong>
-        <small>Translate the validated message.</small>
+      <button class="action-card" type="button" data-action="revalidate"
+              onclick="const ta=document.getElementById('val-text'); if(ta){ta.focus(); ta.scrollIntoView({behavior:'smooth', block:'center'});}">
+        <strong>↻ Edit &amp; Re‑Run</strong><small>Apply fixes and validate again.</small>
+      </button>
+      <a class="action-card" href="{{ root }}/ui/interop/pipeline#mllp-panel" data-action="next-mllp">
+        <strong>📤 Send via MLLP</strong><small>Deliver and view ACK.</small>
       </a>
-      <a class="action-card" href="#" onclick="window.InteropUI.runMllpFrom('val'); return false;">
-        <strong>📤 Send via MLLP</strong>
-        <small>Deliver downstream and view ACK.</small>
-      </a>
-      <a class="action-card" href="#" onclick="const ta=document.getElementById('val-text'); if(ta){ta.focus();} return false;">
-        <strong>↻ Edit &amp; Re-run</strong>
-        <small>Adjust the message, then click Validate again.</small>
+      <a class="action-card" href="{{ root }}/ui/interop/pipeline#translate-panel" data-action="next-fhir">
+        <strong>🔄 HL7 → FHIR</strong><small>Translate the validated message.</small>
       </a>
     </div>
   </div>

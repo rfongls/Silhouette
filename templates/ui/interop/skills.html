@@ -8,7 +8,6 @@
   {% set urls = {} %}
 {% endif %}
 {% set root = request.scope.get('root_path', '') %}
-<p class="micro"><a href="{{ root }}/ui/home">← Back to Home</a></p>
 <div class="row mb" style="justify-content: space-between; align-items: center;">
   <h2>Interoperability</h2>
   <div id="debug-state-badge"
@@ -28,7 +27,7 @@
 </nav>
 
 <details id="card-gen" class="card collapsible" open>
-  <summary>Generate Message <span class="minimax"></span></summary>
+  <summary>Generate Messages <span class="minimax"></span></summary>
   <div class="card-body">
     {% include "ui/interop/_generate_panel.html" %}
   </div>

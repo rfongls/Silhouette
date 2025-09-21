@@ -5,7 +5,7 @@ import os
 import sqlite3
 import time
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 import hashlib
 import hmac
 
@@ -140,3 +140,80 @@ async def get_summary(window: int = 86400):
             "top_types": top_types,
         }
     )
+
+
+@router.get("/search")
+async def search_events(
+    stage: Optional[str] = None,
+    ack_code: Optional[str] = None,
+    hl7_type: Optional[str] = None,
+    msg_id: Optional[str] = None,
+    msh10: Optional[str] = None,
+    status: Optional[str] = None,
+    q: Optional[str] = None,
+    since: int = 86400,
+    limit: int = 100,
+    offset: int = 0,
+):
+    since = max(60, int(since or 0))
+    limit = max(1, min(int(limit or 100), 500))
+    offset = max(0, int(offset or 0))
+
+    con = _conn()
+    cur = con.cursor()
+    cur.execute(
+        """
+      SELECT id, ts, stage, msg_id, hl7_type, hl7_version, status, elapsed_ms, payload
+      FROM events
+      WHERE ts >= strftime('%s','now') - ?
+      ORDER BY ts DESC
+      LIMIT ? OFFSET ?
+    """,
+        (since, limit, offset),
+    )
+    rows = cur.fetchall()
+
+    def match(row: tuple) -> bool:
+        _id, ts, stg, mid, t, ver, st, elapsed, payload = row
+        if stage and stg != stage:
+            return False
+        if status and st != status:
+            return False
+        if hl7_type and t != hl7_type:
+            return False
+        if msg_id and mid != msg_id:
+            return False
+        try:
+            parsed = json.loads(payload or "{}")
+        except Exception:
+            parsed = {}
+        if ack_code and str(parsed.get("ack_code", "")).upper() != ack_code.upper():
+            return False
+        if msh10 and str(parsed.get("msh10", "")) != msh10:
+            return False
+        if q:
+            body = (payload or "").lower()
+            if q.lower() not in body:
+                return False
+        return True
+
+    items = []
+    for row in rows:
+        if not match(row):
+            continue
+        _id, ts, stg, mid, t, ver, st, elapsed, payload = row
+        items.append(
+            {
+                "id": _id,
+                "ts": ts,
+                "stage": stg,
+                "msg_id": mid,
+                "hl7_type": t,
+                "hl7_version": ver,
+                "status": st,
+                "elapsed_ms": elapsed,
+                "payload": payload,
+            }
+        )
+
+    return JSONResponse({"count": len(items), "items": items})
