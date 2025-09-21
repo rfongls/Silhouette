@@ -1,11 +1,17 @@
 {% set root = request.scope.get('root_path', '') %}
 {% if urls is not defined %}{% set urls = {} %}{% endif %}
+{% set api_deidentify = urls.api_deidentify | default(root ~ '/api/interop/deidentify', true) %}
+{% if '?' in api_deidentify %}
+  {% set api_deidentify_plain = api_deidentify ~ '&format=txt' %}
+{% else %}
+  {% set api_deidentify_plain = api_deidentify ~ '?format=txt' %}
+{% endif %}
 
 <form id="deid-form"
       class="mt"
       method="post"
       action="{{ urls.ui_deidentify | default(root ~ '/ui/interop/deidentify', true) }}"
-      hx-post="{{ urls.api_deidentify | default(root ~ '/api/interop/deidentify', true) }}"
+      hx-post="{{ api_deidentify_plain }}"
       hx-encoding="application/x-www-form-urlencoded"
       hx-headers='{"Accept":"text/plain"}'
       hx-target="#deid-output"
