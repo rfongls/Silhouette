@@ -25,6 +25,7 @@ logger = logging.getLogger(__name__)
 
 _BASE_DIR = Path(__file__).resolve().parent
 _HTTP_LOG_PATH = _BASE_DIR / "out" / "interop" / "server_http.log"
+_STATIC_DIR = _BASE_DIR / "static"
 
 app = FastAPI(
     title="Silhouette Core Interop",
@@ -43,7 +44,7 @@ for r in (
     diag_router,         # diagnostics
 ):
     app.include_router(r)
-app.mount("/static", StaticFiles(directory="static"), name="static")
+app.mount("/static", StaticFiles(directory=_STATIC_DIR), name="static")
 install_http_logging(app, log_path=_HTTP_LOG_PATH)
 ensure_diagnostics(app, http_log_path=_HTTP_LOG_PATH)
 
