@@ -7,6 +7,7 @@ import anyio
 from fastapi import APIRouter, UploadFile, File, Form, Query, Request
 from fastapi.responses import PlainTextResponse, StreamingResponse, HTMLResponse
 from starlette.templating import Jinja2Templates
+from api.ui import install_link_for
 
 from skills.cyber_pentest_gate.v1.wrapper import tool as gate_tool
 from skills.cyber_recon_scan.v1.wrapper import tool as recon_tool
@@ -15,6 +16,7 @@ from skills.cyber_ir_playbook.v1.wrapper import tool as ir_tool
 
 router = APIRouter()
 templates = Jinja2Templates(directory="templates")
+install_link_for(templates)
 OUT_ROOT = Path("out/security")
 UI_OUT = OUT_ROOT / "ui"
 INDEX_PATH = UI_OUT / "index.json"

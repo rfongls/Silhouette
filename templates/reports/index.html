@@ -62,7 +62,7 @@
             <div class="muted">Loading…</div>
           </div>
           <div class="mt">
-            <a class="btn btn-secondary btn-sm" href="{{ request.url_for('ui_reports_validate') }}">Open validation</a>
+            <a class="btn btn-secondary btn-sm" href="{{ link_for(request, 'ui_reports_validate', '/reports/validate') }}">Open validation</a>
           </div>
         </div>
         <div class="report-card">
@@ -72,7 +72,7 @@
             <div class="muted">Loading…</div>
           </div>
           <div class="mt">
-            <a class="btn btn-secondary btn-sm" href="{{ request.url_for('ui_reports_acks') }}">Open ACKs</a>
+            <a class="btn btn-secondary btn-sm" href="{{ link_for(request, 'ui_reports_acks', '/reports/acks') }}">Open ACKs</a>
           </div>
         </div>
       </div>

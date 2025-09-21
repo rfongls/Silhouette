@@ -1,7 +1,7 @@
 {% extends "layout.html" %}
 {% block content %}
 {% set root = request.scope.get('root_path', '') %}
-{% set reports_acks_url = request.url_for('ui_reports_acks') %}
+{% set reports_acks_url = link_for(request, 'ui_reports_acks', '/reports/acks') %}
 <section class="dashboard">
   <div class="dashboard-container">
     <header class="dashboard-header">

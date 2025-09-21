@@ -22,7 +22,7 @@
   {% set interop_path = root ~ '/ui/interop' %}
   {% set interop_url = root ~ '/ui/interop/skills' %}
   {% set reports_path = root ~ '/reports' %}
-  {% set reports_url = request.url_for('ui_reports') %}
+  {% set reports_url = link_for(request, 'ui_reports', '/reports') %}
 
   <header class="top-nav">
     <div class="nav-container">
