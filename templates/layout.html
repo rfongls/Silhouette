@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="default">
+<html lang="en" data-theme="light">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -10,7 +10,6 @@
   <link rel="stylesheet" href="{{ request.url_for('static', path='css/dashboard.css') }}" />
   {% block extra_head %}{% endblock %}
   <script src="{{ request.url_for('static', path='htmx.min.js') }}"></script>
-  <script type="module" src="{{ request.url_for('static', path='js/nav.js') }}"></script>
   <script type="module" src="{{ request.url_for('static', path='js/examples.js') }}"></script>
 </head>
 <body data-root="{{ request.scope.get('root_path', '') }}">
@@ -54,8 +53,8 @@
         <h4>Theme</h4>
         <div class="theme-selector">
           <label class="theme-option">
-            <input type="radio" name="theme" value="default" checked />
-            <span class="theme-label">Default</span>
+            <input type="radio" name="theme" value="light" checked />
+            <span class="theme-label">Light</span>
           </label>
           <label class="theme-option">
             <input type="radio" name="theme" value="dark" />
@@ -110,6 +109,8 @@
     });
   })();
   </script>
+  <script type="module" src="{{ request.url_for('static', path='js/nav.js') }}"></script>
+  <script type="module" src="{{ request.url_for('static', path='js/pipeline_tray.js') }}"></script>
   {% block extra_scripts %}{% endblock %}
 </body>
 </html>

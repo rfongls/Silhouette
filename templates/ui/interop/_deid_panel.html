@@ -7,51 +7,60 @@
   {% set api_deidentify_plain = api_deidentify ~ '?format=txt' %}
 {% endif %}
 
-<form id="deid-form"
-      class="mt"
-      method="post"
-      action="{{ urls.ui_deidentify | default(root ~ '/ui/interop/deidentify', true) }}"
-      hx-post="{{ api_deidentify_plain }}"
-      hx-encoding="application/x-www-form-urlencoded"
-      hx-headers='{"Accept":"text/plain"}'
-      hx-target="#deid-output"
-      hx-swap="textContent">
-  <textarea id="deid-text"
-            name="text"
-            class="input textarea-output"
-            placeholder="Paste HL7 to de-identify"></textarea>
-  <div class="row gap mt">
-    <input class="input" id="deid-seed" name="seed" placeholder="seed (optional)" />
-    <button id="deid-run" class="btn" type="submit">De‑identify</button>
-  </div>
-</form>
+<section id="deid-panel" class="interop-panel interop-panel-deid">
+  <form id="deid-form"
+        class="mt"
+        method="post"
+        action="{{ urls.ui_deidentify | default(root ~ '/ui/interop/deidentify', true) }}"
+        hx-post="{{ api_deidentify_plain }}"
+        hx-encoding="application/x-www-form-urlencoded"
+        hx-headers='{"Accept":"text/plain"}'
+        hx-target="#deid-output"
+        hx-swap="textContent"
+        hx-on::afterSwap="window.InteropUI.onDeidentifyComplete(event)">
+    <textarea id="deid-text"
+              name="text"
+              class="input textarea-output"
+              placeholder="Paste HL7 to de-identify"></textarea>
+    <div class="row gap mt">
+      <input class="input" id="deid-seed" name="seed" placeholder="seed (optional)" />
+      <button id="deid-run" class="btn" type="submit" data-action="deidentify">De‑identify</button>
+    </div>
+  </form>
 
-<div id="deid-report"
-     class="mt"
-     hx-post="{{ urls.api_deidentify_summary | default(root ~ '/api/interop/deidentify/summary', true) }}"
-     hx-include="#deid-text,#deid-seed"
-     hx-trigger="htmx:afterRequest from:#deid-form"
-     hx-headers='{"Accept":"text/html"}'
-     hx-swap="innerHTML">
-  <details class="mini-report">
-    <summary>De-identification report</summary>
-    <div class="muted small">Run de-identify to see what fields changed.</div>
-  </details>
-</div>
+  <div id="deid-report"
+       class="mt"
+       hx-post="{{ urls.api_deidentify_summary | default(root ~ '/api/interop/deidentify/summary', true) }}"
+       hx-include="#deid-text,#deid-seed"
+       hx-trigger="htmx:afterRequest from:#deid-form"
+       hx-headers='{"Accept":"text/html"}'
+       hx-swap="innerHTML">
+    <details class="mini-report">
+      <summary>De-identification report</summary>
+      <div class="muted small">Run de-identify to see what fields changed.</div>
+    </details>
+  </div>
 
-<pre id="deid-output" class="codepane limit10 scrollbox" aria-live="polite"></pre>
+  <pre id="deid-output" class="codepane limit10 scrollbox" aria-live="polite"></pre>
 
-<div class="action-tray mt">
-  <div class="action-card" onclick="window.InteropUI.runNextFromDeid('validate')">
-    <strong>Run Next Pipeline → Validate</strong>
-    <small>Use the de‑identified HL7 for validation.</small>
+  <div id="deid-run-tray" class="action-tray mt" hidden>
+    <div class="action-tray-header">
+      <h4>Next steps after De‑ID</h4>
+      <p>Choose what to do with the de‑identified message.</p>
+    </div>
+    <div class="action-cards">
+      <a class="action-card" href="#" onclick="window.InteropUI.runNextFromDeid('validate'); return false;">
+        <strong>✓ Validate</strong>
+        <small>Ensure structural correctness.</small>
+      </a>
+      <a class="action-card" href="#" onclick="window.InteropUI.openPipelineFrom('deid'); return false;">
+        <strong>🔄 HL7 → FHIR Pipeline</strong>
+        <small>Launch the pipeline with the scrubbed HL7.</small>
+      </a>
+      <a class="action-card" href="#" onclick="window.InteropUI.runNextFromDeid('mllp'); return false;">
+        <strong>📤 Send via MLLP</strong>
+        <small>Prefill transport with this de‑identified message.</small>
+      </a>
+    </div>
   </div>
-  <div class="action-card" onclick="window.InteropUI.runNextFromDeid('mllp')">
-    <strong>Run MLLP Pipeline</strong>
-    <small>Prefill the MLLP card with the de‑identified message.</small>
-  </div>
-  <div class="action-card" onclick="window.InteropUI.runTo('fhir')">
-    <strong>Run Full FHIR Pipeline → HL7 → FHIR</strong>
-    <small>Open the transport card with FHIR translation enabled.</small>
-  </div>
-</div>
+</section>
