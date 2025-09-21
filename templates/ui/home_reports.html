@@ -1,7 +1,8 @@
 {% extends "layout.html" %}
 {% block content %}
-{% set root = request.scope.get('root_path', '') %}
-{% set reports_acks_url = link_for(request, 'ui_reports_acks', '/reports/acks') %}
+{% set req = request if request is defined else none %}
+{% set root = req.scope.get('root_path', '') if req else '' %}
+{% set reports_acks_url = link_for(req, 'ui_reports_acks', '/reports/acks') %}
 <section class="dashboard">
   <div class="dashboard-container">
     <header class="dashboard-header">

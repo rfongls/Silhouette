@@ -1,13 +1,13 @@
 from __future__ import annotations
 
 import json
+import logging
 from datetime import datetime, timezone
 from pathlib import Path
 
 import yaml
 from fastapi import APIRouter, Form, Request
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
-from starlette.routing import NoMatchFound
 from starlette.templating import Jinja2Templates
 
 from api.debug_log import (
@@ -17,6 +17,8 @@ from api.debug_log import (
     toggle_debug_enabled,
 )
 from skills.hl7_drafter import draft_message, send_message
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 templates = Jinja2Templates(directory="templates")
@@ -39,8 +41,9 @@ def _link_for(
 
     try:
         return request.url_for(name, **path_params)
-    except NoMatchFound:
+    except Exception:
         root = request.scope.get("root_path", "")
+        logger.debug("Falling back to default path for link %s", name, exc_info=True)
         return f"{root}{fallback}"
 
 
