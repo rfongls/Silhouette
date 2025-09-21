@@ -1230,11 +1230,9 @@ MESSAGE_TYPES = [
 ]
 
 def _render(request: Request, context: dict) -> HTMLResponse:
-    try:
-        return templates.TemplateResponse(request, "ui/hl7_send.html", context)
-    except Exception:
-        context["request"] = request
-        return templates.TemplateResponse("ui/hl7_send.html", context)
+    ctx = dict(context)
+    ctx.setdefault("request", request)
+    return templates.TemplateResponse("ui/hl7_send.html", ctx)
 
 
 @router.get("/ui/hl7", response_class=HTMLResponse)
