@@ -1,27 +1,28 @@
 {% set root = request.scope.get('root_path', '') %}
 {% if urls is not defined %}{% set urls = {} %}{% endif %}
 
-<textarea id="deid-text"
-          name="text"
-          class="input textarea-output"
-          placeholder="Paste HL7 to de-identify"></textarea>
-
 <form id="deid-form"
-      class="row gap mt"
+      class="mt"
       method="post"
-      hx-post="{{ urls.ui_deidentify | default(root ~ '/api/interop/deidentify', true) }}"
+      action="{{ urls.ui_deidentify | default(root ~ '/ui/interop/deidentify', true) }}"
+      hx-post="{{ urls.api_deidentify | default(root ~ '/api/interop/deidentify', true) }}"
       hx-encoding="application/x-www-form-urlencoded"
-      hx-include="#deid-text,#deid-seed"
       hx-headers='{"Accept":"text/plain"}'
       hx-target="#deid-output"
       hx-swap="textContent">
-  <input class="input" id="deid-seed" name="seed" placeholder="seed (optional)" />
-  <button id="deid-run" class="btn" type="submit">De‑identify</button>
+  <textarea id="deid-text"
+            name="text"
+            class="input textarea-output"
+            placeholder="Paste HL7 to de-identify"></textarea>
+  <div class="row gap mt">
+    <input class="input" id="deid-seed" name="seed" placeholder="seed (optional)" />
+    <button id="deid-run" class="btn" type="submit">De‑identify</button>
+  </div>
 </form>
 
 <div id="deid-report"
      class="mt"
-     hx-post="{{ root }}/api/interop/deidentify/summary"
+     hx-post="{{ urls.api_deidentify_summary | default(root ~ '/api/interop/deidentify/summary', true) }}"
      hx-include="#deid-text,#deid-seed"
      hx-trigger="htmx:afterRequest from:#deid-form"
      hx-headers='{"Accept":"text/html"}'

@@ -1,6 +1,7 @@
 {% extends "layout.html" %}
 {% block extra_head %}
 <link rel="stylesheet" href="{{ request.url_for('static', path='css/interop_extras.css') }}" />
+<script type="module" src="{{ request.url_for('static', path='js/interop_ui.js') }}"></script>
 {% endblock %}
 {% block content %}
 {% if urls is not defined %}

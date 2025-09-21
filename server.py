@@ -11,12 +11,14 @@ from api.interop import router as interop_router
 from api.interop_gen import router as interop_gen_router, try_generate_on_validation_error
 from api.security import router as security_router
 from api.ui import router as ui_router
+from api.ui_reports import router as ui_reports_router
 from api.ui_interop import router as ui_interop_router
 from api.ui_security import router as ui_security_router
 from api.diag import router as diag_router
 from api.http_logging import install_http_logging
 from api.diag_fallback import ensure_diagnostics
 from api.debug_log import log_debug_event
+from api.metrics import router as metrics_router
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -32,11 +34,13 @@ app = FastAPI(
 )
 for r in (
     ui_router,
+    ui_reports_router,
     ui_interop_router,
     ui_security_router,
     interop_gen_router,  # specific generator endpoint
     interop_router,      # generic tools (now under /api/interop/exec/{tool})
     security_router,
+    metrics_router,
     diag_router,         # diagnostics
 ):
     app.include_router(r)
