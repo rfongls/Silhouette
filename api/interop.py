@@ -1,5 +1,5 @@
 from __future__ import annotations
-import json, subprocess, time, shutil, re, io, csv, datetime, textwrap, tempfile
+import json, subprocess, time, shutil, re, io, csv, datetime, textwrap, tempfile, uuid
 from pathlib import Path
 from typing import List, Optional, Dict, Any
 import threading
@@ -22,6 +22,7 @@ from silhouette_core.interop.validate_workbook import validate_message
 from .interop_gen import generate_messages, _find_template_by_trigger
 from api.activity_log import log_activity
 from api.debug_log import log_debug_event
+from api.metrics import record_event
 
 
 def _log(event: str, **fields):
@@ -334,10 +335,14 @@ async def ui_validate(text: str = Form(...), profile: Optional[str] = Form(None)
         profile=profile or "",
         input_bytes=len((text or "").encode("utf-8", errors="ignore")),
     )
+    start_ts = time.time()
     res = validate_message(text, profile=profile)
+    elapsed_ms = int((time.time() - start_ts) * 1000)
+    errors_list = list(res.get("errors", []) or [])
+    warnings_list = list(res.get("warnings", []) or [])
     badge = "<span class='chip'>OK</span>" if res.get("ok") else "<span class='chip'>Issues</span>"
-    errs = "".join(f"<li>{_esc(e)}</li>" for e in res.get("errors", []))
-    warns = "".join(f"<li>{_esc(w)}</li>" for w in res.get("warnings", []))
+    errs = "".join(f"<li>{_esc(e)}</li>" for e in errors_list)
+    warns = "".join(f"<li>{_esc(w)}</li>" for w in warnings_list)
     html = [
         f"<div>Result: {badge}</div>",
         "<div class='mt'><strong>Errors</strong><ul>" + (errs or "<li>None</li>") + "</ul></div>",
@@ -346,9 +351,23 @@ async def ui_validate(text: str = Form(...), profile: Optional[str] = Form(None)
     _log(
         "ui.validate.done",
         ok=bool(res.get("ok")),
-        errors=len(res.get("errors", [])),
-        warnings=len(res.get("warnings", [])),
+        errors=len(errors_list),
+        warnings=len(warnings_list),
     )
+    try:
+        record_event(
+            {
+                "stage": "validate",
+                "msg_id": str(uuid.uuid4()),
+                "status": "success" if res.get("ok") else "fail",
+                "elapsed_ms": elapsed_ms,
+                "error_count": len(errors_list),
+                "warning_count": len(warnings_list),
+                "profile": profile or "",
+            }
+        )
+    except Exception:
+        _log("metrics.validate_record_failed")
     return HTMLResponse("".join(html))
 
 
@@ -420,7 +439,7 @@ async def interop_hl7_send(
         _write_artifact("send", payload)
         return templates.TemplateResponse(
             "interop/partials/draft_result.html",
-            {"request": request, "payload": payload, "kpi": _compute_kpis()},
+            {"request": request, "payload": payload},
             media_type="text/html",
         )
     message = draft_message(message_type, data)
@@ -454,7 +473,7 @@ async def interop_hl7_send(
     _write_artifact("send", payload)
     return templates.TemplateResponse(
         "interop/partials/draft_result.html",
-        {"request": request, "payload": payload, "translate": tr, "kpi": _compute_kpis()},
+        {"request": request, "payload": payload, "translate": tr},
         media_type="text/html",
     )
 
@@ -511,7 +530,7 @@ async def translate(
     _write_artifact("translate", result)
     return templates.TemplateResponse(
         "interop/partials/translate_result.html",
-        {"request": request, "result": result, "kpi": _compute_kpis()},
+        {"request": request, "result": result},
         media_type="text/html",
     )
 
@@ -529,12 +548,27 @@ async def validate_fhir(
         with dest.open("wb") as fh:
             fh.write(up.file.read())
     args = ["fhir", "validate", "--in-dir", str(in_dir)]
+    start_ts = time.time()
     result = _run_cli(args)
     result["out"] = out_dir
     _write_artifact("validate", result)
+    try:
+        record_event(
+            {
+                "stage": "validate",
+                "msg_id": str(uuid.uuid4()),
+                "status": "success" if int(result.get("rc", 1)) == 0 else "fail",
+                "elapsed_ms": int((time.time() - start_ts) * 1000),
+                "error_count": 0,
+                "warning_count": 0,
+                "profile": "cli",
+            }
+        )
+    except Exception:
+        _log("metrics.validate_record_failed")
     return templates.TemplateResponse(
         "interop/partials/validate_result.html",
-        {"request": request, "result": result, "kpi": _compute_kpis()},
+        {"request": request, "result": result},
         media_type="text/html",
     )
 
@@ -556,7 +590,7 @@ async def interop_hl7_send_batch(
     _write_artifact("send", {"batch": results})
     return templates.TemplateResponse(
         "interop/partials/draft_result.html",
-        {"request": request, "payload": {"batch": results}, "kpi": _compute_kpis()},
+        {"request": request, "payload": {"batch": results}},
         media_type="text/html",
     )
 
@@ -593,7 +627,6 @@ async def interop_translate_batch(
             "hl7_path": str(uploads),
             "translate": {"rc": 0, "stdout": f'Translated {len(written)} files', "stderr": ""},
             "validate": val_res or {"rc": 0, "stdout": "", "stderr": ""},
-            "kpi": _compute_kpis(),
         },
         media_type="text/html",
     )
@@ -605,11 +638,26 @@ async def interop_validate_last(request: Request, out_dir: str = Form("out/inter
     target_dir = _find_newest_fhir_dir(Path(out_dir))
     if not target_dir:
         return HTMLResponse("<div class='muted'>No recent FHIR outputs found to validate.</div>")
+    start_ts = time.time()
     res = _run_cli(["fhir", "validate", "--in-dir", str(target_dir)])
     _write_artifact("validate", res)
+    try:
+        record_event(
+            {
+                "stage": "validate",
+                "msg_id": str(uuid.uuid4()),
+                "status": "success" if int(res.get("rc", 1)) == 0 else "fail",
+                "elapsed_ms": int((time.time() - start_ts) * 1000),
+                "error_count": 0,
+                "warning_count": 0,
+                "profile": "cli-latest",
+            }
+        )
+    except Exception:
+        _log("metrics.validate_record_failed")
     return templates.TemplateResponse(
         "interop/partials/validate_result.html",
-        {"request": request, "result": res, "kpi": _compute_kpis()},
+        {"request": request, "result": res},
         media_type="text/html",
     )
 
@@ -633,7 +681,7 @@ async def interop_hl7_analyze(
     _write_artifact("analyze", payload)
     return templates.TemplateResponse(
         "interop/partials/draft_result.html",
-        {"request": request, "payload": payload, "kpi": _compute_kpis()},
+        {"request": request, "payload": payload},
         media_type="text/html",
     )
 
@@ -718,88 +766,24 @@ async def interop_fhir_read(
     payload = {"status": r.status_code, "body": _safe_json(r.text)}
     return templates.TemplateResponse(
         "interop/partials/draft_result.html",
-        {"request": request, "payload": payload, "kpi": _compute_kpis()},
+        {"request": request, "payload": payload},
         media_type="text/html",
     )
 
 
-# ---------- KPI Summary, Demo & Quickstart ----------
-
-def _compute_kpis() -> dict:
-    files = sorted(list(OUT_ROOT.glob("**/active/*.json")), key=lambda p: p.stat().st_mtime, reverse=True)
-    k = {
-        "send": {"count": 0, "ok": 0, "last_ok": None},
-        "translate": {"ok": 0, "fail": 0},
-        "validate": {"ok": 0, "fail": 0},
-    }
-    for p in files:
-        o = json.loads(p.read_text(encoding="utf-8"))
-        if o.get("kind") == "send" or "ack" in o or "ack_ok" in o:
-            k["send"]["count"] += 1
-            ok = bool(o.get("ack_ok"))
-            if ok:
-                k["send"]["ok"] += 1
-            if k["send"]["last_ok"] is None:
-                k["send"]["last_ok"] = ok
-        elif "stdout" in o and "stderr" in o and "rc" in o:
-            kind = o.get("kind")
-            ok = int(o.get("rc", 1)) == 0
-            if kind == "translate":
-                if ok:
-                    k["translate"]["ok"] += 1
-                else:
-                    k["translate"]["fail"] += 1
-            elif kind == "validate":
-                if ok:
-                    k["validate"]["ok"] += 1
-                else:
-                    k["validate"]["fail"] += 1
-            else:
-                if "translate" in str(p.parent.parent):
-                    if ok:
-                        k["translate"]["ok"] += 1
-                    else:
-                        k["translate"]["fail"] += 1
-                else:
-                    if ok:
-                        k["validate"]["ok"] += 1
-                    else:
-                        k["validate"]["fail"] += 1
-    INDEX_PATH.parent.mkdir(parents=True, exist_ok=True)
-    try:
-        idx = json.loads(INDEX_PATH.read_text(encoding="utf-8"))
-        if not isinstance(idx, list):
-            idx = []
-    except Exception:
-        idx = []
-    idx.append({
-        "t": int(time.time()),
-        "send_ok": k["send"]["ok"],
-        "translate_ok": k["translate"]["ok"],
-        "validate_ok": k["validate"]["ok"],
-    })
-    idx = idx[-200:]
-    INDEX_PATH.write_text(json.dumps(idx), encoding="utf-8")
-    return k
+# ---------- Summary, Demo & Quickstart ----------
 
 
 @router.get("/interop/summary", response_class=HTMLResponse)
 def interop_summary():
-    counts: list[tuple[str, int]] = []
-    total = 0
-    for v in sorted(VALID_VERSIONS):
-        root = SAMPLE_DIR / v
-        c = len(list(root.glob("*.hl7"))) if root.exists() else 0
-        counts.append((v, c))
-        total += c
-    html = ["<section class='card'><h3>Interop Summary</h3><div class='row gap'>"]
-    html.append(f"<span class='chip'>templates: <strong>{total}</strong></span>")
-    for v, c in counts:
-        html.append(
-            f"<span class='chip chip-version' data-version='{v}' title='Set primary version to {v}'>{v}: <strong>{c}</strong></span>"
-        )
-    html.append("</div></section>")
-    return HTMLResponse("".join(html))
+    html = (
+        "<section class='card'>"
+        "<h3>Interop Metrics</h3>"
+        "<p class='muted'>Detailed KPIs now live on the dedicated Reports dashboard.</p>"
+        "<div class='mt'><a class='btn' href='/reports'>Open Reports</a></div>"
+        "</section>"
+    )
+    return HTMLResponse(html)
 
 
 @router.post("/interop/demo/seed", response_class=HTMLResponse)

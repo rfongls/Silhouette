@@ -1,4 +1,3 @@
-{% if kpi %}<div id="interop-kpi-wrap" hx-swap-oob="true">{% include "interop/summary.html" %}</div>{% endif %}
 <div>
   <h4>Quickstart Pipeline — {{ trigger }}</h4>
   <p class="muted">HL7 saved: <code>{{ hl7_path }}</code></p>
@@ -9,4 +8,3 @@
   <p>rc: {{ validate.rc }}</p>
   <details><summary>stdout/stderr</summary><pre>{{ validate.stdout }}\n----\n{{ validate.stderr }}</pre></details>
 </div>
-<script>window.refreshKPI&&refreshKPI('#interop-kpi-wrap','/interop/summary');</script>

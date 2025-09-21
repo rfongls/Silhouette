@@ -38,6 +38,12 @@ def test_interop_dashboard_renders():
     assert "Generate Messages" in response.text
 
 
+def test_ui_homepage_renders():
+    response = client.get("/ui/home")
+    assert response.status_code == 200
+    assert "Quick launch" in response.text
+
+
 def test_diag_routes_available():
     response = client.get("/api/diag/routes")
     assert response.status_code == 200
