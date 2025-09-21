@@ -1,0 +1,35 @@
+{% extends "layout.html" %}
+{% block content %}
+<section class="dashboard">
+  <div class="dashboard-container">
+    <header class="dashboard-header">
+      <h1 class="text-h1">Validation Reports</h1>
+      <p class="text-body">Search validation runs, view rule hits, and export/print.</p>
+    </header>
+
+    <div class="controls-section">
+      <label for="v_window">Window</label>
+      <select id="v_window" class="input">
+        <option value="86400">Last 24h</option>
+        <option value="604800">Last 7d</option>
+        <option value="2592000">Last 30d</option>
+      </select>
+      <label for="v_q">Search</label>
+      <input id="v_q" class="input" placeholder="Error code, segment, type…" />
+      <button class="btn" id="v_search">Search</button>
+    </div>
+
+    <div class="reports-grid">
+      <div class="report-card">
+        <h3 class="text-h3">Summary</h3>
+        <div class="text-body" id="v_summary">Loading…</div>
+      </div>
+      <div class="report-card" style="grid-column: 1 / -1;">
+        <h3 class="text-h3">Results</h3>
+        <div class="sample-results" id="v_results"><div class="sample-row">Run a search…</div></div>
+      </div>
+    </div>
+  </div>
+</section>
+<script src="{{ request.url_for('static', path='js/reports_validate.js') }}" defer></script>
+{% endblock %}

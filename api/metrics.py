@@ -217,3 +217,93 @@ async def search_events(
         )
 
     return JSONResponse({"count": len(items), "items": items})
+
+@router.get("/validate_summary")
+async def validate_summary(window: int = 86400):
+    con = _conn()
+    cur = con.cursor()
+    cur.execute(
+        """
+      SELECT COUNT(*) as total,
+             SUM(CASE WHEN status='success' THEN 1 ELSE 0 END) as ok,
+             AVG(elapsed_ms) as avg_ms
+      FROM events
+      WHERE stage='validate' AND ts >= strftime('%s','now') - ?
+    """,
+        (window,),
+    )
+    row = cur.fetchone() or (0, 0, 0)
+    total, ok, avg_ms = row
+
+    cur.execute(
+        """
+      SELECT payload FROM events
+      WHERE stage='validate' AND ts >= strftime('%s','now') - ?
+    """,
+        (window,),
+    )
+    import collections
+
+    counter = collections.Counter()
+    for (payload,) in cur.fetchall():
+        try:
+            parsed = json.loads(payload or "{}")
+        except Exception:
+            parsed = {}
+        top = parsed.get("top_errors") or []
+        if isinstance(top, dict):
+            counter.update(top.keys())
+        elif isinstance(top, list):
+            counter.update(str(item) for item in top)
+
+    top_errors = [{"code": code, "count": count} for code, count in counter.most_common(10)]
+    return JSONResponse(
+        {
+            "total": total or 0,
+            "successes": ok or 0,
+            "success_rate": (ok or 0) / max(total or 1, 1),
+            "avg_ms": int(avg_ms or 0),
+            "top_errors": top_errors,
+        }
+    )
+
+
+@router.get("/validate_search")
+async def validate_search(q: str = "", window: int = 86400, limit: int = 100):
+    window = max(60, int(window or 0))
+    limit = max(1, min(int(limit or 100), 500))
+    con = _conn()
+    cur = con.cursor()
+    cur.execute(
+        """
+      SELECT id, ts, stage, msg_id, hl7_type, hl7_version, status, elapsed_ms, payload
+      FROM events
+      WHERE stage='validate' AND ts >= strftime('%s','now') - ?
+      ORDER BY ts DESC LIMIT ?
+    """,
+        (window, limit),
+    )
+    rows = cur.fetchall()
+    items = []
+    for row in rows:
+        _id, ts, stg, mid, hl7_type, hl7_version, status, elapsed_ms, payload = row
+        try:
+            parsed = json.loads(payload or "{}")
+        except Exception:
+            parsed = {}
+        search_blob = json.dumps(parsed, separators=(",", ":")).lower()
+        if q and q.lower() not in search_blob:
+            continue
+        items.append(
+            {
+                "id": _id,
+                "ts": ts,
+                "msg_id": mid,
+                "hl7_type": hl7_type,
+                "hl7_version": hl7_version,
+                "status": status,
+                "elapsed_ms": elapsed_ms,
+                "payload": parsed,
+            }
+        )
+    return JSONResponse({"count": len(items), "items": items})

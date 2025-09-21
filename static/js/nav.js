@@ -1,39 +1,42 @@
 // static/js/nav.js
-// Single hamburger + robust fallback + theme persistence (light/dark/hc/pro)
 (() => {
   'use strict';
   const D = document;
-
+  const $ = (s, r = D) => r.querySelector(s);
+  const $$ = (s, r = D) => Array.from(r.querySelectorAll(s));
   const THEME_KEY = 'theme';
   const THEMES = new Set(['light','dark','high-contrast','professional']);
 
-  const $  = (s, r=D) => r.querySelector(s);
-  const $$ = (s, r=D) => Array.from(r.querySelectorAll(s));
+  function applyTheme(theme) {
+    if (!THEMES.has(theme)) theme = 'light';
+    D.documentElement.setAttribute('data-theme', theme);
+    if (D.body) D.body.setAttribute('data-theme', theme);
+    try {
+      localStorage.setItem(THEME_KEY, theme);
+    } catch (err) {
+      /* ignore storage errors */
+    }
+    $$('input[name="theme"][type="radio"]').forEach((radio) => {
+      radio.checked = radio.value === theme;
+    });
+  }
 
   function getTheme() {
-    const t = localStorage.getItem(THEME_KEY);
-    return THEMES.has(t) ? t : 'light';
-  }
-  function applyTheme(t) {
-    if (!THEMES.has(t)) t = 'light';
-    D.documentElement.setAttribute('data-theme', t);
-    D.body && D.body.setAttribute('data-theme', t);
-    localStorage.setItem(THEME_KEY, t);
-    $$('input[name="theme"][type="radio"]').forEach(r => r.checked = (r.value === t));
-  }
-
-  function ensureSingleHamburger() {
-    const triggers = $$('#hamburger-toggle, #app-hamburger, .hamburger-btn, [data-role="hamburger"]');
-    if (triggers.length > 1) triggers.slice(1).forEach(el => el.style.display='none');
-    return triggers[0] || null;
+    try {
+      const stored = localStorage.getItem(THEME_KEY);
+      if (stored && THEMES.has(stored)) return stored;
+    } catch (err) {
+      /* ignore */
+    }
+    return 'light';
   }
 
   function ensureDrawerDom() {
     if (!$('#hamburger-menu')) {
-      const menu = D.createElement('div');
-      menu.id = 'hamburger-menu';
-      menu.className = 'hamburger-menu';
-      menu.innerHTML = `
+      const el = D.createElement('div');
+      el.id = 'hamburger-menu';
+      el.className = 'hamburger-menu';
+      el.innerHTML = `
         <div class="hamburger-content">
           <div class="hamburger-header">
             <h3>Settings</h3>
@@ -49,13 +52,22 @@
             </div>
           </div>
         </div>`;
-      D.body.appendChild(menu);
+      D.body.appendChild(el);
     }
     if (!$('#overlay')) {
-      const ov = D.createElement('div');
-      ov.id = 'overlay';
-      ov.className = 'overlay';
-      D.body.appendChild(ov);
+      const overlay = D.createElement('div');
+      overlay.id = 'overlay';
+      overlay.className = 'overlay';
+      D.body.appendChild(overlay);
+    }
+  }
+
+  function ensureSingleHamburger() {
+    const triggers = $$('#hamburger-toggle, #app-hamburger, .hamburger-btn, [data-role="hamburger"]');
+    if (triggers.length > 1) {
+      triggers.slice(1).forEach((el) => {
+        el.style.display = 'none';
+      });
     }
   }
 
@@ -63,26 +75,53 @@
     ensureDrawerDom();
     applyTheme(getTheme());
 
-    const toggle  = ensureSingleHamburger();
-    const menu    = $('#hamburger-menu');
-    const close   = $('#close-hamburger');
+    const toggle = ensureSingleHamburger();
+    const menu = $('#hamburger-menu');
+    const close = $('#close-hamburger');
     const overlay = $('#overlay');
 
-    const open = () => { menu.classList.add('open'); overlay.classList.add('active'); D.body.style.overflow='hidden'; };
-    const closeFn = () => { menu.classList.remove('open'); overlay.classList.remove('active'); D.body.style.overflow=''; };
-    const toggleFn = () => (menu.classList.contains('open') ? closeFn() : open());
+    const open = () => {
+      menu?.classList.add('open');
+      overlay?.classList.add('active');
+      if (D.body) D.body.style.overflow = 'hidden';
+    };
+    const closeFn = () => {
+      menu?.classList.remove('open');
+      overlay?.classList.remove('active');
+      if (D.body) D.body.style.overflow = '';
+    };
+    const toggleFn = () => {
+      if (menu?.classList.contains('open')) {
+        closeFn();
+      } else {
+        open();
+      }
+    };
 
-    // expose fallback for inline onclick
     window.SilhouetteMenuToggle = toggleFn;
 
-    toggle && toggle.addEventListener('click', e => { e.preventDefault(); toggleFn(); });
-    close  && close.addEventListener('click', closeFn);
-    overlay&& overlay.addEventListener('click', closeFn);
-    D.addEventListener('keydown', e => { if (e.key === 'Escape') closeFn(); });
+    toggle?.addEventListener('click', (event) => {
+      event.preventDefault();
+      toggleFn();
+    });
+    close?.addEventListener('click', closeFn);
+    overlay?.addEventListener('click', closeFn);
+    D.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') closeFn();
+    });
 
-    $$('input[name="theme"][type="radio"]').forEach(r =>
-      r.addEventListener('change', e => { if (e.target.checked) applyTheme(e.target.value); })
-    );
+    $$('input[name="theme"][type="radio"]').forEach((radio) => {
+      radio.addEventListener('change', (event) => {
+        if (event.target.checked) applyTheme(event.target.value);
+      });
+    });
+  }
+
+  applyTheme(getTheme());
+  if (D.readyState === 'loading') {
+    D.addEventListener('DOMContentLoaded', bind);
+  } else {
+    bind();
   }
 
   // Early theme & reliable init

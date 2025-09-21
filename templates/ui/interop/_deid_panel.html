@@ -49,15 +49,15 @@
       <p>Choose what to do with the de‑identified message.</p>
     </div>
     <div class="action-cards">
-      <a class="action-card" href="{{ root }}/ui/interop/pipeline#validate-panel" data-action="next-validate">
+      <button class="action-card" type="button" data-next="validate">
         <strong>✓ Validate</strong><small>Ensure structural correctness.</small>
-      </a>
-      <a class="action-card" href="{{ root }}/ui/interop/pipeline#mllp-panel" data-action="next-mllp">
+      </button>
+      <button class="action-card" type="button" data-next="mllp">
         <strong>📤 Send via MLLP</strong><small>Deliver and view ACK.</small>
-      </a>
-      <a class="action-card" href="{{ root }}/ui/interop/pipeline#translate-panel" data-action="next-fhir">
+      </button>
+      <button class="action-card" type="button" data-next="fhir">
         <strong>🔄 HL7 → FHIR</strong><small>Translate for downstream apps.</small>
-      </a>
+      </button>
     </div>
   </div>
 </section>

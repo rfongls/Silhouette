@@ -34,13 +34,12 @@
       <p>Follow‑up actions.</p>
     </div>
     <div class="action-cards">
-      <button class="action-card" type="button" data-action="resend"
-              onclick="const ta=document.getElementById('mllp-messages'); if(ta){ta.focus(); ta.scrollIntoView({behavior:'smooth', block:'center'});}">
+      <button class="action-card" type="button" data-next="mllp">
         <strong>↻ Re‑Send</strong><small>Try another destination.</small>
       </button>
-      <a class="action-card" href="{{ root }}/ui/interop/pipeline#translate-panel" data-action="next-fhir">
+      <button class="action-card" type="button" data-next="fhir">
         <strong>🔄 HL7 → FHIR</strong><small>Translate for analytics.</small>
-      </a>
+      </button>
       <a class="action-card" href="{{ root }}/reports/acks">
         <strong>📊 View Reports</strong><small>ACK codes &amp; latency; search by MSH‑10.</small>
       </a>

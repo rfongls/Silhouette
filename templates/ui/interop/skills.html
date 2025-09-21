@@ -3,6 +3,10 @@
 <link rel="stylesheet" href="{{ request.url_for('static', path='css/interop_extras.css') }}" />
 <script type="module" src="{{ request.url_for('static', path='js/interop_ui.js') }}"></script>
 {% endblock %}
+
+{% block extra_scripts %}
+<script src="{{ request.url_for('static', path='js/validate_panel.js') }}" defer></script>
+{% endblock %}
 {% block content %}
 {% if urls is not defined %}
   {% set urls = {} %}
