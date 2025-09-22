@@ -49,6 +49,9 @@ for r in (
 ):
     app.include_router(r)
 app.mount("/static", StaticFiles(directory=_STATIC_DIR), name="static")
+# Keep the registration near the bottom so it is easy to toggle during local
+# investigations. The middleware ensures the log directory exists and degrades
+# to console-only logging if file access fails.
 install_http_logging(app, log_path=_HTTP_LOG_PATH)
 ensure_diagnostics(app, http_log_path=_HTTP_LOG_PATH)
 

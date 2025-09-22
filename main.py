@@ -54,6 +54,9 @@ for r in (
 ):
     app.include_router(r)
 
+# Keep the install close to the bottom so it can be commented out quickly when
+# isolating failures. The middleware creates the log directory on demand and
+# falls back to console logging if file access is unavailable.
 install_http_logging(app, log_path=_HTTP_LOG_PATH)
 ensure_diagnostics(app, http_log_path=_HTTP_LOG_PATH)
 

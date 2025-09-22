@@ -6,14 +6,15 @@ import logging
 from logging.handlers import RotatingFileHandler
 import time
 from pathlib import Path
-from typing import Any
+from typing import Any, Tuple
 
 from fastapi import FastAPI, Request
+from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import Response as StarletteResponse
 
 from api.debug_log import is_debug_enabled
 
-__all__ = ["install_http_logging"]
+__all__ = ["HttpLoggerMiddleware", "install_http_logging"]
 
 _BASE_DIR = Path(__file__).resolve().parents[1]
 _DEFAULT_HTTP_LOG_PATH = _BASE_DIR / "out" / "interop" / "server_http.log"
@@ -85,8 +86,9 @@ def _should_skip_logging(path: str, content_type: str | None) -> str | None:
     return "binary"
 
 
-def _ensure_logger(log_path: Path | str | None) -> logging.Logger:
+def _ensure_logger(log_path: Path | str | None) -> Tuple[logging.Logger, bool]:
     logger = logging.getLogger("silhouette.http")
+    file_logging_enabled = False
 
     if not any(
         isinstance(handler, logging.StreamHandler) and not isinstance(handler, logging.FileHandler)
@@ -126,9 +128,12 @@ def _ensure_logger(log_path: Path | str | None) -> logging.Logger:
                         logging.Formatter("%(asctime)s %(name)s %(levelname)s %(message)s")
                     )
                     logger.addHandler(file_handler)
+                    file_logging_enabled = True
+            else:
+                file_logging_enabled = True
 
     logger.setLevel(logging.INFO)
-    return logger
+    return logger, file_logging_enabled
 
 
 def _log_safe(
@@ -141,27 +146,37 @@ def _log_safe(
         pass
 
 
-def install_http_logging(
-    app: FastAPI,
-    *,
-    log_path: Path | str | None = _DEFAULT_HTTP_LOG_PATH,
-) -> None:
-    """Attach the shared HTTP logging middleware to *app*.
-
-    The middleware captures the request payload, logs a safe preview, and
-    replays the body for downstream handlers. Responses are buffered only for
-    textual payloads so static/binary assets are not copied into memory.
+class HttpLoggerMiddleware(BaseHTTPMiddleware):
+    """Best-effort request logger that cannot break the request pipeline.
+    Impact analysis:
+    - Pros: auto-creates the HTTP log directory on startup and falls back to
+      console logging if file I/O fails, preventing first-hit 500 errors on new
+      machines.
+    - Cons: when file logging is unavailable only the console stream is
+      populated, reducing historical retention.
     """
 
-    if getattr(app.state, "_silhouette_http_logging_installed", False):
-        return
+    def __init__(
+        self,
+        app,
+        *,
+        log_path: Path | str | None = _DEFAULT_HTTP_LOG_PATH,
+    ) -> None:
+        super().__init__(app)
+        self._raw_log_path = Path(log_path) if log_path is not None else None
+        self.logger, self.file_logging_enabled = _ensure_logger(self._raw_log_path)
+        display_path = str(self._raw_log_path) if self._raw_log_path is not None else "<disabled>"
+        _log_safe(
+            self.logger,
+            "info",
+            "HTTP logging middleware installed; log_path=%s",
+            display_path,
+        )
 
-    http_logger = _ensure_logger(log_path)
-    _log_safe(http_logger, "info", "HTTP logging middleware installed; log_path=%s", str(log_path))
-
-    async def http_action_logger(request: Request, call_next):
+    async def dispatch(self, request: Request, call_next):  # type: ignore[override]
         if not is_debug_enabled():
             return await call_next(request)
+
         start = time.time()
         raw_body = await request.body()
 
@@ -176,13 +191,13 @@ def install_http_logging(
             "raw_len": len(raw_body or b""),
             "body_preview": _safe_json_preview(raw_body),
         }
-        _log_safe(http_logger, "info", "Action=%s Vars=%s", action, vars_preview)
+        _log_safe(self.logger, "info", "Action=%s Vars=%s", action, vars_preview)
 
         try:
             response = await call_next(replayable_request)
         except Exception:
             elapsed_ms = int(1000 * (time.time() - start))
-            _log_safe(http_logger, "exception", "Action=%s Response=<exception> ms=%s", action, elapsed_ms)
+            _log_safe(self.logger, "exception", "Action=%s Response=<exception> ms=%s", action, elapsed_ms)
             raise
 
         content_type = ""
@@ -192,7 +207,7 @@ def install_http_logging(
         if skip_reason:
             elapsed_ms = int(1000 * (time.time() - start))
             _log_safe(
-                http_logger,
+                self.logger,
                 "info",
                 "Action=%s Response={status:%s, ms:%s, preview:<skipped %s>}",
                 action,
@@ -223,7 +238,7 @@ def install_http_logging(
         )
         elapsed_ms = int(1000 * (time.time() - start))
         _log_safe(
-            http_logger,
+            self.logger,
             "info",
             "Action=%s Response={status:%s, ms:%s, preview:%s}",
             action,
@@ -233,5 +248,16 @@ def install_http_logging(
         )
         return new_response
 
-    app.middleware("http")(http_action_logger)
+
+def install_http_logging(
+    app: FastAPI,
+    *,
+    log_path: Path | str | None = _DEFAULT_HTTP_LOG_PATH,
+) -> None:
+    """Attach the shared HTTP logging middleware to *app*."""
+
+    if getattr(app.state, "_silhouette_http_logging_installed", False):
+        return
+
+    app.add_middleware(HttpLoggerMiddleware, log_path=log_path)
     app.state._silhouette_http_logging_installed = True
