@@ -180,7 +180,6 @@
 
     const targetId = resolvePanelIdFrom(trigger);
     if (!targetId) return;
-
     const manager = getManager();
     const current = getCurrentPanel();
     if (manager?.currentPanel) {
