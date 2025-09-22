@@ -44,15 +44,18 @@
       <p>Select a follow-up task to continue the workflow.</p>
     </div>
     <div class="action-cards">
-      <a class="action-card" href="#" onclick="window.InteropUI.runTo('deid'); return false;">
+      <button class="action-card pipeline-run" type="button" data-run-to="deid">
         <strong>🔒 De‑identify</strong>
         <small>Prefill the De‑identify card with this message.</small>
-      </a>
-      <a class="action-card" href="#" onclick="window.InteropUI.runTo('validate'); return false;">
+      </button>
+      <button class="action-card pipeline-run" type="button" data-run-to="validate">
         <strong>✓ Validate</strong>
         <small>Send the generated HL7 to the Validate card.</small>
-      </a>
-      <a class="action-card" href="#" onclick="window.InteropUI.openPipelineFrom('generate'); return false;">
+      </button>
+      <a class="action-card pipeline-run"
+         href="{{ urls.ui_pipeline | default(root ~ '/ui/interop/pipeline', true) }}"
+         data-open-pipeline-from="generate"
+         data-run-to="pipeline">
         <strong>🔄 HL7 → FHIR Pipeline</strong>
         <small>Launch the pipeline with this generated message.</small>
       </a>
