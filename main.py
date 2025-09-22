@@ -6,7 +6,7 @@ from pathlib import Path
 import silhouette_core.compat.forwardref_shim  # noqa: F401  # ensure ForwardRef shim is active before FastAPI imports
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import JSONResponse, PlainTextResponse
+from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.responses import RedirectResponse
 
@@ -36,7 +36,51 @@ app = FastAPI(
     docs_url=None,
     redoc_url=None,
 )
-app.mount("/static", StaticFiles(directory=_STATIC_DIR), name="static")
+
+# --- BEGIN DIAG SHIM (remove after we verify) ---
+# 1) Static mount MUST be named "static" for url_for('static', ...) to work
+try:
+    app.mount("/static", StaticFiles(directory=_STATIC_DIR), name="static")
+except Exception:
+    # If it's already mounted, this will raise; that's fine to ignore.
+    pass
+
+
+@app.get("/__routes", include_in_schema=False)
+def __routes():
+    """Return the live routing table for quick inspection."""
+
+    items = []
+    for route in app.router.routes:
+        methods = sorted(list(getattr(route, "methods", []) or []))
+        items.append(
+            {
+                "path": getattr(route, "path", str(route)),
+                "name": getattr(route, "name", None),
+                "methods": methods,
+            }
+        )
+    return JSONResponse(items)
+
+
+HOME_FALLBACK = """<!doctype html><html><head>
+<meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">
+<title>Silhouette — Home (fallback)</title>
+<style>body{font:14px system-ui;margin:24px}code{background:#f6f8fa;padding:2px 4px;border-radius:4px}</style>
+</head><body>
+  <h1>Silhouette — Home</h1>
+  <p>This is a temporary fallback served by <code>/ui/home</code>.</p>
+  <p>If your real template exists, we'll switch to it after routing is confirmed.</p>
+  <p><a href=\"/__routes\">List routes</a> · <a href=\"/docs\">OpenAPI</a></p>
+</body></html>"""
+
+
+@app.get("/ui/home", include_in_schema=False)
+def __home_fallback(_: Request):
+    return HTMLResponse(HOME_FALLBACK, status_code=200)
+
+
+# --- END DIAG SHIM ---
 
 # Register the explicit /ui/home route before any catch-all UI handlers.
 app.include_router(ui_home_router)
@@ -57,7 +101,7 @@ for r in (
 # Keep the install close to the bottom so it can be commented out quickly when
 # isolating failures. The middleware creates the log directory on demand and
 # falls back to console logging if file access is unavailable.
-install_http_logging(app, log_path=_HTTP_LOG_PATH)
+# install_http_logging(app, log_path=_HTTP_LOG_PATH)
 ensure_diagnostics(app, http_log_path=_HTTP_LOG_PATH)
 
 
