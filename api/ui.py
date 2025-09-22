@@ -9,6 +9,7 @@ from typing import Any, Dict
 import yaml
 from fastapi import APIRouter, Form, Request
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
+from jinja2 import TemplateNotFound
 from starlette.templating import Jinja2Templates
 
 from api.debug_log import (
@@ -55,7 +56,6 @@ def _url_for_global(
     **path_params: Any,
 ) -> str:
     """Best-effort ``url_for`` replacement that tolerates missing routes."""
-
     return _link_for(request, name, **path_params)
 
 
@@ -89,7 +89,6 @@ _DEFAULT_SKILLS: list[Dict[str, Any]] = [
 
 def _load_skills() -> list[dict]:
     """Load skills from registry, fallback to built-in defaults."""
-
     skills_data: list[dict] = _DEFAULT_SKILLS
     if REG_PATH.exists():
         try:
@@ -118,7 +117,6 @@ def _load_skills() -> list[dict]:
 
 def _render_ui_home(request: Request) -> HTMLResponse:
     from ui_home import render_ui_home
-
     return render_ui_home(request)
 
 
@@ -138,6 +136,7 @@ def root():
 @router.get("/ui/home", response_class=HTMLResponse)
 def ui_home(request: Request):
     """Reports Home — high-level KPIs and recent activity."""
+
 
     return _render_ui_home(request)
 
@@ -160,7 +159,6 @@ def ui_reports_validate(request: Request):
 @router.get("/ui/skills", response_class=HTMLResponse)
 def ui_skills_index(request: Request):
     """Skills Index — navigate to skill dashboards (Interop, Security, etc.)."""
-
     return templates.TemplateResponse(
         "ui/skills_index.html",
         {"request": request, "skills": _load_skills()},

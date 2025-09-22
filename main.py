@@ -110,7 +110,6 @@ def __home_fallback(request: Request):
 def __ping() -> PlainTextResponse:
     return PlainTextResponse("ok", status_code=200)
 
-
 # --- END DIAG SHIM ---
 
 # Register the explicit /ui/home route before any catch-all UI handlers.

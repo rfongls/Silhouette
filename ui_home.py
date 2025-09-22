@@ -1,19 +1,15 @@
 """Explicit /ui/home route with template discovery and diagnostics."""
 from __future__ import annotations
-
 import html
 import logging
 from pathlib import Path
-
 from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from jinja2 import TemplateNotFound
-
 from api.ui import install_link_for, _load_skills
 
 logger = logging.getLogger(__name__)
-
 router = APIRouter()
 _templates = Jinja2Templates(directory=str(Path("templates")))
 install_link_for(_templates)
@@ -102,7 +98,6 @@ def render_ui_home(request: Request) -> HTMLResponse:
         )
 
     return response
-
 
 @router.get("/ui/home", response_class=HTMLResponse)
 async def ui_home(request: Request) -> HTMLResponse:
