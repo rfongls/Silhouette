@@ -15,6 +15,7 @@
     mllp:     { panel: 'mllp-panel',      outputs: ['#ack-output', '#mllp-output', '.mllp-output', 'pre'] },
     pipeline: { panel: 'pipeline-panel',  outputs: [] }
   };
+  const PANEL_IDS = new Set(Object.values(PANELS).map(p => p.panel));
 
   function panelIdFromKey(key) {
     if (!key) return null;
