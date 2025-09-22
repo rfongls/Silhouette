@@ -180,7 +180,6 @@
 
     const targetId = resolvePanelIdFrom(trigger);
     if (!targetId) return;
-
     const manager = getManager();
     const current = getCurrentPanel();
     if (manager?.currentPanel) {
@@ -217,12 +216,20 @@
 
   D.addEventListener('htmx:afterSwap', () => {
     if (!pendingTarget) return;
+    const target = pendingTarget;
     const current = getCurrentPanel();
-    if (current && current !== pendingTarget) {
+    if (current && current !== target) {
       markCurrentCompleted();
     }
-    switchTo(pendingTarget);
-    restorePanelState(pendingTarget);
+    switchTo(target);
+    restorePanelState(target);
+    if (target === 'mllp-panel' && window.PipelineContext?.setMessage) {
+      try {
+        window.PipelineContext.setMessage(window.PipelineContext.message || '');
+      } catch (_) {
+        /* ignore */
+      }
+    }
     pendingTarget = null;
   });
 
