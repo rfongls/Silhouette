@@ -22,6 +22,8 @@ from api.http_logging import install_http_logging
 from api.diag_fallback import ensure_diagnostics
 from api.debug_log import log_debug_event
 from api.metrics import router as metrics_router
+from ui_home import router as ui_home_router
+from ui_pages import router as ui_pages_router
 
 
 logger = logging.getLogger(__name__)
@@ -35,6 +37,9 @@ app = FastAPI(
     redoc_url=None,
 )
 app.mount("/static", StaticFiles(directory=_STATIC_DIR), name="static")
+
+# Register the explicit /ui/home route before any catch-all UI handlers.
+app.include_router(ui_home_router)
 for r in (
     ui_router,
     ui_interop_router,
@@ -45,9 +50,13 @@ for r in (
     diag_router,
     admin_router,
     metrics_router,
+    ui_pages_router,     # generic /ui/{page} catch-all (must come last)
 ):
     app.include_router(r)
 
+# Keep the install close to the bottom so it can be commented out quickly when
+# isolating failures. The middleware creates the log directory on demand and
+# falls back to console logging if file access is unavailable.
 install_http_logging(app, log_path=_HTTP_LOG_PATH)
 ensure_diagnostics(app, http_log_path=_HTTP_LOG_PATH)
 
@@ -82,6 +91,12 @@ async def _http_exc_logger(request: Request, exc: HTTPException):
 @app.exception_handler(Exception)
 async def _log_unhandled_exception(request: Request, exc: Exception):
     logger.exception("Unhandled exception on %s", request.url)
+    # Echo the stack trace to stderr so local runs immediately surface the root cause.
+    import traceback
+    import sys
+
+    print(f"\n--- Unhandled exception on {request.url} ---", file=sys.stderr)
+    traceback.print_exc()
     return PlainTextResponse("Internal Server Error", status_code=500)
 
 
