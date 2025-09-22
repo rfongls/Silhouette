@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 import logging
+from logging.handlers import RotatingFileHandler
 import time
 from pathlib import Path
 from typing import Any
@@ -86,6 +87,7 @@ def _should_skip_logging(path: str, content_type: str | None) -> str | None:
 
 def _ensure_logger(log_path: Path | str | None) -> logging.Logger:
     logger = logging.getLogger("silhouette.http")
+
     if not any(
         isinstance(handler, logging.StreamHandler) and not isinstance(handler, logging.FileHandler)
         for handler in logger.handlers
@@ -96,22 +98,47 @@ def _ensure_logger(log_path: Path | str | None) -> logging.Logger:
             logging.Formatter("%(asctime)s %(name)s %(levelname)s %(message)s")
         )
         logger.addHandler(stream_handler)
+
     if log_path is not None:
         path = Path(log_path)
         try:
             path.parent.mkdir(parents=True, exist_ok=True)
-        except Exception:
-            # Best-effort – the middleware will still log to the configured handlers.
-            pass
-        if not any(getattr(h, "baseFilename", None) == str(path) for h in logger.handlers):
-            file_handler = logging.FileHandler(path, encoding="utf-8")
-            file_handler.setLevel(logging.INFO)
-            file_handler.setFormatter(
-                logging.Formatter("%(asctime)s %(name)s %(levelname)s %(message)s")
+        except Exception as exc:
+            logger.warning("could not create http log directory %s: %s", path.parent, exc)
+        else:
+            existing = next(
+                (handler for handler in logger.handlers if getattr(handler, "baseFilename", None) == str(path)),
+                None,
             )
-            logger.addHandler(file_handler)
+            if existing is None:
+                try:
+                    file_handler = RotatingFileHandler(
+                        path,
+                        maxBytes=5_000_000,
+                        backupCount=3,
+                        encoding="utf-8",
+                    )
+                except OSError as exc:
+                    logger.warning("could not attach http log file %s: %s", path, exc)
+                else:
+                    file_handler.setLevel(logging.INFO)
+                    file_handler.setFormatter(
+                        logging.Formatter("%(asctime)s %(name)s %(levelname)s %(message)s")
+                    )
+                    logger.addHandler(file_handler)
+
     logger.setLevel(logging.INFO)
     return logger
+
+
+def _log_safe(
+    logger: logging.Logger, level: str, message: str, *args: Any, **kwargs: Any
+) -> None:
+    try:
+        getattr(logger, level)(message, *args, **kwargs)
+    except Exception:
+        # Logging must never interrupt the request lifecycle.
+        pass
 
 
 def install_http_logging(
@@ -130,7 +157,7 @@ def install_http_logging(
         return
 
     http_logger = _ensure_logger(log_path)
-    http_logger.info("HTTP logging middleware installed; log_path=%s", str(log_path))
+    _log_safe(http_logger, "info", "HTTP logging middleware installed; log_path=%s", str(log_path))
 
     async def http_action_logger(request: Request, call_next):
         if not is_debug_enabled():
@@ -149,13 +176,13 @@ def install_http_logging(
             "raw_len": len(raw_body or b""),
             "body_preview": _safe_json_preview(raw_body),
         }
-        http_logger.info("Action=%s Vars=%s", action, vars_preview)
+        _log_safe(http_logger, "info", "Action=%s Vars=%s", action, vars_preview)
 
         try:
             response = await call_next(replayable_request)
         except Exception:
             elapsed_ms = int(1000 * (time.time() - start))
-            http_logger.exception("Action=%s Response=<exception> ms=%s", action, elapsed_ms)
+            _log_safe(http_logger, "exception", "Action=%s Response=<exception> ms=%s", action, elapsed_ms)
             raise
 
         content_type = ""
@@ -164,7 +191,9 @@ def install_http_logging(
         skip_reason = _should_skip_logging(request.url.path, content_type)
         if skip_reason:
             elapsed_ms = int(1000 * (time.time() - start))
-            http_logger.info(
+            _log_safe(
+                http_logger,
+                "info",
                 "Action=%s Response={status:%s, ms:%s, preview:<skipped %s>}",
                 action,
                 response.status_code,
@@ -193,7 +222,9 @@ def install_http_logging(
             background=response.background,
         )
         elapsed_ms = int(1000 * (time.time() - start))
-        http_logger.info(
+        _log_safe(
+            http_logger,
+            "info",
             "Action=%s Response={status:%s, ms:%s, preview:%s}",
             action,
             response.status_code,
