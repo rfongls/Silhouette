@@ -23,10 +23,14 @@
   </div>
 </div>
 <nav class="module-nav" id="interop-feature-bar">
-  <button class="module-btn active" type="button" data-feature="gen">⚡ Generate</button>
-  <button class="module-btn" type="button" data-feature="deid">🔒 De‑identify</button>
-  <button class="module-btn" type="button" data-feature="val">✓ Validate</button>
-  <button class="module-btn" type="button" data-feature="mllp">📤 MLLP Send</button>
+  <button class="module-btn active" type="button" data-feature="gen" data-panel="generate-panel"
+          aria-controls="generate-panel" aria-expanded="true">⚡ Generate</button>
+  <button class="module-btn" type="button" data-feature="deid" data-panel="deid-panel"
+          aria-controls="deid-panel" aria-expanded="false">🔒 De‑identify</button>
+  <button class="module-btn" type="button" data-feature="val" data-panel="validate-panel"
+          aria-controls="validate-panel" aria-expanded="false">✓ Validate</button>
+  <button class="module-btn" type="button" data-feature="mllp" data-panel="mllp-panel"
+          aria-controls="mllp-panel" aria-expanded="false">📤 MLLP Send</button>
   <a class="module-btn" data-feature="pipe" href="{{ root }}/ui/interop/pipeline">→ Full Pipeline</a>
 </nav>
 

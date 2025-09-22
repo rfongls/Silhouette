@@ -71,6 +71,28 @@
     }
   }
 
+  function bindInteropModuleNav() {
+    $$('.module-btn[data-panel]').forEach((btn) => {
+      if (btn.dataset.navBound === 'true') return;
+      btn.dataset.navBound = 'true';
+      btn.addEventListener('click', (event) => {
+        const panelId = event.currentTarget?.dataset?.panel;
+        if (!panelId) return;
+        if (window.InteropUI?.setActivePanel) {
+          window.InteropUI.setActivePanel(panelId);
+          return;
+        }
+        if (window.InteropUI?.goToPanel) {
+          window.InteropUI.goToPanel(panelId);
+          return;
+        }
+        if (window.InteropUI?.panelManager?.showPanel) {
+          window.InteropUI.panelManager.showPanel(panelId);
+        }
+      });
+    });
+  }
+
   function bind() {
     ensureDrawerDom();
     applyTheme(getTheme());
@@ -115,6 +137,8 @@
         if (event.target.checked) applyTheme(event.target.value);
       });
     });
+
+    bindInteropModuleNav();
   }
 
   applyTheme(getTheme());

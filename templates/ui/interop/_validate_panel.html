@@ -1,5 +1,5 @@
 {% set root = request.scope.get('root_path', '') %}
-<section id="validate-panel" class="interop-panel interop-panel-validate">
+<section id="validate-panel" class="panel interop-panel interop-panel-validate">
   <form id="val-form"
         method="post"
         action="{{ urls.ui_validate | default(root ~ '/ui/interop/validate', true) }}"
@@ -28,14 +28,17 @@
       <p>Continue the pipeline or fix and re‑validate.</p>
     </div>
     <div class="action-cards">
-      <button class="action-card" type="button" data-next="validate">
-        <strong>↻ Edit &amp; Re‑Run</strong><small>Apply fixes and validate again.</small>
+      <button class="action-card pipeline-run" type="button" data-run-to="deid">
+        <strong>↻ Edit &amp; Re‑Run</strong>
+        <small>Apply fixes and validate again.</small>
       </button>
-      <button class="action-card" type="button" data-next="mllp">
-        <strong>📤 Send via MLLP</strong><small>Deliver and view ACK.</small>
+      <button class="action-card pipeline-run" type="button" data-run-to="mllp">
+        <strong>📤 Send via MLLP</strong>
+        <small>Deliver and view ACK.</small>
       </button>
-      <button class="action-card" type="button" data-next="fhir">
-        <strong>🔄 HL7 → FHIR</strong><small>Translate the validated message.</small>
+      <button class="action-card pipeline-run" type="button" data-run-to="translate">
+        <strong>🔄 HL7 → FHIR</strong>
+        <small>Translate the validated message.</small>
       </button>
     </div>
   </div>

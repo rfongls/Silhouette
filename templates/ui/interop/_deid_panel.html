@@ -7,7 +7,7 @@
   {% set api_deidentify_plain = api_deidentify ~ '?format=txt' %}
 {% endif %}
 
-<section id="deid-panel" class="interop-panel interop-panel-deid">
+<section id="deid-panel" class="panel interop-panel interop-panel-deid">
   <form id="deid-form"
         class="mt"
         method="post"
@@ -49,14 +49,17 @@
       <p>Choose what to do with the de‑identified message.</p>
     </div>
     <div class="action-cards">
-      <button class="action-card" type="button" data-next="validate">
-        <strong>✓ Validate</strong><small>Ensure structural correctness.</small>
+      <button class="action-card pipeline-run" type="button" data-run-to="validate">
+        <strong>✓ Validate</strong>
+        <small>Ensure structural correctness.</small>
       </button>
-      <button class="action-card" type="button" data-next="mllp">
-        <strong>📤 Send via MLLP</strong><small>Deliver and view ACK.</small>
+      <button class="action-card pipeline-run" type="button" data-run-to="mllp">
+        <strong>📤 Send via MLLP</strong>
+        <small>Deliver and view ACK.</small>
       </button>
-      <button class="action-card" type="button" data-next="fhir">
-        <strong>🔄 HL7 → FHIR</strong><small>Translate for downstream apps.</small>
+      <button class="action-card pipeline-run" type="button" data-run-to="translate">
+        <strong>🔄 HL7 → FHIR</strong>
+        <small>Translate for downstream apps.</small>
       </button>
     </div>
   </div>
