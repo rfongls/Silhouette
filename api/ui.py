@@ -97,7 +97,9 @@ def _load_skills() -> list[dict]:
 
 
 def _render_ui_home(request: Request) -> HTMLResponse:
-    return templates.TemplateResponse("ui/home_reports.html", {"request": request})
+    from ui_home import render_ui_home
+
+    return render_ui_home(request)
 
 
 @router.get("/api/ui/skills", response_class=JSONResponse, include_in_schema=False)

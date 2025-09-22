@@ -1,5 +1,4 @@
 """Explicit /ui/home route with template discovery and diagnostics."""
-from __future__ import annotations
 from pathlib import Path
 from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse
@@ -60,10 +59,8 @@ def _diagnostic_page(missing_reason: str) -> str:
 </body></html>"""
 
 
-@router.get("/ui/home", response_class=HTMLResponse)
-async def ui_home(request: Request) -> HTMLResponse:
+def render_ui_home(request: Request) -> HTMLResponse:
     """Render the Home dashboard, providing diagnostics when the template fails."""
-
     target = _first_existing(CANDIDATES)
     context = {"request": request, "skills": _load_skills()}
 
@@ -79,3 +76,10 @@ async def ui_home(request: Request) -> HTMLResponse:
             _diagnostic_page(f"Render error: {type(exc).__name__}: {exc}"),
             status_code=200,
         )
+
+
+@router.get("/ui/home", response_class=HTMLResponse)
+async def ui_home(request: Request) -> HTMLResponse:
+    """FastAPI route that delegates to :func:`render_ui_home`."""
+
+    return render_ui_home(request)
