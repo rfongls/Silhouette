@@ -1,13 +1,9 @@
 """Explicit /ui/home route with template discovery and diagnostics."""
-from __future__ import annotations
-
 from pathlib import Path
-
 from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from jinja2 import TemplateNotFound
-
 from api.ui import install_link_for, _load_skills
 
 router = APIRouter()
