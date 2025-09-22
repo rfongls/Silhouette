@@ -148,7 +148,6 @@ def _log_safe(
 
 class HttpLoggerMiddleware(BaseHTTPMiddleware):
     """Best-effort request logger that cannot break the request pipeline.
-
     Impact analysis:
     - Pros: auto-creates the HTTP log directory on startup and falls back to
       console logging if file I/O fails, preventing first-hit 500 errors on new
