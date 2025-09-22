@@ -19,6 +19,8 @@ from api.http_logging import install_http_logging
 from api.diag_fallback import ensure_diagnostics
 from api.debug_log import log_debug_event
 from api.metrics import router as metrics_router
+from ui_home import router as ui_home_router
+from ui_pages import router as ui_pages_router
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -33,6 +35,7 @@ app = FastAPI(
     docs_url=None,
     redoc_url=None,
 )
+app.include_router(ui_home_router)
 for r in (
     ui_router,
     ui_interop_router,
@@ -42,9 +45,13 @@ for r in (
     security_router,
     metrics_router,
     diag_router,         # diagnostics
+    ui_pages_router,
 ):
     app.include_router(r)
 app.mount("/static", StaticFiles(directory=_STATIC_DIR), name="static")
+# Keep the registration near the bottom so it is easy to toggle during local
+# investigations. The middleware ensures the log directory exists and degrades
+# to console-only logging if file access fails.
 install_http_logging(app, log_path=_HTTP_LOG_PATH)
 ensure_diagnostics(app, http_log_path=_HTTP_LOG_PATH)
 
