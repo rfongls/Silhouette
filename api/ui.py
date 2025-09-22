@@ -8,6 +8,7 @@ from pathlib import Path
 import yaml
 from fastapi import APIRouter, Form, Request
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
+from jinja2 import TemplateNotFound
 from starlette.templating import Jinja2Templates
 
 from api.debug_log import (
