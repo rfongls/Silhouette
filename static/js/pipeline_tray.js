@@ -16,6 +16,7 @@
     mllp:     { panel: 'mllp-panel',      outputs: ['#ack-output','#mllp-output','.mllp-output','pre'] },
     pipeline: { panel: 'pipeline-panel',  outputs: [] }
   };
+  const PANEL_IDS = new Set(Object.values(PANELS).map(p => p.panel));
 
   // ---------- helpers ----------
   function panelIdFromKey(key) {
@@ -60,15 +61,47 @@
     $$('.module-btn').forEach(btn => {
       const on = btn.dataset.panel === panelId;
       btn.classList.toggle('active', on);
-      btn.setAttribute('aria-expanded', on ? 'true' : 'false');
+      if (on) {
+        btn.classList.remove('completed');
+      }
+      if (btn.dataset.panel) {
+        btn.setAttribute('aria-expanded', String(on));
+        btn.setAttribute('aria-controls', btn.dataset.panel);
+      }
       btn.setAttribute('aria-current', on ? 'page' : 'false');
     });
   }
 
-  function collapseOthersAndShow(panelId, { scroll = true } = {}) {
+  function setActivePanel(panelId, { scroll = true } = {}) {
+    if (!panelId) return;
+
     // Collapse all, expand target
-    $$('.panel').forEach(p => p.classList.toggle('active', p.id === panelId));
+    $$('.panel, .interop-panel').forEach(p => {
+      const active = p.id === panelId;
+      const known = PANEL_IDS.has(p.id);
+      p.classList.toggle('active', active);
+      if (known) {
+        p.hidden = !active;
+      } else if (active) {
+        p.hidden = false;
+      }
+      if (active) {
+        const parentDetails = p.closest('details');
+        if (parentDetails && typeof parentDetails.open === 'boolean') {
+          parentDetails.open = true;
+        }
+      }
+    });
     activateNavFor(panelId);
+
+    // hide all trays when switching
+    $$('.action-tray').forEach(t => {
+      t.classList.remove('visible');
+      t.hidden = true;
+    });
+
+    window.InteropUI = window.InteropUI || {};
+    window.InteropUI.currentPanel = panelId;
 
     // Keep PanelManager in sync if present
     if (window.InteropUI?.panelManager) {
@@ -78,7 +111,11 @@
     // Make sure users *see* the target panel
     const target = $('#'+panelId);
     if (target && scroll) {
-      target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      try {
+        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      } catch (_) {
+        /* ignore scroll errors */
+      }
     }
   }
 
@@ -110,12 +147,13 @@
       window.InteropUI.panelManager.showPanel(pid);
     }
     // Enforce collapse/expand universally as a safety net
-    collapseOthersAndShow(pid, { scroll });
+    setActivePanel(pid, { scroll });
   }
 
   // expose for any inline calls
   window.InteropUI = window.InteropUI || {};
   window.InteropUI.goToPanel = goToPanel;
+  window.InteropUI.setActivePanel = setActivePanel;
 
   // Also wrap any existing run helpers so they collapse/expand too
   ['runTo','runNextFromDeid'].forEach(fn => {
@@ -131,40 +169,73 @@
 
   // ---------- intercept pipeline cards ----------
   D.addEventListener('click', (e) => {
-    const card = e.target.closest('.action-card');
+    const card = e.target.closest('[data-run-to], .action-card');
     if (!card) return;
 
-    // supports data-next="validate" or data-action="next-validate"
-    const raw = card.dataset.next || card.dataset.action || '';
+    const runTarget = (card.getAttribute('data-run-to') || '').trim();
+    const legacy = card.dataset.next || card.dataset.action || '';
+    const raw = runTarget || legacy;
     if (!raw) return;
 
-    const targetKey = String(raw).replace(/^next-/, '').replace(/-panel$/,''); // 'validate' | 'mllp' | 'fhir' | 'translate'
-    if (!PANELS[targetKey] && targetKey !== 'fhir') return;
+    const targetKeyRaw = String(raw).replace(/^next-/, '').trim();
+    if (!targetKeyRaw) return;
 
-    // Source payload = current panel’s output
-    const srcKey = keyFromElement(card);
+    const normalizedKey = targetKeyRaw.replace(/-panel$/,'');
+    const destKey = (normalizedKey === 'fhir') ? 'translate' : normalizedKey;
+    if (!PANELS[destKey] && !PANELS[normalizedKey] && destKey !== 'pipeline') return;
+
+    const currentPanelId = window.InteropUI?.currentPanel || (findPanel(card)?.id || '');
+    if (currentPanelId) {
+      const chip = document.querySelector(`.module-btn[data-panel="${currentPanelId}"]`);
+      chip?.classList.add('completed');
+    }
+
+    const srcKey = keyFromElement(card) || (currentPanelId ? currentPanelId.replace(/-panel$/,'') : null);
     const srcOut = srcKey && findOutput(srcKey);
     const text   = textOf(srcOut);
 
-    // If no payload yet, let the default link (if any) proceed
-    if (!text) return;
-
-    // We take over routing
     e.preventDefault();
 
-    // Put payload on bus (consume-once semantics if present)
-    if (window.PipelineBus?.set) window.PipelineBus.set(srcKey, text, { from: srcKey });
+    if (text && window.PipelineBus?.set) {
+      window.PipelineBus.set(srcKey, text, { from: srcKey });
+    }
 
-    // Normalize 'fhir' → 'translate' (UI label vs panel id)
-    const destKey = (targetKey === 'fhir') ? 'translate' : targetKey;
-
-    // Navigate universally (collapse others, expand dest)
     goToPanel(destKey, { scroll: true });
 
-    // Prefill the destination panel with the payload and reveal its tray
-    prefillTarget(destKey, text);
-    revealTrayFor(destKey);
+    if (text) {
+      prefillTarget(destKey, text);
+      revealTrayFor(destKey);
+    }
   });
+
+  D.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    const card = e.target.closest('[data-run-to]');
+    if (!card) return;
+    if (card.tagName === 'BUTTON' || card.tagName === 'A') return;
+    e.preventDefault();
+    card.click();
+  });
+
+  $$('.module-btn[data-panel]').forEach(btn => {
+    const panelId = btn.dataset.panel;
+    if (!panelId) return;
+    if (!btn.getAttribute('aria-controls')) {
+      btn.setAttribute('aria-controls', panelId);
+    }
+    btn.setAttribute('aria-expanded', String(btn.classList.contains('active')));
+    btn.addEventListener('click', (event) => {
+      const targetPanel = event.currentTarget.dataset.panel;
+      if (!targetPanel) return;
+      event.preventDefault();
+      setActivePanel(targetPanel);
+    });
+  });
+
+  const initialActiveBtn = $('.module-btn.active[data-panel]');
+  if (initialActiveBtn?.dataset.panel) {
+    setActivePanel(initialActiveBtn.dataset.panel, { scroll: false });
+  }
 
   // ---------- optional: reveal trays when outputs fill asynchronously ----------
   function watchOutput(key) {

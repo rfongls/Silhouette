@@ -1,5 +1,5 @@
 {% set root = request.scope.get('root_path', '') %}
-<section id="mllp-panel" class="interop-panel interop-panel-mllp">
+<section id="mllp-panel" class="panel interop-panel interop-panel-mllp">
   <form id="mllp-form"
         method="post"
         hx-post="{{ root }}/api/interop/mllp/send"
@@ -34,11 +34,13 @@
       <p>Follow‑up actions.</p>
     </div>
     <div class="action-cards">
-      <button class="action-card" type="button" data-next="mllp">
-        <strong>↻ Re‑Send</strong><small>Try another destination.</small>
+      <button class="action-card" type="button" data-run-to="mllp">
+        <strong>↻ Re‑Send</strong>
+        <small>Try another destination.</small>
       </button>
-      <button class="action-card" type="button" data-next="fhir">
-        <strong>🔄 HL7 → FHIR</strong><small>Translate for analytics.</small>
+      <button class="action-card" type="button" data-run-to="translate">
+        <strong>🔄 HL7 → FHIR</strong>
+        <small>Translate for analytics.</small>
       </button>
       <a class="action-card" href="{{ link_for(request, 'ui_reports_acks', '/reports/acks') }}">
         <strong>📊 View Reports</strong><small>ACK codes &amp; latency; search by MSH‑10.</small>
