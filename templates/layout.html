@@ -1,9 +1,10 @@
 <!DOCTYPE html>
 <html lang="en" data-theme="light">
+{# Fallback for static URLs if a handler ever forgets 'request' #}
+{% set static_base = request.url_for('static', path='') if request is defined else '/static/' %}
 {% set req = request if request is defined else none %}
 {% set root = req.scope.get('root_path', '') if req else '' %}
 {% set current_path = req.url.path if req and req.url else '' %}
-{% set static_base = req.url_for('static', path='') if req else '/static/' %}
 {% set home_url = link_for(req, 'ui_home', '/ui/home') %}
 {% set skills_url = link_for(req, 'ui_skills_index', '/ui/skills') %}
 {% set interop_url = link_for(req, 'interop_skills', '/ui/interop/skills') %}
