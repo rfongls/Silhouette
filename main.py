@@ -8,6 +8,7 @@ from fastapi import FastAPI, Request, HTTPException
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
 from starlette.responses import RedirectResponse
 
 from api.security import router as security_router
@@ -30,6 +31,7 @@ logger = logging.getLogger(__name__)
 _BASE_DIR = Path(__file__).resolve().parent
 _HTTP_LOG_PATH = _BASE_DIR / "out" / "interop" / "server_http.log"
 _STATIC_DIR = _BASE_DIR / "static"
+_TEMPLATES_DIR = _BASE_DIR / "templates"
 
 app = FastAPI(
     openapi_url=None,
@@ -44,6 +46,10 @@ try:
 except Exception:
     # If it's already mounted, this will raise; that's fine to ignore.
     pass
+
+# 1b) Expose url_for to templates that rely on it directly.
+_diagnostic_templates = Jinja2Templates(directory=_TEMPLATES_DIR)
+_diagnostic_templates.env.globals.setdefault("url_for", app.url_path_for)
 
 
 @app.get("/__routes", include_in_schema=False)
@@ -76,9 +82,33 @@ HOME_FALLBACK = """<!doctype html><html><head>
 
 
 @app.get("/ui/home", include_in_schema=False)
-def __home_fallback(_: Request):
+def __home_fallback(request: Request):
+    """Delegate to the real renderer when available, otherwise serve fallback HTML."""
+
+    render_exc: Exception | None = None
+    try:
+        from ui_home import render_ui_home
+    except Exception as exc:  # pragma: no cover - module import failure
+        render_exc = exc
+    else:
+        try:
+            response = render_ui_home(request)
+        except Exception as exc:  # pragma: no cover - defensive diagnostic path
+            render_exc = exc
+        else:
+            return response
+
+    if render_exc is not None:
+        logging.getLogger("silhouette.ui.home").error(
+            "/ui/home diagnostic fallback engaged", exc_info=render_exc
+        )
+
     return HTMLResponse(HOME_FALLBACK, status_code=200)
 
+
+@app.get("/ping", include_in_schema=False)
+def __ping() -> PlainTextResponse:
+    return PlainTextResponse("ok", status_code=200)
 
 # --- END DIAG SHIM ---
 
