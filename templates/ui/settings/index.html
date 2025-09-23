@@ -1,0 +1,96 @@
+{% extends "layout.html" %}
+{% block content %}
+{% set root = request.scope.get('root_path', '') %}
+<section class="page-container">
+  <header class="page-header">
+    <h1>Interop Settings</h1>
+    <p class="muted">Manage reusable templates for de-identification and validation workflows.</p>
+  </header>
+
+  <div class="grid2 gap-lg">
+    <section class="card">
+      <div class="card-header row space-between center">
+        <div>
+          <h2 class="text-h3">De-identify templates</h2>
+          <p class="muted small">Rules that mask, hash, or redact PHI fields.</p>
+        </div>
+        <a class="btn" href="{{ link_for(request, 'ui_settings_deid_new', '/ui/settings/deid/new') }}">New template</a>
+      </div>
+      <table class="table mt">
+        <thead>
+          <tr>
+            <th scope="col">Name</th>
+            <th scope="col">Rules</th>
+            <th scope="col" class="actions">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% if deid_templates %}
+            {% for item in deid_templates %}
+              <tr>
+                <td><strong>{{ item.name }}</strong></td>
+                <td>{{ item.count }}</td>
+                <td class="actions">
+                  <a class="btn btn-secondary btn-sm" href="{{ link_for(request, 'ui_settings_deid_edit', '/ui/settings/deid/' ~ item.name) }}">Edit</a>
+                  <a class="btn btn-tertiary btn-sm" href="{{ link_for(request, 'ui_settings_deid_export_json', '/ui/settings/deid/' ~ item.name ~ '/export.json') }}">JSON</a>
+                  <a class="btn btn-tertiary btn-sm" href="{{ link_for(request, 'ui_settings_deid_export_csv', '/ui/settings/deid/' ~ item.name ~ '/export.csv') }}">CSV</a>
+                  <form method="post" action="{{ link_for(request, 'ui_settings_deid_delete', '/ui/settings/deid/delete') }}" class="inline-form" onsubmit="return confirm('Delete template {{ item.name }}?');">
+                    <input type="hidden" name="name" value="{{ item.name }}" />
+                    <button class="btn btn-danger btn-sm" type="submit">Delete</button>
+                  </form>
+                </td>
+              </tr>
+            {% endfor %}
+          {% else %}
+            <tr>
+              <td colspan="3" class="muted">No templates yet. Create one to begin.</td>
+            </tr>
+          {% endif %}
+        </tbody>
+      </table>
+    </section>
+
+    <section class="card">
+      <div class="card-header row space-between center">
+        <div>
+          <h2 class="text-h3">Validation templates</h2>
+          <p class="muted small">Field requirements and value constraints used during validation.</p>
+        </div>
+        <a class="btn" href="{{ link_for(request, 'ui_settings_val_new', '/ui/settings/validation/new') }}">New template</a>
+      </div>
+      <table class="table mt">
+        <thead>
+          <tr>
+            <th scope="col">Name</th>
+            <th scope="col">Checks</th>
+            <th scope="col" class="actions">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% if val_templates %}
+            {% for item in val_templates %}
+              <tr>
+                <td><strong>{{ item.name }}</strong></td>
+                <td>{{ item.count }}</td>
+                <td class="actions">
+                  <a class="btn btn-secondary btn-sm" href="{{ link_for(request, 'ui_settings_val_edit', '/ui/settings/validation/' ~ item.name) }}">Edit</a>
+                  <a class="btn btn-tertiary btn-sm" href="{{ link_for(request, 'ui_settings_val_export_json', '/ui/settings/validation/' ~ item.name ~ '/export.json') }}">JSON</a>
+                  <a class="btn btn-tertiary btn-sm" href="{{ link_for(request, 'ui_settings_val_export_csv', '/ui/settings/validation/' ~ item.name ~ '/export.csv') }}">CSV</a>
+                  <form method="post" action="{{ link_for(request, 'ui_settings_val_delete', '/ui/settings/validation/delete') }}" class="inline-form" onsubmit="return confirm('Delete template {{ item.name }}?');">
+                    <input type="hidden" name="name" value="{{ item.name }}" />
+                    <button class="btn btn-danger btn-sm" type="submit">Delete</button>
+                  </form>
+                </td>
+              </tr>
+            {% endfor %}
+          {% else %}
+            <tr>
+              <td colspan="3" class="muted">No templates yet. Create one to begin.</td>
+            </tr>
+          {% endif %}
+        </tbody>
+      </table>
+    </section>
+  </div>
+</section>
+{% endblock %}

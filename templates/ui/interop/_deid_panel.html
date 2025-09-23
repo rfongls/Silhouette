@@ -1,6 +1,8 @@
 {% set root = request.scope.get('root_path', '') %}
 {% if urls is not defined %}{% set urls = {} %}{% endif %}
 {% set api_deidentify = (urls.api_deidentify | default(root ~ '/api/interop/deidentify', true)) | string %}
+{% set deid_options = deid_templates if deid_templates is defined and deid_templates else ['builtin'] %}
+{% set default_deid_template = 'default' if 'default' in deid_options else (deid_options[0] if deid_options else 'builtin') %}
 {% if '?' in api_deidentify %}
   {% set api_deidentify_plain = api_deidentify ~ '&format=txt' %}
 {% else %}
@@ -18,6 +20,14 @@
         hx-target="#deid-output"
         hx-swap="textContent"
         hx-on::afterSwap="window.InteropUI.onDeidentifyComplete(event)">
+    <label class="row gap small">
+      <span>Template</span>
+      <select id="deid-template" name="deid_template" class="input">
+        {% for name in deid_options %}
+          <option value="{{ name }}" {% if name == default_deid_template %}selected{% endif %}>{{ name }}</option>
+        {% endfor %}
+      </select>
+    </label>
     <textarea id="deid-text"
               name="text"
               class="input textarea-output"
@@ -31,7 +41,7 @@
   <div id="deid-report"
        class="mt"
        hx-post="{{ urls.api_deidentify_summary | default(root ~ '/api/interop/deidentify/summary', true) }}"
-       hx-include="#deid-text,#deid-seed"
+       hx-include="#deid-text,#deid-seed,#deid-template"
        hx-trigger="htmx:afterRequest from:#deid-form"
        hx-headers='{"Accept":"text/html"}'
        hx-swap="innerHTML">

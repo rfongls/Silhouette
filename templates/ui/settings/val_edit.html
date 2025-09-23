@@ -1,0 +1,60 @@
+{% extends "layout.html" %}
+{% block content %}
+{% set back_url = link_for(request, 'ui_settings_index', '/ui/settings') %}
+<section class="page-container">
+  <a class="link" href="{{ back_url }}">← Back to settings</a>
+  <header class="page-header">
+    <h1>{{ 'New validation template' if is_new else 'Edit validation template' }}</h1>
+    <p class="muted">Define required HL7 fields, regex patterns, and allowed values.</p>
+  </header>
+
+  <form class="card" method="post" action="{{ link_for(request, 'ui_settings_val_save', '/ui/settings/validation/save') }}">
+    <div class="card-body">
+      <input type="hidden" name="original_name" value="{{ template.name | default('') }}" />
+      <div class="row gap">
+        <label class="grow">
+          <span class="micro muted">Name</span>
+          <input class="input" name="name" value="{{ template.name | default('') }}" placeholder="default" required />
+        </label>
+        <label class="small">
+          <span class="micro muted">Version</span>
+          <input class="input" name="version" value="{{ template.version | default('v1') }}" />
+        </label>
+      </div>
+
+      <h2 class="text-h4 mt">Checks</h2>
+      <p class="muted small">Required applies when checked. Allowed values accept semicolon-separated lists.</p>
+      {% include 'ui/settings/_val_checks_table.html' with checks=template.checks %}
+    </div>
+    <footer class="card-footer row gap">
+      <button class="btn btn-primary" type="submit">Save template</button>
+      <a class="btn btn-tertiary" href="{{ back_url }}">Cancel</a>
+    </footer>
+  </form>
+
+  <section class="card mt">
+    <div class="card-body">
+      <h2 class="text-h4">Import / export</h2>
+      <div class="row gap">
+        <form method="post" action="{{ link_for(request, 'ui_settings_val_import', '/ui/settings/validation/import') }}" enctype="multipart/form-data" class="row gap">
+          <label class="small">
+            <span class="micro muted">Template name</span>
+            <input class="input" name="name" value="{{ template.name | default('') }}" placeholder="default" required />
+          </label>
+          <label class="small">
+            <span class="micro muted">Import CSV</span>
+            <input class="input" type="file" name="file" accept=".csv" required />
+          </label>
+          <button class="btn btn-secondary" type="submit">Upload</button>
+        </form>
+        {% if template.name %}
+        <div class="row gap">
+          <a class="btn btn-tertiary" href="{{ link_for(request, 'ui_settings_val_export_json', '/ui/settings/validation/' ~ template.name ~ '/export.json') }}">Download JSON</a>
+          <a class="btn btn-tertiary" href="{{ link_for(request, 'ui_settings_val_export_csv', '/ui/settings/validation/' ~ template.name ~ '/export.csv') }}">Download CSV</a>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </section>
+</section>
+{% endblock %}

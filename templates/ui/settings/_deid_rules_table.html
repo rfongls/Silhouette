@@ -1,0 +1,34 @@
+{% set existing = rules if rules is defined and rules else [] %}
+{% set blanks = [{'segment':'','field':'','component':'','subcomponent':'','action':'redact','param':''}] * 3 %}
+{% set rows = existing + blanks %}
+<table class="table mt">
+  <thead>
+    <tr>
+      <th scope="col">Segment</th>
+      <th scope="col">Field</th>
+      <th scope="col">Component</th>
+      <th scope="col">Subcomponent</th>
+      <th scope="col">Action</th>
+      <th scope="col">Parameter</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for rule in rows %}
+      <tr>
+        <td><input class="input" name="rules-segment" value="{{ rule.segment | default('') }}" placeholder="PID" /></td>
+        <td><input class="input" name="rules-field" value="{{ rule.field | default('') }}" placeholder="5" /></td>
+        <td><input class="input" name="rules-component" value="{{ rule.component | default('') }}" placeholder="1" /></td>
+        <td><input class="input" name="rules-subcomponent" value="{{ rule.subcomponent | default('') }}" placeholder="" /></td>
+        <td>
+          <select class="input" name="rules-action">
+            {% set current = rule.action | default('redact') %}
+            {% for option in ['redact','mask','hash','replace'] %}
+              <option value="{{ option }}" {% if option == current %}selected{% endif %}>{{ option }}</option>
+            {% endfor %}
+          </select>
+        </td>
+        <td><input class="input" name="rules-param" value="{{ rule.param | default('') }}" placeholder="(optional)" /></td>
+      </tr>
+    {% endfor %}
+  </tbody>
+</table>
