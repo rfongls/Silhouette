@@ -16,7 +16,7 @@
       <input class="input grow" id="fhir-endpoint" name="fhir_endpoint" placeholder="https://example.org/fhir (optional)" />
       <label class="small"><input type="checkbox" id="run-pipeline-fhir-post" name="post_fhir" /> POST FHIR bundle</label>
     </div>
-    <textarea class="input textarea-output mt" id="mllp-messages" name="messages" placeholder="Paste one or more HL7 messages…"></textarea>
+    <textarea class="input textarea-output mt" id="mllp-messages" name="message" data-bind="pipeline.message" placeholder="Paste one or more HL7 messages…"></textarea>
     <div class="row gap mt">
       <input id="mllp-file" type="file" accept=".hl7,.txt" />
       <button class="btn" type="button" onclick="window.InteropUI.loadFileIntoTextarea('mllp-file','mllp-messages')">Load file</button>
