@@ -5,6 +5,10 @@
 {% endblock %}
 {% block content %}
 {% set root = request.scope.get('root_path', '') %}
+{% set deid_options = deid_templates if deid_templates is defined and deid_templates else [] %}
+{% set default_deid_template = 'default' if 'default' in deid_options else (deid_options[0] if deid_options else '') %}
+{% set val_options = val_templates if val_templates is defined and val_templates else [] %}
+{% set default_val_template = 'default' if 'default' in val_options else (val_options[0] if val_options else '') %}
 <h2>HL7 → FHIR Pipeline</h2>
 <form method="get" action="{{ root }}/ui/interop/pipeline" class="row gap mb small" autocomplete="off">
   <label for="pipeline-preset-standalone">Preset</label>
@@ -50,6 +54,24 @@
       <label><input type="checkbox" name="ensure_unique" checked/> Unique IDs</label>
       <label><input type="checkbox" name="include_clinical"/> Enrich clinical (DG1/AL1)</label>
       <label><input type="checkbox" name="deidentify"/> De-identify</label>
+    </div>
+    <div class="row gap mt">
+      <label class="grow">
+        <span class="micro muted">De-identify template</span>
+        <select name="deid_template" class="input">
+          {% for name in deid_options %}
+            <option value="{{ name }}" {% if name == default_deid_template %}selected{% endif %}>{{ name }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label class="grow">
+        <span class="micro muted">Validation template</span>
+        <select name="val_template" class="input">
+          {% for name in val_options %}
+            <option value="{{ name }}" {% if name == default_val_template %}selected{% endif %}>{{ name }}</option>
+          {% endfor %}
+        </select>
+      </label>
     </div>
     <div class="row gap mt">
       <label><input type="checkbox" id="pipeline-post-fhir" name="post_fhir" {{ 'checked' if defaults.post_fhir else '' }}/> Send FHIR</label>

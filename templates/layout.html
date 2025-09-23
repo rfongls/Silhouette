@@ -9,10 +9,12 @@
 {% set skills_url = link_for(req, 'ui_skills_index', '/ui/skills') %}
 {% set interop_url = link_for(req, 'interop_skills', '/ui/interop/skills') %}
 {% set reports_url = link_for(req, 'ui_reports', '/reports') %}
+{% set settings_url = link_for(req, 'ui_settings_index', '/ui/settings') %}
 {% set home_path = root ~ '/ui/home' %}
 {% set skills_path = root ~ '/ui/skills' %}
 {% set interop_path = root ~ '/ui/interop' %}
 {% set reports_path = root ~ '/reports' %}
+{% set settings_path = root ~ '/ui/settings' %}
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -37,6 +39,7 @@
         <a href="{{ skills_url }}" class="nav-link {% if current_path.startswith(skills_path) %}active{% endif %}">Skills</a>
         <a href="{{ interop_url }}" class="nav-link {% if current_path.startswith(interop_path) %}active{% endif %}">Interoperability</a>
         <a href="{{ reports_url }}" class="nav-link {% if current_path.startswith(reports_path) %}active{% endif %}">Reports</a>
+        <a class="nav-link {% if current_path.startswith(settings_path) %}active{% endif %}" href="{{ settings_url }}">Settings</a>
       </nav>
       <div class="nav-actions">
         <button class="hamburger-btn" id="hamburger-toggle"

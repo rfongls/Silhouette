@@ -13,6 +13,7 @@ from api.interop_gen import router as interop_gen_router, try_generate_on_valida
 from api.security import router as security_router
 from api.ui import router as ui_router
 from api.ui_interop import router as ui_interop_router
+from api.ui_settings import router as ui_settings_router
 from api.ui_security import router as ui_security_router
 from api.diag import router as diag_router
 from api.http_logging import install_http_logging
@@ -39,6 +40,7 @@ app.include_router(ui_home_router)
 for r in (
     ui_router,
     ui_interop_router,
+    ui_settings_router,
     ui_security_router,
     interop_gen_router,  # specific generator endpoint
     interop_router,      # generic tools (now under /api/interop/exec/{tool})

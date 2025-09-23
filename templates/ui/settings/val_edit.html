@@ -1,0 +1,28 @@
+{% extends "layout.html" %}
+{% block content %}
+<h1 class="text-h1">Validation Template — {{ tpl.name }}</h1>
+<div class="row gap">
+  <a class="button" href="{{ request.url_for('ui_settings_val_export_json', name=tpl.name) }}">Export JSON</a>
+  <a class="button" href="{{ request.url_for('ui_settings_val_export_csv', name=tpl.name) }}">Export CSV</a>
+  <form class="row gap small" hx-post="{{ request.url_for('ui_settings_val_import_csv', name=tpl.name) }}" hx-target="#val-checks">
+    <input type="file" name="file" accept=".csv" required />
+    <button class="button">Import CSV</button>
+  </form>
+</div>
+
+<div class="card mt">
+  <h2 class="text-h2">Checks</h2>
+  <form class="row gap small mb" hx-post="{{ request.url_for('ui_settings_val_add_check', name=tpl.name) }}" hx-target="#val-checks">
+    <input class="input" name="segment" placeholder="MSH" required style="max-width:7rem" />
+    <input class="input" name="field" type="number" min="1" placeholder="Field" required style="max-width:6rem" />
+    <label class="row gap small" style="align-items:center"><input type="checkbox" name="required" checked /> required</label>
+    <input class="input" name="pattern" placeholder="Regex pattern (optional)" style="min-width:18rem" />
+    <input class="input" name="allowed_values" placeholder="Allowed values (comma-separated)" style="min-width:18rem" />
+    <button class="button">Add</button>
+  </form>
+
+  <div id="val-checks">
+    {% include "ui/settings/_val_checks_table.html" %}
+  </div>
+</div>
+{% endblock %}

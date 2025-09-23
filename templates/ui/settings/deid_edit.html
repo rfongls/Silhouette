@@ -1,0 +1,34 @@
+{% extends "layout.html" %}
+{% block content %}
+<h1 class="text-h1">De-identify Template — {{ tpl.name }}</h1>
+<div class="row gap">
+  <a class="button" href="{{ request.url_for('ui_settings_deid_export_json', name=tpl.name) }}">Export JSON</a>
+  <a class="button" href="{{ request.url_for('ui_settings_deid_export_csv', name=tpl.name) }}">Export CSV</a>
+  <form class="row gap small" hx-post="{{ request.url_for('ui_settings_deid_import_csv', name=tpl.name) }}" hx-target="#deid-rules">
+    <input type="file" name="file" accept=".csv" required />
+    <button class="button">Import CSV</button>
+  </form>
+</div>
+
+<div class="card mt">
+  <h2 class="text-h2">Rules</h2>
+  <form class="row gap small mb" hx-post="{{ request.url_for('ui_settings_deid_add_rule', name=tpl.name) }}" hx-target="#deid-rules">
+    <input class="input" name="segment" placeholder="PID" required style="max-width:7rem" />
+    <input class="input" name="field" type="number" min="1" placeholder="Field" required style="max-width:6rem" />
+    <input class="input" name="component" type="number" min="1" placeholder="Comp." style="max-width:6rem" />
+    <input class="input" name="subcomponent" type="number" min="1" placeholder="Subcomp." style="max-width:8rem" />
+    <select class="input" name="action" style="max-width:12rem">
+      <option value="redact">redact</option>
+      <option value="mask">mask</option>
+      <option value="hash">hash</option>
+      <option value="replace">replace</option>
+    </select>
+    <input class="input" name="param" placeholder="Param (mask char, replacement, hash salt)" style="min-width:18rem" />
+    <button class="button">Add</button>
+  </form>
+
+  <div id="deid-rules">
+    {% include "ui/settings/_deid_rules_table.html" %}
+  </div>
+</div>
+{% endblock %}

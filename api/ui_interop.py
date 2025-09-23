@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -8,9 +9,9 @@ from starlette.routing import NoMatchFound
 from fastapi.responses import HTMLResponse, PlainTextResponse
 from starlette.templating import Jinja2Templates
 from api.ui import install_link_for
-from api.interop_gen import generate_messages, parse_any_request
-from silhouette_core.interop.deid import deidentify_message
-from silhouette_core.interop.validate_workbook import validate_message
+from api.interop_gen import generate_messages, parse_any_request, _normalize_validation_result
+from silhouette_core.interop.deid import deidentify_message, apply_deid_with_template
+from silhouette_core.interop.validate_workbook import validate_message, validate_with_template
 from api.debug_log import (
     LOG_FILE,
     tail_debug_lines,
@@ -21,6 +22,46 @@ from api.debug_log import (
 router = APIRouter()
 templates = Jinja2Templates(directory="templates")
 install_link_for(templates)
+
+DEID_DIR = Path("configs/interop/deid_templates")
+VAL_DIR = Path("configs/interop/validate_templates")
+
+
+def _ensure_dirs() -> None:
+    DEID_DIR.mkdir(parents=True, exist_ok=True)
+    VAL_DIR.mkdir(parents=True, exist_ok=True)
+
+
+def list_deid_templates() -> list[str]:
+    _ensure_dirs()
+    return [p.stem for p in sorted(DEID_DIR.glob("*.json"))]
+
+
+def list_validation_templates() -> list[str]:
+    _ensure_dirs()
+    return [p.stem for p in sorted(VAL_DIR.glob("*.json"))]
+
+
+def load_deid_template(name: str) -> dict:
+    _ensure_dirs()
+    path = DEID_DIR / f"{name}.json"
+    if not path.exists():
+        raise HTTPException(status_code=400, detail=f"De-identify template '{name}' not found")
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:  # pragma: no cover - malformed template
+        raise HTTPException(status_code=400, detail=f"Invalid template JSON: {exc}") from exc
+
+
+def load_validation_template(name: str) -> dict:
+    _ensure_dirs()
+    path = VAL_DIR / f"{name}.json"
+    if not path.exists():
+        raise HTTPException(status_code=400, detail=f"Validation template '{name}' not found")
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:  # pragma: no cover - malformed template
+        raise HTTPException(status_code=400, detail=f"Invalid template JSON: {exc}") from exc
 
 # ---------------- Server-side pipeline presets ----------------
 PIPELINE_PRESETS = {
@@ -51,6 +92,10 @@ PIPELINE_PRESETS = {
 }
 
 
+def _template_lists() -> tuple[list[str], list[str]]:
+    return list_deid_templates(), list_validation_templates()
+
+
 def _pipeline_defaults(preset_key: str | None) -> dict:
     preset = PIPELINE_PRESETS.get((preset_key or "").strip()) or {}
     return {
@@ -60,6 +105,24 @@ def _pipeline_defaults(preset_key: str | None) -> dict:
         "fhir_endpoint": preset.get("fhir_endpoint", ""),
         "post_fhir": bool(preset.get("post_fhir", False)),
     }
+
+
+def _maybe_load_deid_template(name: str | None) -> dict | None:
+    if not name:
+        return None
+    normalized = str(name).strip()
+    if not normalized or normalized.lower() in {"builtin", "legacy", "none"}:
+        return None
+    return load_deid_template(normalized)
+
+
+def _maybe_load_validation_template(name: str | None) -> dict | None:
+    if not name:
+        return None
+    normalized = str(name).strip()
+    if not normalized or normalized.lower() in {"builtin", "legacy", "none"}:
+        return None
+    return load_validation_template(normalized)
 
 def _safe_url_for(request: Request, name: str, fallback: str) -> str:
     try:
@@ -89,17 +152,26 @@ def _ui_urls(request: Request) -> dict[str, str]:
 
 @router.get("/ui/interop/dashboard", response_class=HTMLResponse)
 async def dashboard(request: Request):
-    return templates.TemplateResponse("ui/interop/skills.html", {"request": request, "urls": _ui_urls(request)})
+    deid, val = _template_lists()
+    return templates.TemplateResponse(
+        "ui/interop/skills.html",
+        {"request": request, "urls": _ui_urls(request), "deid_templates": deid, "val_templates": val},
+    )
 
 
 @router.get("/ui/interop/skills", response_class=HTMLResponse)
 async def interop_skills(request: Request):
-    return templates.TemplateResponse("ui/interop/skills.html", {"request": request, "urls": _ui_urls(request)})
+    deid, val = _template_lists()
+    return templates.TemplateResponse(
+        "ui/interop/skills.html",
+        {"request": request, "urls": _ui_urls(request), "deid_templates": deid, "val_templates": val},
+    )
 
 
 @router.get("/ui/interop/pipeline", response_class=HTMLResponse)
 async def interop_pipeline(request: Request, preset: str | None = None):
     defaults = _pipeline_defaults(preset)
+    deid, val = _template_lists()
     return templates.TemplateResponse(
         "ui/interop/pipeline.html",
         {
@@ -108,6 +180,8 @@ async def interop_pipeline(request: Request, preset: str | None = None):
             "presets": PIPELINE_PRESETS,
             "preset_key": preset or "",
             "defaults": defaults,
+            "deid_templates": deid,
+            "val_templates": val,
         },
     )
 
@@ -205,25 +279,43 @@ async def ui_deidentify(request: Request):
         seed_int = None
     if not text:
         return HTMLResponse("<div class='muted'>No input.</div>")
-    out = deidentify_message(text, seed=seed_int)
+    tpl = _maybe_load_deid_template(body.get("deid_template") or body.get("template"))
+    if tpl:
+        out = apply_deid_with_template(text, tpl)
+    else:
+        out = deidentify_message(text, seed=seed_int)
     return HTMLResponse(f"<pre class='codepane'>{out}</pre>")
 
 # Validate (HTML fragment suitable for hx-swap)
 @router.post("/ui/interop/validate", response_class=HTMLResponse)
 async def ui_validate(request: Request):
     body = await parse_any_request(request)
-    text = body.get("text", "")
+    text = body.get("message") or body.get("text") or ""
     profile = body.get("profile")
-    res = validate_message(text, profile=profile)
-    errs = "".join(f"<li>{e.get('message','')}</li>" for e in (res.get('errors') or []))
-    warns = "".join(f"<li class='muted'>{w.get('message','')}</li>" for w in (res.get('warnings') or []))
-    html = f"""
-      <div class='mt'><strong>Analyze</strong> {('<span class="chip">OK</span>' if res.get('ok') else '<span class="chip">Issues</span>')}
-        <div class='grid2'>
-          <div><em>Errors</em><ul>{errs or '<li>None</li>'}</ul></div>
-          <div><em>Warnings</em><ul class='muted'>{warns or '<li>None</li>'}</ul></div>
-        </div>
-      </div>
-    """
+    tpl = _maybe_load_validation_template(body.get("val_template") or body.get("template"))
+    if tpl:
+        res = validate_with_template(text, tpl)
+    else:
+        res = validate_message(text, profile=profile)
+    normalized = _normalize_validation_result(res, text)
+    errors = [it for it in normalized.get("issues", []) if it.get("severity") == "error"]
+    warnings = [it for it in normalized.get("issues", []) if it.get("severity") == "warning"]
+    ok_badge = "<span class='chip'>OK</span>" if res.get("ok") else "<span class='chip'>Issues</span>"
+    err_html = "".join(
+        f"<li><code>{(it.get('location') or it.get('segment') or '—')}</code> — {it.get('message') or ''}</li>"
+        for it in errors
+    )
+    warn_html = "".join(
+        f"<li class='muted'><code>{(it.get('location') or it.get('segment') or '—')}</code> — {it.get('message') or ''}</li>"
+        for it in warnings
+    )
+    html = (
+        "<div class='mt'><strong>Analyze</strong> "
+        + ok_badge
+        + "<div class='grid2'>"
+        + f"<div><em>Errors</em><ul>{err_html or '<li>None</li>'}</ul></div>"
+        + f"<div><em>Warnings</em><ul class='muted'>{warn_html or '<li>None</li>'}</ul></div>"
+        + "</div></div>"
+    )
     return HTMLResponse(html)
 

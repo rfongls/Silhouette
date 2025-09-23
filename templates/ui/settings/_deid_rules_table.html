@@ -1,0 +1,26 @@
+<table class="table">
+  <thead>
+    <tr><th>#</th><th>Segment</th><th>Field</th><th>Comp</th><th>Subcomp</th><th>Action</th><th>Param</th><th></th></tr>
+  </thead>
+  <tbody>
+  {% for r in (tpl.rules or []) %}
+    <tr>
+      <td>{{ loop.index0 }}</td>
+      <td>{{ r.segment }}</td>
+      <td>{{ r.field }}</td>
+      <td>{{ r.component or "" }}</td>
+      <td>{{ r.subcomponent or "" }}</td>
+      <td>{{ r.action }}</td>
+      <td>{{ r.param or "" }}</td>
+      <td>
+        <form hx-post="{{ request.url_for('ui_settings_deid_delete_rule', name=tpl.name) }}" hx-target="#deid-rules">
+          <input type="hidden" name="index" value="{{ loop.index0 }}" />
+          <button class="button danger small" title="Delete">✕</button>
+        </form>
+      </td>
+    </tr>
+  {% else %}
+    <tr><td colspan="8" class="muted">No rules yet.</td></tr>
+  {% endfor %}
+  </tbody>
+</table>

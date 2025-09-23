@@ -1,0 +1,35 @@
+{% extends "layout.html" %}
+{% block content %}
+<section class="dashboard">
+  <div class="dashboard-container">
+    <header class="dashboard-header">
+      <h1 class="text-h1">Settings</h1>
+      <p class="text-body">Manage Interop templates for <strong>De-identify</strong> and <strong>Validate</strong>.</p>
+    </header>
+
+    <div class="grid two">
+      <div class="card">
+        <h2 class="text-h2">De-identify Templates</h2>
+        <form hx-post="{{ request.url_for('ui_settings_deid_create') }}" hx-target="#deid-list" class="row gap small">
+          <input class="input" type="text" name="name" placeholder="Template name (e.g., default)" required />
+          <button class="button">Create</button>
+        </form>
+        <div id="deid-list" class="mt">
+          {% include "ui/settings/_deid_list.html" with names=deid_templates %}
+        </div>
+      </div>
+
+      <div class="card">
+        <h2 class="text-h2">Validation Templates</h2>
+        <form hx-post="{{ request.url_for('ui_settings_val_create') }}" hx-target="#val-list" class="row gap small">
+          <input class="input" type="text" name="name" placeholder="Template name (e.g., default)" required />
+          <button class="button">Create</button>
+        </form>
+        <div id="val-list" class="mt">
+          {% include "ui/settings/_val_list.html" with names=val_templates %}
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+{% endblock %}

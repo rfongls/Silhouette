@@ -39,6 +39,10 @@ resourcePlan:
         fhir_path: "period.end"
         transform: "ts_to_date"
 
+      - hl7_path: "-"
+        fhir_path: "status"
+        transform: "default_encounter_status"
+
   # Condition resource derived from DG1 segments
   - resource: Condition
     profile: "http://hl7.org/fhir/us/core/StructureDefinition/us-core-condition"
@@ -97,8 +101,3 @@ resourcePlan:
       - hl7_path: "-"
         fhir_path: "status"
         transform: "default_procedure_status"
-
-      # Minimal, safe default status (you can refine later)
-      - hl7_path: "-"
-        fhir_path: "status"
-        transform: "default_encounter_status"
