@@ -34,6 +34,7 @@ _STATIC_DIR = _BASE_DIR / "static"
 _TEMPLATES_DIR = _BASE_DIR / "templates"
 
 app = FastAPI(
+    debug=True,
     openapi_url=None,
     docs_url=None,
     redoc_url=None,

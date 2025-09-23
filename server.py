@@ -31,6 +31,7 @@ _HTTP_LOG_PATH = _BASE_DIR / "out" / "interop" / "server_http.log"
 _STATIC_DIR = _BASE_DIR / "static"
 
 app = FastAPI(
+    debug=True,
     title="Silhouette Core Interop",
     openapi_url=None,
     docs_url=None,
