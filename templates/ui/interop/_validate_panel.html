@@ -1,13 +1,20 @@
 {% set root = request.scope.get('root_path', '') %}
+{% set validate_api = urls.api_validate | default(root ~ '/api/interop/validate', true) %}
+{% if '?' in validate_api %}
+  {% set validate_api = validate_api ~ '&format=html' %}
+{% else %}
+  {% set validate_api = validate_api ~ '?format=html' %}
+{% endif %}
 <section id="validate-panel" class="panel interop-panel interop-panel-validate">
   <form id="validate-form"
         method="post"
         action="{{ urls.ui_validate | default(root ~ '/ui/interop/validate', true) }}"
-        hx-post="{{ urls.api_validate | default(root ~ '/api/interop/validate', true) }}"
+        hx-post="{{ validate_api }}"
         hx-target="#validate-report"
         hx-swap="innerHTML"
         hx-headers='{"Accept":"text/html"}'
         hx-on::afterSwap="window.InteropUI.onValidateComplete(event)">
+    <input type="hidden" name="format" value="html" />
     <textarea class="input textarea-output" id="val-text" name="message" placeholder="Paste HL7 to validate"></textarea>
     <div class="row gap mt">
       <input class="input" type="text" name="profile" placeholder="profile/workbook (optional)" />

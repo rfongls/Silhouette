@@ -413,8 +413,25 @@ def _wants_text_plain(request: Request) -> bool:
     return ("format=txt" in qs) or ("format=text" in qs) or ("format=plain" in qs)
 
 
-def _wants_validation_html(request: Request) -> bool:
+def _wants_validation_html(request: Request, format_hint: Any | None = None) -> bool:
     """Detect when the caller expects an HTML validation report."""
+
+    def _is_html(value: Any) -> bool:
+        try:
+            return str(value).strip().lower() == "html"
+        except Exception:
+            return False
+
+    if _is_html(format_hint):
+        return True
+
+    try:
+        query_format = request.query_params.get("format")  # type: ignore[attr-defined]
+    except Exception:
+        query_format = None
+    if _is_html(query_format):
+        return True
+
     headers = request.headers
     hx_header = headers.get("hx-request") or headers.get("HX-Request")
     if hx_header is not None:
@@ -699,8 +716,9 @@ async def api_validate(request: Request):
         workbook=bool(body.get("workbook")),
         profile=profile or "",
     )
+    format_hint = body.get("format")
     model = _normalize_validation_result(results, text)
-    if _wants_validation_html(request):
+    if _wants_validation_html(request, format_hint=format_hint):
         return templates.TemplateResponse(
             "ui/interop/_validate_report.html",
             {"request": request, "r": model},

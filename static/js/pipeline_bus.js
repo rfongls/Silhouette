@@ -141,7 +141,7 @@
     if (trigger.tagName === 'BUTTON' && !trigger.hasAttribute('type')) {
       trigger.setAttribute('type', 'button');
     }
-    
+
     const targetId = resolvePanelId(trigger);
     if (!targetId) return;
 
