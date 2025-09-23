@@ -1,45 +1,23 @@
 {% set root = request.scope.get('root_path', '') %}
 <section id="validate-panel" class="panel interop-panel interop-panel-validate">
-  <form id="val-form"
+  <form id="validate-form"
         method="post"
         action="{{ urls.ui_validate | default(root ~ '/ui/interop/validate', true) }}"
         hx-post="{{ urls.api_validate | default(root ~ '/api/interop/validate', true) }}"
-        hx-target="#validation-results"
+        hx-target="#validate-report"
         hx-swap="innerHTML"
+        hx-headers='{"Accept":"text/html"}'
         hx-on::afterSwap="window.InteropUI.onValidateComplete(event)">
-    <textarea class="input textarea-output" id="val-text" name="text" placeholder="Paste HL7 to validate"></textarea>
+    <textarea class="input textarea-output" id="val-text" name="message" placeholder="Paste HL7 to validate"></textarea>
     <div class="row gap mt">
       <input class="input" type="text" name="profile" placeholder="profile/workbook (optional)" />
       <button class="btn" type="submit" data-action="validate">Validate</button>
     </div>
   </form>
   <div class="form-row mt">
-    <div class="label">Validated against</div>
-    <div id="validate-target" class="small muted">—</div>
+    <button class="btn btn-secondary btn-sm" id="print-validate-report" type="button">Print report</button>
   </div>
-  <div class="form-row mt">
-    <button class="btn btn-secondary btn-sm" id="print-validate-report" type="button">Print Report</button>
-  </div>
-  <div id="validation-results" class="scrollbox codepane mt small muted"></div>
-
-  <div id="validate-run-tray" class="action-tray mt" hidden>
-    <div class="action-tray-header">
-      <h4>Validation finished</h4>
-      <p>Continue the pipeline or fix and re‑validate.</p>
-    </div>
-    <div class="action-cards">
-      <button class="action-card pipeline-run" type="button" data-run-to="deid">
-        <strong>↻ Edit &amp; Re‑Run</strong>
-        <small>Apply fixes and validate again.</small>
-      </button>
-      <button class="action-card pipeline-run" type="button" data-run-to="mllp">
-        <strong>📤 Send via MLLP</strong>
-        <small>Deliver and view ACK.</small>
-      </button>
-      <button class="action-card pipeline-run" type="button" data-run-to="translate">
-        <strong>🔄 HL7 → FHIR</strong>
-        <small>Translate the validated message.</small>
-      </button>
-    </div>
+  <div id="validate-report" class="mt">
+    <p class="muted">Run validation to see a report.</p>
   </div>
 </section>

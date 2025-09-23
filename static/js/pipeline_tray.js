@@ -10,7 +10,7 @@
     samples:  { panel: 'samples-panel',  outputs: ['.codepane', '#sample-preview'] },
     generate: { panel: 'generate-panel', outputs: ['#gen-output', '[data-role="gen-output"]', 'textarea[name="message"]', 'pre', '.gen-output'] },
     deid:     { panel: 'deid-panel',     outputs: ['#deid-output', '[data-role="deid-output"]', '#deidentify-output', 'pre', '.deid-output'] },
-    validate: { panel: 'validate-panel',  outputs: ['#validate-output', '#validation-results', '[data-role="validate-output"]', '.validate-output', 'pre'] },
+    validate: { panel: 'validate-panel',  outputs: ['textarea[name="message"]', '#validate-report', '#validate-output', '[data-role="validate-output"]', '.validate-output', 'pre'] },
     translate:{ panel: 'translate-panel', outputs: ['#translate-output', '.translate-output', 'pre', 'code'] },
     mllp:     { panel: 'mllp-panel',      outputs: ['#ack-output', '#mllp-output', '.mllp-output', 'pre'] },
     pipeline: { panel: 'pipeline-panel',  outputs: [] }
@@ -78,8 +78,8 @@
     if (!wrap) return;
 
     const candidatesByKey = {
-      validate: ['#validate-input', 'textarea[name="validate-message"]', '.validate-input', 'textarea'],
-      mllp:     ['#mllp-input', 'textarea[name="mllp-message"]', '.mllp-input', 'textarea'],
+      validate: ['#val-text', 'textarea[name="message"]', '.validate-input', 'textarea'],
+      mllp:     ['[data-bind="pipeline.message"]', '#mllp-messages', 'textarea[name="message"]', '.mllp-input', 'textarea'],
       translate:['#translate-input', 'textarea[name="translate-message"]', '.translate-input', 'textarea']
     };
     const candidates = candidatesByKey[targetKey] || ['textarea', '.codepane', 'pre'];
@@ -99,6 +99,14 @@
       input.dispatchEvent(new Event('input', { bubbles: true }));
     } else {
       input.textContent = text;
+    }
+
+    if (targetKey === 'mllp' && window.PipelineContext?.setMessage) {
+      try {
+        window.PipelineContext.setMessage(text);
+      } catch (err) {
+        /* ignore */
+      }
     }
   }
 
@@ -140,16 +148,25 @@
 
     const srcKey = keyFromElement(card) || keyFromPanelId(window.InteropUI?.currentPanel || '') || null;
     const sourceOutput = srcKey && findOutput(srcKey);
-    const payload = textOf(sourceOutput);
+    let payload = '';
+    if (srcKey === 'validate' && window.PipelineContext?.message) {
+      payload = window.PipelineContext.message;
+    }
+    if (!payload && sourceOutput) {
+      payload = textOf(sourceOutput);
+    }
+    if (!payload && srcKey === 'validate' && window.PipelineContext?.message) {
+      payload = window.PipelineContext.message;
+    }
+    const fallbackPayload = destKey === 'mllp' ? (window.PipelineContext?.message || '') : '';
+    const finalPayload = payload || fallbackPayload;
 
-    if (payload && window.PipelineBus?.set) {
-      window.PipelineBus.set(srcKey, payload, { from: srcKey });
+    if (finalPayload && window.PipelineBus?.set) {
+      window.PipelineBus.set(srcKey || destKey, finalPayload, { from: srcKey });
     }
 
-    if (payload) {
-      prefillTarget(destKey, payload);
-      revealTrayFor(destKey);
-    }
+    prefillTarget(destKey, finalPayload);
+    revealTrayFor(destKey);
   });
 
   D.addEventListener('keydown', (event) => {
