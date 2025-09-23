@@ -15,6 +15,7 @@ from fastapi import APIRouter, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 import html as _html
 from fastapi.responses import JSONResponse, PlainTextResponse, HTMLResponse
+from fastapi.templating import Jinja2Templates
 from starlette.datastructures import UploadFile
 from silhouette_core.interop.hl7_mutate import (
     enrich_clinical_fields,
@@ -30,6 +31,7 @@ from api.metrics import record_event
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
+templates = Jinja2Templates(directory="templates")
 
 
 def _preview(value: Any, limit: int = 160) -> str:
@@ -411,6 +413,150 @@ def _wants_text_plain(request: Request) -> bool:
     return ("format=txt" in qs) or ("format=text" in qs) or ("format=plain" in qs)
 
 
+def _wants_validation_html(request: Request) -> bool:
+    """Detect when the caller expects an HTML validation report."""
+    headers = request.headers
+    hx_header = headers.get("hx-request") or headers.get("HX-Request")
+    if hx_header is not None:
+        try:
+            if str(hx_header).lower() == "true":
+                return True
+        except Exception:
+            return True
+    accept = (headers.get("accept") or headers.get("Accept") or "").lower()
+    return "text/html" in accept
+
+
+def _normalize_validation_result(raw: Any, message_text: str) -> dict[str, Any]:
+    """Map validator output into counts + issue rows for the UI report."""
+
+    def _as_list(value: Any) -> list[Any]:
+        if value is None:
+            return []
+        if isinstance(value, (list, tuple, set)):
+            return list(value)
+        return [value]
+
+    if not isinstance(raw, dict):
+        raw = {"ok": bool(raw), "raw": raw}
+
+    issues: list[dict[str, str]] = []
+    seen: set[tuple[str, str, str, str]] = set()
+    ok_count = 1 if raw.get("ok") else 0
+    warn_count = 0
+    err_count = 0
+
+    def append_issue(severity: str, code: str | None, location: str | None, message: str | None) -> None:
+        nonlocal warn_count, err_count
+        sev_raw = str(severity or "info").lower()
+        if "warn" in sev_raw:
+            normalized = "warning"
+        elif any(tag in sev_raw for tag in ("err", "fail")):
+            normalized = "error"
+        elif "info" in sev_raw or "ok" in sev_raw or "pass" in sev_raw:
+            normalized = "info"
+        else:
+            normalized = "info"
+        code_text = (code or "").strip() or "—"
+        location_text = (location or "").strip() or "—"
+        message_text_local = (message or "").strip()
+        key = (normalized, code_text, location_text, message_text_local)
+        if key in seen:
+            return
+        seen.add(key)
+        if normalized == "error":
+            err_count += 1
+        elif normalized == "warning":
+            warn_count += 1
+        issues.append(
+            {
+                "severity": normalized,
+                "code": code_text,
+                "location": location_text,
+                "message": message_text_local or "—",
+            }
+        )
+
+    # Structured issues (already include severity/code/location/message)
+    for entry in _as_list(raw.get("issues")):
+        if isinstance(entry, dict):
+            append_issue(
+                entry.get("severity") or entry.get("level") or entry.get("status") or "info",
+                entry.get("code") or entry.get("rule") or entry.get("id") or entry.get("type"),
+                entry.get("location")
+                or entry.get("segment")
+                or entry.get("field")
+                or entry.get("path")
+                or entry.get("target"),
+                entry.get("message") or entry.get("detail") or entry.get("description") or str(entry),
+            )
+        else:
+            append_issue("info", None, None, str(entry))
+
+    # Errors may be returned as list[str], list[dict], or dict[str, Any]
+    errors = raw.get("errors")
+    if isinstance(errors, dict):
+        for key, value in errors.items():
+            append_issue("error", str(key), None, value if isinstance(value, str) else str(value))
+    else:
+        for idx, entry in enumerate(_as_list(errors), start=1):
+            if isinstance(entry, dict):
+                append_issue(
+                    entry.get("severity") or "error",
+                    entry.get("code") or entry.get("rule") or f"E{idx:03}",
+                    entry.get("location")
+                    or entry.get("segment")
+                    or entry.get("field")
+                    or entry.get("path"),
+                    entry.get("message") or entry.get("detail") or str(entry),
+                )
+            else:
+                append_issue("error", f"E{idx:03}", None, str(entry))
+
+    # Warnings mirror the error shapes
+    warnings = raw.get("warnings") or raw.get("warning")
+    for idx, entry in enumerate(_as_list(warnings), start=1):
+        if isinstance(entry, dict):
+            append_issue(
+                entry.get("severity") or entry.get("level") or "warning",
+                entry.get("code") or entry.get("rule") or f"W{idx:03}",
+                entry.get("location")
+                or entry.get("segment")
+                or entry.get("field")
+                or entry.get("path"),
+                entry.get("message") or entry.get("detail") or str(entry),
+            )
+        else:
+            append_issue("warning", f"W{idx:03}", None, str(entry))
+
+    counts_payload = raw.get("counts")
+    if isinstance(counts_payload, dict):
+        try:
+            ok_count = max(ok_count, int(counts_payload.get("ok") or counts_payload.get("pass") or 0))
+        except Exception:
+            pass
+        try:
+            warn_count = max(warn_count, int(counts_payload.get("warnings") or counts_payload.get("warning") or 0))
+        except Exception:
+            pass
+        try:
+            err_count = max(err_count, int(counts_payload.get("errors") or counts_payload.get("error") or 0))
+        except Exception:
+            pass
+
+    if err_count == 0 and warn_count == 0:
+        ok_count = max(ok_count, 1 if (message_text or raw.get("validated_message")) else ok_count)
+
+    normalized_message = raw.get("validated_message") or raw.get("message") or message_text or ""
+
+    return {
+        "counts": {"ok": ok_count, "warnings": warn_count, "errors": err_count},
+        "issues": issues,
+        "validated_message": str(normalized_message or ""),
+        "raw": raw,
+    }
+
+
 def _field_label(seg: str, idx: int) -> str:
     NAMES = {
         "PID": {
@@ -541,7 +687,10 @@ async def api_deidentify_summary(request: Request):
 async def api_validate(request: Request):
     """Validate HL7; accept JSON, form, multipart, or query."""
     body = await parse_any_request(request)
-    text = body.get("text", "")
+    text_value = body.get("message")
+    if text_value is None:
+        text_value = body.get("text") or ""
+    text = text_value if isinstance(text_value, str) else str(text_value or "")
     profile = body.get("profile")
     results = validate_message(text, profile=profile)
     log_activity(
@@ -550,7 +699,14 @@ async def api_validate(request: Request):
         workbook=bool(body.get("workbook")),
         profile=profile or "",
     )
-    return JSONResponse(results)
+    if _wants_validation_html(request):
+        model = _normalize_validation_result(results, text)
+        return templates.TemplateResponse(
+            "ui/interop/_validate_report.html",
+            {"request": request, "r": model},
+        )
+    model = _normalize_validation_result(results, text)
+    return JSONResponse(model)
 
 
 @router.post("/api/interop/mllp/send")
@@ -560,7 +716,12 @@ async def api_mllp_send(request: Request):
     host = (body.get("host") or "").strip()
     port = int(body.get("port") or 0)
     timeout = float(body.get("timeout") or 5.0)
-    messages = body.get("messages") or body.get("text") or ""
+    messages = (
+        body.get("messages")
+        or body.get("message")
+        or body.get("text")
+        or ""
+    )
     if not host or not port:
         raise HTTPException(status_code=400, detail="Missing 'host' or 'port'")
     if isinstance(messages, str):

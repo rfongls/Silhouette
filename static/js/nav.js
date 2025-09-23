@@ -76,6 +76,7 @@
       if (btn.dataset.navBound === 'true') return;
       btn.dataset.navBound = 'true';
       btn.addEventListener('click', (event) => {
+        event.preventDefault();
         const panelId = event.currentTarget?.dataset?.panel;
         if (!panelId) return;
         if (window.InteropUI?.setActivePanel) {
@@ -89,7 +90,7 @@
         if (window.InteropUI?.panelManager?.showPanel) {
           window.InteropUI.panelManager.showPanel(panelId);
         }
-      });
+      }, true);
     });
   }
 

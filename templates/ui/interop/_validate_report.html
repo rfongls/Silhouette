@@ -1,0 +1,97 @@
+<section class="validate-report">
+  <header class="validate-report__header" style="display:flex;align-items:center;justify-content:space-between;gap:0.75rem">
+    <h4 class="text-h3" style="margin:0">Validation report</h4>
+    <div class="validate-report__counts" style="display:flex;flex-wrap:wrap;gap:0.5rem">
+      <span class="chip" style="background:#10b981;color:#0b1e15">OK: {{ r.counts.ok | default(0) }}</span>
+      <span class="chip" style="background:#f59e0b;color:#1f1300">Warnings: {{ r.counts.warnings | default(0) }}</span>
+      <span class="chip" style="background:#ef4444;color:#250101">Errors: {{ r.counts.errors | default(0) }}</span>
+    </div>
+  </header>
+
+  {% if r.counts.errors | default(0) %}
+    <p class="text-small" style="margin-top:0.5rem">Found {{ r.counts.errors | default(0) }} error{{ 's' if (r.counts.errors | default(0)) != 1 else '' }} and {{ r.counts.warnings | default(0) }} warning{{ 's' if (r.counts.warnings | default(0)) != 1 else '' }}.</p>
+  {% else %}
+    <p class="text-small" style="margin-top:0.5rem;color:#0f5132">No blocking errors detected. You can proceed to MLLP send.</p>
+  {% endif %}
+
+  <div class="scrollbox" style="margin-top:0.75rem">
+    <table class="validate-report__table" style="width:100%;border-collapse:collapse;font-size:0.875rem">
+      <thead>
+        <tr style="text-align:left;border-bottom:1px solid var(--color-border, #d1d5db)">
+          <th style="padding:0.5rem">Severity</th>
+          <th style="padding:0.5rem">Rule / Code</th>
+          <th style="padding:0.5rem">Location</th>
+          <th style="padding:0.5rem">Message</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for it in r.issues %}
+        <tr style="border-bottom:1px solid var(--color-border, #e5e7eb)">
+          <td style="padding:0.5rem">{{ it.severity | capitalize }}</td>
+          <td style="padding:0.5rem"><code class="mono">{{ it.code }}</code></td>
+          <td style="padding:0.5rem"><code class="mono">{{ it.location }}</code></td>
+          <td style="padding:0.5rem">{{ it.message }}</td>
+        </tr>
+      {% else %}
+        <tr>
+          <td colspan="4" style="padding:0.75rem" class="muted">No issues to display.</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <details class="mt" style="margin-top:0.75rem">
+    <summary class="text-small">Show raw JSON</summary>
+    <pre class="codepane mono" style="margin-top:0.5rem">{{ r.raw | tojson(indent=2) }}</pre>
+  </details>
+
+  <textarea id="validated-message" hidden>{{ r.validated_message }}</textarea>
+  <script>
+    window.PipelineContext = window.PipelineContext || { message: '' };
+    window.PipelineContext.setMessage = function(msg) {
+      this.message = msg || '';
+      var value = this.message;
+      document.querySelectorAll('[data-bind="pipeline.message"]').forEach(function(el){
+        if (!el) return;
+        if ('value' in el) {
+          if (el.value !== value) {
+            el.value = value;
+            try { el.dispatchEvent(new Event('input', { bubbles: true })); } catch (err) { /* ignore */ }
+          }
+        } else {
+          el.textContent = value;
+        }
+      });
+      if (window.PipelineBus && typeof window.PipelineBus.set === 'function') {
+        try { window.PipelineBus.set('validate', value, { from: 'validate' }); } catch (err) { /* ignore */ }
+      }
+    };
+    (function(){
+      var field = document.getElementById('validated-message');
+      if (field) {
+        window.PipelineContext.setMessage(field.value || '');
+      }
+      if (window.InteropUI && typeof window.InteropUI.onValidateComplete === 'function') {
+        try { window.InteropUI.onValidateComplete(); } catch (err) { /* ignore */ }
+      }
+    })();
+  </script>
+
+  <div class="action-tray visible" style="margin-top:1rem">
+    <div class="action-tray-header">
+      <h5 style="margin:0">Next steps</h5>
+      <p class="text-small" style="margin:0.25rem 0 0 0">Continue with the validated message.</p>
+    </div>
+    <div class="action-cards" style="margin-top:0.75rem">
+      <a class="action-card pipeline-run" href="#mllp-panel" data-run-to="mllp">
+        <strong>📤 Send via MLLP</strong>
+        <small>Deliver the validated message.</small>
+      </a>
+      <a class="action-card pipeline-run" href="#translate-panel" data-run-to="translate">
+        <strong>🔄 HL7 → FHIR</strong>
+        <small>Translate this validated message.</small>
+      </a>
+    </div>
+  </div>
+</section>
