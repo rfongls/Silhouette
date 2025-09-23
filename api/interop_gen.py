@@ -419,7 +419,7 @@ def _wants_validation_html(request: Request) -> bool:
     hx_header = headers.get("hx-request") or headers.get("HX-Request")
     if hx_header is not None:
         try:
-            if str(hx_header).lower() == "true":
+            if str(hx_header).strip().lower() == "true":
                 return True
         except Exception:
             return True
@@ -699,13 +699,12 @@ async def api_validate(request: Request):
         workbook=bool(body.get("workbook")),
         profile=profile or "",
     )
+    model = _normalize_validation_result(results, text)
     if _wants_validation_html(request):
-        model = _normalize_validation_result(results, text)
         return templates.TemplateResponse(
             "ui/interop/_validate_report.html",
             {"request": request, "r": model},
         )
-    model = _normalize_validation_result(results, text)
     return JSONResponse(model)
 
 
