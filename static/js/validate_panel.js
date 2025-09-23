@@ -51,7 +51,7 @@
     if (event.target && event.target.id === 'print-validate-report') {
       event.preventDefault();
       const meta = $('#validate-target')?.textContent || '';
-      const body = $('#validation-results')?.innerHTML || '';
+      const body = $('#validate-report')?.innerHTML || '';
       const popup = window.open('', '_blank', 'width=900,height=700');
       if (!popup) return;
       popup.document.write(`<!DOCTYPE html><html><head><title>Validation Report</title>
