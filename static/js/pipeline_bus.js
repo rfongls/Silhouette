@@ -5,13 +5,10 @@
   const $$ = (selector, root = D) => Array.from(root.querySelectorAll(selector));
   const SELECTOR = '[data-run-to],[data-run],[data-target-panel],[data-panel],.pipeline-run,a[href^="#"]';
   const HX_SELECTOR = '[hx-get],[hx-post],[hx-put],[hx-delete],[hx-patch]';
-
   const nameMap = {
     samples: 'samples-panel',
     generate: 'generate-panel',
-    deid: 'deid-panel',
-    'de-identify': 'deid-panel',
-    deidentify: 'deid-panel',
+    deid: 'deid-panel', 'de-identify': 'deid-panel', deidentify: 'deid-panel',
     validate: 'validate-panel',
     translate: 'translate-panel',
     fhir: 'translate-panel',
@@ -144,7 +141,7 @@
     if (trigger.tagName === 'BUTTON' && !trigger.hasAttribute('type')) {
       trigger.setAttribute('type', 'button');
     }
-
+    
     const targetId = resolvePanelId(trigger);
     if (!targetId) return;
 
