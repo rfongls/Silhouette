@@ -209,6 +209,18 @@ def translate(
 
     resources: List[Dict[str, Any]] = []
 
+    def _should_skip_resource(resource: Dict[str, Any]) -> bool:
+        r_type = resource.get("resourceType")
+        if not r_type:
+            return True
+        # Drop resources that only contain bookkeeping metadata.
+        keys = {k for k in resource.keys() if k not in {"resourceType", "meta"}}
+        if not keys:
+            return r_type not in {"Specimen"}
+        if r_type in {"Condition", "AllergyIntolerance", "Procedure"} and "code" not in resource:
+            return True
+        return False
+
     for plan in spec.resourcePlan:
         res: Dict[str, Any] = {"resourceType": plan.resource}
         profile = defaults.get(plan.resource) or plan.profile
@@ -265,33 +277,24 @@ def translate(
                             _assign(res, k, val)
                 else:
                     _assign(res, rule.fhir_path, v)
+        if plan.resource == "Encounter" and "status" not in res:
+            try:
+                res["status"] = transforms.default_encounter_status()
+            except Exception:
+                res["status"] = "finished"
+        if _should_skip_resource(res):
+            continue
         resources.append(res)
 
     # --- Post-processing to normalize shapes & fill required references ---
 
     def _wrap_encounter_class(res: dict) -> None:
-        # Some fhir.resources builds model Encounter.class as a list; wrap only if required
         if res.get("resourceType") != "Encounter":
             return
         c = res.get("class")
         if c is None or isinstance(c, list):
             return
-        wants_list = False
-        try:
-            from fhir.resources.encounter import Encounter as EncounterModel
-            if hasattr(EncounterModel, "model_fields"):
-                ann = EncounterModel.model_fields.get("class_fhir").annotation
-                from typing import get_origin
-                wants_list = get_origin(ann) in (list, tuple)
-            else:
-                field = getattr(EncounterModel, "__fields__", {}).get("class_fhir")
-                if field is not None:
-                    from typing import get_origin
-                    wants_list = get_origin(getattr(field, "outer_type_", None)) in (list, tuple)
-        except Exception:
-            wants_list = False
-        if wants_list:
-            res["class"] = [c]
+        res["class"] = [c]
 
     def _ensure_provenance_agent_who(res: dict, default_ref: str | None) -> None:
         # Ensure Provenance.agent[0].who exists; use default actor if missing

@@ -18,9 +18,13 @@ from silhouette_core.interop.hl7_mutate import (
     enrich_clinical_fields,
     ensure_unique_fields,
 )
-from silhouette_core.interop.deid import deidentify_message
-from silhouette_core.interop.validate_workbook import validate_message
-from .interop_gen import generate_messages, _find_template_by_trigger
+from silhouette_core.interop.deid import deidentify_message, apply_deid_with_template
+from silhouette_core.interop.validate_workbook import validate_message, validate_with_template
+from silhouette_core.interop.template_store import (
+    load_deid_template,
+    load_validation_template,
+)
+from .interop_gen import generate_messages, _find_template_by_trigger, _normalize_validation_result
 from api.activity_log import log_activity
 from api.debug_log import log_debug_event
 from api.metrics import record_event
@@ -56,6 +60,34 @@ install_link_for(templates)
 OUT_ROOT = Path("out/interop")
 UI_OUT = OUT_ROOT / "ui"
 INDEX_PATH = UI_OUT / "index.json"
+
+
+def _maybe_load_deid_template(name: str | None) -> dict | None:
+    if not name:
+        return None
+    normalized = str(name).strip()
+    if not normalized or normalized.lower() in {"builtin", "legacy", "none"}:
+        return None
+    try:
+        return load_deid_template(normalized)
+    except FileNotFoundError:
+        raise HTTPException(400, f"De-identify template '{normalized}' not found")
+    except ValueError as exc:
+        raise HTTPException(400, str(exc))
+
+
+def _maybe_load_validation_template(name: str | None) -> dict | None:
+    if not name:
+        return None
+    normalized = str(name).strip()
+    if not normalized or normalized.lower() in {"builtin", "legacy", "none"}:
+        return None
+    try:
+        return load_validation_template(normalized)
+    except FileNotFoundError:
+        raise HTTPException(400, f"Validation template '{normalized}' not found")
+    except ValueError as exc:
+        raise HTTPException(400, str(exc))
 
 
 # -------- HL7 Sample Indexing (templates/hl7/*) ----------
@@ -97,7 +129,7 @@ def _load_trigger_descriptions() -> Dict[str, str]:
     mapping: Dict[str, str] = {}
     try:
         with path.open("r", encoding="utf-8", errors="ignore") as fh:
-            rdr = csv.DictReader(fh)
+            rdr = csv.DictReader(line for line in fh if line.strip())
             cols = {c.lower(): c for c in rdr.fieldnames or []}
             code_col = None
             for cand in ("trigger", "event", "message", "code", "hl7_event", "hl7_trigger"):
@@ -311,7 +343,11 @@ def render_trigger_options(
 
 
 @router.post("/ui/interop/deidentify", response_class=HTMLResponse)
-async def ui_deidentify(text: str = Form(...), seed: Optional[int] = Form(None)):
+async def ui_deidentify(
+    text: str = Form(...),
+    seed: Optional[int] = Form(None),
+    deid_template: Optional[str] = Form(None),
+):
     """
     HTML-friendly De-Identify: returns <pre> with scrubbed HL7 (no JSON body).
     """
@@ -320,25 +356,39 @@ async def ui_deidentify(text: str = Form(...), seed: Optional[int] = Form(None))
         "ui.deidentify",
         input_bytes=len((text or "").encode("utf-8", errors="ignore")),
         seed=clean_seed,
+        template=deid_template or "",
     )
-    out = deidentify_message(text, seed=clean_seed)
+    tpl = _maybe_load_deid_template(deid_template)
+    if tpl:
+        out = apply_deid_with_template(text, tpl)
+    else:
+        out = deidentify_message(text, seed=clean_seed)
     html = f"<pre class='codepane'>{_esc(out)}</pre>"
     _log("ui.deidentify.done", output_bytes=len(out.encode("utf-8", errors="ignore")))
     return HTMLResponse(html)
 
 
 @router.post("/ui/interop/validate", response_class=HTMLResponse)
-async def ui_validate(text: str = Form(...), profile: Optional[str] = Form(None)):
+async def ui_validate(
+    text: str = Form(...),
+    profile: Optional[str] = Form(None),
+    val_template: Optional[str] = Form(None),
+):
     """
     HTML-friendly Validate: returns a small list of errors/warnings with OK/FAIL chip.
     """
     _log(
         "ui.validate",
         profile=profile or "",
+        template=val_template or "",
         input_bytes=len((text or "").encode("utf-8", errors="ignore")),
     )
     start_ts = time.time()
-    res = validate_message(text, profile=profile)
+    tpl = _maybe_load_validation_template(val_template)
+    if tpl:
+        res = validate_with_template(text, tpl)
+    else:
+        res = validate_message(text, profile=profile)
     elapsed_ms = int((time.time() - start_ts) * 1000)
     errors_list = list(res.get("errors", []) or [])
     warnings_list = list(res.get("warnings", []) or [])
@@ -1004,8 +1054,18 @@ def _post_fhir(paths: list[Path], url: str) -> tuple[bool, list[str]]:
     return ok, results
 
 def _render_pipeline_result(hl7_txt: str, val: dict, trans: dict, post_res: dict | None, artifacts: Path) -> HTMLResponse:
-    errs = "".join(f"<li>{_esc(e)}</li>" for e in val.get("errors", []))
-    warns = "".join(f"<li>{_esc(w)}</li>" for w in val.get("warnings", []))
+    normalized = _normalize_validation_result(val, hl7_txt)
+    issues = normalized.get("issues", [])
+    errs = "".join(
+        f"<li>{_esc(it.get('location') or it.get('code') or '—')}: {_esc(it.get('message') or '')}</li>"
+        for it in issues
+        if str(it.get("severity", "")).lower() == "error"
+    )
+    warns = "".join(
+        f"<li class='muted'>{_esc(it.get('location') or it.get('code') or '—')}: {_esc(it.get('message') or '')}</li>"
+        for it in issues
+        if str(it.get("severity", "")).lower() == "warning"
+    )
     fhir_list = "".join(
         f"<li><a href='/ui/interop/history/view?path={_esc(p)}' target='_blank'>{_esc(Path(p).name)}</a></li>"
         for p in trans.get("paths", [])
@@ -1093,6 +1153,8 @@ async def run_pipeline(request: Request):
     deidentify = _to_bool(body.get("deidentify"), False)
     post_fhir = _to_bool(body.get("post_fhir"), False)
     fhir_endpoint = body.get("fhir_endpoint")
+    deid_template_name = body.get("deid_template")
+    val_template_name = body.get("val_template")
 
     log_activity(
         "pipeline.run",
@@ -1112,16 +1174,28 @@ async def run_pipeline(request: Request):
             "ensure_unique": ensure_unique,
             "include_clinical": include_clinical,
             "deidentify": deidentify,
+            "deid_template": deid_template_name,
         }
         resp = generate_messages(body2)
         text = resp.body.decode("utf-8") if hasattr(resp, "body") else str(resp)
     if not text or not text.strip():
         raise HTTPException(400, "No HL7 content to process")
 
+    deid_template = _maybe_load_deid_template(deid_template_name)
+    if deidentify:
+        if deid_template:
+            text = apply_deid_with_template(text, deid_template)
+        else:
+            text = deidentify_message(text, seed=seed)
+
     run_dir = OUT_ROOT / "pipeline" / _now_tag()
     _write_file(run_dir, "input.hl7", text)
 
-    val = validate_message(text, profile=None)
+    tpl_val = _maybe_load_validation_template(val_template_name)
+    if tpl_val:
+        val = validate_with_template(text, tpl_val)
+    else:
+        val = validate_message(text, profile=None)
     _write_file(run_dir, "validate.json", json.dumps(val, indent=2))
 
     trans = _translate_hl7_to_fhir_cli(text, run_dir)

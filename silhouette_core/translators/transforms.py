@@ -7,6 +7,7 @@ import re
 
 from silhouette_core import terminology
 from silhouette_core.identifier_registry import get_system
+from maps import transforms as map_transforms
 
 _V2_IDENTIFIER_SYSTEM = "http://terminology.hl7.org/CodeSystem/v2-0203"
 _V3_ACT_CODE_SYSTEM = "http://terminology.hl7.org/CodeSystem/v3-ActCode"
@@ -181,6 +182,47 @@ def default_dr_status() -> str:
 
 def default_encounter_status() -> str:
     return "finished"
+
+
+def default_condition_clinical_status() -> str:
+    """Proxy to shared transform logic used by HL7→FHIR maps."""
+
+    try:
+        return map_transforms.default_condition_clinical_status()
+    except AttributeError:
+        return "active"
+
+
+def default_condition_verification_status() -> str:
+    """Proxy for verification status transform used by HL7→FHIR maps."""
+
+    try:
+        return map_transforms.default_condition_verification_status()
+    except AttributeError:
+        return "confirmed"
+
+
+def default_allergy_clinical_status() -> str:
+    try:
+        return map_transforms.default_allergy_clinical_status()
+    except AttributeError:
+        return "active"
+
+
+def default_allergy_verification_status() -> str:
+    try:
+        return map_transforms.default_allergy_verification_status()
+    except AttributeError:
+        return "confirmed"
+
+
+def default_procedure_status() -> str:
+    try:
+        return map_transforms.default_procedure_status()
+    except AttributeError:
+        return "completed"
+
+
 
 
 def obx_value_to_valuex(

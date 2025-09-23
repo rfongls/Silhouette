@@ -1,3 +1,1 @@
-{
-  "CVE-0001": {"cvss": 7.5, "summary": "Sample vulnerability", "refs": []}
-}
+{"CVE-0001": {"summary": "Demo CVE for offline tests", "severity": 5}}

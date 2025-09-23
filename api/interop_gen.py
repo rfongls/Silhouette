@@ -22,9 +22,13 @@ from silhouette_core.interop.hl7_mutate import (
     ensure_unique_fields,
     load_template_text,
 )
-from silhouette_core.interop.deid import deidentify_message
+from silhouette_core.interop.deid import deidentify_message, apply_deid_with_template
 from silhouette_core.interop.mllp import send_mllp_batch
-from silhouette_core.interop.validate_workbook import validate_message
+from silhouette_core.interop.validate_workbook import validate_message, validate_with_template
+from silhouette_core.interop.template_store import (
+    load_deid_template,
+    load_validation_template,
+)
 from api.activity_log import log_activity
 from api.debug_log import log_debug_message
 from api.metrics import record_event
@@ -67,6 +71,30 @@ def _coerce_scalar(value: Any) -> Any:
     if isinstance(value, list) and len(value) == 1:
         return value[0]
     return value
+
+
+def _maybe_load_deid_template(name: Any) -> dict | None:
+    if not name:
+        return None
+    normalized = str(name).strip()
+    if not normalized or normalized.lower() in {"builtin", "legacy", "none"}:
+        return None
+    try:
+        return load_deid_template(normalized)
+    except FileNotFoundError:
+        raise HTTPException(status_code=400, detail=f"De-identify template '{normalized}' not found")
+
+
+def _maybe_load_validation_template(name: Any) -> dict | None:
+    if not name:
+        return None
+    normalized = str(name).strip()
+    if not normalized or normalized.lower() in {"builtin", "legacy", "none"}:
+        return None
+    try:
+        return load_validation_template(normalized)
+    except FileNotFoundError:
+        raise HTTPException(status_code=400, detail=f"Validation template '{normalized}' not found")
 
 
 async def parse_any_request(request: Request) -> dict:
@@ -277,6 +305,8 @@ def generate_messages(body: dict):
     deidentify = _to_bool(deid_input)
     if count > 1 and (deid_input is None or str(deid_input).strip() == ""):
         deidentify = True
+    deid_template_name = body.get("deid_template")
+    deid_template = _maybe_load_deid_template(deid_template_name)
     # Load text (from relpath or inline "text")
     template_path = None
     if not text:
@@ -306,7 +336,10 @@ def generate_messages(body: dict):
         if include_clinical:
             msg = enrich_clinical_fields(msg, seed=derived)
         if deidentify:
-            msg = deidentify_message(msg, seed=derived)
+            if deid_template:
+                msg = apply_deid_with_template(msg, deid_template)
+            else:
+                msg = deidentify_message(msg, seed=derived)
         msgs.append(msg)
     first_preview = msgs[0] if msgs else ""
     _debug_log(
@@ -314,6 +347,7 @@ def generate_messages(body: dict):
         messages=len(msgs),
         rel=rel or "inline",
         deidentify=deidentify,
+        deid_template=deid_template_name or "",
         ensure_unique=ensure_unique,
         include_clinical=include_clinical,
         preview=first_preview,
@@ -658,13 +692,18 @@ async def api_deidentify(request: Request):
     except Exception:
         seed_int = None
     text_value = text if isinstance(text, str) else str(text)
-    out = deidentify_message(text_value, seed=seed_int)
+    template = _maybe_load_deid_template(body.get("deid_template") or body.get("template"))
+    if template:
+        out = apply_deid_with_template(text_value, template)
+    else:
+        out = deidentify_message(text_value, seed=seed_int)
     changes = _summarize_hl7_changes(text_value, out)
     log_activity(
         "deidentify",
         length=len(text_value),
         mode=body.get("mode") or "",
         changed=len(changes),
+        template=body.get("deid_template") or "",
     )
     if _wants_text_plain(request):
         return PlainTextResponse(
@@ -692,7 +731,11 @@ async def api_deidentify_summary(request: Request):
     except Exception:
         seed_int = None
     src = text if isinstance(text, str) else str(text)
-    deid = deidentify_message(src, seed=seed_int)
+    template = _maybe_load_deid_template(body.get("deid_template") or body.get("template"))
+    if template:
+        deid = apply_deid_with_template(src, template)
+    else:
+        deid = deidentify_message(src, seed=seed_int)
     changes = _summarize_hl7_changes(src, deid)
     accept = (request.headers.get("accept") or "").lower()
     if "text/html" in accept:
@@ -709,12 +752,17 @@ async def api_validate(request: Request):
         text_value = body.get("text") or ""
     text = text_value if isinstance(text_value, str) else str(text_value or "")
     profile = body.get("profile")
-    results = validate_message(text, profile=profile)
+    template = _maybe_load_validation_template(body.get("val_template") or body.get("template"))
+    if template:
+        results = validate_with_template(text, template)
+    else:
+        results = validate_message(text, profile=profile)
     log_activity(
         "validate",
         version=body.get("version") or "",
         workbook=bool(body.get("workbook")),
         profile=profile or "",
+        template=body.get("val_template") or "",
     )
     format_hint = body.get("format")
     model = _normalize_validation_result(results, text)
