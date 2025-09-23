@@ -15,7 +15,9 @@
           <button class="button">Create</button>
         </form>
         <div id="deid-list" class="mt">
-          {% include "ui/settings/_deid_list.html" with names=deid_templates %}
+          {% with names = deid_templates %}
+            {% include "ui/settings/_deid_list.html" %}
+          {% endwith %}
         </div>
       </div>
 
@@ -26,7 +28,9 @@
           <button class="button">Create</button>
         </form>
         <div id="val-list" class="mt">
-          {% include "ui/settings/_val_list.html" with names=val_templates %}
+          {% with names = val_templates %}
+            {% include "ui/settings/_val_list.html" %}
+          {% endwith %}
         </div>
       </div>
     </div>

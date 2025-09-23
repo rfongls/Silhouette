@@ -1,6 +1,7 @@
 from __future__ import annotations
 import csv
 import json
+import traceback
 from dataclasses import dataclass, asdict
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -111,16 +112,27 @@ def _save_json(path: Path, payload: Dict[str, Any]) -> None:
     path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
 
 
+@router.get("/ui/settings/ping", name="ui_settings_ping")
+def ui_settings_ping() -> Dict[str, bool]:
+    return {"ok": True}
+
+
 @router.get("/ui/settings", response_class=HTMLResponse, name="ui_settings_index")
-def ui_settings_index(request: Request) -> HTMLResponse:
-    return templates.TemplateResponse(
-        "ui/settings/index.html",
-        {
-            "request": request,
-            "deid_templates": _list_templates(DEID_DIR),
-            "val_templates": _list_templates(VAL_DIR),
-        },
-    )
+def ui_settings_index(request: Request) -> HTMLResponse | PlainTextResponse:
+    try:
+        return templates.TemplateResponse(
+            "ui/settings/index.html",
+            {
+                "request": request,
+                "deid_templates": _list_templates(DEID_DIR),
+                "val_templates": _list_templates(VAL_DIR),
+            },
+        )
+    except Exception:
+        return PlainTextResponse(
+            "Settings template render failed:\n\n" + traceback.format_exc(),
+            status_code=500,
+        )
 
 
 @router.post("/ui/settings/deid/create", response_class=HTMLResponse, name="ui_settings_deid_create")
