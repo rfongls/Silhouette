@@ -3,7 +3,6 @@
   'use strict';
   const $$ = (selector, root = document) => Array.from(root.querySelectorAll(selector));
   const $ = (selector, root = document) => root.querySelector(selector);
-
   const nameMap = {
     samples: 'samples-panel',
     generate: 'generate-panel',
