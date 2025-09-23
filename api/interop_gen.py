@@ -416,9 +416,10 @@ def _wants_text_plain(request: Request) -> bool:
 def _wants_validation_html(request: Request) -> bool:
     """Detect when the caller expects an HTML validation report."""
     headers = request.headers
-    if headers.get("hx-request"):
+    hx_header = headers.get("hx-request") or headers.get("HX-Request")
+    if hx_header:
         return True
-    accept = (headers.get("accept") or "").lower()
+    accept = (headers.get("accept") or headers.get("Accept") or "").lower()
     return "text/html" in accept
 
 
