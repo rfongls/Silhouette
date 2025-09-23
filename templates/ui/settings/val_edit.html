@@ -9,7 +9,6 @@
     <button class="button">Import CSV</button>
   </form>
 </div>
-
 <div class="card mt">
   <h2 class="text-h2">Checks</h2>
   <form class="row gap small mb" hx-post="{{ request.url_for('ui_settings_val_add_check', name=tpl.name) }}" hx-target="#val-checks">

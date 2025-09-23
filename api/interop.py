@@ -99,6 +99,34 @@ def _maybe_load_validation_template(name: str | None) -> dict | None:
     return load_validation_template(normalized)
 
 
+def _maybe_load_deid_template(name: str | None) -> dict | None:
+    if not name:
+        return None
+    normalized = str(name).strip()
+    if not normalized or normalized.lower() in {"builtin", "legacy", "none"}:
+        return None
+    try:
+        return load_deid_template(normalized)
+    except FileNotFoundError:
+        raise HTTPException(400, f"De-identify template '{normalized}' not found")
+    except ValueError as exc:
+        raise HTTPException(400, str(exc))
+
+
+def _maybe_load_validation_template(name: str | None) -> dict | None:
+    if not name:
+        return None
+    normalized = str(name).strip()
+    if not normalized or normalized.lower() in {"builtin", "legacy", "none"}:
+        return None
+    try:
+        return load_validation_template(normalized)
+    except FileNotFoundError:
+        raise HTTPException(400, f"Validation template '{normalized}' not found")
+    except ValueError as exc:
+        raise HTTPException(400, str(exc))
+
+
 # -------- HL7 Sample Indexing (templates/hl7/*) ----------
 SAMPLE_DIR = (Path(__file__).resolve().parent.parent / "templates" / "hl7").resolve()
 VALID_VERSIONS = {"hl7-v2-3", "hl7-v2-4", "hl7-v2-5"}

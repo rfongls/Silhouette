@@ -99,7 +99,7 @@ def _maybe_load_deid_template(name: Any) -> dict | None:
     if not normalized or normalized.lower() in {"builtin", "legacy", "none"}:
         return None
     return load_deid_template(normalized)
-
+  
 
 def _maybe_load_validation_template(name: Any) -> dict | None:
     if not name:
