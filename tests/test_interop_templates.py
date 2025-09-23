@@ -1,7 +1,6 @@
 from silhouette_core.interop.deid import apply_deid_with_template
 from silhouette_core.interop.validate_workbook import validate_with_template
 
-
 SAMPLE = "MSH|^~\\&|S1|F1|R1|D1|202501011200||ADT^A01|MSGID|P|2.5\rPID|1||12345^^^HOSP^MR||DOE^JOHN||19800101|M\r"
 
 

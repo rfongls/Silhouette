@@ -25,10 +25,6 @@ from silhouette_core.interop.hl7_mutate import (
 from silhouette_core.interop.deid import deidentify_message, apply_deid_with_template
 from silhouette_core.interop.mllp import send_mllp_batch
 from silhouette_core.interop.validate_workbook import validate_message, validate_with_template
-from silhouette_core.interop.template_store import (
-    load_deid_template,
-    load_validation_template,
-)
 from api.activity_log import log_activity
 from api.debug_log import log_debug_message
 from api.metrics import record_event
@@ -36,6 +32,29 @@ from api.metrics import record_event
 router = APIRouter()
 logger = logging.getLogger(__name__)
 templates = Jinja2Templates(directory="templates")
+
+DEID_DIR = Path("configs/interop/deid_templates")
+VAL_DIR = Path("configs/interop/validate_templates")
+for folder in (DEID_DIR, VAL_DIR):
+    folder.mkdir(parents=True, exist_ok=True)
+
+
+def _load_template(path: Path, name: str, kind: str) -> dict:
+    target = path / f"{name}.json"
+    if not target.exists():
+        raise HTTPException(status_code=400, detail=f"{kind.title()} template '{name}' not found")
+    try:
+        return json.loads(target.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:  # pragma: no cover - malformed template
+        raise HTTPException(status_code=400, detail=f"Invalid {kind} template JSON: {exc}") from exc
+
+
+def load_deid_template(name: str) -> dict:
+    return _load_template(DEID_DIR, name, "de-identify")
+
+
+def load_validation_template(name: str) -> dict:
+    return _load_template(VAL_DIR, name, "validation")
 
 
 def _preview(value: Any, limit: int = 160) -> str:
@@ -79,11 +98,8 @@ def _maybe_load_deid_template(name: Any) -> dict | None:
     normalized = str(name).strip()
     if not normalized or normalized.lower() in {"builtin", "legacy", "none"}:
         return None
-    try:
-        return load_deid_template(normalized)
-    except FileNotFoundError:
-        raise HTTPException(status_code=400, detail=f"De-identify template '{normalized}' not found")
-
+    return load_deid_template(normalized)
+  
 
 def _maybe_load_validation_template(name: Any) -> dict | None:
     if not name:
@@ -91,10 +107,7 @@ def _maybe_load_validation_template(name: Any) -> dict | None:
     normalized = str(name).strip()
     if not normalized or normalized.lower() in {"builtin", "legacy", "none"}:
         return None
-    try:
-        return load_validation_template(normalized)
-    except FileNotFoundError:
-        raise HTTPException(status_code=400, detail=f"Validation template '{normalized}' not found")
+    return load_validation_template(normalized)
 
 
 async def parse_any_request(request: Request) -> dict:

@@ -1,60 +1,33 @@
 {% extends "layout.html" %}
 {% block content %}
-{% set back_url = link_for(request, 'ui_settings_index', '/ui/settings') %}
-<section class="page-container">
-  <a class="link" href="{{ back_url }}">← Back to settings</a>
-  <header class="page-header">
-    <h1>{{ 'New de-identify template' if is_new else 'Edit de-identify template' }}</h1>
-    <p class="muted">Configure HL7 field rules to mask or remove sensitive data.</p>
-  </header>
-
-  <form class="card" method="post" action="{{ link_for(request, 'ui_settings_deid_save', '/ui/settings/deid/save') }}">
-    <div class="card-body">
-      <input type="hidden" name="original_name" value="{{ template.name | default('') }}" />
-      <div class="row gap">
-        <label class="grow">
-          <span class="micro muted">Name</span>
-          <input class="input" name="name" value="{{ template.name | default('') }}" placeholder="default" required />
-        </label>
-        <label class="small">
-          <span class="micro muted">Version</span>
-          <input class="input" name="version" value="{{ template.version | default('v1') }}" />
-        </label>
-      </div>
-
-      <h2 class="text-h4 mt">Rules</h2>
-      <p class="muted small">Leave segment or field blank to remove a row. Component and subcomponent are optional (1-based).</p>
-      {% include 'ui/settings/_deid_rules_table.html' with rules=template.rules %}
-    </div>
-    <footer class="card-footer row gap">
-      <button class="btn btn-primary" type="submit">Save template</button>
-      <a class="btn btn-tertiary" href="{{ back_url }}">Cancel</a>
-    </footer>
+<h1 class="text-h1">De-identify Template — {{ tpl.name }}</h1>
+<div class="row gap">
+  <a class="button" href="{{ request.url_for('ui_settings_deid_export_json', name=tpl.name) }}">Export JSON</a>
+  <a class="button" href="{{ request.url_for('ui_settings_deid_export_csv', name=tpl.name) }}">Export CSV</a>
+  <form class="row gap small" hx-post="{{ request.url_for('ui_settings_deid_import_csv', name=tpl.name) }}" hx-target="#deid-rules">
+    <input type="file" name="file" accept=".csv" required />
+    <button class="button">Import CSV</button>
+  </form>
+</div>
+<div class="card mt">
+  <h2 class="text-h2">Rules</h2>
+  <form class="row gap small mb" hx-post="{{ request.url_for('ui_settings_deid_add_rule', name=tpl.name) }}" hx-target="#deid-rules">
+    <input class="input" name="segment" placeholder="PID" required style="max-width:7rem" />
+    <input class="input" name="field" type="number" min="1" placeholder="Field" required style="max-width:6rem" />
+    <input class="input" name="component" type="number" min="1" placeholder="Comp." style="max-width:6rem" />
+    <input class="input" name="subcomponent" type="number" min="1" placeholder="Subcomp." style="max-width:8rem" />
+    <select class="input" name="action" style="max-width:12rem">
+      <option value="redact">redact</option>
+      <option value="mask">mask</option>
+      <option value="hash">hash</option>
+      <option value="replace">replace</option>
+    </select>
+    <input class="input" name="param" placeholder="Param (mask char, replacement, hash salt)" style="min-width:18rem" />
+    <button class="button">Add</button>
   </form>
 
-  <section class="card mt">
-    <div class="card-body">
-      <h2 class="text-h4">Import / export</h2>
-      <div class="row gap">
-        <form method="post" action="{{ link_for(request, 'ui_settings_deid_import', '/ui/settings/deid/import') }}" enctype="multipart/form-data" class="row gap">
-          <label class="small">
-            <span class="micro muted">Template name</span>
-            <input class="input" name="name" value="{{ template.name | default('') }}" placeholder="default" required />
-          </label>
-          <label class="small">
-            <span class="micro muted">Import CSV</span>
-            <input class="input" type="file" name="file" accept=".csv" required />
-          </label>
-          <button class="btn btn-secondary" type="submit">Upload</button>
-        </form>
-        {% if template.name %}
-        <div class="row gap">
-          <a class="btn btn-tertiary" href="{{ link_for(request, 'ui_settings_deid_export_json', '/ui/settings/deid/' ~ template.name ~ '/export.json') }}">Download JSON</a>
-          <a class="btn btn-tertiary" href="{{ link_for(request, 'ui_settings_deid_export_csv', '/ui/settings/deid/' ~ template.name ~ '/export.csv') }}">Download CSV</a>
-        </div>
-        {% endif %}
-      </div>
-    </div>
-  </section>
-</section>
+  <div id="deid-rules">
+    {% include "ui/settings/_deid_rules_table.html" %}
+  </div>
+</div>
 {% endblock %}

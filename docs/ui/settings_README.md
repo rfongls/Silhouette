@@ -1,26 +1,39 @@
 # Interop Settings UI
 
-The settings dashboard available at `/ui/settings` provides authoring tools for
-two reusable interoperability templates:
+The settings workspace at `/ui/settings` lets analysts manage reusable
+interoperability templates without touching the filesystem. Two template types
+are supported:
 
-* **De-identify templates** – HL7 segment/field selectors with an action of
-  `redact`, `mask`, `hash`, or `replace`.  These drive runtime scrubbing within
-  the de-identification step of the interop pipeline.
-* **Validation templates** – Required-field definitions, regex patterns, and
-  allowed-value lists that power the validation stage.
+* **De-identify templates** – HL7 segment/field selectors mapped to an action
+  (`redact`, `mask`, `hash`, or `replace`) plus an optional parameter.
+* **Validation templates** – Field requirements, optional regex patterns, and
+  allowed value lists that power the validation step of the pipeline.
 
-Each template is stored as canonical JSON under `configs/interop/...` with a
-one-click CSV export/import to support analyst workflows.  The edit forms offer
-simple row-based tables (blank rows are ignored so removing an entry is as easy
-as clearing the segment/field values).
+Each template lives as canonical JSON under
+`configs/interop/deid_templates/` or `configs/interop/validate_templates/`.
+Analysts can import/export CSV for spreadsheet workflows, but the JSON payloads
+remain the source of truth.
 
-Runtime behaviour:
+## UI Overview
 
-* Selecting a template in the Interop UI or pipeline causes the corresponding
-  rules/checks to be enforced.  When no template is chosen the legacy behaviour
-  remains available via the built-in scrubber and basic validator.
-* Validation issues surface in the UI alongside the existing `errors`/`warnings`
-  view, while de-identification continues to populate the report summary.
+* **Settings index** – Lists existing templates and exposes quick-create
+  actions. HTMX forms allow inline creation without a page reload.
+* **Template editor** – A detail view for a specific template. New rules/checks
+  are added one at a time, with the resulting table refreshed via HTMX swaps.
+  Delete buttons remove individual entries instantly. CSV import updates the
+  table without leaving the page, and JSON/CSV exports stream the current
+  template definition.
 
-Refer to the settings index page for management actions (create, import, export,
-delete) and use the per-template editor to fine-tune individual rules.
+## Runtime Integration
+
+The Interop dashboard and pipeline screens surface dropdowns populated directly
+from the JSON filenames in the configs directories. Selected templates are
+threaded through to the runtime endpoints:
+
+* The **De-identify** stage uses `apply_deid_with_template` to enforce the
+  configured rules.
+* The **Validate** stage feeds `validate_with_template`, surfacing issues in the
+  UI and API responses.
+
+If a requested template is missing or malformed, the API returns a 400-level
+error with a descriptive message so the UI can surface the failure cleanly.

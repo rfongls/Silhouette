@@ -1,257 +1,334 @@
 from __future__ import annotations
-
+import csv
 import json
-from fastapi import APIRouter, Request, Form, UploadFile, File, HTTPException
-from fastapi.responses import HTMLResponse, RedirectResponse, Response
+from dataclasses import dataclass, asdict
+from pathlib import Path
+from typing import Any, Dict, List, Optional
+
+from fastapi import APIRouter, Form, HTTPException, Request, UploadFile, File
+from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse
 from starlette.templating import Jinja2Templates
 
-from api.ui import install_link_for
-from silhouette_core.interop.template_store import (
-    list_deid_templates,
-    list_validation_templates,
-    load_deid_template,
-    load_validation_template,
-    save_deid_template,
-    save_validation_template,
-    delete_deid_template,
-    delete_validation_template,
-    export_deid_csv,
-    export_validation_csv,
-    import_deid_csv,
-    import_validation_csv,
-)
-
+try:
+    from api.ui import install_link_for
+except Exception:  # pragma: no cover - fallback when helper unavailable
+    def install_link_for(_):  # type: ignore[misc]
+        pass
 
 router = APIRouter()
 templates = Jinja2Templates(directory="templates")
 install_link_for(templates)
 
+DEID_DIR = Path("configs/interop/deid_templates")
+VAL_DIR = Path("configs/interop/validate_templates")
+for folder in (DEID_DIR, VAL_DIR):
+    folder.mkdir(parents=True, exist_ok=True)
 
-def _deid_rows(form) -> list[dict[str, object]]:
-    segments = form.getlist("rules-segment")
-    fields = form.getlist("rules-field")
-    components = form.getlist("rules-component")
-    subcomponents = form.getlist("rules-subcomponent")
-    actions = form.getlist("rules-action")
-    params = form.getlist("rules-param")
-    max_len = max(len(segments), len(fields), len(components), len(subcomponents), len(actions), len(params))
-    rules: list[dict[str, object]] = []
-    for idx in range(max_len):
-        segment = (segments[idx] if idx < len(segments) else "").strip().upper()
-        field = (fields[idx] if idx < len(fields) else "").strip()
-        if not segment or not field:
-            continue
-        rule = {
-            "segment": segment,
-            "field": field,
-            "component": (components[idx] if idx < len(components) else "").strip(),
-            "subcomponent": (subcomponents[idx] if idx < len(subcomponents) else "").strip(),
-            "action": (actions[idx] if idx < len(actions) else "redact").strip().lower() or "redact",
-            "param": (params[idx] if idx < len(params) else "").strip(),
+
+@dataclass
+class DeidRule:
+    segment: str
+    field: int
+    component: Optional[int] = None
+    subcomponent: Optional[int] = None
+    action: str = "redact"
+    param: Optional[str] = None
+
+
+@dataclass
+class DeidTemplate:
+    name: str
+    version: str = "v1"
+    rules: List[DeidRule] | None = None
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "name": self.name,
+            "version": self.version,
+            "rules": [asdict(r) for r in (self.rules or [])],
         }
-        rules.append(rule)
-    return rules
 
-
-def _validation_rows(form) -> list[dict[str, object]]:
-    segments = form.getlist("checks-segment")
-    fields = form.getlist("checks-field")
-    patterns = form.getlist("checks-pattern")
-    allowed = form.getlist("checks-allowed")
-    required_indices = {str(v) for v in form.getlist("checks-required")}
-    max_len = max(len(segments), len(fields), len(patterns), len(allowed))
-    checks: list[dict[str, object]] = []
-    for idx in range(max_len):
-        segment = (segments[idx] if idx < len(segments) else "").strip().upper()
-        field = (fields[idx] if idx < len(fields) else "").strip()
-        if not segment or not field:
-            continue
-        pattern = (patterns[idx] if idx < len(patterns) else "").strip()
-        allowed_raw = (allowed[idx] if idx < len(allowed) else "").strip()
-        checks.append(
-            {
-                "segment": segment,
-                "field": field,
-                "required": str(idx) in required_indices,
-                "pattern": pattern,
-                "allowed_values": allowed_raw,
-            }
+    @staticmethod
+    def from_dict(data: Dict[str, Any]) -> "DeidTemplate":
+        return DeidTemplate(
+            name=data.get("name", "unnamed"),
+            version=data.get("version", "v1"),
+            rules=[DeidRule(**row) for row in data.get("rules", [])],
         )
-    return checks
 
 
-def _template_summaries() -> dict[str, list[dict[str, object]]]:
-    deid_items: list[dict[str, object]] = []
-    for name in list_deid_templates():
-        try:
-            tpl = load_deid_template(name)
-            count = len(tpl.get("rules") or [])
-        except Exception:
-            count = 0
-        deid_items.append({"name": name, "count": count})
+@dataclass
+class ValidateCheck:
+    segment: str
+    field: int
+    required: bool = True
+    pattern: Optional[str] = None
+    allowed_values: Optional[List[str]] = None
 
-    val_items: list[dict[str, object]] = []
-    for name in list_validation_templates():
-        try:
-            tpl = load_validation_template(name)
-            count = len(tpl.get("checks") or [])
-        except Exception:
-            count = 0
-        val_items.append({"name": name, "count": count})
 
-    return {"deid": deid_items, "validation": val_items}
+@dataclass
+class ValidateTemplate:
+    name: str
+    version: str = "v1"
+    checks: List[ValidateCheck] | None = None
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "name": self.name,
+            "version": self.version,
+            "checks": [asdict(c) for c in (self.checks or [])],
+        }
+
+    @staticmethod
+    def from_dict(data: Dict[str, Any]) -> "ValidateTemplate":
+        return ValidateTemplate(
+            name=data.get("name", "unnamed"),
+            version=data.get("version", "v1"),
+            checks=[ValidateCheck(**row) for row in data.get("checks", [])],
+        )
+
+
+def _safe_name(name: str) -> str:
+    cleaned = "".join(c for c in (name or "") if c.isalnum() or c in {"-", "_"}).strip()
+    return cleaned or "default"
+
+
+def _json_path(base: Path, name: str) -> Path:
+    return base / f"{_safe_name(name)}.json"
+
+
+def _list_templates(base: Path) -> List[str]:
+    return [p.stem for p in sorted(base.glob("*.json"))]
+
+
+def _load_json(path: Path) -> Dict[str, Any]:
+    if not path.exists():
+        raise HTTPException(status_code=404, detail=f"Template not found: {path.name}")
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+def _save_json(path: Path, payload: Dict[str, Any]) -> None:
+    path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
 
 
 @router.get("/ui/settings", response_class=HTMLResponse, name="ui_settings_index")
-async def settings_index(request: Request):
-    summaries = _template_summaries()
-    ctx = {
-        "request": request,
-        "deid_templates": summaries["deid"],
-        "val_templates": summaries["validation"],
-    }
-    return templates.TemplateResponse("ui/settings/index.html", ctx)
+def ui_settings_index(request: Request) -> HTMLResponse:
+    return templates.TemplateResponse(
+        "ui/settings/index.html",
+        {
+            "request": request,
+            "deid_templates": _list_templates(DEID_DIR),
+            "val_templates": _list_templates(VAL_DIR),
+        },
+    )
 
 
-def _deid_edit_context(request: Request, template: dict[str, object], *, is_new: bool) -> dict[str, object]:
-    return {
-        "request": request,
-        "template": template,
-        "is_new": is_new,
-    }
+@router.post("/ui/settings/deid/create", response_class=HTMLResponse, name="ui_settings_deid_create")
+def ui_settings_deid_create(request: Request, name: str = Form(...)) -> HTMLResponse:
+    path = _json_path(DEID_DIR, name)
+    if path.exists():
+        raise HTTPException(status_code=400, detail="Template already exists")
+    tpl = DeidTemplate(name=_safe_name(name), rules=[])
+    _save_json(path, tpl.to_dict())
+    return templates.TemplateResponse(
+        "ui/settings/_deid_list.html",
+        {"request": request, "names": _list_templates(DEID_DIR)},
+    )
 
 
-def _val_edit_context(request: Request, template: dict[str, object], *, is_new: bool) -> dict[str, object]:
-    return {
-        "request": request,
-        "template": template,
-        "is_new": is_new,
-    }
+@router.get("/ui/settings/deid/edit/{name}", response_class=HTMLResponse, name="ui_settings_deid_edit")
+def ui_settings_deid_edit(request: Request, name: str) -> HTMLResponse:
+    tpl = DeidTemplate.from_dict(_load_json(_json_path(DEID_DIR, name)))
+    return templates.TemplateResponse("ui/settings/deid_edit.html", {"request": request, "tpl": tpl})
 
 
-@router.get("/ui/settings/deid/new", response_class=HTMLResponse, name="ui_settings_deid_new")
-async def deid_new(request: Request):
-    tpl = {"name": "", "version": "v1", "rules": []}
-    return templates.TemplateResponse("ui/settings/deid_edit.html", _deid_edit_context(request, tpl, is_new=True))
-
-
-@router.get("/ui/settings/deid/{name}", response_class=HTMLResponse, name="ui_settings_deid_edit")
-async def deid_edit(request: Request, name: str):
-    try:
-        tpl = load_deid_template(name)
-    except FileNotFoundError:
-        raise HTTPException(status_code=404, detail="Template not found")
-    return templates.TemplateResponse("ui/settings/deid_edit.html", _deid_edit_context(request, tpl, is_new=False))
-
-
-@router.post("/ui/settings/deid/save", name="ui_settings_deid_save")
-async def deid_save(
+@router.post("/ui/settings/deid/add_rule/{name}", response_class=HTMLResponse, name="ui_settings_deid_add_rule")
+def ui_settings_deid_add_rule(
     request: Request,
-    original_name: str = Form(""),
-    name: str = Form(...),
-    version: str = Form("v1"),
-):
-    form = await request.form()
-    data = {
-        "name": name,
-        "version": version or "v1",
-        "rules": _deid_rows(form),
-    }
-    saved = save_deid_template(data, original_name=original_name or None)
-    url = request.url_for("ui_settings_deid_edit", name=saved["name"])
-    return RedirectResponse(url=url, status_code=303)
+    name: str,
+    segment: str = Form(...),
+    field: int = Form(...),
+    component: Optional[int] = Form(None),
+    subcomponent: Optional[int] = Form(None),
+    action: str = Form("redact"),
+    param: Optional[str] = Form(None),
+) -> HTMLResponse:
+    path = _json_path(DEID_DIR, name)
+    tpl = DeidTemplate.from_dict(_load_json(path))
+    tpl.rules = tpl.rules or []
+    tpl.rules.append(
+        DeidRule(
+            segment=segment.strip().upper(),
+            field=int(field),
+            component=component if component not in (None, "") else None,
+            subcomponent=subcomponent if subcomponent not in (None, "") else None,
+            action=(action or "redact").strip(),
+            param=param or None,
+        )
+    )
+    _save_json(path, tpl.to_dict())
+    return templates.TemplateResponse("ui/settings/_deid_rules_table.html", {"request": request, "tpl": tpl})
 
 
-@router.post("/ui/settings/deid/delete", name="ui_settings_deid_delete")
-async def deid_delete(request: Request, name: str = Form(...)):
-    delete_deid_template(name)
-    url = request.url_for("ui_settings_index")
-    return RedirectResponse(url=url, status_code=303)
+@router.post("/ui/settings/deid/delete_rule/{name}", response_class=HTMLResponse, name="ui_settings_deid_delete_rule")
+def ui_settings_deid_delete_rule(request: Request, name: str, index: int = Form(...)) -> HTMLResponse:
+    path = _json_path(DEID_DIR, name)
+    tpl = DeidTemplate.from_dict(_load_json(path))
+    tpl.rules = tpl.rules or []
+    if 0 <= index < len(tpl.rules):
+        del tpl.rules[index]
+    _save_json(path, tpl.to_dict())
+    return templates.TemplateResponse("ui/settings/_deid_rules_table.html", {"request": request, "tpl": tpl})
 
 
-@router.post("/ui/settings/deid/import", name="ui_settings_deid_import")
-async def deid_import(request: Request, name: str = Form(...), file: UploadFile = File(...)):
-    content = (await file.read()).decode("utf-8", errors="ignore")
-    import_deid_csv(name, content)
-    url = request.url_for("ui_settings_deid_edit", name=name)
-    return RedirectResponse(url=url, status_code=303)
+@router.get("/ui/settings/deid/export/{name}.json", response_class=JSONResponse, name="ui_settings_deid_export_json")
+def ui_settings_deid_export_json(name: str) -> JSONResponse:
+    return JSONResponse(_load_json(_json_path(DEID_DIR, name)))
 
 
-@router.get("/ui/settings/deid/{name}/export.json", name="ui_settings_deid_export_json")
-async def deid_export_json(name: str):
-    tpl = load_deid_template(name)
-    payload = json.dumps(tpl, indent=2)
-    headers = {"Content-Disposition": f"attachment; filename={name}.json"}
-    return Response(content=payload, media_type="application/json", headers=headers)
+@router.get("/ui/settings/deid/export/{name}.csv", response_class=PlainTextResponse, name="ui_settings_deid_export_csv")
+def ui_settings_deid_export_csv(name: str) -> PlainTextResponse:
+    tpl = DeidTemplate.from_dict(_load_json(_json_path(DEID_DIR, name)))
+    rows = ["segment,field,component,subcomponent,action,param"]
+    for rule in tpl.rules or []:
+        rows.append(
+            ",".join(
+                [
+                    rule.segment,
+                    str(rule.field),
+                    "" if rule.component is None else str(rule.component),
+                    "" if rule.subcomponent is None else str(rule.subcomponent),
+                    rule.action,
+                    "" if rule.param is None else rule.param,
+                ]
+            )
+        )
+    return PlainTextResponse("\n".join(rows), media_type="text/csv")
 
 
-@router.get("/ui/settings/deid/{name}/export.csv", name="ui_settings_deid_export_csv")
-async def deid_export_csv(name: str):
-    tpl = load_deid_template(name)
-    csv_text = export_deid_csv(tpl)
-    headers = {"Content-Disposition": f"attachment; filename={name}.csv"}
-    return Response(content=csv_text, media_type="text/csv", headers=headers)
+@router.post("/ui/settings/deid/import_csv/{name}", response_class=HTMLResponse, name="ui_settings_deid_import_csv")
+async def ui_settings_deid_import_csv(request: Request, name: str, file: UploadFile = File(...)) -> HTMLResponse:
+    if not file.filename.lower().endswith(".csv"):
+        raise HTTPException(status_code=400, detail="Upload a .csv file")
+    rows = (await file.read()).decode("utf-8").splitlines()
+    reader = csv.DictReader(rows)
+    rules: List[DeidRule] = []
+    for row in reader:
+        rules.append(
+            DeidRule(
+                segment=(row.get("segment") or "").strip().upper(),
+                field=int(row.get("field") or 0),
+                component=int(row["component"]) if row.get("component") else None,
+                subcomponent=int(row["subcomponent"]) if row.get("subcomponent") else None,
+                action=(row.get("action") or "redact").strip(),
+                param=row.get("param") or None,
+            )
+        )
+    tpl = DeidTemplate(name=_safe_name(name), rules=rules)
+    _save_json(_json_path(DEID_DIR, name), tpl.to_dict())
+    return templates.TemplateResponse("ui/settings/_deid_rules_table.html", {"request": request, "tpl": tpl})
 
 
-@router.get("/ui/settings/validation/new", response_class=HTMLResponse, name="ui_settings_val_new")
-async def val_new(request: Request):
-    tpl = {"name": "", "version": "v1", "checks": []}
-    return templates.TemplateResponse("ui/settings/val_edit.html", _val_edit_context(request, tpl, is_new=True))
+@router.post("/ui/settings/val/create", response_class=HTMLResponse, name="ui_settings_val_create")
+def ui_settings_val_create(request: Request, name: str = Form(...)) -> HTMLResponse:
+    path = _json_path(VAL_DIR, name)
+    if path.exists():
+        raise HTTPException(status_code=400, detail="Template already exists")
+    tpl = ValidateTemplate(name=_safe_name(name), checks=[])
+    _save_json(path, tpl.to_dict())
+    return templates.TemplateResponse(
+        "ui/settings/_val_list.html",
+        {"request": request, "names": _list_templates(VAL_DIR)},
+    )
 
 
-@router.get("/ui/settings/validation/{name}", response_class=HTMLResponse, name="ui_settings_val_edit")
-async def val_edit(request: Request, name: str):
-    try:
-        tpl = load_validation_template(name)
-    except FileNotFoundError:
-        raise HTTPException(status_code=404, detail="Template not found")
-    return templates.TemplateResponse("ui/settings/val_edit.html", _val_edit_context(request, tpl, is_new=False))
+@router.get("/ui/settings/val/edit/{name}", response_class=HTMLResponse, name="ui_settings_val_edit")
+def ui_settings_val_edit(request: Request, name: str) -> HTMLResponse:
+    tpl = ValidateTemplate.from_dict(_load_json(_json_path(VAL_DIR, name)))
+    return templates.TemplateResponse("ui/settings/val_edit.html", {"request": request, "tpl": tpl})
 
 
-@router.post("/ui/settings/validation/save", name="ui_settings_val_save")
-async def val_save(
+@router.post("/ui/settings/val/add_check/{name}", response_class=HTMLResponse, name="ui_settings_val_add_check")
+def ui_settings_val_add_check(
     request: Request,
-    original_name: str = Form(""),
-    name: str = Form(...),
-    version: str = Form("v1"),
-):
-    form = await request.form()
-    data = {
-        "name": name,
-        "version": version or "v1",
-        "checks": _validation_rows(form),
-    }
-    saved = save_validation_template(data, original_name=original_name or None)
-    url = request.url_for("ui_settings_val_edit", name=saved["name"])
-    return RedirectResponse(url=url, status_code=303)
+    name: str,
+    segment: str = Form(...),
+    field: int = Form(...),
+    required: bool = Form(False),
+    pattern: Optional[str] = Form(None),
+    allowed_values: Optional[str] = Form(None),
+) -> HTMLResponse:
+    path = _json_path(VAL_DIR, name)
+    tpl = ValidateTemplate.from_dict(_load_json(path))
+    tpl.checks = tpl.checks or []
+    allowed = [v.strip() for v in (allowed_values or "").replace(";", ",").split(",") if v.strip()] or None
+    tpl.checks.append(
+        ValidateCheck(
+            segment=segment.strip().upper(),
+            field=int(field),
+            required=bool(required),
+            pattern=pattern or None,
+            allowed_values=allowed,
+        )
+    )
+    _save_json(path, tpl.to_dict())
+    return templates.TemplateResponse("ui/settings/_val_checks_table.html", {"request": request, "tpl": tpl})
 
 
-@router.post("/ui/settings/validation/delete", name="ui_settings_val_delete")
-async def val_delete(request: Request, name: str = Form(...)):
-    delete_validation_template(name)
-    url = request.url_for("ui_settings_index")
-    return RedirectResponse(url=url, status_code=303)
+@router.post("/ui/settings/val/delete_check/{name}", response_class=HTMLResponse, name="ui_settings_val_delete_check")
+def ui_settings_val_delete_check(request: Request, name: str, index: int = Form(...)) -> HTMLResponse:
+    path = _json_path(VAL_DIR, name)
+    tpl = ValidateTemplate.from_dict(_load_json(path))
+    tpl.checks = tpl.checks or []
+    if 0 <= index < len(tpl.checks):
+        del tpl.checks[index]
+    _save_json(path, tpl.to_dict())
+    return templates.TemplateResponse("ui/settings/_val_checks_table.html", {"request": request, "tpl": tpl})
 
 
-@router.post("/ui/settings/validation/import", name="ui_settings_val_import")
-async def val_import(request: Request, name: str = Form(...), file: UploadFile = File(...)):
-    content = (await file.read()).decode("utf-8", errors="ignore")
-    import_validation_csv(name, content)
-    url = request.url_for("ui_settings_val_edit", name=name)
-    return RedirectResponse(url=url, status_code=303)
+@router.get("/ui/settings/val/export/{name}.json", response_class=JSONResponse, name="ui_settings_val_export_json")
+def ui_settings_val_export_json(name: str) -> JSONResponse:
+    return JSONResponse(_load_json(_json_path(VAL_DIR, name)))
 
 
-@router.get("/ui/settings/validation/{name}/export.json", name="ui_settings_val_export_json")
-async def val_export_json(name: str):
-    tpl = load_validation_template(name)
-    payload = json.dumps(tpl, indent=2)
-    headers = {"Content-Disposition": f"attachment; filename={name}.json"}
-    return Response(content=payload, media_type="application/json", headers=headers)
+@router.get("/ui/settings/val/export/{name}.csv", response_class=PlainTextResponse, name="ui_settings_val_export_csv")
+def ui_settings_val_export_csv(name: str) -> PlainTextResponse:
+    tpl = ValidateTemplate.from_dict(_load_json(_json_path(VAL_DIR, name)))
+    rows = ["segment,field,required,pattern,allowed_values"]
+    for check in tpl.checks or []:
+        rows.append(
+            ",".join(
+                [
+                    check.segment,
+                    str(check.field),
+                    "true" if check.required else "false",
+                    "" if not check.pattern else check.pattern.replace(",", ";"),
+                    "" if not check.allowed_values else ";".join(check.allowed_values),
+                ]
+            )
+        )
+    return PlainTextResponse("\n".join(rows), media_type="text/csv")
 
 
-@router.get("/ui/settings/validation/{name}/export.csv", name="ui_settings_val_export_csv")
-async def val_export_csv(name: str):
-    tpl = load_validation_template(name)
-    csv_text = export_validation_csv(tpl)
-    headers = {"Content-Disposition": f"attachment; filename={name}.csv"}
-    return Response(content=csv_text, media_type="text/csv", headers=headers)
+@router.post("/ui/settings/val/import_csv/{name}", response_class=HTMLResponse, name="ui_settings_val_import_csv")
+async def ui_settings_val_import_csv(request: Request, name: str, file: UploadFile = File(...)) -> HTMLResponse:
+    if not file.filename.lower().endswith(".csv"):
+        raise HTTPException(status_code=400, detail="Upload a .csv file")
+    rows = (await file.read()).decode("utf-8").splitlines()
+    reader = csv.DictReader(rows)
+    checks: List[ValidateCheck] = []
+    for row in reader:
+        allowed_raw = row.get("allowed_values") or ""
+        allowed = [v.strip() for v in allowed_raw.replace(";", ",").split(",") if v.strip()] or None
+        checks.append(
+            ValidateCheck(
+                segment=(row.get("segment") or "").strip().upper(),
+                field=int(row.get("field") or 0),
+                required=str(row.get("required") or "true").strip().lower() in {"1", "true", "yes", "y"},
+                pattern=row.get("pattern") or None,
+                allowed_values=allowed,
+            )
+        )
+    tpl = ValidateTemplate(name=_safe_name(name), checks=checks)
+    _save_json(_json_path(VAL_DIR, name), tpl.to_dict())
+    return templates.TemplateResponse("ui/settings/_val_checks_table.html", {"request": request, "tpl": tpl})

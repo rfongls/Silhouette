@@ -1,28 +1,26 @@
-{% set existing = checks if checks is defined and checks else [] %}
-{% set blanks = [{'segment':'','field':'','required':True,'pattern':'','allowed_values':''}] * 3 %}
-{% set rows = existing + blanks %}
-<table class="table mt">
+<table class="table">
   <thead>
-    <tr>
-      <th scope="col">Segment</th>
-      <th scope="col">Field</th>
-      <th scope="col">Required</th>
-      <th scope="col">Pattern</th>
-      <th scope="col">Allowed values</th>
-    </tr>
+    <tr><th>#</th><th>Segment</th><th>Field</th><th>Required</th><th>Pattern</th><th>Allowed Values</th><th></th></tr>
   </thead>
   <tbody>
-    {% for check in rows %}
-      <tr>
-        <td><input class="input" name="checks-segment" value="{{ check.segment | default('') }}" placeholder="MSH" /></td>
-        <td><input class="input" name="checks-field" value="{{ check.field | default('') }}" placeholder="9" /></td>
-        <td class="center">
-          <input type="checkbox" name="checks-required" value="{{ loop.index0 }}" {% if check.required %}checked{% endif %} />
-        </td>
-        <td><input class="input" name="checks-pattern" value="{{ check.pattern | default('') }}" placeholder="^ADT\\^A01$" /></td>
-        <td><input class="input" name="checks-allowed" value="{{ check.allowed_values | default('') }}" placeholder="ADT^A01;ADT^A04" /></td>
-      </tr>
-    {% endfor %}
+  {% for c in (tpl.checks or []) %}
+    <tr>
+      <td>{{ loop.index0 }}</td>
+      <td>{{ c.segment }}</td>
+      <td>{{ c.field }}</td>
+      <td>{{ "yes" if c.required else "no" }}</td>
+      <td><code>{{ c.pattern or "" }}</code></td>
+      <td>{{ ", ".join(c.allowed_values) if c.allowed_values else "" }}</td>
+      <td>
+        <form hx-post="{{ request.url_for('ui_settings_val_delete_check', name=tpl.name) }}" hx-target="#val-checks">
+          <input type="hidden" name="index" value="{{ loop.index0 }}" />
+          <button class="button danger small" title="Delete">✕</button>
+        </form>
+      </td>
+    </tr>
+  {% else %}
+    <tr><td colspan="7" class="muted">No checks yet.</td></tr>
+  {% endfor %}
   </tbody>
 </table>
-<p class="muted micro">Separate allowed values with semicolons. Leave blank for no restriction.</p>
+

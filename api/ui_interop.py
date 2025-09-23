@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -11,12 +12,6 @@ from api.ui import install_link_for
 from api.interop_gen import generate_messages, parse_any_request, _normalize_validation_result
 from silhouette_core.interop.deid import deidentify_message, apply_deid_with_template
 from silhouette_core.interop.validate_workbook import validate_message, validate_with_template
-from silhouette_core.interop.template_store import (
-    list_deid_templates,
-    list_validation_templates,
-    load_deid_template,
-    load_validation_template,
-)
 from api.debug_log import (
     LOG_FILE,
     tail_debug_lines,
@@ -27,6 +22,46 @@ from api.debug_log import (
 router = APIRouter()
 templates = Jinja2Templates(directory="templates")
 install_link_for(templates)
+
+DEID_DIR = Path("configs/interop/deid_templates")
+VAL_DIR = Path("configs/interop/validate_templates")
+
+
+def _ensure_dirs() -> None:
+    DEID_DIR.mkdir(parents=True, exist_ok=True)
+    VAL_DIR.mkdir(parents=True, exist_ok=True)
+
+
+def list_deid_templates() -> list[str]:
+    _ensure_dirs()
+    return [p.stem for p in sorted(DEID_DIR.glob("*.json"))]
+
+
+def list_validation_templates() -> list[str]:
+    _ensure_dirs()
+    return [p.stem for p in sorted(VAL_DIR.glob("*.json"))]
+
+
+def load_deid_template(name: str) -> dict:
+    _ensure_dirs()
+    path = DEID_DIR / f"{name}.json"
+    if not path.exists():
+        raise HTTPException(status_code=400, detail=f"De-identify template '{name}' not found")
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:  # pragma: no cover - malformed template
+        raise HTTPException(status_code=400, detail=f"Invalid template JSON: {exc}") from exc
+
+
+def load_validation_template(name: str) -> dict:
+    _ensure_dirs()
+    path = VAL_DIR / f"{name}.json"
+    if not path.exists():
+        raise HTTPException(status_code=400, detail=f"Validation template '{name}' not found")
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:  # pragma: no cover - malformed template
+        raise HTTPException(status_code=400, detail=f"Invalid template JSON: {exc}") from exc
 
 # ---------------- Server-side pipeline presets ----------------
 PIPELINE_PRESETS = {
@@ -58,15 +93,7 @@ PIPELINE_PRESETS = {
 
 
 def _template_lists() -> tuple[list[str], list[str]]:
-    deid = ["builtin"]
-    val = ["builtin"]
-    for name in list_deid_templates():
-        if name not in deid:
-            deid.append(name)
-    for name in list_validation_templates():
-        if name not in val:
-            val.append(name)
-    return deid, val
+    return list_deid_templates(), list_validation_templates()
 
 
 def _pipeline_defaults(preset_key: str | None) -> dict:
@@ -86,12 +113,7 @@ def _maybe_load_deid_template(name: str | None) -> dict | None:
     normalized = str(name).strip()
     if not normalized or normalized.lower() in {"builtin", "legacy", "none"}:
         return None
-    try:
-        return load_deid_template(normalized)
-    except FileNotFoundError:
-        raise HTTPException(400, f"De-identify template '{normalized}' not found")
-    except ValueError as exc:
-        raise HTTPException(400, str(exc))
+    return load_deid_template(normalized)
 
 
 def _maybe_load_validation_template(name: str | None) -> dict | None:
@@ -100,12 +122,8 @@ def _maybe_load_validation_template(name: str | None) -> dict | None:
     normalized = str(name).strip()
     if not normalized or normalized.lower() in {"builtin", "legacy", "none"}:
         return None
-    try:
-        return load_validation_template(normalized)
-    except FileNotFoundError:
-        raise HTTPException(400, f"Validation template '{normalized}' not found")
-    except ValueError as exc:
-        raise HTTPException(400, str(exc))
+    return load_validation_template(normalized)
+
 
 def _safe_url_for(request: Request, name: str, fallback: str) -> str:
     try:

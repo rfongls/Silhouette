@@ -20,10 +20,6 @@ from silhouette_core.interop.hl7_mutate import (
 )
 from silhouette_core.interop.deid import deidentify_message, apply_deid_with_template
 from silhouette_core.interop.validate_workbook import validate_message, validate_with_template
-from silhouette_core.interop.template_store import (
-    load_deid_template,
-    load_validation_template,
-)
 from .interop_gen import generate_messages, _find_template_by_trigger, _normalize_validation_result
 from api.activity_log import log_activity
 from api.debug_log import log_debug_event
@@ -60,6 +56,47 @@ install_link_for(templates)
 OUT_ROOT = Path("out/interop")
 UI_OUT = OUT_ROOT / "ui"
 INDEX_PATH = UI_OUT / "index.json"
+
+DEID_DIR = Path("configs/interop/deid_templates")
+VAL_DIR = Path("configs/interop/validate_templates")
+for directory in (DEID_DIR, VAL_DIR):
+    directory.mkdir(parents=True, exist_ok=True)
+
+
+def _load_template(directory: Path, name: str, kind: str) -> dict:
+    path = directory / f"{name}.json"
+    if not path.exists():
+        raise HTTPException(status_code=400, detail=f"{kind.title()} template '{name}' not found")
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:  # pragma: no cover - malformed template
+        raise HTTPException(status_code=400, detail=f"Invalid {kind} template JSON: {exc}") from exc
+
+
+def load_deid_template(name: str) -> dict:
+    return _load_template(DEID_DIR, name, "de-identify")
+
+
+def load_validation_template(name: str) -> dict:
+    return _load_template(VAL_DIR, name, "validation")
+
+
+def _maybe_load_deid_template(name: str | None) -> dict | None:
+    if not name:
+        return None
+    normalized = str(name).strip()
+    if not normalized or normalized.lower() in {"builtin", "legacy", "none"}:
+        return None
+    return load_deid_template(normalized)
+
+
+def _maybe_load_validation_template(name: str | None) -> dict | None:
+    if not name:
+        return None
+    normalized = str(name).strip()
+    if not normalized or normalized.lower() in {"builtin", "legacy", "none"}:
+        return None
+    return load_validation_template(normalized)
 
 
 def _maybe_load_deid_template(name: str | None) -> dict | None:
