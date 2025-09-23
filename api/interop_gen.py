@@ -417,8 +417,12 @@ def _wants_validation_html(request: Request) -> bool:
     """Detect when the caller expects an HTML validation report."""
     headers = request.headers
     hx_header = headers.get("hx-request") or headers.get("HX-Request")
-    if hx_header:
-        return True
+    if hx_header is not None:
+        try:
+            if str(hx_header).lower() == "true":
+                return True
+        except Exception:
+            return True
     accept = (headers.get("accept") or headers.get("Accept") or "").lower()
     return "text/html" in accept
 
@@ -701,7 +705,8 @@ async def api_validate(request: Request):
             "ui/interop/_validate_report.html",
             {"request": request, "r": model},
         )
-    return JSONResponse(results)
+    model = _normalize_validation_result(results, text)
+    return JSONResponse(model)
 
 
 @router.post("/api/interop/mllp/send")

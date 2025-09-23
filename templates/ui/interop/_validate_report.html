@@ -72,6 +72,10 @@
       if (field) {
         window.PipelineContext.setMessage(field.value || '');
       }
+      if (window.InteropUI && typeof window.InteropUI.onValidateComplete === 'function') {
+        try { window.InteropUI.onValidateComplete(); } catch (err) { /* ignore */ }
+      }
+
     })();
   </script>
 
