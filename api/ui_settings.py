@@ -140,7 +140,12 @@ def ui_settings_index(request: Request) -> Response:
         )
 
 
-@router.post("/ui/settings/deid/create", response_class=HTMLResponse, name="ui_settings_deid_create")
+@router.post(
+    "/ui/settings/deid/create",
+    response_class=HTMLResponse,
+    name="ui_settings_deid_create",
+    response_model=None,
+)
 def ui_settings_deid_create(request: Request, name: str = Form(...)) -> HTMLResponse:
     path = _json_path(DEID_DIR, name)
     if path.exists():
@@ -149,7 +154,7 @@ def ui_settings_deid_create(request: Request, name: str = Form(...)) -> HTMLResp
     _save_json(path, tpl.to_dict())
     return templates.TemplateResponse(
         "ui/settings/_deid_list.html",
-        {"request": request, "names": _list_templates(DEID_DIR)},
+        {"request": request, "deid_templates": _list_templates(DEID_DIR)},
     )
 
 
@@ -246,7 +251,12 @@ async def ui_settings_deid_import_csv(request: Request, name: str, file: UploadF
     return templates.TemplateResponse("ui/settings/_deid_rules_table.html", {"request": request, "tpl": tpl})
 
 
-@router.post("/ui/settings/val/create", response_class=HTMLResponse, name="ui_settings_val_create")
+@router.post(
+    "/ui/settings/val/create",
+    response_class=HTMLResponse,
+    name="ui_settings_val_create",
+    response_model=None,
+)
 def ui_settings_val_create(request: Request, name: str = Form(...)) -> HTMLResponse:
     path = _json_path(VAL_DIR, name)
     if path.exists():
@@ -255,7 +265,39 @@ def ui_settings_val_create(request: Request, name: str = Form(...)) -> HTMLRespo
     _save_json(path, tpl.to_dict())
     return templates.TemplateResponse(
         "ui/settings/_val_list.html",
-        {"request": request, "names": _list_templates(VAL_DIR)},
+        {"request": request, "val_templates": _list_templates(VAL_DIR)},
+    )
+
+
+@router.post(
+    "/ui/settings/deid/delete",
+    response_class=HTMLResponse,
+    name="ui_settings_deid_delete",
+    response_model=None,
+)
+def ui_settings_deid_delete(request: Request, name: str = Form(...)) -> HTMLResponse:
+    path = _json_path(DEID_DIR, name)
+    if path.exists():
+        path.unlink()
+    return templates.TemplateResponse(
+        "ui/settings/_deid_list.html",
+        {"request": request, "deid_templates": _list_templates(DEID_DIR)},
+    )
+
+
+@router.post(
+    "/ui/settings/val/delete",
+    response_class=HTMLResponse,
+    name="ui_settings_val_delete",
+    response_model=None,
+)
+def ui_settings_val_delete(request: Request, name: str = Form(...)) -> HTMLResponse:
+    path = _json_path(VAL_DIR, name)
+    if path.exists():
+        path.unlink()
+    return templates.TemplateResponse(
+        "ui/settings/_val_list.html",
+        {"request": request, "val_templates": _list_templates(VAL_DIR)},
     )
 
 

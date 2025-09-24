@@ -14,11 +14,7 @@
           <input class="input" type="text" name="name" placeholder="Template name (e.g., default)" required />
           <button class="button">Create</button>
         </form>
-        <div id="deid-list" class="mt">
-          {% with names = deid_templates %}
-            {% include "ui/settings/_deid_list.html" %}
-          {% endwith %}
-        </div>
+        {% include "ui/settings/_deid_list.html" %}
       </div>
 
       <div class="card">
@@ -27,11 +23,7 @@
           <input class="input" type="text" name="name" placeholder="Template name (e.g., default)" required />
           <button class="button">Create</button>
         </form>
-        <div id="val-list" class="mt">
-          {% with names = val_templates %}
-            {% include "ui/settings/_val_list.html" %}
-          {% endwith %}
-        </div>
+        {% include "ui/settings/_val_list.html" %}
       </div>
     </div>
   </div>
