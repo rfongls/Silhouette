@@ -320,6 +320,7 @@ def generate_messages(body: dict):
         deidentify = True
     deid_template_name = body.get("deid_template")
     deid_template = _maybe_load_deid_template(deid_template_name)
+    apply_baseline = _to_bool(body.get("apply_baseline"))
     # Load text (from relpath or inline "text")
     template_path = None
     if not text:
@@ -349,8 +350,9 @@ def generate_messages(body: dict):
         if include_clinical:
             msg = enrich_clinical_fields(msg, seed=derived)
         if deidentify:
-            if deid_template:
-                msg = apply_deid_with_template(msg, deid_template)
+            if deid_template or apply_baseline:
+                tpl_payload = deid_template or {"rules": []}
+                msg = apply_deid_with_template(msg, tpl_payload, apply_baseline=apply_baseline)
             else:
                 msg = deidentify_message(msg, seed=derived)
         msgs.append(msg)
@@ -361,6 +363,7 @@ def generate_messages(body: dict):
         rel=rel or "inline",
         deidentify=deidentify,
         deid_template=deid_template_name or "",
+        baseline=apply_baseline,
         ensure_unique=ensure_unique,
         include_clinical=include_clinical,
         preview=first_preview,
@@ -706,8 +709,10 @@ async def api_deidentify(request: Request):
         seed_int = None
     text_value = text if isinstance(text, str) else str(text)
     template = _maybe_load_deid_template(body.get("deid_template") or body.get("template"))
-    if template:
-        out = apply_deid_with_template(text_value, template)
+    apply_baseline = _to_bool(body.get("apply_baseline"))
+    if template or apply_baseline:
+        tpl_payload = template or {"rules": []}
+        out = apply_deid_with_template(text_value, tpl_payload, apply_baseline=apply_baseline)
     else:
         out = deidentify_message(text_value, seed=seed_int)
     changes = _summarize_hl7_changes(text_value, out)
@@ -717,6 +722,7 @@ async def api_deidentify(request: Request):
         mode=body.get("mode") or "",
         changed=len(changes),
         template=body.get("deid_template") or "",
+        baseline=apply_baseline,
     )
     if _wants_text_plain(request):
         return PlainTextResponse(
@@ -745,8 +751,10 @@ async def api_deidentify_summary(request: Request):
         seed_int = None
     src = text if isinstance(text, str) else str(text)
     template = _maybe_load_deid_template(body.get("deid_template") or body.get("template"))
-    if template:
-        deid = apply_deid_with_template(src, template)
+    apply_baseline = _to_bool(body.get("apply_baseline"))
+    if template or apply_baseline:
+        tpl_payload = template or {"rules": []}
+        deid = apply_deid_with_template(src, tpl_payload, apply_baseline=apply_baseline)
     else:
         deid = deidentify_message(src, seed=seed_int)
     changes = _summarize_hl7_changes(src, deid)

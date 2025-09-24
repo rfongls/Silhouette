@@ -4,6 +4,11 @@ import hashlib
 import random
 from typing import Optional
 
+try:  # pragma: no cover - optional baseline import
+    from silhouette_core.interop.deid_defaults import deidentify_hl7 as _baseline_deid
+except Exception:  # pragma: no cover - baseline unavailable
+    _baseline_deid = None
+
 FIELD_SEP = "|"
 COMP_SEP = "^"
 SUBCOMP_SEP = "&"
@@ -125,7 +130,7 @@ def _apply_action(existing: str, action: str, param: Optional[str]) -> str:
     return ""
 
 
-def apply_deid_with_template(message_text: str, tpl: dict) -> str:
+def apply_deid_with_template(message_text: str, tpl: dict, apply_baseline: bool = False) -> str:
     """Apply a structured template to de-identify an HL7 message."""
 
     if not message_text:
@@ -169,38 +174,45 @@ def apply_deid_with_template(message_text: str, tpl: dict) -> str:
         )
 
     if not norm_rules:
-        return message_text
+        result = message_text
+    else:
+        out_lines: list[str] = []
+        for line in message_text.splitlines():
+            if not line.strip():
+                out_lines.append(line)
+                continue
+            parts = line.split(FIELD_SEP)
+            seg_name = parts[0].strip().upper() if parts else ""
+            if not seg_name:
+                out_lines.append(line)
+                continue
+            seg_rules = [r for r in norm_rules if r["segment"] == seg_name]
+            if not seg_rules:
+                out_lines.append(line)
+                continue
+            for rule in seg_rules:
+                existing = _read_hl7_path(
+                    parts,
+                    seg_name,
+                    rule["field"],
+                    rule["component"],
+                    rule["subcomponent"],
+                )
+                new_value = _apply_action(existing, rule["action"], rule.get("param"))
+                parts = _set_hl7_path(
+                    parts,
+                    seg_name,
+                    rule["field"],
+                    rule["component"],
+                    rule["subcomponent"],
+                    new_value,
+                )
+            out_lines.append(FIELD_SEP.join(parts))
+        result = "\n".join(out_lines)
 
-    out_lines: list[str] = []
-    for line in message_text.splitlines():
-        if not line.strip():
-            out_lines.append(line)
-            continue
-        parts = line.split(FIELD_SEP)
-        seg_name = parts[0].strip().upper() if parts else ""
-        if not seg_name:
-            out_lines.append(line)
-            continue
-        seg_rules = [r for r in norm_rules if r["segment"] == seg_name]
-        if not seg_rules:
-            out_lines.append(line)
-            continue
-        for rule in seg_rules:
-            existing = _read_hl7_path(
-                parts,
-                seg_name,
-                rule["field"],
-                rule["component"],
-                rule["subcomponent"],
-            )
-            new_value = _apply_action(existing, rule["action"], rule.get("param"))
-            parts = _set_hl7_path(
-                parts,
-                seg_name,
-                rule["field"],
-                rule["component"],
-                rule["subcomponent"],
-                new_value,
-            )
-        out_lines.append(FIELD_SEP.join(parts))
-    return "\n".join(out_lines)
+    if apply_baseline and _baseline_deid is not None:
+        from collections import defaultdict
+
+        counts = defaultdict(set)
+        return _baseline_deid(result, counts)
+    return result

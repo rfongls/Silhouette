@@ -384,6 +384,7 @@ async def ui_deidentify(
     text: str = Form(...),
     seed: Optional[int] = Form(None),
     deid_template: Optional[str] = Form(None),
+    apply_baseline: bool = Form(False),
 ):
     """
     HTML-friendly De-Identify: returns <pre> with scrubbed HL7 (no JSON body).
@@ -394,10 +395,13 @@ async def ui_deidentify(
         input_bytes=len((text or "").encode("utf-8", errors="ignore")),
         seed=clean_seed,
         template=deid_template or "",
+        baseline=bool(apply_baseline),
     )
     tpl = _maybe_load_deid_template(deid_template)
-    if tpl:
-        out = apply_deid_with_template(text, tpl)
+    baseline_flag = bool(apply_baseline)
+    if tpl or baseline_flag:
+        template_payload = tpl or {"rules": []}
+        out = apply_deid_with_template(text, template_payload, apply_baseline=baseline_flag)
     else:
         out = deidentify_message(text, seed=clean_seed)
     html = f"<pre class='codepane'>{_esc(out)}</pre>"
@@ -1188,6 +1192,7 @@ async def run_pipeline(request: Request):
     ensure_unique = _to_bool(body.get("ensure_unique"), True)
     include_clinical = _to_bool(body.get("include_clinical"), False)
     deidentify = _to_bool(body.get("deidentify"), False)
+    apply_baseline = _to_bool(body.get("apply_baseline"), False)
     post_fhir = _to_bool(body.get("post_fhir"), False)
     fhir_endpoint = body.get("fhir_endpoint")
     deid_template_name = body.get("deid_template")
@@ -1211,6 +1216,7 @@ async def run_pipeline(request: Request):
             "ensure_unique": ensure_unique,
             "include_clinical": include_clinical,
             "deidentify": deidentify,
+            "apply_baseline": apply_baseline,
             "deid_template": deid_template_name,
         }
         resp = generate_messages(body2)
@@ -1220,8 +1226,9 @@ async def run_pipeline(request: Request):
 
     deid_template = _maybe_load_deid_template(deid_template_name)
     if deidentify:
-        if deid_template:
-            text = apply_deid_with_template(text, deid_template)
+        if deid_template or apply_baseline:
+            tpl_payload = deid_template or {"rules": []}
+            text = apply_deid_with_template(text, tpl_payload, apply_baseline=apply_baseline)
         else:
             text = deidentify_message(text, seed=seed)
 

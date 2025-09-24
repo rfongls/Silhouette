@@ -280,9 +280,14 @@ async def ui_deidentify(request: Request):
         seed_int = None
     if not text:
         return HTMLResponse("<div class='muted'>No input.</div>")
+    raw_baseline = body.get("apply_baseline")
+    baseline_flag = False
+    if raw_baseline not in (None, ""):
+        baseline_flag = str(raw_baseline).strip().lower() in {"1", "true", "on", "yes"}
     tpl = _maybe_load_deid_template(body.get("deid_template") or body.get("template"))
-    if tpl:
-        out = apply_deid_with_template(text, tpl)
+    if tpl or baseline_flag:
+        tpl_payload = tpl or {"rules": []}
+        out = apply_deid_with_template(text, tpl_payload, apply_baseline=baseline_flag)
     else:
         out = deidentify_message(text, seed=seed_int)
     return HTMLResponse(f"<pre class='codepane'>{out}</pre>")

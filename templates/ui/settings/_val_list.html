@@ -1,22 +1,13 @@
-{% for name in names %}
-  <div class="row between mb-1 wrap gap small">
-    <div>
-      <a href="{{ request.url_for('ui_settings_val_edit', name=name) }}" class="link strong">{{ name }}</a>
-      <div class="muted micro">configs/interop/validate_templates/{{ name }}.json</div>
-    </div>
-    <div class="row gap small">
-      <a class="button small" href="{{ request.url_for('ui_settings_val_edit', name=name) }}">Edit</a>
-      <a class="button small" href="{{ request.url_for('ui_settings_val_export_json', name=name) }}">JSON</a>
-      <a class="button small" href="{{ request.url_for('ui_settings_val_export_csv', name=name) }}">CSV</a>
-      <form method="post"
-            action="{{ request.url_for('ui_settings_val_delete') }}"
-            class="inline-form"
-            onsubmit="return confirm('Delete template {{ name }}?');">
+<div id="val-list" class="mt">
+  {% for name in val_templates %}
+    <div class="row between mb-1">
+      <a href="{{ request.url_for('ui_settings_val_edit', name=name) }}" class="link">{{ name }}</a>
+      <form hx-post="{{ request.url_for('ui_settings_val_delete') }}" hx-target="#val-list" class="row gap small" style="margin:0">
         <input type="hidden" name="name" value="{{ name }}" />
-        <button class="button danger small" type="submit">Delete</button>
+        <button class="button danger small" title="Delete template">Delete</button>
       </form>
     </div>
-  </div>
-{% else %}
-  <p class="muted">No templates yet.</p>
-{% endfor %}
+  {% else %}
+    <p class="muted">No templates yet.</p>
+  {% endfor %}
+</div>
