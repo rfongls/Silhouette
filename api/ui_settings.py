@@ -34,7 +34,7 @@ class DeidRule:
     field: int
     component: Optional[int] = None
     subcomponent: Optional[int] = None
-    action: str = "redact"  # redact | mask | hash | replace
+    action: str = "redact"  # redact | mask | hash | replace | preset
     param: Optional[str] = None
 
 @dataclass
@@ -97,6 +97,10 @@ def _save_json(path: Path, obj: Dict[str, Any]) -> None:
 # ---------- Pages ----------
 @router.get("/ui/settings", response_class=HTMLResponse, name="ui_settings_index", response_model=None)
 def ui_settings_index(request: Request) -> Response:
+    # Ensure 'default' exists for De-ID on first visit, without overwriting
+    default_path = _json_path(DEID_DIR, "default")
+    if not default_path.exists():
+        _save_json(default_path, {"name": "default", "version": "v1", "rules": []})
     return templates.TemplateResponse(
         "ui/settings/index.html",
         {
@@ -197,6 +201,71 @@ async def ui_settings_deid_import_csv(request: Request, name: str, file: UploadF
         ))
     _save_json(_json_path(DEID_DIR, name), DeidTemplate(name=_safe_name(name), rules=rules).to_dict())
     tpl = DeidTemplate.from_dict(_load_json(_json_path(DEID_DIR, name)))
+    return templates.TemplateResponse("ui/settings/_deid_rules_table.html", {"request": request, "tpl": tpl})
+
+
+@router.post("/ui/settings/deid/seed_defaults/{name}", response_class=HTMLResponse, name="ui_settings_deid_seed_defaults", response_model=None)
+def ui_settings_deid_seed_defaults(request: Request, name: str) -> Response:
+    """
+    Create or overwrite a template with a rich baseline of rules using presets.
+    """
+    # A carefully chosen baseline across common PHI fields (can expand later)
+    baseline_rules = [
+        # PID
+        {"segment": "PID", "field": 5, "component": 1, "action": "preset", "param": "name"},  # Patient Name (family^given)
+        {"segment": "PID", "field": 7, "action": "preset", "param": "birthdate"},
+        {"segment": "PID", "field": 8, "action": "preset", "param": "gender"},
+        {"segment": "PID", "field": 11, "action": "preset", "param": "address"},
+        {"segment": "PID", "field": 13, "action": "preset", "param": "phone"},
+        {"segment": "PID", "field": 14, "action": "preset", "param": "phone"},
+        {"segment": "PID", "field": 15, "action": "preset", "param": "language"},
+        {"segment": "PID", "field": 19, "action": "preset", "param": "ssn"},
+
+        # NK1
+        {"segment": "NK1", "field": 2, "action": "preset", "param": "name"},
+        {"segment": "NK1", "field": 4, "action": "preset", "param": "address"},
+        {"segment": "NK1", "field": 5, "action": "preset", "param": "phone"},
+        {"segment": "NK1", "field": 6, "action": "preset", "param": "phone"},
+
+        # PV1
+        {"segment": "PV1", "field": 1, "action": "replace", "param": "1"},
+        {"segment": "PV1", "field": 7, "action": "preset", "param": "name"},
+        {"segment": "PV1", "field": 8, "action": "preset", "param": "name"},
+        {"segment": "PV1", "field": 9, "action": "preset", "param": "name"},
+        {"segment": "PV1", "field": 19, "action": "preset", "param": "name"},
+        {"segment": "PV1", "field": 39, "action": "preset", "param": "facility"},
+
+        # PD1
+        {"segment": "PD1", "field": 5, "action": "preset", "param": "name"},
+        {"segment": "PD1", "field": 7, "action": "preset", "param": "facility"},
+
+        # ORC/OBR/OBX timestamps & contact
+        {"segment": "ORC", "field": 9, "action": "preset", "param": "datetime"},
+        {"segment": "ORC", "field": 15, "action": "preset", "param": "datetime"},
+        {"segment": "OBR", "field": 6, "action": "preset", "param": "datetime"},
+        {"segment": "OBR", "field": 7, "action": "preset", "param": "datetime"},
+        {"segment": "OBR", "field": 8, "action": "preset", "param": "datetime"},
+        {"segment": "OBR", "field": 14, "action": "preset", "param": "datetime"},
+        {"segment": "OBR", "field": 17, "action": "preset", "param": "phone"},
+        {"segment": "OBR", "field": 22, "action": "preset", "param": "datetime"},
+        {"segment": "OBX", "field": 14, "action": "preset", "param": "datetime"},
+
+        # OBX blobs (PDF/XML)
+        {"segment": "OBX", "field": 5, "action": "preset", "param": "pdf_blob"},
+
+        # NTE free text
+        {"segment": "NTE", "field": 3, "action": "preset", "param": "note"},
+
+        # EVN / ACC dates
+        {"segment": "EVN", "field": 2, "action": "preset", "param": "datetime"},
+        {"segment": "EVN", "field": 3, "action": "preset", "param": "datetime"},
+        {"segment": "ACC", "field": 1, "action": "preset", "param": "datetime"},
+        {"segment": "ACC", "field": 4, "action": "preset", "param": "datetime"},
+    ]
+
+    path = _json_path(DEID_DIR, name)
+    _save_json(path, {"name": _safe_name(name), "version": "v1", "rules": baseline_rules})
+    tpl = DeidTemplate.from_dict(_load_json(path))
     return templates.TemplateResponse("ui/settings/_deid_rules_table.html", {"request": request, "tpl": tpl})
 
 # Delete the entire De-ID template (required by your template)

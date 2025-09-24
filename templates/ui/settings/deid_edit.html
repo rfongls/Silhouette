@@ -8,23 +8,70 @@
     <input type="file" name="file" accept=".csv" required />
     <button class="button">Import CSV</button>
   </form>
+  <form class="row gap small" hx-post="{{ request.url_for('ui_settings_deid_seed_defaults', name=tpl.name) }}" hx-target="#deid-rules">
+    <button class="button secondary" title="Populate the template with recommended defaults">Seed defaults</button>
+  </form>
 </div>
 <div class="card mt">
   <h2 class="text-h2">Rules</h2>
   <form class="row gap small mb" hx-post="{{ request.url_for('ui_settings_deid_add_rule', name=tpl.name) }}" hx-target="#deid-rules">
-    <input class="input" name="segment" placeholder="PID" required style="max-width:7rem" />
+    <input class="input" name="segment" placeholder="Segment (e.g., PID)" required style="max-width:7rem" />
     <input class="input" name="field" type="number" min="1" placeholder="Field" required style="max-width:6rem" />
     <input class="input" name="component" type="number" min="1" placeholder="Comp." style="max-width:6rem" />
     <input class="input" name="subcomponent" type="number" min="1" placeholder="Subcomp." style="max-width:8rem" />
-    <select class="input" name="action" style="max-width:12rem">
+
+    <select class="input" name="action" id="deid-action" style="max-width:12rem" onchange="toggleDeidParam()">
       <option value="redact">redact</option>
       <option value="mask">mask</option>
       <option value="hash">hash</option>
-      <option value="replace">replace</option>
+      <option value="replace">replace (literal)</option>
+      <option value="preset">preset (synthetic)</option>
     </select>
-    <input class="input" name="param" placeholder="Param (mask char, replacement, hash salt)" style="min-width:18rem" />
+
+    <!-- Literal param for replace/mask/hash -->
+    <input class="input" name="param" id="param-literal" placeholder="Param (e.g., *, fixed string, hash salt)" style="min-width:18rem" />
+
+    <!-- Preset param select (shown when action=preset) -->
+    <select class="input" name="param" id="param-preset" style="min-width:18rem; display:none" disabled>
+      <option value="name">Name (XPN family^given)</option>
+      <option value="birthdate">Birthdate (YYYYMMDD)</option>
+      <option value="datetime">Date/Time (YYYYMMDDHHMMSS)</option>
+      <option value="gender">Gender (M/F)</option>
+      <option value="address">Address (XAD)</option>
+      <option value="phone">Phone (XTN)</option>
+      <option value="language">Language</option>
+      <option value="race">Race</option>
+      <option value="mrn">MRN</option>
+      <option value="ssn">SSN</option>
+      <option value="facility">Facility (ID^Name^Addr)</option>
+      <option value="note">Note (NTE)</option>
+      <option value="pdf_blob">PDF Blob (JVBER stub)</option>
+      <option value="xml_blob">XML Blob (PD94 stub)</option>
+    </select>
+
     <button class="button">Add</button>
   </form>
+
+  <script>
+    function toggleDeidParam() {
+      var a = document.getElementById('deid-action').value;
+      var lit = document.getElementById('param-literal');
+      var pre = document.getElementById('param-preset');
+      if (a === 'preset') {
+        lit.style.display = 'none';
+        lit.disabled = true;
+        pre.style.display = '';
+        pre.disabled = false;
+      } else {
+        lit.style.display = '';
+        lit.disabled = false;
+        pre.style.display = 'none';
+        pre.disabled = true;
+      }
+    }
+    // initialize on page load in case browser restores values
+    document.addEventListener('DOMContentLoaded', toggleDeidParam);
+  </script>
 
   <div id="deid-rules">
     {% include "ui/settings/_deid_rules_table.html" %}

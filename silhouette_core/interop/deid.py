@@ -4,6 +4,8 @@ import hashlib
 import random
 from typing import Optional
 
+from silhouette_core.interop.deid_presets import gen_preset
+
 try:  # pragma: no cover - optional baseline import
     from silhouette_core.interop.deid_defaults import deidentify_hl7 as _baseline_deid
 except Exception:  # pragma: no cover - baseline unavailable
@@ -127,6 +129,9 @@ def _apply_action(existing: str, action: str, param: Optional[str]) -> str:
         salt = param or ""
         digest = hashlib.sha256((salt + (existing or "")).encode("utf-8")).hexdigest()
         return digest[:16]
+    if act == "preset":
+        # param is a preset key: name, birthdate, datetime, gender, address, phone, mrn, ssn, facility, note, pdf_blob, xml_blob, ...
+        return gen_preset(param or "")
     return ""
 
 
