@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, Form, HTTPException, Request, UploadFile, File
-from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse
+from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse, Response
 from starlette.templating import Jinja2Templates
 
 try:
@@ -117,8 +117,13 @@ def ui_settings_ping() -> Dict[str, bool]:
     return {"ok": True}
 
 
-@router.get("/ui/settings", response_class=HTMLResponse, name="ui_settings_index")
-def ui_settings_index(request: Request) -> HTMLResponse | PlainTextResponse:
+@router.get(
+    "/ui/settings",
+    response_class=HTMLResponse,
+    name="ui_settings_index",
+    response_model=None,
+)
+def ui_settings_index(request: Request) -> Response:
     try:
         return templates.TemplateResponse(
             "ui/settings/index.html",
