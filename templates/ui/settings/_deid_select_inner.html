@@ -5,6 +5,6 @@
 </select>
 
 <!-- Open editor -->
-<form method="get" action="" onsubmit="this.action='{{ request.url_for('ui_settings_deid_edit', name='__NAME__') }}'.replace('__NAME__', document.getElementById('deid-select').value)">
+<form method="get" class="row gap small" action="" onsubmit="this.action='{{ request.url_for('ui_settings_deid_edit', name='__NAME__') }}'.replace('__NAME__', document.getElementById('deid-select').value)">
   <button class="button">Open</button>
 </form>
