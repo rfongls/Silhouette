@@ -1,5 +1,13 @@
 {% extends "layout.html" %}
 {% block content %}
+<style>
+.modal-root { position: fixed; inset: 0; z-index: 1000; }
+.modal-backdrop { position: absolute; inset: 0; background: rgba(0, 0, 0, 0.2); backdrop-filter: blur(1px); }
+.modal { position: absolute; inset: 0; display: grid; place-items: center; padding: 1.5rem; }
+.modal-card { background: #fff; border-radius: 1rem; padding: 1.25rem 1.5rem; min-width: 720px; max-width: 90vw; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2); }
+.modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem; }
+</style>
+
 <h1 class="text-h1">De-identify Template — {{ tpl.name }}</h1>
 
 <div class="row gap">
@@ -20,93 +28,14 @@
 
 <div class="card mt">
   <h2 class="text-h2">Rules</h2>
-  <form class="row gap small mb" hx-post="{{ request.url_for('ui_settings_deid_add_rule', name=tpl.name) }}" hx-target="#deid-rules" id="deid-add-form">
-    <input class="input" name="segment" placeholder="Segment (e.g., PID)" required style="max-width:7rem" />
-    <input class="input" name="field" type="number" min="1" placeholder="Field" required style="max-width:6rem" />
-    <input class="input" name="component" type="number" min="1" placeholder="Comp." style="max-width:6rem" />
-    <input class="input" name="subcomponent" type="number" min="1" placeholder="Subcomp." style="max-width:8rem" />
-
-    <select class="input" name="action" id="deid-action" style="max-width:14rem" onchange="syncParamControls()">
-      <option value="redact">redact</option>
-      <option value="mask">mask (param = mask char)</option>
-      <option value="hash">hash (param = salt)</option>
-      <option value="replace">replace (param = literal)</option>
-      <option value="preset">preset (synthetic)</option>
-    </select>
-
-    <select class="input" id="param-mode" style="max-width:12rem" onchange="syncParamControls()">
-      <option value="preset">Preset</option>
-      <option value="free">Free-text</option>
-    </select>
-
-    <!-- Preset dropdown -->
-    <select class="input" id="param-preset" style="min-width:18rem">
-      <option value="name">Name (XPN family^given)</option>
-      <option value="birthdate">Birthdate (YYYYMMDD)</option>
-      <option value="datetime">Date/Time (YYYYMMDDHHMMSS)</option>
-      <option value="gender">Gender (M/F)</option>
-      <option value="address">Address (XAD)</option>
-      <option value="phone">Phone (XTN)</option>
-      <option value="language">Language</option>
-      <option value="race">Race</option>
-      <option value="mrn">MRN</option>
-      <option value="ssn">SSN</option>
-      <option value="facility">Facility (ID^Name^Addr)</option>
-      <option value="note">Note (NTE)</option>
-      <option value="pdf_blob">PDF Blob (JVBER stub)</option>
-      <option value="xml_blob">XML Blob (PD94 stub)</option>
-    </select>
-
-    <!-- Free text (used by replace/mask/hash or truly custom) -->
-    <input class="input" id="param-literal" placeholder="Param (e.g., *, fixed string, hash salt, custom)" style="min-width:18rem" />
-
-    <button class="button">Add</button>
-  </form>
-
-  <script>
-  function syncParamControls() {
-    const action = document.getElementById('deid-action').value;
-    const mode   = document.getElementById('param-mode').value;
-    const preset = document.getElementById('param-preset');
-    const free   = document.getElementById('param-literal');
-
-    if (action === 'preset') {
-      document.getElementById('param-mode').disabled = false;
-      if (mode === 'preset') {
-        preset.style.display = '';
-        preset.disabled = false;
-        preset.name = 'param';
-        free.style.display = 'none';
-        free.disabled = true;
-        free.name = '';
-      } else {
-        preset.style.display = 'none';
-        preset.disabled = true;
-        preset.name = '';
-        free.style.display = '';
-        free.disabled = false;
-        free.name = 'param';
-      }
-    } else if (action === 'replace' || action === 'mask' || action === 'hash') {
-      document.getElementById('param-mode').disabled = true;
-      preset.style.display = 'none';
-      preset.disabled = true;
-      preset.name = '';
-      free.style.display = '';
-      free.disabled = false;
-      free.name = 'param';
-    } else {
-      document.getElementById('param-mode').disabled = true;
-      preset.style.display = 'none';
-      preset.disabled = true;
-      preset.name = '';
-      free.style.display = 'none';
-      free.disabled = true;
-      free.name = '';
-    }
-  }
-  document.addEventListener('DOMContentLoaded', syncParamControls);
-  </script>
+  <div class="row mb">
+    <button
+      class="button"
+      hx-get="{{ request.url_for('ui_settings_deid_new_rule_modal', name=tpl.name) }}"
+      hx-target="body"
+      hx-swap="beforeend"
+    >Add Rule</button>
+  </div>
 
   <div class="grid two mt">
     <div>
@@ -122,7 +51,10 @@
         <li><b>mask</b>: replaces each char; <i>Param</i> = mask char (e.g., <code>*</code>).</li>
         <li><b>hash</b>: deterministic 16-char digest; <i>Param</i> = optional salt.</li>
         <li><b>replace</b>: literal string; <i>Param</i> = fixed text.</li>
-        <li><b>preset</b>: synthetic; choose a preset or switch to Free-text to enter a preset key manually.</li>
+        <li><b>preset</b>: synthetic; choose from presets or enter a custom preset key.</li>
+        <li><b>regex_replace</b>: JSON param with <code>pattern</code>, <code>repl</code>, <code>flags</code>.</li>
+        <li><b>regex_redact</b>: JSON param; matches are masked with <code>*</code>.</li>
+        <li><b>dotnet_regex_*</b>: future hook — inert unless <code>ENABLE_DOTNET_REGEX=1</code>.</li>
       </ul>
       <h4 class="text-h4 mb">Common presets</h4>
       <ul class="mb">

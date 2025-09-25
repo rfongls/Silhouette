@@ -1,0 +1,30 @@
+<div id="val-modal" class="modal-root">
+  <div class="modal-backdrop" onclick="document.getElementById('val-modal').remove()"></div>
+  <div class="modal" role="dialog" aria-modal="true">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 class="text-h3">Add Validation Check</h3>
+        <button class="button ghost" type="button" onclick="document.getElementById('val-modal').remove()">✕</button>
+      </div>
+      <form
+        hx-post="{{ request.url_for('ui_settings_val_add_check', name=tpl.name) }}"
+        hx-target="#val-checks"
+        hx-on::after-request="var m=document.getElementById('val-modal');if(m){m.remove();}"
+      >
+        <div class="grid two">
+          <label>Segment<input class="input" name="segment" placeholder="MSH" required></label>
+          <label>Field<input class="input" name="field" type="number" min="1" required></label>
+          <label class="row gap small" style="align-items:center"><input type="checkbox" name="required" checked> required</label>
+          <label>Pattern (regex)<input class="input" name="pattern" placeholder="^ADT\\^A0[14]$"></label>
+        </div>
+        <label class="mt">Allowed values (comma or semicolon separated)
+          <input class="input" name="allowed_values" placeholder="ADT^A01, ADT^A04">
+        </label>
+        <div class="row end mt">
+          <button type="button" class="button ghost" onclick="document.getElementById('val-modal').remove()">Cancel</button>
+          <button class="button">Add check</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
