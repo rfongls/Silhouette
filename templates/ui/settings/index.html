@@ -11,18 +11,14 @@
       <div class="card">
         <h2 class="text-h2">De-identify Templates</h2>
 
-        <!-- Create new -->
         <form hx-post="{{ request.url_for('ui_settings_deid_create') }}" hx-target="#deid-select-wrap" class="row gap small mb">
           <input class="input" type="text" name="name" placeholder="Template name (e.g., default)" required />
           <button class="button">Create</button>
         </form>
 
-        <!-- Selector -->
         <div id="deid-select-wrap" class="row gap small items-center">
           {% include "ui/settings/_deid_select_inner.html" %}
         </div>
-
-        <p class="muted mt">All templates are stored as JSON under <code>configs/interop/deid_templates/</code>. Use the editor to seed defaults or customize rules.</p>
       </div>
 
       <div class="card">

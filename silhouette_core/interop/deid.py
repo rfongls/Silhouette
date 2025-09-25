@@ -73,23 +73,17 @@ def _read_hl7_path(
     pos = field_idx if segment != "MSH" else field_idx - 1
     if pos < 0 or pos >= len(fields):
         return ""
-    current = fields[pos] or ""
     if component_idx is None:
-        return current
-
-    comps = current.split(COMP_SEP)
-    comp_pos = component_idx - 1
-    if comp_pos < 0 or comp_pos >= len(comps):
+        return fields[pos] or ""
+    comps = (fields[pos] or "").split(COMP_SEP)
+    ci = component_idx - 1
+    if ci < 0 or ci >= len(comps):
         return ""
-    value = comps[comp_pos] or ""
     if subcomponent_idx is None:
-        return value
-
-    subs = value.split(SUBCOMP_SEP)
-    sub_pos = subcomponent_idx - 1
-    if sub_pos < 0 or sub_pos >= len(subs):
-        return ""
-    return subs[sub_pos] or ""
+        return comps[ci] or ""
+    subs = (comps[ci] or "").split(SUBCOMP_SEP)
+    si = subcomponent_idx - 1
+    return subs[si] if 0 <= si < len(subs) else ""
 
 
 def _set_hl7_path(
@@ -100,41 +94,30 @@ def _set_hl7_path(
     subcomponent_idx: int | None,
     value: str,
 ) -> list[str]:
-    """Write value into fields using 1-based HL7 indexing."""
-
     pos = field_idx if segment != "MSH" else field_idx - 1
     if pos < 0:
         return fields
-
     while pos >= len(fields):
         fields.append("")
-
     if component_idx is None:
         fields[pos] = value
         return fields
-
-    current = fields[pos] or ""
-    comps = current.split(COMP_SEP)
-    comp_pos = component_idx - 1
-    while comp_pos >= len(comps):
+    comps = (fields[pos] or "").split(COMP_SEP)
+    ci = component_idx - 1
+    while ci >= len(comps):
         comps.append("")
-
     if subcomponent_idx is None:
-        comps[comp_pos] = value
+        comps[ci] = value
         fields[pos] = COMP_SEP.join(comps)
         return fields
-
-    subs = (comps[comp_pos] or "").split(SUBCOMP_SEP)
-    sub_pos = subcomponent_idx - 1
-    while sub_pos >= len(subs):
+    subs = (comps[ci] or "").split(SUBCOMP_SEP)
+    si = subcomponent_idx - 1
+    while si >= len(subs):
         subs.append("")
-    subs[sub_pos] = value
-    comps[comp_pos] = SUBCOMP_SEP.join(subs)
+    subs[si] = value
+    comps[ci] = SUBCOMP_SEP.join(subs)
     fields[pos] = COMP_SEP.join(comps)
     return fields
-
-
-MAX_REGEX_FIELD_LEN = 1_000_000
 
 
 MAX_REGEX_FIELD_LEN = 1_000_000
@@ -145,8 +128,9 @@ def _apply_action(existing: str, action: str, param: Optional[str]) -> str:
     if act == "redact":
         return ""
     if act == "mask":
-        mask_char = (param or "*")[:1] or "*"
-        return mask_char * len(existing) if existing else ""
+        char = (param or "*")[:1]
+        char = char or "*"
+        return (char * len(existing)) if existing else ""
     if act == "replace":
         return param or ""
     if act == "hash":
@@ -154,22 +138,25 @@ def _apply_action(existing: str, action: str, param: Optional[str]) -> str:
         digest = hashlib.sha256((salt + (existing or "")).encode("utf-8")).hexdigest()
         return digest[:16]
     if act == "preset":
-        # param is a preset key: name, birthdate, datetime, gender, address, phone, mrn, ssn, facility, note, pdf_blob, xml_blob, ...
         return gen_preset(param or "")
-    if act in {"regex_replace", "regex_redact"}:
-        pattern: str = ""
-        repl: str = ""
-        flags: str = ""
+
+    if act in ("regex_replace", "regex_redact"):
+        pattern = ""
+        repl = ""
+        flags = ""
         if isinstance(param, str) and param.strip().startswith("{"):
             try:
                 obj = json.loads(param)
-                pattern = str(obj.get("pattern") or "")
-                repl = str(obj.get("repl") or "")
-                flags = str(obj.get("flags") or "").lower()
+                pattern = obj.get("pattern") or ""
+                repl = obj.get("repl") or ""
+                flags = (obj.get("flags") or "").lower()
             except Exception:
                 pattern = param or ""
+        elif isinstance(param, str) and ":::" in param:
+            pattern, repl = param.split(":::", 1)
         else:
             pattern = param or ""
+
         if not pattern:
             return existing or ""
 
@@ -177,125 +164,93 @@ def _apply_action(existing: str, action: str, param: Optional[str]) -> str:
         for flag in flags:
             if flag == "i":
                 py_flags |= re.IGNORECASE
-            elif flag == "m":
+            if flag == "m":
                 py_flags |= re.MULTILINE
-            elif flag == "s":
+            if flag == "s":
                 py_flags |= re.DOTALL
-            elif flag == "x":
+            if flag == "x":
                 py_flags |= re.VERBOSE
 
         original = existing or ""
         text = original[:MAX_REGEX_FIELD_LEN]
         remainder = "" if len(original) <= MAX_REGEX_FIELD_LEN else original[MAX_REGEX_FIELD_LEN:]
+        lib = regex_lib or re
 
         def _mask(value: str) -> str:
             return "*" * len(value) if value else ""
 
-        if regex_lib is not None:
-            try:
-                compiled = regex_lib.compile(pattern, flags=py_flags)
-                if act == "regex_replace":
-                    return compiled.sub(repl, text, timeout=0.05) + remainder
-
-                def _mask_match(match):
-                    span = match.group(0)
-                    return _mask(span)
-
-                return compiled.sub(_mask_match, text, timeout=0.05) + remainder
-            except Exception:
-                return existing or ""
         try:
-            compiled_std = re.compile(pattern, py_flags)
+            if lib is re:
+                compiled = lib.compile(pattern, py_flags)
+            else:
+                compiled = lib.compile(pattern, flags=py_flags)
             if act == "regex_replace":
-                return compiled_std.sub(repl, text) + remainder
+                if lib is regex_lib:
+                    return compiled.sub(repl, text, timeout=0.05) + remainder
+                return compiled.sub(repl, text) + remainder
 
-            def _mask_match_std(match):
-                span = match.group(0)
+            def _mask_match(match):
+                span = match.group(0) if hasattr(match, "group") else match[0]
                 return _mask(span)
 
-            return compiled_std.sub(_mask_match_std, text) + remainder
+            if lib is regex_lib:
+                return compiled.sub(_mask_match, text, timeout=0.05) + remainder
+            return compiled.sub(_mask_match, text) + remainder
         except Exception:
             return existing or ""
+
     if act in {"dotnet_regex_replace", "dotnet_regex_redact"}:
         import os
 
         if os.environ.get("ENABLE_DOTNET_REGEX") != "1":
             return existing or ""
-        # Placeholder for future sandboxed .NET regex execution
         return existing or ""
+
     return ""
 
 
 def apply_single_rule(message_text: str, rule: dict) -> dict[str, object]:
-    """Apply a single rule to an HL7 message for preview/testing purposes."""
-    message_text = message_text or ""
-    segment = str(rule.get("segment") or "").strip().upper()
-    try:
-        field_idx = int(rule.get("field") or 0)
-    except Exception:
-        field_idx = 0
-    if not segment or field_idx <= 0:
-        return {
-            "before": None,
-            "after": None,
-            "changed": False,
-            "line_before": None,
-            "line_after": None,
-            "message_after": message_text,
-        }
+    segment = (rule.get("segment") or "").strip().upper()
+    field = int(rule.get("field") or 0)
     component = rule.get("component")
-    if component in ("", None):
-        comp_idx = None
-    else:
-        try:
-            comp_idx = int(component)
-        except Exception:
-            comp_idx = None
+    component_idx = int(component) if str(component or "").isdigit() else None
     subcomponent = rule.get("subcomponent")
-    if subcomponent in ("", None):
-        sub_idx = None
-    else:
-        try:
-            sub_idx = int(subcomponent)
-        except Exception:
-            sub_idx = None
-    action = str(rule.get("action") or "redact").strip()
+    subcomponent_idx = int(subcomponent) if str(subcomponent or "").isdigit() else None
+    action = (rule.get("action") or "redact").strip()
     param = rule.get("param")
 
+    lines = (message_text or "").splitlines()
+    out_lines: list[str] = []
     before_value: Optional[str] = None
     after_value: Optional[str] = None
     first_line_before: Optional[str] = None
     first_line_after: Optional[str] = None
-    out_lines: list[str] = []
 
-    for line in message_text.splitlines():
+    for line in lines:
         parts = line.split(FIELD_SEP)
         seg_name = parts[0].strip().upper() if parts else ""
         if seg_name != segment:
             out_lines.append(line)
             continue
 
-        existing = _read_hl7_path(parts, seg_name, field_idx, comp_idx, sub_idx)
+        existing = _read_hl7_path(parts, seg_name, field, component_idx, subcomponent_idx)
         if before_value is None:
             before_value = existing
             first_line_before = FIELD_SEP.join(parts)
 
-        new_value = _apply_action(existing, action, param)
-        parts = _set_hl7_path(parts, seg_name, field_idx, comp_idx, sub_idx, new_value)
-        out_line = FIELD_SEP.join(parts)
+        new_val = _apply_action(existing, action, param)
+        parts = _set_hl7_path(parts, seg_name, field, component_idx, subcomponent_idx, new_val)
         if after_value is None:
-            after_value = new_value
-            first_line_after = out_line
+            after_value = new_val
+            first_line_after = FIELD_SEP.join(parts)
 
-        out_lines.append(out_line)
+        out_lines.append(FIELD_SEP.join(parts))
 
-    message_after = "\n".join(out_lines) if out_lines else message_text
-    changed = before_value is not None and before_value != after_value
-
+    message_after = "\n".join(out_lines) if out_lines else (message_text or "")
     return {
         "before": before_value,
-        "after": after_value if before_value is not None else None,
-        "changed": changed,
+        "after": after_value,
+        "changed": before_value is not None and before_value != after_value,
         "line_before": first_line_before,
         "line_after": first_line_after,
         "message_after": message_after,
