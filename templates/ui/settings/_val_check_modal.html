@@ -6,7 +6,6 @@
         <h3 class="text-h3">Add Validation Check</h3>
         <button class="button ghost" type="button" onclick="document.getElementById('val-modal').remove()">✕</button>
       </div>
-
       <form
         hx-post="{{ request.url_for('ui_settings_val_add_check', name=tpl.name) }}"
         hx-target="#val-checks"

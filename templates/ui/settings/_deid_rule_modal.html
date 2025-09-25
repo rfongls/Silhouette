@@ -66,7 +66,6 @@
             </select>
           </label>
         </div>
-
         <div id="m-group-free" class="mt" style="display:none">
           <label>Param (literal / mask char / hash salt)
             <input class="input" id="m-free" placeholder="e.g., *, fixed text, SALT123" value="{{ prefill.free_value }}">
@@ -84,7 +83,6 @@
           <p class="muted">Serialized as <code>{"pattern": "...", "repl": "...", "flags": "imxs"}</code>.</p>
           <input type="hidden" id="m-param-json" name="param" value="{{ prefill.regex_param_json }}">
         </div>
-
       <div class="card mt">
         <h4 class="text-h4">Test &amp; Preview</h4>
         <label>Sample HL7 snippet
@@ -118,13 +116,11 @@
           <pre id="m-after-msg" class="mono" style="white-space:pre-wrap"></pre>
         </div>
       </div>
-
         <div class="row end mt">
           <button type="button" class="button ghost" onclick="document.getElementById('deid-modal').remove()">Cancel</button>
           <button class="button">Save rule</button>
         </div>
       </form>
-
       <style>
         .diff-del { background: #ffe5e5; text-decoration: line-through; }
         .diff-add { background: #e6ffed; }
@@ -172,7 +168,6 @@
           }
           return result;
         }
-
         function toggleParamGroupsModal() {
           const actionEl = document.getElementById('m-action');
           const modeEl = document.getElementById('m-param-mode');
@@ -207,7 +202,6 @@
             regexWrap.style.display = 'none';
             return;
           }
-
           if (action === 'preset') {
             if (mode === 'regex') {
               mode = 'preset';

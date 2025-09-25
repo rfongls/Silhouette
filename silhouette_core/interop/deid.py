@@ -137,6 +137,9 @@ def _set_hl7_path(
 MAX_REGEX_FIELD_LEN = 1_000_000
 
 
+MAX_REGEX_FIELD_LEN = 1_000_000
+
+
 def _apply_action(existing: str, action: str, param: Optional[str]) -> str:
     act = (action or "redact").strip().lower()
     if act == "redact":
@@ -225,15 +228,12 @@ def _apply_action(existing: str, action: str, param: Optional[str]) -> str:
 
 def apply_single_rule(message_text: str, rule: dict) -> dict[str, object]:
     """Apply a single rule to an HL7 message for preview/testing purposes."""
-
     message_text = message_text or ""
-
     segment = str(rule.get("segment") or "").strip().upper()
     try:
         field_idx = int(rule.get("field") or 0)
     except Exception:
         field_idx = 0
-
     if not segment or field_idx <= 0:
         return {
             "before": None,
@@ -243,7 +243,6 @@ def apply_single_rule(message_text: str, rule: dict) -> dict[str, object]:
             "line_after": None,
             "message_after": message_text,
         }
-
     component = rule.get("component")
     if component in ("", None):
         comp_idx = None
@@ -252,7 +251,6 @@ def apply_single_rule(message_text: str, rule: dict) -> dict[str, object]:
             comp_idx = int(component)
         except Exception:
             comp_idx = None
-
     subcomponent = rule.get("subcomponent")
     if subcomponent in ("", None):
         sub_idx = None
@@ -261,7 +259,6 @@ def apply_single_rule(message_text: str, rule: dict) -> dict[str, object]:
             sub_idx = int(subcomponent)
         except Exception:
             sub_idx = None
-
     action = str(rule.get("action") or "redact").strip()
     param = rule.get("param")
 
