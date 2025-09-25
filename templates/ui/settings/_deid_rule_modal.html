@@ -81,20 +81,17 @@
           </select>
         </label>
       </div>
-
       <div id="param-controls" class="mt">
         {% include 'ui/settings/_deid_param_controls.html' with context %}
       </div>
 
       <div class="row gap small mt"><span class="badge muted">Path</span><span class="badge mono" id="m-path-badge">—</span></div>
-
       <div class="card mt">
         <h4 class="text-h4">Test &amp; Preview</h4>
         <label>Sample HL7 snippet
           <textarea class="input" id="m-sample" rows="5">PID|1||444444^^^HOSP^MR||DOE^JOHN||19800101|M</textarea>
         </label>
         <div class="row mt"><button class="button" type="button" data-deid-test>Test</button></div>
-
         <div class="grid two mt">
           <div><h5 class="text-h5">Before (field)</h5><div id="m-before-diff" class="diff muted"></div></div>
           <div><h5 class="text-h5">After (field)</h5><div id="m-after-diff" class="diff"></div></div>

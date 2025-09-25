@@ -396,7 +396,6 @@ def api_deid_test_rule(
         param_value = json.dumps({"pattern": pattern or "", "repl": repl or ""})
     else:
         param_value = None
-
     rule = {
         "segment": segment.strip().upper(),
         "field": int(field),
