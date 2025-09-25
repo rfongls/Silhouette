@@ -27,7 +27,7 @@
       <td>{{ r.subcomponent or "" }}</td>
       <td>{{ r.action }}</td>
       <td><code>{{ r.param or "" }}</code></td>
-      <td class="row gap small">
+      <td class="row small">
         <form hx-post="{{ request.url_for('ui_settings_deid_delete_rule', name=tpl.name) }}" hx-target="#deid-rules">
           <input type="hidden" name="index" value="{{ loop.index0 }}" />
           <button class="button danger small" title="Delete">✕</button>

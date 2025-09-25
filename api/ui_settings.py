@@ -217,6 +217,9 @@ def _build_rule_prefill(rule: Optional[DeidRule]) -> Dict[str, Any]:
     if param_mode != "regex" and not prefill.get("regex_param_json"):
         prefill["regex_param_json"] = json.dumps({"pattern": "", "repl": "", "flags": ""})
 
+    if param_mode not in {"preset", "free"}:
+        param_mode = "preset"
+
     prefill["param_mode"] = param_mode
     return prefill
 
@@ -279,8 +282,8 @@ def ui_settings_deid_add_rule(
     name: str,
     segment: str = Form(...),
     field: int = Form(...),
-    component: Optional[int] = Form(None),
-    subcomponent: Optional[int] = Form(None),
+    component: Optional[str] = Form(None),
+    subcomponent: Optional[str] = Form(None),
     action: str = Form("redact"),
     param: Optional[str] = Form(None),
 ) -> Response:
@@ -364,7 +367,7 @@ def api_deid_test_rule(
         preview = apply_single_rule(message_text or "", rule)
         return JSONResponse({"ok": True, "preview": preview})
     except Exception as exc:  # pragma: no cover - defensive
-        return JSONResponse({"ok": False, "error": f"{type(exc).__name__}: {exc}"})
+        return JSONResponse({"ok": False, "error": f"{type(exc).__name__}: {exc}"}, status_code=200)
 
 @router.post("/ui/settings/deid/delete_rule/{name}", response_class=HTMLResponse, name="ui_settings_deid_delete_rule", response_model=None)
 def ui_settings_deid_delete_rule(request: Request, name: str, index: int = Form(...)) -> Response:
