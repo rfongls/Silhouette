@@ -3,12 +3,24 @@
 {% endif %}
 <table class="table">
   <thead>
-    <tr><th>#</th><th>Segment</th><th>Field</th><th>Comp</th><th>Subcomp</th><th>Action</th><th>Param</th><th></th></tr>
+    <tr>
+      <th>#</th>
+      <th>Path</th>
+      <th>Segment</th>
+      <th>Field</th>
+      <th>Comp</th>
+      <th>Subcomp</th>
+      <th>Action</th>
+      <th>Param</th>
+      <th></th>
+    </tr>
   </thead>
   <tbody>
   {% for r in (tpl.rules or []) %}
+    {% set path = (r.segment ~ ':' ~ r.field ~ ('.' ~ r.component if r.component else '') ~ ('.' ~ r.subcomponent if r.subcomponent else '')) %}
     <tr>
       <td>{{ loop.index0 }}</td>
+      <td><span class="badge mono">{{ path }}</span></td>
       <td>{{ r.segment }}</td>
       <td>{{ r.field }}</td>
       <td>{{ r.component or "" }}</td>
@@ -29,7 +41,7 @@
       </td>
     </tr>
   {% else %}
-    <tr><td colspan="8" class="muted">No rules yet.</td></tr>
+    <tr><td colspan="9" class="muted">No rules yet.</td></tr>
   {% endfor %}
   </tbody>
 </table>

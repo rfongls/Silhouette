@@ -23,6 +23,26 @@
   <meta name="app-root" content="{{ root }}" />
   <link rel="stylesheet" href="{{ static_base }}css/app.css" />
   <link rel="stylesheet" href="{{ static_base }}css/dashboard.css" />
+  <style>
+    .badge {
+      display: inline-block;
+      font-size: .85rem;
+      line-height: 1;
+      padding: .35rem .5rem;
+      border-radius: .5rem;
+      background: rgba(99, 102, 241, .12);
+      color: #6366f1;
+      border: 1px solid rgba(99, 102, 241, .35);
+    }
+    .badge.mono {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+    }
+    .badge.muted {
+      background: rgba(148, 163, 184, .15);
+      color: #475569;
+      border-color: rgba(148, 163, 184, .35);
+    }
+  </style>
   {% block extra_head %}{% endblock %}
   <script src="{{ static_base }}htmx.min.js"></script>
   <script type="module" src="{{ static_base }}js/examples.js"></script>
