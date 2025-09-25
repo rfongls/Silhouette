@@ -34,7 +34,7 @@ class DeidRule:
     field: int
     component: Optional[int] = None
     subcomponent: Optional[int] = None
-    action: str = "redact"  # redact | mask | hash | replace | preset
+    action: str = "redact"  # redact | mask | hash | replace | preset | regex_replace | regex_redact | dotnet_regex_*
     param: Optional[str] = None
 
 @dataclass
@@ -117,9 +117,9 @@ def ui_settings_deid_create(request: Request, name: str = Form(...)) -> Response
     if p.exists():
         raise HTTPException(status_code=400, detail="Template already exists")
     _save_json(p, DeidTemplate(name=_safe_name(name), rules=[]).to_dict())
-    # Return the list partial (HTMX swap target is #deid-list)
+    # Return the select partial (HTMX target is #deid-select-wrap)
     return templates.TemplateResponse(
-        "ui/settings/_deid_list.html",
+        "ui/settings/_deid_select_inner.html",
         {"request": request, "deid_templates": _list_templates(DEID_DIR)},
     )
 
@@ -127,6 +127,17 @@ def ui_settings_deid_create(request: Request, name: str = Form(...)) -> Response
 def ui_settings_deid_edit(request: Request, name: str) -> Response:
     tpl = DeidTemplate.from_dict(_load_json(_json_path(DEID_DIR, name)))
     return templates.TemplateResponse("ui/settings/deid_edit.html", {"request": request, "tpl": tpl})
+
+
+@router.get(
+    "/ui/settings/deid/new_rule_modal/{name}",
+    response_class=HTMLResponse,
+    name="ui_settings_deid_new_rule_modal",
+    response_model=None,
+)
+def ui_settings_deid_new_rule_modal(request: Request, name: str) -> Response:
+    tpl = DeidTemplate.from_dict(_load_json(_json_path(DEID_DIR, name)))
+    return templates.TemplateResponse("ui/settings/_deid_rule_modal.html", {"request": request, "tpl": tpl})
 
 @router.post("/ui/settings/deid/add_rule/{name}", response_class=HTMLResponse, name="ui_settings_deid_add_rule", response_model=None)
 def ui_settings_deid_add_rule(
@@ -274,10 +285,7 @@ def ui_settings_deid_delete(request: Request, name: str = Form(...)) -> Response
     p = _json_path(DEID_DIR, name)
     if p.exists():
         p.unlink()
-    return templates.TemplateResponse(
-        "ui/settings/_deid_list.html",
-        {"request": request, "deid_templates": _list_templates(DEID_DIR)},
-    )
+    return ui_settings_index(request)
 
 # ---------- Validate: create / edit / add / delete check / import-export ----------
 @router.post("/ui/settings/val/create", response_class=HTMLResponse, name="ui_settings_val_create", response_model=None)
@@ -367,6 +375,17 @@ async def ui_settings_val_import_csv(request: Request, name: str, file: UploadFi
     _save_json(_json_path(VAL_DIR, name), ValidateTemplate(name=_safe_name(name), checks=checks).to_dict())
     tpl = ValidateTemplate.from_dict(_load_json(_json_path(VAL_DIR, name)))
     return templates.TemplateResponse("ui/settings/_val_checks_table.html", {"request": request, "tpl": tpl})
+
+
+@router.get(
+    "/ui/settings/val/new_check_modal/{name}",
+    response_class=HTMLResponse,
+    name="ui_settings_val_new_check_modal",
+    response_model=None,
+)
+def ui_settings_val_new_check_modal(request: Request, name: str) -> Response:
+    tpl = ValidateTemplate.from_dict(_load_json(_json_path(VAL_DIR, name)))
+    return templates.TemplateResponse("ui/settings/_val_check_modal.html", {"request": request, "tpl": tpl})
 
 # Delete the entire Validate template (required by your template)
 @router.post("/ui/settings/val/delete", name="ui_settings_val_delete", response_class=HTMLResponse, response_model=None)

@@ -1,0 +1,172 @@
+<div id="deid-modal" class="modal-root">
+  <div class="modal-backdrop" onclick="document.getElementById('deid-modal').remove()"></div>
+  <div class="modal" role="dialog" aria-modal="true">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3 class="text-h3">Add De-identification Rule</h3>
+        <button class="button ghost" type="button" onclick="document.getElementById('deid-modal').remove()">✕</button>
+      </div>
+      <form
+        hx-post="{{ request.url_for('ui_settings_deid_add_rule', name=tpl.name) }}"
+        hx-target="#deid-rules"
+        hx-on::after-request="var m=document.getElementById('deid-modal');if(m){m.remove();}"
+      >
+        <div class="grid two">
+          <label>Segment<input class="input" name="segment" placeholder="PID" required></label>
+          <label>Field<input class="input" name="field" type="number" min="1" required></label>
+          <label>Component<input class="input" name="component" type="number" min="1"></label>
+          <label>Subcomponent<input class="input" name="subcomponent" type="number" min="1"></label>
+        </div>
+
+        <div class="grid two mt">
+          <label>Action
+            <select class="input" name="action" id="action" onchange="toggleParamGroups()">
+              <option value="redact">redact</option>
+              <option value="mask">mask</option>
+              <option value="hash">hash</option>
+              <option value="replace">replace (literal)</option>
+              <option value="preset">preset (synthetic)</option>
+              <option value="regex_replace">regex replace</option>
+              <option value="regex_redact">regex redact</option>
+              <option value="dotnet_regex_replace">.NET regex replace</option>
+              <option value="dotnet_regex_redact">.NET regex redact</option>
+            </select>
+          </label>
+
+          <label>Param mode
+            <select class="input" id="param-mode" onchange="toggleParamGroups()">
+              <option value="preset">Preset</option>
+              <option value="free">Free-text</option>
+              <option value="regex">Regex JSON</option>
+            </select>
+          </label>
+        </div>
+
+        <div id="group-preset" class="mt">
+          <label>Preset key
+            <select class="input" id="preset" name="param">
+              <option value="name">name</option>
+              <option value="birthdate">birthdate</option>
+              <option value="datetime">datetime</option>
+              <option value="gender">gender</option>
+              <option value="address">address</option>
+              <option value="phone">phone</option>
+              <option value="language">language</option>
+              <option value="race">race</option>
+              <option value="mrn">mrn</option>
+              <option value="ssn">ssn</option>
+              <option value="facility">facility</option>
+              <option value="note">note</option>
+              <option value="pdf_blob">pdf_blob</option>
+              <option value="xml_blob">xml_blob</option>
+            </select>
+          </label>
+        </div>
+
+        <div id="group-free" class="mt" style="display:none">
+          <label>Param (literal / mask char / hash salt)
+            <input class="input" id="free" placeholder="e.g., *, fixed text, SALT123">
+          </label>
+        </div>
+
+        <div id="group-regex" class="mt" style="display:none">
+          <div class="grid two">
+            <label>Pattern<input class="input" id="rx-pattern" placeholder="\\d{3}-\\d{2}-\\d{4}"></label>
+            <label>Flags<input class="input" id="rx-flags" placeholder="imxs (optional)"></label>
+          </div>
+          <label>Replacement (regex_replace only)
+            <input class="input" id="rx-repl" placeholder="***-**-****">
+          </label>
+          <p class="muted">Serialized as <code>{"pattern": "...", "repl": "...", "flags": "imxs"}</code>.</p>
+          <input type="hidden" id="param-json" name="param">
+        </div>
+
+        <div class="row end mt">
+          <button type="button" class="button ghost" onclick="document.getElementById('deid-modal').remove()">Cancel</button>
+          <button class="button">Add rule</button>
+        </div>
+      </form>
+
+      <script>
+        function updateRegexJSON() {
+          const obj = {
+            pattern: document.getElementById('rx-pattern').value || '',
+            repl: document.getElementById('rx-repl').value || '',
+            flags: (document.getElementById('rx-flags').value || '').toLowerCase(),
+          };
+          document.getElementById('param-json').value = JSON.stringify(obj);
+        }
+
+        function toggleParamGroups() {
+          const actionEl = document.getElementById('action');
+          const modeEl = document.getElementById('param-mode');
+          const presetWrap = document.getElementById('group-preset');
+          const freeWrap = document.getElementById('group-free');
+          const regexWrap = document.getElementById('group-regex');
+          const preset = document.getElementById('preset');
+          const free = document.getElementById('free');
+          const paramJson = document.getElementById('param-json');
+          const rxRepl = document.getElementById('rx-repl');
+
+          let mode = modeEl.value;
+          preset.name = '';
+          free.name = '';
+          paramJson.name = '';
+          paramJson.value = '';
+
+          modeEl.disabled = false;
+          rxRepl.disabled = false;
+
+          if (actionEl.value === 'redact') {
+            modeEl.disabled = true;
+            presetWrap.style.display = 'none';
+            freeWrap.style.display = 'none';
+            regexWrap.style.display = 'none';
+            return;
+          }
+
+          if (actionEl.value === 'preset') {
+            if (mode === 'regex') {
+              mode = 'preset';
+              modeEl.value = 'preset';
+            }
+          } else if (actionEl.value === 'regex_replace' || actionEl.value === 'regex_redact' || actionEl.value.startsWith('dotnet_regex')) {
+            mode = 'regex';
+            modeEl.value = 'regex';
+            modeEl.disabled = true;
+            rxRepl.disabled = actionEl.value.endsWith('redact');
+          } else {
+            mode = 'free';
+            modeEl.value = 'free';
+            modeEl.disabled = true;
+          }
+
+          if (mode === 'preset') {
+            presetWrap.style.display = '';
+            freeWrap.style.display = 'none';
+            regexWrap.style.display = 'none';
+            preset.name = 'param';
+          } else if (mode === 'free') {
+            presetWrap.style.display = 'none';
+            freeWrap.style.display = '';
+            regexWrap.style.display = 'none';
+            free.name = 'param';
+          } else {
+            presetWrap.style.display = 'none';
+            freeWrap.style.display = 'none';
+            regexWrap.style.display = '';
+            updateRegexJSON();
+            paramJson.name = 'param';
+          }
+        }
+
+        ['rx-pattern', 'rx-repl', 'rx-flags'].forEach(function (id) {
+          const el = document.getElementById(id);
+          el.addEventListener('input', updateRegexJSON);
+        });
+
+        toggleParamGroups();
+      </script>
+    </div>
+  </div>
+</div>

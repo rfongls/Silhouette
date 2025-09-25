@@ -1,0 +1,10 @@
+<select id="deid-select" class="input" style="min-width:18rem">
+  {% for name in deid_templates %}
+    <option value="{{ name }}" {% if name == 'default' %}selected{% endif %}>{{ name }}</option>
+  {% endfor %}
+</select>
+
+<!-- Open editor -->
+<form method="get" action="" onsubmit="this.action='{{ request.url_for('ui_settings_deid_edit', name='__NAME__') }}'.replace('__NAME__', document.getElementById('deid-select').value)">
+  <button class="button">Open</button>
+</form>
