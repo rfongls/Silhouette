@@ -27,6 +27,24 @@ VAL_DIR  = Path("configs/interop/validate_templates")
 for d in (DEID_DIR, VAL_DIR):
     d.mkdir(parents=True, exist_ok=True)
 
+PRESET_PARAM_KEYS = {
+    "name",
+    "birthdate",
+    "datetime",
+    "gender",
+    "address",
+    "phone",
+    "language",
+    "race",
+    "mrn",
+    "ssn",
+    "facility",
+    "note",
+    "pdf_blob",
+    "xml_blob",
+}
+DEFAULT_PRESET_KEY = "name"
+
 # ---------- Models ----------
 @dataclass
 class DeidRule:
@@ -34,7 +52,7 @@ class DeidRule:
     field: int
     component: Optional[int] = None
     subcomponent: Optional[int] = None
-    action: str = "redact"  # redact | mask | hash | replace | preset
+    action: str = "redact"  # redact | mask | hash | replace | preset | regex_replace | regex_redact | dotnet_regex_*
     param: Optional[str] = None
 
 @dataclass
@@ -94,6 +112,114 @@ def _load_json(path: Path) -> Dict[str, Any]:
 def _save_json(path: Path, obj: Dict[str, Any]) -> None:
     path.write_text(json.dumps(obj, indent=2), encoding="utf-8")
 
+
+def _canonical_key(rule: Dict[str, Any]) -> tuple[Any, ...]:
+    """Return a tuple that uniquely identifies a rule ignoring param values."""
+
+    component = rule.get("component")
+    if isinstance(component, str) and component.isdigit():
+        component_val: Optional[int] = int(component)
+    elif isinstance(component, int):
+        component_val = component
+    else:
+        component_val = None
+
+    subcomponent = rule.get("subcomponent")
+    if isinstance(subcomponent, str) and subcomponent.isdigit():
+        subcomponent_val: Optional[int] = int(subcomponent)
+    elif isinstance(subcomponent, int):
+        subcomponent_val = subcomponent
+    else:
+        subcomponent_val = None
+
+    return (
+        (rule.get("segment") or "").strip().upper(),
+        int(rule.get("field") or 0),
+        component_val,
+        subcomponent_val,
+        (rule.get("action") or "redact").strip(),
+    )
+
+
+def _has_duplicate(rules: List[Dict[str, Any]], new_rule: Dict[str, Any]) -> bool:
+    new_key = _canonical_key(new_rule)
+    for rule in rules or []:
+        if _canonical_key(rule) == new_key:
+            return True
+    return False
+
+
+def _build_rule_prefill(rule: Optional[DeidRule]) -> Dict[str, Any]:
+    prefill: Dict[str, Any] = {
+        "segment": "" if rule is None else (rule.segment or ""),
+        "field": "" if rule is None else str(rule.field if rule.field is not None else ""),
+        "component": "" if rule is None or rule.component is None else str(rule.component),
+        "subcomponent": "" if rule is None or rule.subcomponent is None else str(rule.subcomponent),
+        "action": "redact" if rule is None else (rule.action or "redact"),
+        "param_mode": "preset",
+        "preset_value": DEFAULT_PRESET_KEY,
+        "free_value": "",
+        "regex_pattern": "",
+        "regex_repl": "",
+        "regex_flags": "",
+    }
+    prefill["regex_param_json"] = json.dumps({"pattern": "", "repl": "", "flags": ""})
+
+    if rule is None:
+        return prefill
+
+    action = prefill["action"]
+    raw_param = rule.param or ""
+    param_mode = "preset"
+
+    if action in {"mask", "hash", "replace"}:
+        param_mode = "free"
+        prefill["free_value"] = raw_param
+    elif action in {"regex_replace", "regex_redact", "dotnet_regex_replace", "dotnet_regex_redact"}:
+        param_mode = "regex"
+        pattern = raw_param
+        repl = ""
+        flags = ""
+        if isinstance(raw_param, str) and raw_param.strip().startswith("{"):
+            try:
+                obj = json.loads(raw_param)
+                pattern = str(obj.get("pattern") or "")
+                repl = str(obj.get("repl") or "")
+                flags = str(obj.get("flags") or "").lower()
+            except Exception:
+                pattern = raw_param
+        prefill["regex_pattern"] = pattern
+        prefill["regex_repl"] = repl
+        prefill["regex_flags"] = flags
+        prefill["regex_param_json"] = json.dumps({
+            "pattern": pattern or "",
+            "repl": repl or "",
+            "flags": flags or "",
+        })
+    elif action == "preset":
+        if raw_param and raw_param not in PRESET_PARAM_KEYS:
+            param_mode = "free"
+            prefill["free_value"] = raw_param
+        else:
+            prefill["preset_value"] = raw_param or DEFAULT_PRESET_KEY
+    else:
+        if raw_param:
+            param_mode = "free"
+            prefill["free_value"] = raw_param
+
+    if param_mode != "preset":
+        # Ensure presets fall back to default when switching modes later
+        prefill.setdefault("preset_value", DEFAULT_PRESET_KEY)
+
+    if param_mode != "free" and not prefill.get("free_value"):
+        prefill["free_value"] = ""
+
+    if param_mode != "regex" and not prefill.get("regex_param_json"):
+        prefill["regex_param_json"] = json.dumps({"pattern": "", "repl": "", "flags": ""})
+
+    prefill["param_mode"] = param_mode
+    return prefill
+
 # ---------- Pages ----------
 @router.get("/ui/settings", response_class=HTMLResponse, name="ui_settings_index", response_model=None)
 def ui_settings_index(request: Request) -> Response:
@@ -117,9 +243,9 @@ def ui_settings_deid_create(request: Request, name: str = Form(...)) -> Response
     if p.exists():
         raise HTTPException(status_code=400, detail="Template already exists")
     _save_json(p, DeidTemplate(name=_safe_name(name), rules=[]).to_dict())
-    # Return the list partial (HTMX swap target is #deid-list)
+    # Return the select partial (HTMX target is #deid-select-wrap)
     return templates.TemplateResponse(
-        "ui/settings/_deid_list.html",
+        "ui/settings/_deid_select_inner.html",
         {"request": request, "deid_templates": _list_templates(DEID_DIR)},
     )
 
@@ -127,6 +253,25 @@ def ui_settings_deid_create(request: Request, name: str = Form(...)) -> Response
 def ui_settings_deid_edit(request: Request, name: str) -> Response:
     tpl = DeidTemplate.from_dict(_load_json(_json_path(DEID_DIR, name)))
     return templates.TemplateResponse("ui/settings/deid_edit.html", {"request": request, "tpl": tpl})
+
+
+@router.get(
+    "/ui/settings/deid/new_rule_modal/{name}",
+    response_class=HTMLResponse,
+    name="ui_settings_deid_new_rule_modal",
+    response_model=None,
+)
+def ui_settings_deid_new_rule_modal(request: Request, name: str) -> Response:
+    tpl = DeidTemplate.from_dict(_load_json(_json_path(DEID_DIR, name)))
+    context = {
+        "request": request,
+        "tpl": tpl,
+        "prefill": _build_rule_prefill(None),
+        "is_clone": False,
+        "clone_index": None,
+        "clone": None,
+    }
+    return templates.TemplateResponse("ui/settings/_deid_rule_modal.html", context)
 
 @router.post("/ui/settings/deid/add_rule/{name}", response_class=HTMLResponse, name="ui_settings_deid_add_rule", response_model=None)
 def ui_settings_deid_add_rule(
@@ -142,18 +287,84 @@ def ui_settings_deid_add_rule(
     p = _json_path(DEID_DIR, name)
     tpl = DeidTemplate.from_dict(_load_json(p))
     tpl.rules = tpl.rules or []
-    tpl.rules.append(
-        DeidRule(
-            segment=segment.strip().upper(),
-            field=int(field),
-            component=component if component not in (None, "") else None,
-            subcomponent=subcomponent if subcomponent not in (None, "") else None,
-            action=action,
-            param=param or None,
+    try:
+        comp_val = None if component in (None, "") else int(component)
+    except Exception:
+        comp_val = None
+    try:
+        sub_val = None if subcomponent in (None, "") else int(subcomponent)
+    except Exception:
+        sub_val = None
+    new_rule = {
+        "segment": segment.strip().upper(),
+        "field": int(field),
+        "component": comp_val,
+        "subcomponent": sub_val,
+        "action": action,
+        "param": param or None,
+    }
+
+    if _has_duplicate([asdict(r) for r in tpl.rules], new_rule):
+        return templates.TemplateResponse(
+            "ui/settings/_deid_rules_table.html",
+            {"request": request, "tpl": tpl, "error": "Duplicate rule for the same path/action is not allowed."},
         )
-    )
+
+    tpl.rules.append(DeidRule(**new_rule))
     _save_json(p, tpl.to_dict())
     return templates.TemplateResponse("ui/settings/_deid_rules_table.html", {"request": request, "tpl": tpl})
+
+
+@router.post(
+    "/api/tools/deid/test_rule",
+    response_class=JSONResponse,
+    name="api_deid_test_rule",
+    response_model=None,
+)
+def api_deid_test_rule(
+    message_text: str = Form(...),
+    segment: str = Form(...),
+    field: int = Form(...),
+    component: Optional[str] = Form(None),
+    subcomponent: Optional[str] = Form(None),
+    action: str = Form(...),
+    param: Optional[str] = Form(None),
+) -> JSONResponse:
+    from silhouette_core.interop.deid import apply_single_rule
+
+    comp_val: Optional[int]
+    sub_val: Optional[int]
+
+    if component and component.isdigit():
+        try:
+            comp_val = int(component)
+        except Exception:  # pragma: no cover - defensive
+            comp_val = None
+    else:
+        comp_val = None
+
+    if subcomponent and subcomponent.isdigit():
+        try:
+            sub_val = int(subcomponent)
+        except Exception:  # pragma: no cover - defensive
+            sub_val = None
+    else:
+        sub_val = None
+
+    rule = {
+        "segment": segment.strip().upper(),
+        "field": int(field),
+        "component": comp_val,
+        "subcomponent": sub_val,
+        "action": action.strip(),
+        "param": param,
+    }
+
+    try:
+        preview = apply_single_rule(message_text or "", rule)
+        return JSONResponse({"ok": True, "preview": preview})
+    except Exception as exc:  # pragma: no cover - defensive
+        return JSONResponse({"ok": False, "error": f"{type(exc).__name__}: {exc}"})
 
 @router.post("/ui/settings/deid/delete_rule/{name}", response_class=HTMLResponse, name="ui_settings_deid_delete_rule", response_model=None)
 def ui_settings_deid_delete_rule(request: Request, name: str, index: int = Form(...)) -> Response:
@@ -202,6 +413,30 @@ async def ui_settings_deid_import_csv(request: Request, name: str, file: UploadF
     _save_json(_json_path(DEID_DIR, name), DeidTemplate(name=_safe_name(name), rules=rules).to_dict())
     tpl = DeidTemplate.from_dict(_load_json(_json_path(DEID_DIR, name)))
     return templates.TemplateResponse("ui/settings/_deid_rules_table.html", {"request": request, "tpl": tpl})
+
+
+@router.get(
+    "/ui/settings/deid/clone_rule_modal/{name}/{index}",
+    response_class=HTMLResponse,
+    name="ui_settings_deid_clone_rule_modal",
+    response_model=None,
+)
+def ui_settings_deid_clone_rule_modal(request: Request, name: str, index: int) -> Response:
+    p = _json_path(DEID_DIR, name)
+    tpl = DeidTemplate.from_dict(_load_json(p))
+    rules = tpl.rules or []
+    if index < 0 or index >= len(rules):
+        raise HTTPException(status_code=404, detail="Rule not found")
+    clone_rule = rules[index]
+    context = {
+        "request": request,
+        "tpl": tpl,
+        "prefill": _build_rule_prefill(clone_rule),
+        "is_clone": True,
+        "clone_index": index,
+        "clone": asdict(clone_rule),
+    }
+    return templates.TemplateResponse("ui/settings/_deid_rule_modal.html", context)
 
 
 @router.post("/ui/settings/deid/seed_defaults/{name}", response_class=HTMLResponse, name="ui_settings_deid_seed_defaults", response_model=None)
@@ -274,10 +509,7 @@ def ui_settings_deid_delete(request: Request, name: str = Form(...)) -> Response
     p = _json_path(DEID_DIR, name)
     if p.exists():
         p.unlink()
-    return templates.TemplateResponse(
-        "ui/settings/_deid_list.html",
-        {"request": request, "deid_templates": _list_templates(DEID_DIR)},
-    )
+    return ui_settings_index(request)
 
 # ---------- Validate: create / edit / add / delete check / import-export ----------
 @router.post("/ui/settings/val/create", response_class=HTMLResponse, name="ui_settings_val_create", response_model=None)
@@ -319,6 +551,43 @@ def ui_settings_val_add_check(
     ))
     _save_json(p, tpl.to_dict())
     return templates.TemplateResponse("ui/settings/_val_checks_table.html", {"request": request, "tpl": tpl})
+
+
+@router.post(
+    "/api/tools/validate/test_check",
+    response_class=JSONResponse,
+    name="api_validate_test_check",
+    response_model=None,
+)
+def api_validate_test_check(
+    message_text: str = Form(...),
+    segment: str = Form(...),
+    field: int = Form(...),
+    required: bool = Form(False),
+    pattern: Optional[str] = Form(None),
+    allowed_values: Optional[str] = Form(None),
+) -> JSONResponse:
+    from silhouette_core.interop.validate_workbook import validate_with_template
+
+    allowed = [v.strip() for v in (allowed_values or "").replace(";", ",").split(",") if v.strip()] or None
+    required_flag = str(required).strip().lower() in {"1", "true", "yes", "on"}
+    tpl = {
+        "name": "_preview",
+        "checks": [
+            {
+                "segment": segment.strip().upper(),
+                "field": int(field),
+                "required": required_flag,
+                "pattern": pattern or None,
+                "allowed_values": allowed,
+            }
+        ],
+    }
+    try:
+        report = validate_with_template(message_text, tpl)
+    except Exception as exc:  # pragma: no cover - defensive
+        return JSONResponse({"ok": False, "error": str(exc)}, status_code=400)
+    return JSONResponse({"ok": True, "report": report})
 
 @router.post("/ui/settings/val/delete_check/{name}", response_class=HTMLResponse, name="ui_settings_val_delete_check", response_model=None)
 def ui_settings_val_delete_check(request: Request, name: str, index: int = Form(...)) -> Response:
@@ -367,6 +636,17 @@ async def ui_settings_val_import_csv(request: Request, name: str, file: UploadFi
     _save_json(_json_path(VAL_DIR, name), ValidateTemplate(name=_safe_name(name), checks=checks).to_dict())
     tpl = ValidateTemplate.from_dict(_load_json(_json_path(VAL_DIR, name)))
     return templates.TemplateResponse("ui/settings/_val_checks_table.html", {"request": request, "tpl": tpl})
+
+
+@router.get(
+    "/ui/settings/val/new_check_modal/{name}",
+    response_class=HTMLResponse,
+    name="ui_settings_val_new_check_modal",
+    response_model=None,
+)
+def ui_settings_val_new_check_modal(request: Request, name: str) -> Response:
+    tpl = ValidateTemplate.from_dict(_load_json(_json_path(VAL_DIR, name)))
+    return templates.TemplateResponse("ui/settings/_val_check_modal.html", {"request": request, "tpl": tpl})
 
 # Delete the entire Validate template (required by your template)
 @router.post("/ui/settings/val/delete", name="ui_settings_val_delete", response_class=HTMLResponse, response_model=None)
