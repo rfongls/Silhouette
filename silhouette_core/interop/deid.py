@@ -212,6 +212,80 @@ def _apply_action(existing: str, action: str, param: Optional[str]) -> str:
     return ""
 
 
+def apply_single_rule(message_text: str, rule: dict) -> dict[str, object]:
+    """Apply a single rule to an HL7 message for preview/testing purposes."""
+
+    if message_text is None:
+        message_text = ""
+
+    segment = str(rule.get("segment") or "").strip().upper()
+    try:
+        field_idx = int(rule.get("field") or 0)
+    except Exception:
+        field_idx = 0
+    if not segment or field_idx <= 0:
+        return {
+            "before": None,
+            "after": None,
+            "changed": False,
+            "message_after": message_text,
+        }
+    component = rule.get("component")
+    if component in ("", None):
+        comp_idx = None
+    else:
+        try:
+            comp_idx = int(component)
+        except Exception:
+            comp_idx = None
+    subcomponent = rule.get("subcomponent")
+    if subcomponent in ("", None):
+        sub_idx = None
+    else:
+        try:
+            sub_idx = int(subcomponent)
+        except Exception:
+            sub_idx = None
+    action = str(rule.get("action") or "redact").strip()
+    param = rule.get("param")
+
+    before_value: Optional[str] = None
+    after_value: Optional[str] = None
+    out_lines: list[str] = []
+
+    for line in message_text.splitlines():
+        if not line.strip():
+            out_lines.append(line)
+            continue
+
+        parts = line.split(FIELD_SEP)
+        seg_name = parts[0].strip().upper() if parts else ""
+        if not seg_name or seg_name != segment:
+            out_lines.append(line)
+            continue
+
+        existing = _read_hl7_path(parts, seg_name, field_idx, comp_idx, sub_idx)
+        if before_value is None:
+            before_value = existing
+
+        new_value = _apply_action(existing, action, param)
+        if after_value is None:
+            after_value = new_value
+
+        parts = _set_hl7_path(parts, seg_name, field_idx, comp_idx, sub_idx, new_value)
+        out_lines.append(FIELD_SEP.join(parts))
+
+    message_after = "\n".join(out_lines)
+    changed = before_value is not None and before_value != after_value
+
+    return {
+        "before": before_value,
+        "after": after_value if before_value is not None else None,
+        "changed": changed,
+        "message_after": message_after,
+    }
+
+
 def apply_deid_with_template(message_text: str, tpl: dict, apply_baseline: bool = False) -> str:
     """Apply a structured template to de-identify an HL7 message."""
 

@@ -3,138 +3,164 @@
   <div class="modal" role="dialog" aria-modal="true">
     <div class="modal-card">
       <div class="modal-header">
-        <h3 class="text-h3">Add De-identification Rule</h3>
+        <h3 class="text-h3">{{ 'Clone De-identification Rule' if is_clone else 'Add De-identification Rule' }}</h3>
         <button class="button ghost" type="button" onclick="document.getElementById('deid-modal').remove()">✕</button>
       </div>
+
       <form
+        id="deid-modal-form"
         hx-post="{{ request.url_for('ui_settings_deid_add_rule', name=tpl.name) }}"
         hx-target="#deid-rules"
         hx-on::after-request="var m=document.getElementById('deid-modal');if(m){m.remove();}"
       >
         <div class="grid two">
-          <label>Segment<input class="input" name="segment" placeholder="PID" required></label>
-          <label>Field<input class="input" name="field" type="number" min="1" required></label>
-          <label>Component<input class="input" name="component" type="number" min="1"></label>
-          <label>Subcomponent<input class="input" name="subcomponent" type="number" min="1"></label>
+          <label>Segment<input class="input" name="segment" id="m-seg" placeholder="PID" required value="{{ prefill.segment }}"></label>
+          <label>Field<input class="input" name="field" id="m-field" type="number" min="1" required value="{{ prefill.field }}"></label>
+          <label>Component<input class="input" name="component" id="m-comp" type="number" min="1" value="{{ prefill.component }}"></label>
+          <label>Subcomponent<input class="input" name="subcomponent" id="m-sub" type="number" min="1" value="{{ prefill.subcomponent }}"></label>
         </div>
 
         <div class="grid two mt">
           <label>Action
-            <select class="input" name="action" id="action" onchange="toggleParamGroups()">
-              <option value="redact">redact</option>
-              <option value="mask">mask</option>
-              <option value="hash">hash</option>
-              <option value="replace">replace (literal)</option>
-              <option value="preset">preset (synthetic)</option>
-              <option value="regex_replace">regex replace</option>
-              <option value="regex_redact">regex redact</option>
-              <option value="dotnet_regex_replace">.NET regex replace</option>
-              <option value="dotnet_regex_redact">.NET regex redact</option>
+            <select class="input" name="action" id="m-action" onchange="toggleParamGroupsModal()">
+              {% set act = prefill.action %}
+              <option value="redact" {{ 'selected' if act == 'redact' else '' }}>redact</option>
+              <option value="mask" {{ 'selected' if act == 'mask' else '' }}>mask</option>
+              <option value="hash" {{ 'selected' if act == 'hash' else '' }}>hash</option>
+              <option value="replace" {{ 'selected' if act == 'replace' else '' }}>replace (literal)</option>
+              <option value="preset" {{ 'selected' if act == 'preset' else '' }}>preset (synthetic)</option>
+              <option value="regex_replace" {{ 'selected' if act == 'regex_replace' else '' }}>regex replace</option>
+              <option value="regex_redact" {{ 'selected' if act == 'regex_redact' else '' }}>regex redact</option>
+              <option value="dotnet_regex_replace" {{ 'selected' if act == 'dotnet_regex_replace' else '' }}>.NET regex replace</option>
+              <option value="dotnet_regex_redact" {{ 'selected' if act == 'dotnet_regex_redact' else '' }}>.NET regex redact</option>
             </select>
           </label>
 
           <label>Param mode
-            <select class="input" id="param-mode" onchange="toggleParamGroups()">
-              <option value="preset">Preset</option>
-              <option value="free">Free-text</option>
-              <option value="regex">Regex JSON</option>
+            <select class="input" id="m-param-mode" onchange="toggleParamGroupsModal()">
+              <option value="preset" {{ 'selected' if prefill.param_mode == 'preset' else '' }}>Preset</option>
+              <option value="free" {{ 'selected' if prefill.param_mode == 'free' else '' }}>Free-text</option>
+              <option value="regex" {{ 'selected' if prefill.param_mode == 'regex' else '' }}>Regex JSON</option>
             </select>
           </label>
         </div>
 
-        <div id="group-preset" class="mt">
+        <div id="m-group-preset" class="mt">
           <label>Preset key
-            <select class="input" id="preset" name="param">
-              <option value="name">name</option>
-              <option value="birthdate">birthdate</option>
-              <option value="datetime">datetime</option>
-              <option value="gender">gender</option>
-              <option value="address">address</option>
-              <option value="phone">phone</option>
-              <option value="language">language</option>
-              <option value="race">race</option>
-              <option value="mrn">mrn</option>
-              <option value="ssn">ssn</option>
-              <option value="facility">facility</option>
-              <option value="note">note</option>
-              <option value="pdf_blob">pdf_blob</option>
-              <option value="xml_blob">xml_blob</option>
+            <select class="input" id="m-preset">
+              {% set pv = prefill.preset_value %}
+              <option value="name" {{ 'selected' if pv == 'name' else '' }}>name</option>
+              <option value="birthdate" {{ 'selected' if pv == 'birthdate' else '' }}>birthdate</option>
+              <option value="datetime" {{ 'selected' if pv == 'datetime' else '' }}>datetime</option>
+              <option value="gender" {{ 'selected' if pv == 'gender' else '' }}>gender</option>
+              <option value="address" {{ 'selected' if pv == 'address' else '' }}>address</option>
+              <option value="phone" {{ 'selected' if pv == 'phone' else '' }}>phone</option>
+              <option value="language" {{ 'selected' if pv == 'language' else '' }}>language</option>
+              <option value="race" {{ 'selected' if pv == 'race' else '' }}>race</option>
+              <option value="mrn" {{ 'selected' if pv == 'mrn' else '' }}>mrn</option>
+              <option value="ssn" {{ 'selected' if pv == 'ssn' else '' }}>ssn</option>
+              <option value="facility" {{ 'selected' if pv == 'facility' else '' }}>facility</option>
+              <option value="note" {{ 'selected' if pv == 'note' else '' }}>note</option>
+              <option value="pdf_blob" {{ 'selected' if pv == 'pdf_blob' else '' }}>pdf_blob</option>
+              <option value="xml_blob" {{ 'selected' if pv == 'xml_blob' else '' }}>xml_blob</option>
             </select>
           </label>
         </div>
-
-        <div id="group-free" class="mt" style="display:none">
+        <div id="m-group-free" class="mt" style="display:none">
           <label>Param (literal / mask char / hash salt)
-            <input class="input" id="free" placeholder="e.g., *, fixed text, SALT123">
+            <input class="input" id="m-free" placeholder="e.g., *, fixed text, SALT123" value="{{ prefill.free_value }}">
           </label>
         </div>
 
-        <div id="group-regex" class="mt" style="display:none">
+        <div id="m-group-regex" class="mt" style="display:none">
           <div class="grid two">
-            <label>Pattern<input class="input" id="rx-pattern" placeholder="\\d{3}-\\d{2}-\\d{4}"></label>
-            <label>Flags<input class="input" id="rx-flags" placeholder="imxs (optional)"></label>
+            <label>Pattern<input class="input" id="m-rx-pattern" placeholder="\\d{3}-\\d{2}-\\d{4}" value="{{ prefill.regex_pattern }}"></label>
+            <label>Flags<input class="input" id="m-rx-flags" placeholder="imxs (optional)" value="{{ prefill.regex_flags }}"></label>
           </div>
           <label>Replacement (regex_replace only)
-            <input class="input" id="rx-repl" placeholder="***-**-****">
+            <input class="input" id="m-rx-repl" placeholder="***-**-****" value="{{ prefill.regex_repl }}">
           </label>
           <p class="muted">Serialized as <code>{"pattern": "...", "repl": "...", "flags": "imxs"}</code>.</p>
-          <input type="hidden" id="param-json" name="param">
+          <input type="hidden" id="m-param-json" name="param" value="{{ prefill.regex_param_json }}">
+        </div>
+
+        <div class="card mt">
+          <h4 class="text-h4">Test &amp; Preview</h4>
+          <label>Sample HL7 snippet
+            <textarea class="input" id="m-sample" rows="5">PID|1||444444^^^HOSP^MR||DOE^JOHN||19800101|M</textarea>
+          </label>
+          <div class="row mt">
+            <button class="button" type="button" onclick="testDeidRule()">Test</button>
+          </div>
+          <div class="grid two mt">
+            <div>
+              <h5 class="text-h5">Before</h5>
+              <pre id="m-before" class="mono muted" style="white-space:pre-wrap">—</pre>
+            </div>
+            <div>
+              <h5 class="text-h5">After</h5>
+              <pre id="m-after" class="mono" style="white-space:pre-wrap">—</pre>
+            </div>
+          </div>
+          <div class="mt">
+            <h5 class="text-h5">Transformed message</h5>
+            <pre id="m-after-msg" class="mono" style="white-space:pre-wrap"></pre>
+          </div>
         </div>
 
         <div class="row end mt">
           <button type="button" class="button ghost" onclick="document.getElementById('deid-modal').remove()">Cancel</button>
-          <button class="button">Add rule</button>
+          <button class="button">Save rule</button>
         </div>
       </form>
 
       <script>
-        function updateRegexJSON() {
-          const obj = {
-            pattern: document.getElementById('rx-pattern').value || '',
-            repl: document.getElementById('rx-repl').value || '',
-            flags: (document.getElementById('rx-flags').value || '').toLowerCase(),
-          };
-          document.getElementById('param-json').value = JSON.stringify(obj);
-        }
+        function toggleParamGroupsModal() {
+          const actionEl = document.getElementById('m-action');
+          const modeEl = document.getElementById('m-param-mode');
+          const presetWrap = document.getElementById('m-group-preset');
+          const freeWrap = document.getElementById('m-group-free');
+          const regexWrap = document.getElementById('m-group-regex');
+          const preset = document.getElementById('m-preset');
+          const free = document.getElementById('m-free');
+          const paramJson = document.getElementById('m-param-json');
+          const rxRepl = document.getElementById('m-rx-repl');
 
-        function toggleParamGroups() {
-          const actionEl = document.getElementById('action');
-          const modeEl = document.getElementById('param-mode');
-          const presetWrap = document.getElementById('group-preset');
-          const freeWrap = document.getElementById('group-free');
-          const regexWrap = document.getElementById('group-regex');
-          const preset = document.getElementById('preset');
-          const free = document.getElementById('free');
-          const paramJson = document.getElementById('param-json');
-          const rxRepl = document.getElementById('rx-repl');
+          if (!actionEl || !modeEl) { return; }
 
           let mode = modeEl.value;
-          preset.name = '';
-          free.name = '';
-          paramJson.name = '';
-          paramJson.value = '';
+          if (preset) preset.name = '';
+          if (free) free.name = '';
+          if (paramJson) {
+            paramJson.name = '';
+            if (mode !== 'regex') {
+              paramJson.value = JSON.stringify({ pattern: '', repl: '', flags: '' });
+            }
+          }
 
           modeEl.disabled = false;
-          rxRepl.disabled = false;
+          if (rxRepl) rxRepl.disabled = false;
 
-          if (actionEl.value === 'redact') {
+          const action = actionEl.value;
+          if (action === 'redact') {
             modeEl.disabled = true;
             presetWrap.style.display = 'none';
             freeWrap.style.display = 'none';
             regexWrap.style.display = 'none';
             return;
           }
-
-          if (actionEl.value === 'preset') {
+          if (action === 'preset') {
             if (mode === 'regex') {
               mode = 'preset';
               modeEl.value = 'preset';
             }
-          } else if (actionEl.value === 'regex_replace' || actionEl.value === 'regex_redact' || actionEl.value.startsWith('dotnet_regex')) {
+          } else if (action === 'regex_replace' || action === 'regex_redact' || action.indexOf('dotnet_regex') === 0) {
             mode = 'regex';
             modeEl.value = 'regex';
             modeEl.disabled = true;
-            rxRepl.disabled = actionEl.value.endsWith('redact');
+            if (rxRepl) {
+              rxRepl.disabled = action.endsWith('redact');
+            }
           } else {
             mode = 'free';
             modeEl.value = 'free';
@@ -145,27 +171,92 @@
             presetWrap.style.display = '';
             freeWrap.style.display = 'none';
             regexWrap.style.display = 'none';
-            preset.name = 'param';
+            if (preset) preset.name = 'param';
           } else if (mode === 'free') {
             presetWrap.style.display = 'none';
             freeWrap.style.display = '';
             regexWrap.style.display = 'none';
-            free.name = 'param';
+            if (free) free.name = 'param';
           } else {
             presetWrap.style.display = 'none';
             freeWrap.style.display = 'none';
             regexWrap.style.display = '';
-            updateRegexJSON();
-            paramJson.name = 'param';
+            if (paramJson) {
+              paramJson.name = 'param';
+              const obj = {
+                pattern: document.getElementById('m-rx-pattern').value || '',
+                repl: document.getElementById('m-rx-repl').value || '',
+                flags: (document.getElementById('m-rx-flags').value || '').toLowerCase(),
+              };
+              paramJson.value = JSON.stringify(obj);
+            }
           }
         }
 
-        ['rx-pattern', 'rx-repl', 'rx-flags'].forEach(function (id) {
+        ['m-rx-pattern', 'm-rx-repl', 'm-rx-flags'].forEach(function (id) {
           const el = document.getElementById(id);
-          el.addEventListener('input', updateRegexJSON);
+          if (el) {
+            el.addEventListener('input', function () {
+              const paramJson = document.getElementById('m-param-json');
+              if (!paramJson) return;
+              const obj = {
+                pattern: document.getElementById('m-rx-pattern').value || '',
+                repl: document.getElementById('m-rx-repl').value || '',
+                flags: (document.getElementById('m-rx-flags').value || '').toLowerCase(),
+              };
+              paramJson.value = JSON.stringify(obj);
+            });
+          }
         });
 
-        toggleParamGroups();
+        async function testDeidRule() {
+          const before = document.getElementById('m-before');
+          const after = document.getElementById('m-after');
+          const message = document.getElementById('m-after-msg');
+          before.textContent = '…';
+          after.textContent = '…';
+          message.textContent = '';
+          const fd = new FormData();
+          fd.append('message_text', document.getElementById('m-sample').value);
+          fd.append('segment', document.getElementById('m-seg').value);
+          fd.append('field', document.getElementById('m-field').value);
+          fd.append('component', document.getElementById('m-comp').value || '');
+          fd.append('subcomponent', document.getElementById('m-sub').value || '');
+          fd.append('action', document.getElementById('m-action').value);
+
+          const action = document.getElementById('m-action').value;
+          const mode = document.getElementById('m-param-mode').value;
+          let param = '';
+          if (action === 'preset' && mode === 'preset') {
+            param = document.getElementById('m-preset').value || '';
+          } else if (mode === 'regex' || action.indexOf('regex') !== -1) {
+            param = document.getElementById('m-param-json').value || '';
+          } else if (action !== 'redact') {
+            param = document.getElementById('m-free').value || '';
+          }
+          fd.append('param', param);
+
+          try {
+            const resp = await fetch('{{ request.url_for("api_deid_test_rule") }}', { method: 'POST', body: fd });
+            const data = await resp.json();
+            if (!data.ok) {
+              before.textContent = '—';
+              after.textContent = '—';
+              message.textContent = 'Error: ' + (data.error || 'unknown');
+              return;
+            }
+            before.textContent = data.preview.before === null ? '— (no match at path)' : String(data.preview.before);
+            after.textContent = data.preview.after === null ? '—' : String(data.preview.after);
+            message.textContent = data.preview.message_after || '';
+          } catch (err) {
+            before.textContent = '—';
+            after.textContent = '—';
+            message.textContent = 'Error: ' + (err && err.message ? err.message : err);
+          }
+        }
+
+        toggleParamGroupsModal();
+
       </script>
     </div>
   </div>

@@ -1,3 +1,6 @@
+{% if error %}
+  <div class="card danger mb">{{ error }}</div>
+{% endif %}
 <table class="table">
   <thead>
     <tr><th>#</th><th>Segment</th><th>Field</th><th>Comp</th><th>Subcomp</th><th>Action</th><th>Param</th><th></th></tr>
@@ -11,12 +14,18 @@
       <td>{{ r.component or "" }}</td>
       <td>{{ r.subcomponent or "" }}</td>
       <td>{{ r.action }}</td>
-      <td>{{ r.param or "" }}</td>
-      <td>
+      <td><code>{{ r.param or "" }}</code></td>
+      <td class="row gap small">
         <form hx-post="{{ request.url_for('ui_settings_deid_delete_rule', name=tpl.name) }}" hx-target="#deid-rules">
           <input type="hidden" name="index" value="{{ loop.index0 }}" />
           <button class="button danger small" title="Delete">✕</button>
         </form>
+        <button
+          class="button small"
+          hx-get="{{ request.url_for('ui_settings_deid_clone_rule_modal', name=tpl.name, index=loop.index0) }}"
+          hx-target="body"
+          hx-swap="beforeend"
+        >Clone</button>
       </td>
     </tr>
   {% else %}
