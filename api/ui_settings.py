@@ -6,7 +6,7 @@ from dataclasses import dataclass, asdict
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, Form, HTTPException, Request, UploadFile, File
+from fastapi import APIRouter, Form, HTTPException, Query, Request, UploadFile, File
 from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse, Response
 from starlette.templating import Jinja2Templates
 
@@ -273,6 +273,34 @@ def ui_settings_deid_new_rule_modal(request: Request, name: str) -> Response:
     }
     return templates.TemplateResponse("ui/settings/_deid_rule_modal.html", context)
 
+@router.get(
+    "/ui/settings/deid/param_controls",
+    response_class=HTMLResponse,
+    name="ui_settings_deid_param_controls",
+    response_model=None,
+)
+def ui_settings_deid_param_controls(
+    request: Request,
+    action: str = Query("redact"),
+    param_mode: str = Query("preset"),
+    param_preset: Optional[str] = Query(None),
+    param_free: Optional[str] = Query(None),
+    pattern: Optional[str] = Query(None),
+    repl: Optional[str] = Query(None),
+) -> Response:
+    action = (action or "redact").strip()
+    ctx = {
+        "request": request,
+        "action": action,
+        "param_mode": (param_mode or "preset").strip(),
+        "param_preset": param_preset or "",
+        "param_free": param_free or "",
+        "pattern": pattern or "",
+        "repl": repl or "",
+    }
+    return templates.TemplateResponse("ui/settings/_deid_param_controls.html", ctx)
+
+
 @router.post("/ui/settings/deid/add_rule/{name}", response_class=HTMLResponse, name="ui_settings_deid_add_rule", response_model=None)
 def ui_settings_deid_add_rule(
     request: Request,
@@ -282,7 +310,11 @@ def ui_settings_deid_add_rule(
     component: Optional[str] = Form(None),
     subcomponent: Optional[str] = Form(None),
     action: str = Form("redact"),
-    param: Optional[str] = Form(None),
+    param_mode: Optional[str] = Form(None),
+    param_preset: Optional[str] = Form(None),
+    param_free: Optional[str] = Form(None),
+    pattern: Optional[str] = Form(None),
+    repl: Optional[str] = Form(None),
 ) -> Response:
     p = _json_path(DEID_DIR, name)
     tpl = DeidTemplate.from_dict(_load_json(p))
@@ -295,13 +327,28 @@ def ui_settings_deid_add_rule(
         sub_val = None if subcomponent in (None, "") else int(subcomponent)
     except Exception:
         sub_val = None
+    act = (action or "redact").strip()
+    if act == "preset":
+        if (param_mode or "preset") == "preset":
+            param_value: Optional[str] = (param_preset or "").strip()
+        else:
+            param_value = (param_free or "").strip()
+    elif act in {"replace", "mask", "hash"}:
+        param_value = (param_free or "").strip()
+    elif act == "regex_redact":
+        param_value = (pattern or "").strip()
+    elif act == "regex_replace":
+        param_value = json.dumps({"pattern": pattern or "", "repl": repl or ""})
+    else:
+        param_value = None
+
     new_rule = {
         "segment": segment.strip().upper(),
         "field": int(field),
         "component": comp_val,
         "subcomponent": sub_val,
-        "action": action,
-        "param": param or None,
+        "action": act,
+        "param": (param_value or None),
     }
 
     if _has_duplicate([asdict(r) for r in tpl.rules], new_rule):
@@ -328,19 +375,34 @@ def api_deid_test_rule(
     component: Optional[str] = Form(None),
     subcomponent: Optional[str] = Form(None),
     action: str = Form(...),
-    param: Optional[str] = Form(None),
+    param_mode: Optional[str] = Form(None),
+    param_preset: Optional[str] = Form(None),
+    param_free: Optional[str] = Form(None),
+    pattern: Optional[str] = Form(None),
+    repl: Optional[str] = Form(None),
 ) -> JSONResponse:
     from silhouette_core.interop.deid import apply_single_rule
 
     c = int(component) if component and component.isdigit() else None
     s = int(subcomponent) if subcomponent and subcomponent.isdigit() else None
+    act = (action or "redact").strip()
+    if act == "preset":
+        param_value = (param_preset or "").strip() if (param_mode or "preset") == "preset" else (param_free or "").strip()
+    elif act in {"replace", "mask", "hash"}:
+        param_value = (param_free or "").strip()
+    elif act == "regex_redact":
+        param_value = (pattern or "").strip()
+    elif act == "regex_replace":
+        param_value = json.dumps({"pattern": pattern or "", "repl": repl or ""})
+    else:
+        param_value = None
     rule = {
         "segment": segment.strip().upper(),
         "field": int(field),
         "component": c,
         "subcomponent": s,
-        "action": action.strip(),
-        "param": param,
+        "action": act,
+        "param": param_value,
     }
     try:
         preview = apply_single_rule(message_text or "", rule)

@@ -33,6 +33,13 @@
     {% set regex_pattern = raw_regex_param %}
   {% endif %}
 {% endif %}
+{% set param_payload = {
+  'param_mode': param_mode,
+  'param_preset': preset_value,
+  'param_free': free_value,
+  'pattern': regex_pattern,
+  'repl': regex_replacement
+} %}
 
 <div class="modal-backdrop"></div>
 <div class="modal" id="deid-modal"
@@ -47,7 +54,6 @@
     <form id="deid-modal-form"
           hx-post="{{ request.url_for('ui_settings_deid_add_rule', name=tpl.name) }}"
           hx-target="#deid-rules"
-          hx-on::before-submit="initDeidModal('#deid-modal')"
           hx-on::after-request="document.getElementById('deid-modal').remove()">
 
       <div class="grid two">
@@ -59,7 +65,12 @@
 
       <div class="grid two mt">
         <label>Action
-          <select class="input" name="action" id="m-action">
+          <select class="input" name="action" id="m-action"
+                  hx-get="{{ request.url_for('ui_settings_deid_param_controls') }}"
+                  hx-target="#param-controls"
+                  hx-trigger="load, change"
+                  hx-include="#deid-modal-form"
+                  hx-vals='{{ param_payload | tojson }}'>
             <option value="redact"         {{ 'selected' if act=='redact' else '' }}>redact</option>
             <option value="mask"           {{ 'selected' if act=='mask' else '' }}>mask</option>
             <option value="hash"           {{ 'selected' if act=='hash' else '' }}>hash</option>
@@ -69,38 +80,11 @@
             <option value="regex_replace"  {{ 'selected' if act=='regex_replace' else '' }}>regex replace</option>
           </select>
         </label>
-
-        <label id="m-param-mode-wrap" style="display:none">Parameter mode
-          <select class="input" id="m-param-mode">
-            <option value="preset" {{ 'selected' if param_mode == 'preset' else '' }}>Preset</option>
-            <option value="free" {{ 'selected' if param_mode == 'free' else '' }}>Free-text</option>
-          </select>
-        </label>
+      </div>
+      <div id="param-controls" class="mt">
+        {% include 'ui/settings/_deid_param_controls.html' with context %}
       </div>
 
-      <div id="m-preset-wrap" class="mt" style="display:none">
-        <label>Preset key
-          <select class="input" id="m-preset">
-            {% for opt in preset_options %}
-              <option value="{{ opt }}" {{ 'selected' if preset_value==opt else '' }}>{{ opt }}</option>
-            {% endfor %}
-          </select>
-        </label>
-      </div>
-
-      <div id="m-free-wrap" class="mt" style="display:none">
-        <label>Value / Param <input class="input" id="m-free" placeholder="*, SALT123, fixed text" value="{{ free_value }}"></label>
-      </div>
-
-      <div id="m-regex-wrap" class="mt" style="display:none">
-        <div class="grid two">
-          <label>Regex pattern <input class="input" id="m-rx-pattern" placeholder="e.g., ^\\d{6}$" value="{{ regex_pattern }}"></label>
-          <label id="m-rx-repl-wrap" style="display:none">Replacement (for regex_replace) <input class="input" id="m-rx-repl" placeholder="***000" value="{{ regex_replacement }}"></label>
-        </div>
-        <p class="muted">Regex is time-bounded &amp; length-limited. Use <code>regex_redact</code> to mask matches, <code>regex_replace</code> to replace.</p>
-      </div>
-
-      <input type="hidden" id="m-param-hidden" />
       <div class="row gap small mt"><span class="badge muted">Path</span><span class="badge mono" id="m-path-badge">—</span></div>
       <div class="card mt">
         <h4 class="text-h4">Test &amp; Preview</h4>
