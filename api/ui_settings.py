@@ -117,9 +117,9 @@ def ui_settings_deid_create(request: Request, name: str = Form(...)) -> Response
     if p.exists():
         raise HTTPException(status_code=400, detail="Template already exists")
     _save_json(p, DeidTemplate(name=_safe_name(name), rules=[]).to_dict())
-    # Return the list partial (HTMX swap target is #deid-list)
+    # Return the select partial (HTMX target is #deid-select-wrap)
     return templates.TemplateResponse(
-        "ui/settings/_deid_list.html",
+        "ui/settings/_deid_select_inner.html",
         {"request": request, "deid_templates": _list_templates(DEID_DIR)},
     )
 
@@ -274,10 +274,7 @@ def ui_settings_deid_delete(request: Request, name: str = Form(...)) -> Response
     p = _json_path(DEID_DIR, name)
     if p.exists():
         p.unlink()
-    return templates.TemplateResponse(
-        "ui/settings/_deid_list.html",
-        {"request": request, "deid_templates": _list_templates(DEID_DIR)},
-    )
+    return ui_settings_index(request)
 
 # ---------- Validate: create / edit / add / delete check / import-export ----------
 @router.post("/ui/settings/val/create", response_class=HTMLResponse, name="ui_settings_val_create", response_model=None)
