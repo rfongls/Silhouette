@@ -63,6 +63,35 @@ def deidentify_message(message: str, *, seed: Optional[int] = None) -> str:
     return "\n".join(out)
 
 
+def _read_hl7_path(
+    fields: list[str],
+    segment: str,
+    field_idx: int,
+    component_idx: int | None,
+    subcomponent_idx: int | None,
+) -> str:
+    pos = field_idx if segment != "MSH" else field_idx - 1
+    if pos < 0 or pos >= len(fields):
+        return ""
+    current = fields[pos] or ""
+    if component_idx is None:
+        return current
+
+    comps = current.split(COMP_SEP)
+    comp_pos = component_idx - 1
+    if comp_pos < 0 or comp_pos >= len(comps):
+        return ""
+    value = comps[comp_pos] or ""
+    if subcomponent_idx is None:
+        return value
+
+    subs = value.split(SUBCOMP_SEP)
+    sub_pos = subcomponent_idx - 1
+    if sub_pos < 0 or sub_pos >= len(subs):
+        return ""
+    return subs[sub_pos] or ""
+
+
 def _set_hl7_path(
     fields: list[str],
     segment: str,
@@ -76,51 +105,36 @@ def _set_hl7_path(
     pos = field_idx if segment != "MSH" else field_idx - 1
     if pos < 0:
         return fields
-    while len(fields) <= pos:
+
+    while pos >= len(fields):
         fields.append("")
+
     if component_idx is None:
         fields[pos] = value
         return fields
-    comps = fields[pos].split(COMP_SEP) if fields[pos] else []
-    while len(comps) < component_idx:
-        comps.append("")
+
+    current = fields[pos] or ""
+    comps = current.split(COMP_SEP)
     comp_pos = component_idx - 1
+    while comp_pos >= len(comps):
+        comps.append("")
+
     if subcomponent_idx is None:
         comps[comp_pos] = value
-    else:
-        subs = comps[comp_pos].split(SUBCOMP_SEP) if comp_pos < len(comps) and comps[comp_pos] else []
-        while len(subs) < subcomponent_idx:
-            subs.append("")
-        subs[subcomponent_idx - 1] = value
-        comps[comp_pos] = SUBCOMP_SEP.join(subs)
+        fields[pos] = COMP_SEP.join(comps)
+        return fields
+
+    subs = (comps[comp_pos] or "").split(SUBCOMP_SEP)
+    sub_pos = subcomponent_idx - 1
+    while sub_pos >= len(subs):
+        subs.append("")
+    subs[sub_pos] = value
+    comps[comp_pos] = SUBCOMP_SEP.join(subs)
     fields[pos] = COMP_SEP.join(comps)
     return fields
 
 
-def _read_hl7_path(
-    fields: list[str],
-    segment: str,
-    field_idx: int,
-    component_idx: int | None,
-    subcomponent_idx: int | None,
-) -> str:
-    pos = field_idx if segment != "MSH" else field_idx - 1
-    if pos < 0 or pos >= len(fields):
-        return ""
-    if component_idx is None:
-        return fields[pos]
-    comps = fields[pos].split(COMP_SEP)
-    comp_pos = component_idx - 1
-    if comp_pos < 0 or comp_pos >= len(comps):
-        return ""
-    value = comps[comp_pos]
-    if subcomponent_idx is None:
-        return value
-    subs = value.split(SUBCOMP_SEP)
-    sub_pos = subcomponent_idx - 1
-    if sub_pos < 0 or sub_pos >= len(subs):
-        return ""
-    return subs[sub_pos]
+MAX_REGEX_FIELD_LEN = 1_000_000
 
 
 MAX_REGEX_FIELD_LEN = 1_000_000
@@ -214,10 +228,7 @@ def _apply_action(existing: str, action: str, param: Optional[str]) -> str:
 
 def apply_single_rule(message_text: str, rule: dict) -> dict[str, object]:
     """Apply a single rule to an HL7 message for preview/testing purposes."""
-
-    if message_text is None:
-        message_text = ""
-
+    message_text = message_text or ""
     segment = str(rule.get("segment") or "").strip().upper()
     try:
         field_idx = int(rule.get("field") or 0)
@@ -228,6 +239,8 @@ def apply_single_rule(message_text: str, rule: dict) -> dict[str, object]:
             "before": None,
             "after": None,
             "changed": False,
+            "line_before": None,
+            "line_after": None,
             "message_after": message_text,
         }
     component = rule.get("component")
@@ -251,37 +264,40 @@ def apply_single_rule(message_text: str, rule: dict) -> dict[str, object]:
 
     before_value: Optional[str] = None
     after_value: Optional[str] = None
+    first_line_before: Optional[str] = None
+    first_line_after: Optional[str] = None
     out_lines: list[str] = []
 
     for line in message_text.splitlines():
-        if not line.strip():
-            out_lines.append(line)
-            continue
-
         parts = line.split(FIELD_SEP)
         seg_name = parts[0].strip().upper() if parts else ""
-        if not seg_name or seg_name != segment:
+        if seg_name != segment:
             out_lines.append(line)
             continue
 
         existing = _read_hl7_path(parts, seg_name, field_idx, comp_idx, sub_idx)
         if before_value is None:
             before_value = existing
+            first_line_before = FIELD_SEP.join(parts)
 
         new_value = _apply_action(existing, action, param)
+        parts = _set_hl7_path(parts, seg_name, field_idx, comp_idx, sub_idx, new_value)
+        out_line = FIELD_SEP.join(parts)
         if after_value is None:
             after_value = new_value
+            first_line_after = out_line
 
-        parts = _set_hl7_path(parts, seg_name, field_idx, comp_idx, sub_idx, new_value)
-        out_lines.append(FIELD_SEP.join(parts))
+        out_lines.append(out_line)
 
-    message_after = "\n".join(out_lines)
+    message_after = "\n".join(out_lines) if out_lines else message_text
     changed = before_value is not None and before_value != after_value
 
     return {
         "before": before_value,
         "after": after_value if before_value is not None else None,
         "changed": changed,
+        "line_before": first_line_before,
+        "line_after": first_line_after,
         "message_after": message_after,
     }
 

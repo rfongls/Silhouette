@@ -83,38 +83,91 @@
           <p class="muted">Serialized as <code>{"pattern": "...", "repl": "...", "flags": "imxs"}</code>.</p>
           <input type="hidden" id="m-param-json" name="param" value="{{ prefill.regex_param_json }}">
         </div>
-
-        <div class="card mt">
-          <h4 class="text-h4">Test &amp; Preview</h4>
-          <label>Sample HL7 snippet
-            <textarea class="input" id="m-sample" rows="5">PID|1||444444^^^HOSP^MR||DOE^JOHN||19800101|M</textarea>
-          </label>
-          <div class="row mt">
-            <button class="button" type="button" onclick="testDeidRule()">Test</button>
+      <div class="card mt">
+        <h4 class="text-h4">Test &amp; Preview</h4>
+        <label>Sample HL7 snippet
+          <textarea class="input" id="m-sample" rows="5">PID|1||444444^^^HOSP^MR||DOE^JOHN||19800101|M</textarea>
+        </label>
+        <div class="row mt">
+          <button class="button" type="button" onclick="testDeidRule()">Test</button>
+        </div>
+        <div class="grid two mt">
+          <div>
+            <h5 class="text-h5">Field value (before)</h5>
+            <pre id="m-before-diff" class="mono muted" style="white-space:pre-wrap">—</pre>
           </div>
-          <div class="grid two mt">
-            <div>
-              <h5 class="text-h5">Before</h5>
-              <pre id="m-before" class="mono muted" style="white-space:pre-wrap">—</pre>
-            </div>
-            <div>
-              <h5 class="text-h5">After</h5>
-              <pre id="m-after" class="mono" style="white-space:pre-wrap">—</pre>
-            </div>
-          </div>
-          <div class="mt">
-            <h5 class="text-h5">Transformed message</h5>
-            <pre id="m-after-msg" class="mono" style="white-space:pre-wrap"></pre>
+          <div>
+            <h5 class="text-h5">Field value (after)</h5>
+            <pre id="m-after-diff" class="mono" style="white-space:pre-wrap">—</pre>
           </div>
         </div>
-
+        <div class="grid two mt">
+          <div>
+            <h5 class="text-h5">Matching segment line (before)</h5>
+            <pre id="m-msg-before" class="mono muted" style="white-space:pre-wrap">—</pre>
+          </div>
+          <div>
+            <h5 class="text-h5">Matching segment line (after)</h5>
+            <pre id="m-msg-after" class="mono" style="white-space:pre-wrap">—</pre>
+          </div>
+        </div>
+        <div class="mt">
+          <h5 class="text-h5">Transformed message</h5>
+          <pre id="m-after-msg" class="mono" style="white-space:pre-wrap"></pre>
+        </div>
+      </div>
         <div class="row end mt">
           <button type="button" class="button ghost" onclick="document.getElementById('deid-modal').remove()">Cancel</button>
           <button class="button">Save rule</button>
         </div>
       </form>
-
+      <style>
+        .diff-del { background: #ffe5e5; text-decoration: line-through; }
+        .diff-add { background: #e6ffed; }
+      </style>
       <script>
+        function esc(value) {
+          return (value ?? '').toString()
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;');
+        }
+
+        function diffChars(before, after) {
+          const a = before ?? '';
+          const b = after ?? '';
+          if (a === b) {
+            const html = esc(a || '—');
+            return { beforeHTML: html, afterHTML: html };
+          }
+          let prefix = 0;
+          const maxPrefix = Math.min(a.length, b.length);
+          while (prefix < maxPrefix && a[prefix] === b[prefix]) {
+            prefix += 1;
+          }
+          let suffix = 0;
+          const maxSuffix = Math.min(a.length - prefix, b.length - prefix);
+          while (suffix < maxSuffix && a[a.length - 1 - suffix] === b[b.length - 1 - suffix]) {
+            suffix += 1;
+          }
+          const beforeMid = a.slice(prefix, a.length - suffix);
+          const afterMid = b.slice(prefix, b.length - suffix);
+          const beforeHTML = esc(a.slice(0, prefix)) + (beforeMid ? '<span class="diff-del">' + esc(beforeMid) + '</span>' : '') + esc(a.slice(a.length - suffix));
+          const afterHTML = esc(b.slice(0, prefix)) + (afterMid ? '<span class="diff-add">' + esc(afterMid) + '</span>' : '') + esc(b.slice(b.length - suffix));
+          return { beforeHTML, afterHTML };
+        }
+
+        function diffLines(before, after) {
+          const result = diffChars(before, after);
+          if (!result.beforeHTML) {
+            result.beforeHTML = esc(before || '—');
+          }
+          if (!result.afterHTML) {
+            result.afterHTML = esc(after || '—');
+          }
+          return result;
+        }
         function toggleParamGroupsModal() {
           const actionEl = document.getElementById('m-action');
           const modeEl = document.getElementById('m-param-mode');
@@ -210,19 +263,26 @@
         });
 
         async function testDeidRule() {
-          const before = document.getElementById('m-before');
-          const after = document.getElementById('m-after');
+          const beforeField = document.getElementById('m-before-diff');
+          const afterField = document.getElementById('m-after-diff');
+          const msgBefore = document.getElementById('m-msg-before');
+          const msgAfter = document.getElementById('m-msg-after');
           const message = document.getElementById('m-after-msg');
-          before.textContent = '…';
-          after.textContent = '…';
+
+          beforeField.textContent = '…';
+          afterField.textContent = '…';
+          msgBefore.textContent = '…';
+          msgAfter.textContent = '…';
           message.textContent = '';
+
           const fd = new FormData();
-          fd.append('message_text', document.getElementById('m-sample').value);
-          fd.append('segment', document.getElementById('m-seg').value);
-          fd.append('field', document.getElementById('m-field').value);
+          const sample = document.getElementById('m-sample').value || '';
+          fd.append('message_text', sample);
+          fd.append('segment', document.getElementById('m-seg').value || '');
+          fd.append('field', document.getElementById('m-field').value || '');
           fd.append('component', document.getElementById('m-comp').value || '');
           fd.append('subcomponent', document.getElementById('m-sub').value || '');
-          fd.append('action', document.getElementById('m-action').value);
+          fd.append('action', document.getElementById('m-action').value || '');
 
           const action = document.getElementById('m-action').value;
           const mode = document.getElementById('m-param-mode').value;
@@ -238,25 +298,52 @@
 
           try {
             const resp = await fetch('{{ request.url_for("api_deid_test_rule") }}', { method: 'POST', body: fd });
-            const data = await resp.json();
+            let data;
+            try {
+              data = await resp.json();
+            } catch (jsonErr) {
+              const text = await resp.text();
+              data = { ok: false, error: 'Non-JSON response', text };
+            }
+
             if (!data.ok) {
-              before.textContent = '—';
-              after.textContent = '—';
-              message.textContent = 'Error: ' + (data.error || 'unknown');
+              beforeField.innerHTML = esc('—');
+              afterField.innerHTML = esc('Error');
+              msgBefore.innerHTML = esc(sample || '');
+              msgAfter.innerHTML = esc(sample || '');
+              message.innerHTML = esc('Error: ' + (data.error || data.text || 'unknown'));
               return;
             }
-            before.textContent = data.preview.before === null ? '— (no match at path)' : String(data.preview.before);
-            after.textContent = data.preview.after === null ? '—' : String(data.preview.after);
-            message.textContent = data.preview.message_after || '';
+
+            const beforeVal = data.preview.before ?? '';
+            const afterVal = data.preview.after ?? '';
+            const fieldDiff = diffChars(beforeVal, afterVal);
+            beforeField.innerHTML = fieldDiff.beforeHTML || esc(beforeVal || '— (no match at path)');
+            afterField.innerHTML = fieldDiff.afterHTML || esc(afterVal || '—');
+
+            const lineBefore = data.preview.line_before ?? '';
+            const lineAfterRaw = data.preview.line_after;
+            if (!lineBefore) {
+              msgBefore.innerHTML = esc('— (no matching segment)');
+              msgAfter.innerHTML = esc('— (no matching segment)');
+            } else {
+              const lineAfter = lineAfterRaw ?? data.preview.message_after ?? sample;
+              const lineDiff = diffLines(lineBefore, lineAfter);
+              msgBefore.innerHTML = lineDiff.beforeHTML || esc(lineBefore);
+              msgAfter.innerHTML = lineDiff.afterHTML || esc(lineAfter);
+            }
+
+            message.innerHTML = esc(data.preview.message_after || sample);
           } catch (err) {
-            before.textContent = '—';
-            after.textContent = '—';
-            message.textContent = 'Error: ' + (err && err.message ? err.message : err);
+            beforeField.innerHTML = esc('—');
+            afterField.innerHTML = esc('Error');
+            msgBefore.innerHTML = esc(sample || '');
+            msgAfter.innerHTML = esc(sample || '');
+            message.innerHTML = esc('Error: ' + (err && err.message ? err.message : err));
           }
         }
 
         toggleParamGroupsModal();
-
       </script>
     </div>
   </div>

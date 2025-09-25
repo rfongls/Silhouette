@@ -332,13 +332,23 @@ def api_deid_test_rule(
 ) -> JSONResponse:
     from silhouette_core.interop.deid import apply_single_rule
 
-    try:
-        comp_val = None if component in (None, "") else int(component)
-    except Exception:
+    comp_val: Optional[int]
+    sub_val: Optional[int]
+
+    if component and component.isdigit():
+        try:
+            comp_val = int(component)
+        except Exception:  # pragma: no cover - defensive
+            comp_val = None
+    else:
         comp_val = None
-    try:
-        sub_val = None if subcomponent in (None, "") else int(subcomponent)
-    except Exception:
+
+    if subcomponent and subcomponent.isdigit():
+        try:
+            sub_val = int(subcomponent)
+        except Exception:  # pragma: no cover - defensive
+            sub_val = None
+    else:
         sub_val = None
 
     rule = {
@@ -349,11 +359,12 @@ def api_deid_test_rule(
         "action": action.strip(),
         "param": param,
     }
+
     try:
-        preview = apply_single_rule(message_text, rule)
+        preview = apply_single_rule(message_text or "", rule)
+        return JSONResponse({"ok": True, "preview": preview})
     except Exception as exc:  # pragma: no cover - defensive
-        return JSONResponse({"ok": False, "error": str(exc)}, status_code=400)
-    return JSONResponse({"ok": True, "preview": preview})
+        return JSONResponse({"ok": False, "error": f"{type(exc).__name__}: {exc}"})
 
 @router.post("/ui/settings/deid/delete_rule/{name}", response_class=HTMLResponse, name="ui_settings_deid_delete_rule", response_model=None)
 def ui_settings_deid_delete_rule(request: Request, name: str, index: int = Form(...)) -> Response:
