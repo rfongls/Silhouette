@@ -1,349 +1,145 @@
-<div id="deid-modal" class="modal-root">
-  <div class="modal-backdrop" onclick="document.getElementById('deid-modal').remove()"></div>
-  <div class="modal">
-    <div class="modal-card">
-      <div class="modal-header">
-        <h3 class="text-h3">{% if is_clone %}Clone De-identification Rule{% else %}Add De-identification Rule{% endif %}</h3>
-        <button class="button ghost" type="button" onclick="document.getElementById('deid-modal').remove()">✕</button>
+{% set preset_options = ['name','birthdate','datetime','gender','address','phone','language','race','mrn','ssn','facility','note','pdf_blob','xml_blob'] %}
+{% set act = clone.action if clone else 'redact' %}
+{% set preset_value = preset_options[0] %}
+{% if clone and act == 'preset' and clone.param in preset_options %}
+  {% set preset_value = clone.param %}
+{% endif %}
+{% set param_mode = 'preset' %}
+{% if clone and act == 'preset' and (clone.param is not none) and (clone.param not in preset_options) %}
+  {% set param_mode = 'free' %}
+{% endif %}
+{% set free_value = '' %}
+{% if clone %}
+  {% if act in ['replace','mask','hash'] %}
+    {% set free_value = clone.param or '' %}
+  {% elif act == 'preset' and (clone.param is not none) and (clone.param not in preset_options) %}
+    {% set free_value = clone.param %}
+  {% endif %}
+{% endif %}
+{% set regex_pattern = '' %}
+{% set regex_replacement = '' %}
+{% if clone and act == 'regex_redact' %}
+  {% set regex_pattern = clone.param or '' %}
+{% elif clone and act == 'regex_replace' %}
+  {% set raw_regex_param = clone.param or '' %}
+  {% if raw_regex_param and raw_regex_param.strip().startswith('{') %}
+    {% set parsed = raw_regex_param | fromjson(default={}) %}
+    {% set regex_pattern = parsed.get('pattern', '') %}
+    {% set regex_replacement = parsed.get('repl', '') %}
+  {% elif raw_regex_param and ':::' in raw_regex_param %}
+    {% set regex_pattern = raw_regex_param.split(':::', 1)[0] %}
+    {% set regex_replacement = raw_regex_param.split(':::', 1)[1] %}
+  {% else %}
+    {% set regex_pattern = raw_regex_param %}
+  {% endif %}
+{% endif %}
+
+<div class="modal-backdrop"></div>
+<div class="modal" id="deid-modal"
+     data-test-endpoint="{{ request.url_for('api_deid_test_rule') }}"
+     hx-on::after-swap="initDeidModal('#deid-modal')">
+  <div class="modal-card">
+    <div class="modal-header">
+      <h3 class="text-h3">{% if clone %}Clone De-identification Rule{% else %}Add De-identification Rule{% endif %}</h3>
+      <button class="button ghost" type="button" onclick="document.getElementById('deid-modal').remove()">✕</button>
+    </div>
+
+    <form id="deid-modal-form"
+          hx-post="{{ request.url_for('ui_settings_deid_add_rule', name=tpl.name) }}"
+          hx-target="#deid-rules"
+          hx-on::before-submit="initDeidModal('#deid-modal')"
+          hx-on::after-request="document.getElementById('deid-modal').remove()">
+
+      <div class="grid two">
+        <label>Segment <input class="input" name="segment" id="m-seg" placeholder="PID" required value="{{ clone.segment if clone else '' }}"></label>
+        <label>Field   <input class="input" name="field" id="m-field" type="number" min="1" required value="{{ clone.field if clone else '' }}"></label>
+        <label>Component <input class="input" name="component" id="m-comp" type="number" min="1" value="{{ clone.component if clone and clone.component is not none else '' }}"></label>
+        <label>Subcomponent <input class="input" name="subcomponent" id="m-sub" type="number" min="1" value="{{ clone.subcomponent if clone and clone.subcomponent is not none else '' }}"></label>
       </div>
 
-      <form
-        id="deid-modal-form"
-        hx-post="{{ request.url_for('ui_settings_deid_add_rule', name=tpl.name) }}"
-        hx-target="#deid-rules"
-        hx-on::after-request="document.getElementById('deid-modal')?.remove()"
-      >
-        <div class="grid two">
-        <label>Segment
-          <input class="input" name="segment" id="m-seg" placeholder="PID" required value="{{ prefill.segment }}">
-        </label>
-        <label>Field
-          <input class="input" name="field" id="m-field" type="number" min="1" required value="{{ prefill.field }}">
-        </label>
-        <label>Component
-          <input class="input" name="component" id="m-comp" type="number" min="1" value="{{ prefill.component }}">
-        </label>
-        <label>Subcomponent
-          <input class="input" name="subcomponent" id="m-sub" type="number" min="1" value="{{ prefill.subcomponent }}">
-        </label>
-      </div>
-
-        <div class="grid two mt">
+      <div class="grid two mt">
         <label>Action
-          {% set act = prefill.action %}
-          <select class="input" name="action" id="m-action" onchange="syncParamUI()">
-            <option value="redact" {{ 'selected' if act == 'redact' else '' }}>redact</option>
-            <option value="mask" {{ 'selected' if act == 'mask' else '' }}>mask</option>
-            <option value="hash" {{ 'selected' if act == 'hash' else '' }}>hash</option>
-            <option value="replace" {{ 'selected' if act == 'replace' else '' }}>replace (literal)</option>
-            <option value="preset" {{ 'selected' if act == 'preset' else '' }}>preset (synthetic)</option>
-            <option value="regex_redact" {{ 'selected' if act == 'regex_redact' else '' }}>regex redact</option>
-            <option value="regex_replace" {{ 'selected' if act == 'regex_replace' else '' }}>regex replace</option>
+          <select class="input" name="action" id="m-action">
+            <option value="redact"         {{ 'selected' if act=='redact' else '' }}>redact</option>
+            <option value="mask"           {{ 'selected' if act=='mask' else '' }}>mask</option>
+            <option value="hash"           {{ 'selected' if act=='hash' else '' }}>hash</option>
+            <option value="replace"        {{ 'selected' if act=='replace' else '' }}>replace (literal)</option>
+            <option value="preset"         {{ 'selected' if act=='preset' else '' }}>preset (synthetic)</option>
+            <option value="regex_redact"   {{ 'selected' if act=='regex_redact' else '' }}>regex redact</option>
+            <option value="regex_replace"  {{ 'selected' if act=='regex_replace' else '' }}>regex replace</option>
           </select>
         </label>
+
         <label id="m-param-mode-wrap" style="display:none">Parameter mode
-          <select class="input" id="m-param-mode" onchange="syncParamUI()">
-            <option value="preset" {{ 'selected' if prefill.param_mode == 'preset' else '' }}>Preset</option>
-            <option value="free" {{ 'selected' if prefill.param_mode == 'free' else '' }}>Free-text</option>
+          <select class="input" id="m-param-mode">
+            <option value="preset" {{ 'selected' if param_mode == 'preset' else '' }}>Preset</option>
+            <option value="free" {{ 'selected' if param_mode == 'free' else '' }}>Free-text</option>
           </select>
         </label>
       </div>
 
-        <div id="m-preset-wrap" class="mt" style="display:none">
+      <div id="m-preset-wrap" class="mt" style="display:none">
         <label>Preset key
-          {% set pv = prefill.preset_value %}
           <select class="input" id="m-preset">
-            {% for opt in ['name','birthdate','datetime','gender','address','phone','language','race','mrn','ssn','facility','note','pdf_blob','xml_blob'] %}
-              <option value="{{ opt }}" {{ 'selected' if pv == opt else '' }}>{{ opt }}</option>
+            {% for opt in preset_options %}
+              <option value="{{ opt }}" {{ 'selected' if preset_value==opt else '' }}>{{ opt }}</option>
             {% endfor %}
           </select>
         </label>
       </div>
 
-        <div id="m-free-wrap" class="mt" style="display:none">
-        <label>Value / Param
-          <input class="input" id="m-free" placeholder="*, SALT123, fixed text" value="{{ prefill.free_value }}">
-        </label>
+      <div id="m-free-wrap" class="mt" style="display:none">
+        <label>Value / Param <input class="input" id="m-free" placeholder="*, SALT123, fixed text" value="{{ free_value }}"></label>
       </div>
 
-        <div id="m-regex-wrap" class="mt" style="display:none">
-        <input type="hidden" id="m-regex-param">
+      <div id="m-regex-wrap" class="mt" style="display:none">
         <div class="grid two">
-          <label>Regex pattern
-            <input class="input" id="m-rx-pattern" placeholder="^\\d{6}$" value="{{ prefill.regex_pattern }}">
-          </label>
-          <label id="m-rx-repl-wrap" style="display:none">Replacement (regex_replace)
-            <input class="input" id="m-rx-repl" placeholder="***000" value="{{ prefill.regex_repl }}">
-          </label>
+          <label>Regex pattern <input class="input" id="m-rx-pattern" placeholder="e.g., ^\\d{6}$" value="{{ regex_pattern }}"></label>
+          <label id="m-rx-repl-wrap" style="display:none">Replacement (for regex_replace) <input class="input" id="m-rx-repl" placeholder="***000" value="{{ regex_replacement }}"></label>
         </div>
         <p class="muted">Regex is time-bounded &amp; length-limited for safety.</p>
       </div>
 
-        <div class="row gap small mt">
-        <span class="badge muted">Target path</span>
-        <span class="badge mono" id="m-path-badge">—</span>
-      </div>
+      <input type="hidden" id="m-param-hidden" />
 
-        <div class="card mt">
+      <div class="row gap small mt"><span class="badge muted">Path</span><span class="badge mono" id="m-path-badge">—</span></div>
+
+      <div class="card mt">
         <h4 class="text-h4">Test &amp; Preview</h4>
-        <div class="row gap small mb">
-          <span class="badge muted">Target path</span>
-          <span class="badge mono" id="m-path-badge">—</span>
-        </div>
         <label>Sample HL7 snippet
           <textarea class="input" id="m-sample" rows="5">PID|1||444444^^^HOSP^MR||DOE^JOHN||19800101|M</textarea>
         </label>
-        <div class="row mt">
-          <button class="button" type="button" onclick="testDeidRule()">Test</button>
-        </div>
-        <div class="row gap small mt">
-          <span class="badge muted">Diff for</span>
-          <span class="badge mono" id="m-path-badge-secondary">—</span>
+        <div class="row mt"><button class="button" type="button" data-deid-test>Test</button></div>
+
+        <div class="grid two mt">
+          <div><h5 class="text-h5">Before (field)</h5><div id="m-before-diff" class="diff muted"></div></div>
+          <div><h5 class="text-h5">After (field)</h5><div id="m-after-diff" class="diff"></div></div>
         </div>
         <div class="grid two mt">
-          <div>
-            <h5 class="text-h5">Before (field)</h5>
-            <div id="m-before-diff" class="diff muted">—</div>
-          </div>
-          <div>
-            <h5 class="text-h5">After (field)</h5>
-            <div id="m-after-diff" class="diff">—</div>
-          </div>
-        </div>
-        <div class="grid two mt">
-          <div>
-            <h5 class="text-h5">Line — original</h5>
-            <div id="m-msg-before" class="diff">—</div>
-          </div>
-          <div>
-            <h5 class="text-h5">Line — transformed</h5>
-            <div id="m-msg-after" class="diff">—</div>
-          </div>
+          <div><h5 class="text-h5">Line — original</h5><div id="m-msg-before" class="diff"></div></div>
+          <div><h5 class="text-h5">Line — transformed</h5><div id="m-msg-after" class="diff"></div></div>
         </div>
       </div>
 
-        <div class="row end mt">
+      <div class="row end mt">
         <button type="button" class="button ghost" onclick="document.getElementById('deid-modal').remove()">Cancel</button>
         <button class="button">Save rule</button>
       </div>
-      </form>
-
-      <style>
-        .modal-root{position:fixed;inset:0;z-index:50;}
-        .modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.25);backdrop-filter:blur(1px);}
-        .modal{position:fixed;inset:0;display:grid;place-items:center;}
-        .modal-card{background:var(--card-bg,#0b1220);color:var(--card-fg,#e5e7eb);border-radius:1rem;padding:1rem 1.25rem;min-width:820px;max-width:92vw;box-shadow:0 14px 34px rgba(15,23,42,.35);}
-        .modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem;}
-        .grid.two{display:grid;grid-template-columns:1fr 1fr;gap:.75rem;}
-        .row{display:flex;gap:.5rem;align-items:center;}
-        .row.end{justify-content:flex-end;}
-        .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;}
-        .diff{white-space:pre-wrap;background:rgba(15,23,42,.45);border-radius:.5rem;padding:.5rem;min-height:2.25rem;}
-        .diff .diff-del{background:#7f1d1d33;text-decoration:line-through;}
-        .diff .diff-add{background:#16653433;}
-        .badge{display:inline-block;font-size:.85rem;line-height:1;padding:.35rem .5rem;border-radius:.5rem;background:rgba(99,102,241,.12);color:#a5b4fc;border:1px solid rgba(99,102,241,.35);}
-        .badge.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;}
-        .badge.muted{background:rgba(148,163,184,.18);color:#cbd5e1;border-color:rgba(148,163,184,.35);}
-      </style>
-    <script>
-      function esc(value){
-        return (value ?? '').toString()
-          .replace(/&/g,'&amp;')
-          .replace(/</g,'&lt;')
-          .replace(/>/g,'&gt;')
-          .replace(/"/g,'&quot;');
-      }
-      function formatPath(seg, field, comp, sub){
-        seg = (seg||'').trim().toUpperCase();
-        const f = String(field||'').trim();
-        const c = String(comp||'').trim();
-        const s = String(sub||'').trim();
-        if(!seg || !f) return '—';
-        let p = `${seg}:${f}`;
-        if(c) p += `.${c}`;
-        if(s) p += `.${s}`;
-        return p;
-      }
-      function updatePathBadge(){
-        const seg = document.getElementById('m-seg')?.value;
-        const fld = document.getElementById('m-field')?.value;
-        const cmp = document.getElementById('m-comp')?.value;
-        const sub = document.getElementById('m-sub')?.value;
-        const text = formatPath(seg, fld, cmp, sub);
-        const badge = document.getElementById('m-path-badge');
-        if(badge){ badge.textContent = text; }
-      }
-      function diffChars(before, after){
-        const a = before ?? '';
-        const b = after ?? '';
-        if(a === b){
-          const html = esc(a || '—');
-          return { beforeHTML: html, afterHTML: html };
-        }
-        let prefix = 0;
-        const maxPrefix = Math.min(a.length, b.length);
-        while(prefix < maxPrefix && a[prefix] === b[prefix]) prefix += 1;
-        let suffix = 0;
-        const maxSuffix = Math.min(a.length - prefix, b.length - prefix);
-        while(suffix < maxSuffix && a[a.length - 1 - suffix] === b[b.length - 1 - suffix]) suffix += 1;
-        const beforeMid = a.slice(prefix, a.length - suffix);
-        const afterMid = b.slice(prefix, b.length - suffix);
-        const beforeHTML = esc(a.slice(0, prefix)) + (beforeMid ? '<span class="diff-del">' + esc(beforeMid) + '</span>' : '') + esc(a.slice(a.length - suffix));
-        const afterHTML = esc(b.slice(0, prefix)) + (afterMid ? '<span class="diff-add">' + esc(afterMid) + '</span>' : '') + esc(b.slice(b.length - suffix));
-        return { beforeHTML, afterHTML };
-      }
-      function diffLines(before, after){
-        const result = diffChars(before, after);
-        if(!result.beforeHTML){ result.beforeHTML = esc(before || '—'); }
-        if(!result.afterHTML){ result.afterHTML = esc(after || '—'); }
-        return result;
-      }
-      function updateRegexParam(){
-        const action = document.getElementById('m-action')?.value;
-        const holder = document.getElementById('m-regex-param');
-        if(!holder || holder.name !== 'param'){ return; }
-        const pattern = document.getElementById('m-rx-pattern')?.value || '';
-        if(action === 'regex_replace'){
-          const repl = document.getElementById('m-rx-repl')?.value || '';
-          holder.value = JSON.stringify({ pattern, repl });
-        } else {
-          holder.value = pattern;
-        }
-      }
-      function syncParamUI(){
-        const action = document.getElementById('m-action').value;
-        const modeWrap = document.getElementById('m-param-mode-wrap');
-        const modeSel = document.getElementById('m-param-mode');
-        const presetWrap = document.getElementById('m-preset-wrap');
-        const preset = document.getElementById('m-preset');
-        const freeWrap = document.getElementById('m-free-wrap');
-        const free = document.getElementById('m-free');
-        const regexWrap = document.getElementById('m-regex-wrap');
-        const regexParam = document.getElementById('m-regex-param');
-        const regexReplWrap = document.getElementById('m-rx-repl-wrap');
-
-        if(preset) preset.name = '';
-        if(free) free.name = '';
-        if(regexParam){ regexParam.name = ''; regexParam.value = ''; }
-
-        modeWrap.style.display = 'none';
-        presetWrap.style.display = 'none';
-        freeWrap.style.display = 'none';
-        regexWrap.style.display = 'none';
-        regexReplWrap.style.display = 'none';
-
-        if(action === 'preset'){
-          modeWrap.style.display = '';
-          if(modeSel.value !== 'preset' && modeSel.value !== 'free'){
-            modeSel.value = 'preset';
-          }
-          if(modeSel.value === 'preset'){
-            presetWrap.style.display = '';
-            preset.name = 'param';
-          } else {
-            freeWrap.style.display = '';
-            free.name = 'param';
-          }
-        } else if(action === 'replace' || action === 'mask' || action === 'hash'){
-          freeWrap.style.display = '';
-          free.name = 'param';
-        } else if(action === 'regex_redact' || action === 'regex_replace'){
-          regexWrap.style.display = '';
-          regexParam.name = 'param';
-          if(action === 'regex_replace'){
-            regexReplWrap.style.display = '';
-          }
-          updateRegexParam();
-        }
-      }
-      async function testDeidRule(){
-        const beforeField = document.getElementById('m-before-diff');
-        const afterField = document.getElementById('m-after-diff');
-        const msgBefore = document.getElementById('m-msg-before');
-        const msgAfter = document.getElementById('m-msg-after');
-        const sample = document.getElementById('m-sample').value || '';
-
-        beforeField.innerHTML = esc('…');
-        afterField.innerHTML = esc('…');
-        msgBefore.innerHTML = esc('…');
-        msgAfter.innerHTML = esc('…');
-
-        const fd = new FormData();
-        fd.append('message_text', sample);
-        fd.append('segment', document.getElementById('m-seg').value || '');
-        fd.append('field', document.getElementById('m-field').value || '');
-        fd.append('component', document.getElementById('m-comp').value || '');
-        fd.append('subcomponent', document.getElementById('m-sub').value || '');
-        const action = document.getElementById('m-action').value || '';
-        fd.append('action', action);
-
-        let param = '';
-        if(action === 'preset'){
-          if(document.getElementById('m-param-mode').value === 'preset'){
-            param = document.getElementById('m-preset').value || '';
-          } else {
-            param = document.getElementById('m-free').value || '';
-          }
-        } else if(action === 'replace' || action === 'mask' || action === 'hash'){
-          param = document.getElementById('m-free').value || '';
-        } else if(action === 'regex_redact'){
-          param = document.getElementById('m-rx-pattern').value || '';
-        } else if(action === 'regex_replace'){
-          const pattern = document.getElementById('m-rx-pattern').value || '';
-          const repl = document.getElementById('m-rx-repl').value || '';
-          param = JSON.stringify({ pattern, repl });
-        }
-        fd.append('param', param);
-
-        try{
-          const resp = await fetch('{{ request.url_for("api_deid_test_rule") }}', { method: 'POST', body: fd });
-          let data;
-          try {
-            data = await resp.json();
-          } catch {
-            data = { ok: false, error: 'Non-JSON response' };
-          }
-          if(!data.ok){
-            beforeField.innerHTML = esc('—');
-            afterField.innerHTML = esc(`Error: ${data.error || 'unknown'}`);
-            msgBefore.innerHTML = esc(sample || '');
-            msgAfter.innerHTML = esc(sample || '');
-            return;
-          }
-          const beforeVal = data.preview.before ?? '';
-          const afterVal = data.preview.after ?? '';
-          const fieldDiff = diffChars(beforeVal, afterVal);
-          beforeField.innerHTML = fieldDiff.beforeHTML || esc(beforeVal || '—');
-          afterField.innerHTML = fieldDiff.afterHTML || esc(afterVal || '—');
-
-          const lineBefore = data.preview.line_before ?? '';
-          const lineAfter = data.preview.line_after ?? data.preview.message_after ?? sample;
-          if(!lineBefore){
-            msgBefore.innerHTML = esc('— (no matching segment)');
-            msgAfter.innerHTML = esc(sample || '');
-          } else {
-            const lineDiff = diffLines(lineBefore, lineAfter);
-            msgBefore.innerHTML = lineDiff.beforeHTML || esc(lineBefore);
-            msgAfter.innerHTML = lineDiff.afterHTML || esc(lineAfter);
-          }
-        } catch (err){
-          beforeField.innerHTML = esc('—');
-          afterField.innerHTML = esc('Error: ' + (err && err.message ? err.message : err));
-          msgBefore.innerHTML = esc(sample || '');
-          msgAfter.innerHTML = esc(sample || '');
-        }
-      }
-      ['m-seg','m-field','m-comp','m-sub'].forEach(function(id){
-        const el = document.getElementById(id);
-        if(el){ el.addEventListener('input', updatePathBadge); }
-      });
-      ['m-rx-pattern','m-rx-repl'].forEach(function(id){
-        const el = document.getElementById(id);
-        if(el){ el.addEventListener('input', updateRegexParam); }
-      });
-      updatePathBadge();
-      syncParamUI();
-    </script>
-    </div>
+    </form>
   </div>
 </div>
+
+<style>
+.modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.2);backdrop-filter:blur(1px);}
+.modal{position:fixed;inset:0;display:grid;place-items:center;z-index:50;}
+.modal-card{background:var(--card-bg,#0b1220);color:var(--card-fg,#e5e7eb);border-radius:1rem;padding:1rem 1.25rem;min-width:820px;max-width:92vw;box-shadow:0 10px 30px rgba(0,0,0,.25);}
+.modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem;}
+.grid.two{display:grid;grid-template-columns:1fr 1fr;gap:.75rem;}
+.row{display:flex;gap:.5rem;align-items:center}
+.row.end{justify-content:flex-end;}
+.input{width:100%}
+.diff{white-space:pre-wrap;background:rgba(15,23,42,.45);border-radius:.5rem;padding:.5rem;min-height:2.25rem;}
+.badge{display:inline-block;font-size:.85rem;line-height:1;padding:.35rem .5rem;border-radius:.5rem;background:rgba(99,102,241,.12);color:#a5b4fc;border:1px solid rgba(99,102,241,.35)}
+.badge.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace}
+.badge.muted{background:rgba(148,163,184,.15);color:#cbd5e1;border-color:rgba(148,163,184,.35)}
+</style>
