@@ -269,9 +269,6 @@ def ui_settings_deid_new_rule_modal(request: Request, name: str) -> Response:
     context = {
         "request": request,
         "tpl": tpl,
-        "prefill": _build_rule_prefill(None),
-        "is_clone": False,
-        "clone_index": None,
         "clone": None,
     }
     return templates.TemplateResponse("ui/settings/_deid_rule_modal.html", context)
@@ -335,39 +332,21 @@ def api_deid_test_rule(
 ) -> JSONResponse:
     from silhouette_core.interop.deid import apply_single_rule
 
-    comp_val: Optional[int]
-    sub_val: Optional[int]
-
-    if component and component.isdigit():
-        try:
-            comp_val = int(component)
-        except Exception:  # pragma: no cover - defensive
-            comp_val = None
-    else:
-        comp_val = None
-
-    if subcomponent and subcomponent.isdigit():
-        try:
-            sub_val = int(subcomponent)
-        except Exception:  # pragma: no cover - defensive
-            sub_val = None
-    else:
-        sub_val = None
-
+    c = int(component) if component and component.isdigit() else None
+    s = int(subcomponent) if subcomponent and subcomponent.isdigit() else None
     rule = {
         "segment": segment.strip().upper(),
         "field": int(field),
-        "component": comp_val,
-        "subcomponent": sub_val,
+        "component": c,
+        "subcomponent": s,
         "action": action.strip(),
         "param": param,
     }
-
     try:
         preview = apply_single_rule(message_text or "", rule)
         return JSONResponse({"ok": True, "preview": preview})
-    except Exception as exc:  # pragma: no cover - defensive
-        return JSONResponse({"ok": False, "error": f"{type(exc).__name__}: {exc}"}, status_code=200)
+    except Exception as e:  # pragma: no cover - defensive
+        return JSONResponse({"ok": False, "error": f"{type(e).__name__}: {e}"}, status_code=200)
 
 @router.post("/ui/settings/deid/delete_rule/{name}", response_class=HTMLResponse, name="ui_settings_deid_delete_rule", response_model=None)
 def ui_settings_deid_delete_rule(request: Request, name: str, index: int = Form(...)) -> Response:
@@ -434,10 +413,7 @@ def ui_settings_deid_clone_rule_modal(request: Request, name: str, index: int) -
     context = {
         "request": request,
         "tpl": tpl,
-        "prefill": _build_rule_prefill(clone_rule),
-        "is_clone": True,
-        "clone_index": index,
-        "clone": asdict(clone_rule),
+        "clone": clone_rule,
     }
     return templates.TemplateResponse("ui/settings/_deid_rule_modal.html", context)
 
