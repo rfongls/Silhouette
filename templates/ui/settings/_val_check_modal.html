@@ -1,6 +1,6 @@
 <div id="val-modal" class="modal-root">
   <div class="modal-backdrop" onclick="document.getElementById('val-modal').remove()"></div>
-  <div class="modal" role="dialog" aria-modal="true">
+  <div class="modal">
     <div class="modal-card">
       <div class="modal-header">
         <h3 class="text-h3">Add Validation Check</h3>
@@ -9,48 +9,70 @@
       <form
         hx-post="{{ request.url_for('ui_settings_val_add_check', name=tpl.name) }}"
         hx-target="#val-checks"
-        hx-on::after-request="var m=document.getElementById('val-modal');if(m){m.remove();}"
+        hx-on::after-request="document.getElementById('val-modal')?.remove()"
       >
         <div class="grid two">
-          <label>Segment<input class="input" name="segment" id="vc-seg" placeholder="MSH" required></label>
-          <label>Field<input class="input" name="field" id="vc-field" type="number" min="1" required></label>
-          <label class="row gap small" style="align-items:center"><input type="checkbox" name="required" id="vc-required" checked> required</label>
-          <label>Pattern (regex)<input class="input" name="pattern" id="vc-pattern" placeholder="^ADT\\^A0[14]$"></label>
+          <label>Segment
+            <input class="input" name="segment" id="vc-seg" placeholder="MSH" required>
+          </label>
+          <label>Field
+            <input class="input" name="field" id="vc-field" type="number" min="1" required>
+          </label>
+          <label class="row small" style="align-items:center">
+            <input type="checkbox" name="required" id="vc-required" checked>
+            <span>Required</span>
+          </label>
+          <label>Pattern (regex)
+            <input class="input" name="pattern" id="vc-pattern" placeholder="^ADT\\^A0[14]$">
+          </label>
         </div>
         <label class="mt">Allowed values (comma or semicolon separated)
           <input class="input" name="allowed_values" id="vc-allowed" placeholder="ADT^A01, ADT^A04">
         </label>
-
         <div class="card mt">
           <h4 class="text-h4">Test</h4>
           <textarea class="input" id="vc-sample" rows="4">MSH|^~\&|S1|F1|R1|D1|202501011200||ADT^A01|MSGID|P|2.5</textarea>
           <div class="row mt">
             <button class="button" type="button" onclick="testValidationCheck()">Test</button>
           </div>
-          <pre id="vc-report" class="mono mt" style="white-space:pre-wrap"></pre>
+          <pre id="vc-report" class="mono mt" style="white-space:pre-wrap">—</pre>
         </div>
-
         <div class="row end mt">
           <button type="button" class="button ghost" onclick="document.getElementById('val-modal').remove()">Cancel</button>
           <button class="button">Save check</button>
         </div>
       </form>
-
+      <style>
+        .modal-root{position:fixed;inset:0;z-index:50;}
+        .modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.25);backdrop-filter:blur(1px);}
+        .modal{position:fixed;inset:0;display:grid;place-items:center;}
+        .modal-card{background:var(--card-bg,#0b1220);color:var(--card-fg,#e5e7eb);border-radius:1rem;padding:1rem 1.25rem;min-width:720px;max-width:88vw;box-shadow:0 14px 34px rgba(15,23,42,.35);}
+        .modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem;}
+        .grid.two{display:grid;grid-template-columns:1fr 1fr;gap:.75rem;}
+        .row{display:flex;gap:.5rem;align-items:center;}
+        .row.end{justify-content:flex-end;}
+        .row.small{gap:.35rem;}
+        .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;}
+      </style>
       <script>
         async function testValidationCheck() {
           const report = document.getElementById('vc-report');
           report.textContent = 'Testing…';
           const fd = new FormData();
-          fd.append('message_text', document.getElementById('vc-sample').value);
-          fd.append('segment', document.getElementById('vc-seg').value);
-          fd.append('field', document.getElementById('vc-field').value);
+          fd.append('message_text', document.getElementById('vc-sample').value || '');
+          fd.append('segment', document.getElementById('vc-seg').value || '');
+          fd.append('field', document.getElementById('vc-field').value || '');
           fd.append('required', document.getElementById('vc-required').checked ? 'true' : 'false');
-          fd.append('pattern', document.getElementById('vc-pattern').value);
-          fd.append('allowed_values', document.getElementById('vc-allowed').value);
-
+          fd.append('pattern', document.getElementById('vc-pattern').value || '');
+          fd.append('allowed_values', document.getElementById('vc-allowed').value || '');
           try {
             const resp = await fetch('{{ request.url_for("api_validate_test_check") }}', { method: 'POST', body: fd });
-            const data = await resp.json();
+            let data;
+            try {
+              data = await resp.json();
+            } catch {
+              data = { ok: false, error: 'Non-JSON response' };
+            }
             if (!data.ok) {
               report.textContent = 'Error: ' + (data.error || 'unknown');
               return;

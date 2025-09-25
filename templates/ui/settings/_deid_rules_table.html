@@ -3,19 +3,31 @@
 {% endif %}
 <table class="table">
   <thead>
-    <tr><th>#</th><th>Segment</th><th>Field</th><th>Comp</th><th>Subcomp</th><th>Action</th><th>Param</th><th></th></tr>
+    <tr>
+      <th>#</th>
+      <th>Path</th>
+      <th>Segment</th>
+      <th>Field</th>
+      <th>Comp</th>
+      <th>Subcomp</th>
+      <th>Action</th>
+      <th>Param</th>
+      <th></th>
+    </tr>
   </thead>
   <tbody>
   {% for r in (tpl.rules or []) %}
+    {% set path = (r.segment ~ ':' ~ r.field ~ ('.' ~ r.component if r.component else '') ~ ('.' ~ r.subcomponent if r.subcomponent else '')) %}
     <tr>
       <td>{{ loop.index0 }}</td>
+      <td><span class="badge mono">{{ path }}</span></td>
       <td>{{ r.segment }}</td>
       <td>{{ r.field }}</td>
       <td>{{ r.component or "" }}</td>
       <td>{{ r.subcomponent or "" }}</td>
       <td>{{ r.action }}</td>
       <td><code>{{ r.param or "" }}</code></td>
-      <td class="row gap small">
+      <td class="row small">
         <form hx-post="{{ request.url_for('ui_settings_deid_delete_rule', name=tpl.name) }}" hx-target="#deid-rules">
           <input type="hidden" name="index" value="{{ loop.index0 }}" />
           <button class="button danger small" title="Delete">✕</button>
@@ -29,7 +41,7 @@
       </td>
     </tr>
   {% else %}
-    <tr><td colspan="8" class="muted">No rules yet.</td></tr>
+    <tr><td colspan="9" class="muted">No rules yet.</td></tr>
   {% endfor %}
   </tbody>
 </table>
