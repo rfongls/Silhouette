@@ -79,7 +79,12 @@
 
       <!-- Server-rendered Param controls land here so a field is visible immediately. -->
       <div id="param-controls" class="mt">
-        {% include "ui/settings/_deid_param_controls.html" with action=act, param_mode=param_mode, param_preset=preset_value, param_free=free_value, pattern=regex_pattern, repl=regex_replacement %}
+        {% set action = act %}
+        {% set param_preset = preset_value %}
+        {% set param_free = free_value %}
+        {% set pattern = regex_pattern %}
+        {% set repl = regex_replacement %}
+        {% include "ui/settings/_deid_param_controls.html" %}
       </div>
 
       <div class="row gap small mt"><span class="badge muted">Path</span><span class="badge mono" id="m-path-badge">—</span></div>

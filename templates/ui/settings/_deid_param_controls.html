@@ -8,6 +8,9 @@
 {% if request.headers.get('HX-Request') %}
   <input type="hidden" name="param_mode" id="m-param-mode" value="{{ mode }}" hx-swap-oob="outerHTML">
 {% endif %}
+{% if request.headers.get('HX-Request') %}
+  <input type="hidden" name="param_mode" id="m-param-mode" value="{{ mode }}" hx-swap-oob="outerHTML">
+{% endif %}
 
 <div class="mt">
   {% if act == 'preset' %}
