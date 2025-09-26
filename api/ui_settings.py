@@ -45,6 +45,20 @@ PRESET_PARAM_KEYS = {
 }
 DEFAULT_PRESET_KEY = "name"
 
+ACTION_ALIASES = {
+    "replace (literal)": "replace",
+    "preset (synthetic)": "preset",
+    "regex redact": "regex_redact",
+    "regex replace": "regex_replace",
+}
+
+
+def _normalize_action(action: Optional[str]) -> str:
+    raw = (action or "redact").strip().lower()
+    raw = raw.replace("-", "_")
+    normalized = ACTION_ALIASES.get(raw, raw.replace(" ", "_"))
+    return normalized or "redact"
+
 # ---------- Models ----------
 @dataclass
 class DeidRule:
@@ -288,15 +302,27 @@ def ui_settings_deid_param_controls(
     pattern: Optional[str] = Query(None),
     repl: Optional[str] = Query(None),
 ) -> Response:
-    action = (action or "redact").strip()
+    qp = request.query_params
+    initial_mode = qp.get("initial_param_mode")
+    initial_preset = qp.get("initial_param_preset")
+    initial_free = qp.get("initial_param_free")
+    initial_pattern = qp.get("initial_pattern")
+    initial_repl = qp.get("initial_repl")
+    normalized_action = _normalize_action(action)
+    mode_input = param_mode or initial_mode or "preset"
+    mode = (mode_input or "preset").strip().lower() or "preset"
+    preset_value = param_preset if param_preset is not None else initial_preset
+    free_value = param_free if param_free is not None else initial_free
+    pattern_value = pattern if pattern is not None else initial_pattern
+    repl_value = repl if repl is not None else initial_repl
     ctx = {
         "request": request,
-        "action": action,
-        "param_mode": (param_mode or "preset").strip(),
-        "param_preset": param_preset or "",
-        "param_free": param_free or "",
-        "pattern": pattern or "",
-        "repl": repl or "",
+        "action": normalized_action,
+        "param_mode": mode,
+        "param_preset": (preset_value or "").strip(),
+        "param_free": (free_value or "").strip(),
+        "pattern": (pattern_value or "").strip(),
+        "repl": (repl_value or "").strip(),
     }
     return templates.TemplateResponse("ui/settings/_deid_param_controls.html", ctx)
 
@@ -315,6 +341,11 @@ def ui_settings_deid_add_rule(
     param_free: Optional[str] = Form(None),
     pattern: Optional[str] = Form(None),
     repl: Optional[str] = Form(None),
+    initial_param_mode: Optional[str] = Form(None),
+    initial_param_preset: Optional[str] = Form(None),
+    initial_param_free: Optional[str] = Form(None),
+    initial_pattern: Optional[str] = Form(None),
+    initial_repl: Optional[str] = Form(None),
 ) -> Response:
     p = _json_path(DEID_DIR, name)
     tpl = DeidTemplate.from_dict(_load_json(p))
@@ -327,10 +358,11 @@ def ui_settings_deid_add_rule(
         sub_val = None if subcomponent in (None, "") else int(subcomponent)
     except Exception:
         sub_val = None
-    act = (action or "redact").strip()
+    act = _normalize_action(action)
+    mode = (param_mode or "preset").strip().lower() or "preset"
     if act == "preset":
-        if (param_mode or "preset") == "preset":
-            param_value: Optional[str] = (param_preset or "").strip()
+        if mode == "preset":
+            param_value = (param_preset or "").strip()
         else:
             param_value = (param_free or "").strip()
     elif act in {"replace", "mask", "hash"}:
@@ -338,7 +370,7 @@ def ui_settings_deid_add_rule(
     elif act == "regex_redact":
         param_value = (pattern or "").strip()
     elif act == "regex_replace":
-        param_value = json.dumps({"pattern": pattern or "", "repl": repl or ""})
+        param_value = json.dumps({"pattern": (pattern or "").strip(), "repl": (repl or "").strip()})
     else:
         param_value = None
 
@@ -380,20 +412,26 @@ def api_deid_test_rule(
     param_free: Optional[str] = Form(None),
     pattern: Optional[str] = Form(None),
     repl: Optional[str] = Form(None),
+    initial_param_mode: Optional[str] = Form(None),
+    initial_param_preset: Optional[str] = Form(None),
+    initial_param_free: Optional[str] = Form(None),
+    initial_pattern: Optional[str] = Form(None),
+    initial_repl: Optional[str] = Form(None),
 ) -> JSONResponse:
     from silhouette_core.interop.deid import apply_single_rule
 
     c = int(component) if component and component.isdigit() else None
     s = int(subcomponent) if subcomponent and subcomponent.isdigit() else None
-    act = (action or "redact").strip()
+    act = _normalize_action(action)
+    mode = (param_mode or "preset").strip().lower() or "preset"
     if act == "preset":
-        param_value = (param_preset or "").strip() if (param_mode or "preset") == "preset" else (param_free or "").strip()
+        param_value = (param_preset or "").strip() if mode == "preset" else (param_free or "").strip()
     elif act in {"replace", "mask", "hash"}:
         param_value = (param_free or "").strip()
     elif act == "regex_redact":
         param_value = (pattern or "").strip()
     elif act == "regex_replace":
-        param_value = json.dumps({"pattern": pattern or "", "repl": repl or ""})
+        param_value = json.dumps({"pattern": (pattern or "").strip(), "repl": (repl or "").strip()})
     else:
         param_value = None
     rule = {
