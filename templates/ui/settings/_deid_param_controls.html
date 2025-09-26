@@ -5,50 +5,56 @@
 {% set pattern_value = (pattern or '') %}
 {% set repl_value = (repl or '') %}
 
-{% if act == 'preset' %}
-  <div class="grid two">
-    <label>Parameter mode
-      <select class="input" name="param_mode"
-              hx-get="{{ request.url_for('ui_settings_deid_param_controls') }}"
-              hx-target="#param-controls"
-              hx-trigger="change"
-              hx-include="#deid-modal-form">
-        <option value="preset" {{ 'selected' if mode == 'preset' else '' }}>Preset</option>
-        <option value="free" {{ 'selected' if mode == 'free' else '' }}>Free-text</option>
-      </select>
-    </label>
-
-    {% if mode == 'preset' %}
-      <label>Preset key
-        <select class="input" name="param_preset">
-          {% for opt in ['name','birthdate','datetime','gender','address','phone','language','race','mrn','ssn','facility','note','pdf_blob','xml_blob'] %}
-            <option value="{{ opt }}" {{ 'selected' if (preset_value or '') == opt else '' }}>{{ opt }}</option>
-          {% endfor %}
+<div class="mt">
+  {% if act == 'preset' %}
+    <div class="grid two">
+      <label>Parameter mode
+        <select class="input" name="param_mode"
+                hx-get="{{ request.url_for('ui_settings_deid_param_controls') }}"
+                hx-target="#param-controls"
+                hx-include="[name=action],[name=param_mode]"
+                hx-trigger="change">
+          <option value="preset" {{ 'selected' if mode == 'preset' else '' }}>Preset</option>
+          <option value="free" {{ 'selected' if mode == 'free' else '' }}>Free-text</option>
         </select>
       </label>
-    {% else %}
-      <label>Value / Param
-        <input class="input" name="param_free" placeholder="e.g., synthetic text" value="{{ free_value }}">
+
+      {% if mode == 'preset' %}
+        <label>Preset key
+          <select class="input" name="param_preset">
+            {% for opt in ['name','birthdate','datetime','gender','address','phone','language','race','mrn','ssn','facility','note','pdf_blob','xml_blob'] %}
+              <option value="{{ opt }}" {{ 'selected' if (preset_value or '') == opt else '' }}>{{ opt }}</option>
+            {% endfor %}
+          </select>
+        </label>
+      {% else %}
+        <label>Value / Param
+          <input class="input" name="param_free" placeholder="e.g., fixed text" value="{{ free_value }}">
+        </label>
+      {% endif %}
+    </div>
+
+  {% elif act in ['replace', 'mask', 'hash'] %}
+    <label class="mt">Value / Param
+      <input class="input" name="param_free" placeholder="replace→fixed text; mask→mask char; hash→salt" value="{{ free_value }}">
+    </label>
+
+  {% elif act == 'regex_redact' %}
+    <label class="mt">Regex pattern
+      <input class="input" name="pattern" placeholder="e.g., \\d{6}" value="{{ pattern_value }}">
+    </label>
+
+  {% elif act == 'regex_replace' %}
+    <div class="grid two">
+      <label>Regex pattern
+        <input class="input" name="pattern" placeholder="e.g., (\\d{3})-(\\d{2})-(\\d{4})" value="{{ pattern_value }}">
       </label>
-    {% endif %}
-  </div>
-{% elif act in ['replace', 'mask', 'hash'] %}
-  <label>Value / Param
-    <input class="input" name="param_free" placeholder="*, SALT123, replacement text" value="{{ free_value }}">
-  </label>
-{% elif act == 'regex_redact' %}
-  <label>Regex pattern
-    <input class="input" name="pattern" placeholder="e.g., \\d{6}" value="{{ pattern_value }}">
-  </label>
-{% elif act == 'regex_replace' %}
-  <div class="grid two">
-    <label>Regex pattern
-      <input class="input" name="pattern" placeholder="e.g., (\\d{3})-(\\d{2})-(\\d{4})" value="{{ pattern_value }}">
-    </label>
-    <label>Replacement
-      <input class="input" name="repl" placeholder="***-**-****" value="{{ repl_value }}">
-    </label>
-  </div>
-{% else %}
-  <p class="muted">This action has no parameters.</p>
-{% endif %}
+      <label>Replacement
+        <input class="input" name="repl" placeholder="***-**-****" value="{{ repl_value }}">
+      </label>
+    </div>
+
+  {% else %}
+    <p class="muted">This action has no parameters.</p>
+  {% endif %}
+</div>
