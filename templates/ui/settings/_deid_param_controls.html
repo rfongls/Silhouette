@@ -1,11 +1,13 @@
 {% set act = (action or 'redact')|lower %}
 {% set mode = (param_mode or 'preset')|lower %}
-{% set preset_value = (param_preset or '') %}
+{% set preset_options = ['name','birthdate','datetime','gender','address','phone','language','race','mrn','ssn','facility','note','pdf_blob','xml_blob'] %}
+{% set preset_value = (param_preset or preset_options[0]) %}
 {% set free_value = (param_free or '') %}
 {% set pattern_value = (pattern or '') %}
 {% set repl_value = (repl or '') %}
-
-<input type="hidden" name="param_mode" id="m-param-mode" value="{{ mode }}" hx-swap-oob="outerHTML">
+{% if request.headers.get('HX-Request') %}
+  <input type="hidden" name="param_mode" id="m-param-mode" value="{{ mode }}" hx-swap-oob="outerHTML">
+{% endif %}
 
 <div class="mt">
   {% if act == 'preset' %}
@@ -14,7 +16,7 @@
         <select class="input" name="param_mode"
                 hx-get="{{ request.url_for('ui_settings_deid_param_controls') }}"
                 hx-target="#param-controls"
-                hx-include="#m-action,select[name=param_mode],[name^=initial_param_],[name=param_preset],[name=param_free]"
+                hx-include="#deid-modal-form"
                 hx-trigger="change"
                 hx-swap="innerHTML">
           <option value="preset" {{ 'selected' if mode == 'preset' else '' }}>Preset</option>
@@ -25,8 +27,8 @@
       {% if mode == 'preset' %}
         <label>Preset key
           <select class="input" name="param_preset">
-            {% for opt in ['name','birthdate','datetime','gender','address','phone','language','race','mrn','ssn','facility','note','pdf_blob','xml_blob'] %}
-              <option value="{{ opt }}" {{ 'selected' if (preset_value or '') == opt else '' }}>{{ opt }}</option>
+            {% for opt in preset_options %}
+              <option value="{{ opt }}" {{ 'selected' if (preset_value or preset_options[0]) == opt else '' }}>{{ opt }}</option>
             {% endfor %}
           </select>
         </label>

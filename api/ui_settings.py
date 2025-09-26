@@ -302,27 +302,16 @@ def ui_settings_deid_param_controls(
     pattern: Optional[str] = Query(None),
     repl: Optional[str] = Query(None),
 ) -> Response:
-    qp = request.query_params
-    initial_mode = qp.get("initial_param_mode")
-    initial_preset = qp.get("initial_param_preset")
-    initial_free = qp.get("initial_param_free")
-    initial_pattern = qp.get("initial_pattern")
-    initial_repl = qp.get("initial_repl")
     normalized_action = _normalize_action(action)
-    mode_input = param_mode or initial_mode or "preset"
-    mode = (mode_input or "preset").strip().lower() or "preset"
-    preset_value = param_preset if param_preset is not None else initial_preset
-    free_value = param_free if param_free is not None else initial_free
-    pattern_value = pattern if pattern is not None else initial_pattern
-    repl_value = repl if repl is not None else initial_repl
+    mode = (param_mode or "preset").strip().lower() or "preset"
     ctx = {
         "request": request,
         "action": normalized_action,
         "param_mode": mode,
-        "param_preset": (preset_value or "").strip(),
-        "param_free": (free_value or "").strip(),
-        "pattern": (pattern_value or "").strip(),
-        "repl": (repl_value or "").strip(),
+        "param_preset": (param_preset or "").strip(),
+        "param_free": (param_free or "").strip(),
+        "pattern": (pattern or "").strip(),
+        "repl": (repl or "").strip(),
     }
     return templates.TemplateResponse("ui/settings/_deid_param_controls.html", ctx)
 
