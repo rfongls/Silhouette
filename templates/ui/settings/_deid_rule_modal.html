@@ -33,14 +33,6 @@
     {% set regex_pattern = raw_regex_param %}
   {% endif %}
 {% endif %}
-{% set param_payload = {
-  'param_mode': param_mode,
-  'param_preset': preset_value,
-  'param_free': free_value,
-  'pattern': regex_pattern,
-  'repl': regex_replacement
-} %}
-
 <div class="modal-backdrop"></div>
 <div class="modal" id="deid-modal"
      data-test-endpoint="{{ request.url_for('api_deid_test_rule') }}"
@@ -68,21 +60,31 @@
           <select class="input" name="action" id="m-action"
                   hx-get="{{ request.url_for('ui_settings_deid_param_controls') }}"
                   hx-target="#param-controls"
-                  hx-trigger="load, change"
-                  hx-include="#deid-modal-form"
-                  hx-vals='{{ param_payload | tojson }}'>
-            <option value="redact"         {{ 'selected' if act=='redact' else '' }}>redact</option>
-            <option value="mask"           {{ 'selected' if act=='mask' else '' }}>mask</option>
-            <option value="hash"           {{ 'selected' if act=='hash' else '' }}>hash</option>
-            <option value="replace"        {{ 'selected' if act=='replace' else '' }}>replace (literal)</option>
-            <option value="preset"         {{ 'selected' if act=='preset' else '' }}>preset (synthetic)</option>
-            <option value="regex_redact"   {{ 'selected' if act=='regex_redact' else '' }}>regex redact</option>
-            <option value="regex_replace"  {{ 'selected' if act=='regex_replace' else '' }}>regex replace</option>
+                  hx-trigger="change"
+                  hx-swap="innerHTML"
+                  hx-include="#deid-modal-form">
+            <option value="redact"        {{ 'selected' if act=='redact' else '' }}>redact</option>
+            <option value="mask"          {{ 'selected' if act=='mask' else '' }}>mask</option>
+            <option value="hash"          {{ 'selected' if act=='hash' else '' }}>hash</option>
+            <option value="replace"       {{ 'selected' if act=='replace' else '' }}>replace (literal)</option>
+            <option value="preset"        {{ 'selected' if act=='preset' else '' }}>preset (synthetic)</option>
+            <option value="regex_redact"  {{ 'selected' if act=='regex_redact' else '' }}>regex redact</option>
+            <option value="regex_replace" {{ 'selected' if act=='regex_replace' else '' }}>regex replace</option>
           </select>
         </label>
       </div>
+
+      {# Always provide a default param mode so the first request is deterministic. #}
+      <input type="hidden" name="param_mode" id="m-param-mode" value="{{ param_mode }}">
+
+      <!-- Server-rendered Param controls land here so a field is visible immediately. -->
       <div id="param-controls" class="mt">
-        {% include 'ui/settings/_deid_param_controls.html' with context %}
+        {% set action = act %}
+        {% set param_preset = preset_value %}
+        {% set param_free = free_value %}
+        {% set pattern = regex_pattern %}
+        {% set repl = regex_replacement %}
+        {% include "ui/settings/_deid_param_controls.html" %}
       </div>
 
       <div class="row gap small mt"><span class="badge muted">Path</span><span class="badge mono" id="m-path-badge">—</span></div>

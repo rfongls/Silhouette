@@ -45,6 +45,20 @@ PRESET_PARAM_KEYS = {
 }
 DEFAULT_PRESET_KEY = "name"
 
+ACTION_ALIASES = {
+    "replace (literal)": "replace",
+    "preset (synthetic)": "preset",
+    "regex redact": "regex_redact",
+    "regex replace": "regex_replace",
+}
+
+
+def _normalize_action(action: Optional[str]) -> str:
+    raw = (action or "redact").strip().lower()
+    raw = raw.replace("-", "_")
+    normalized = ACTION_ALIASES.get(raw, raw.replace(" ", "_"))
+    return normalized or "redact"
+
 # ---------- Models ----------
 @dataclass
 class DeidRule:
@@ -288,15 +302,16 @@ def ui_settings_deid_param_controls(
     pattern: Optional[str] = Query(None),
     repl: Optional[str] = Query(None),
 ) -> Response:
-    action = (action or "redact").strip()
+    normalized_action = _normalize_action(action)
+    mode = (param_mode or "preset").strip().lower() or "preset"
     ctx = {
         "request": request,
-        "action": action,
-        "param_mode": (param_mode or "preset").strip(),
-        "param_preset": param_preset or "",
-        "param_free": param_free or "",
-        "pattern": pattern or "",
-        "repl": repl or "",
+        "action": normalized_action,
+        "param_mode": mode,
+        "param_preset": (param_preset or "").strip(),
+        "param_free": (param_free or "").strip(),
+        "pattern": (pattern or "").strip(),
+        "repl": (repl or "").strip(),
     }
     return templates.TemplateResponse("ui/settings/_deid_param_controls.html", ctx)
 
@@ -327,10 +342,11 @@ def ui_settings_deid_add_rule(
         sub_val = None if subcomponent in (None, "") else int(subcomponent)
     except Exception:
         sub_val = None
-    act = (action or "redact").strip()
+    act = _normalize_action(action)
+    mode = (param_mode or "preset").strip().lower() or "preset"
     if act == "preset":
-        if (param_mode or "preset") == "preset":
-            param_value: Optional[str] = (param_preset or "").strip()
+        if mode == "preset":
+            param_value = (param_preset or "").strip()
         else:
             param_value = (param_free or "").strip()
     elif act in {"replace", "mask", "hash"}:
@@ -338,7 +354,7 @@ def ui_settings_deid_add_rule(
     elif act == "regex_redact":
         param_value = (pattern or "").strip()
     elif act == "regex_replace":
-        param_value = json.dumps({"pattern": pattern or "", "repl": repl or ""})
+        param_value = json.dumps({"pattern": (pattern or "").strip(), "repl": (repl or "").strip()})
     else:
         param_value = None
 
@@ -385,15 +401,16 @@ def api_deid_test_rule(
 
     c = int(component) if component and component.isdigit() else None
     s = int(subcomponent) if subcomponent and subcomponent.isdigit() else None
-    act = (action or "redact").strip()
+    act = _normalize_action(action)
+    mode = (param_mode or "preset").strip().lower() or "preset"
     if act == "preset":
-        param_value = (param_preset or "").strip() if (param_mode or "preset") == "preset" else (param_free or "").strip()
+        param_value = (param_preset or "").strip() if mode == "preset" else (param_free or "").strip()
     elif act in {"replace", "mask", "hash"}:
         param_value = (param_free or "").strip()
     elif act == "regex_redact":
         param_value = (pattern or "").strip()
     elif act == "regex_replace":
-        param_value = json.dumps({"pattern": pattern or "", "repl": repl or ""})
+        param_value = json.dumps({"pattern": (pattern or "").strip(), "repl": (repl or "").strip()})
     else:
         param_value = None
     rule = {
