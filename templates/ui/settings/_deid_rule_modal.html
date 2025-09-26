@@ -1,5 +1,17 @@
 {% set preset_options = ['name','birthdate','datetime','gender','address','phone','language','race','mrn','ssn','facility','note','pdf_blob','xml_blob'] %}
-{% set act = clone.action if clone else 'redact' %}
+{% set act_label = clone.action if clone else 'redact' %}
+{% set act_lower = (act_label or 'redact')|lower %}
+{% if act_lower == 'replace (literal)' %}
+  {% set act = 'replace' %}
+{% elif act_lower == 'preset (synthetic)' %}
+  {% set act = 'preset' %}
+{% elif act_lower == 'regex redact' %}
+  {% set act = 'regex_redact' %}
+{% elif act_lower == 'regex replace' %}
+  {% set act = 'regex_replace' %}
+{% else %}
+  {% set act = act_lower|replace(' ', '_') %}
+{% endif %}
 {% set preset_value = preset_options[0] %}
 {% if clone and act == 'preset' and clone.param in preset_options %}
   {% set preset_value = clone.param %}
@@ -77,17 +89,29 @@
       {# Always provide a default param mode so the first request is deterministic. #}
       <input type="hidden" name="param_mode" id="m-param-mode" value="{{ param_mode }}">
 
-      <!-- Server-rendered Param controls land here so a field is visible immediately. -->
+      {# ===== Server-side initial param controls (always shown immediately) ===== #}
+      {% set include_label = clone.action if clone else 'redact' %}
+      {% set include_lower = (include_label or 'redact')|lower %}
+      {% if include_lower == 'replace (literal)' %}
+        {% set act_norm = 'replace' %}
+      {% elif include_lower == 'preset (synthetic)' %}
+        {% set act_norm = 'preset' %}
+      {% elif include_lower == 'regex redact' %}
+        {% set act_norm = 'regex_redact' %}
+      {% elif include_lower == 'regex replace' %}
+        {% set act_norm = 'regex_replace' %}
+      {% else %}
+        {% set act_norm = include_lower|replace(' ', '_') %}
+      {% endif %}
+
       <div id="param-controls" class="mt">
-        {% set action = act %}
+        {% set action = act_norm %}
         {% set param_preset = preset_value %}
         {% set param_free = free_value %}
         {% set pattern = regex_pattern %}
         {% set repl = regex_replacement %}
         {% include "ui/settings/_deid_param_controls.html" %}
       </div>
-
-      <div class="row gap small mt"><span class="badge muted">Path</span><span class="badge mono" id="m-path-badge">—</span></div>
       <div class="card mt">
         <h4 class="text-h4">Test &amp; Preview</h4>
         <label>Sample HL7 snippet
