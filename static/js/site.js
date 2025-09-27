@@ -8,7 +8,7 @@ window.diffChars = (a,b) => ({ beforeHTML: esc(a ?? ""), afterHTML: esc(b ?? "")
 window.diffLines = (a,b) => ({ beforeHTML: esc(a ?? ""), afterHTML: esc(b ?? "") });
 
 /* ========== De-ID modal initializer ========== */
-/* Call this AFTER the modal HTML is inserted (HTMX after-swap). */
+/* Call this AFTER the modal HTML is inserted (after HTMX settles). */
 window.initDeidModal = function initDeidModal(sel) {
   const root = (typeof sel === 'string') ? document.querySelector(sel) : sel;
   if (!root) return;
@@ -25,6 +25,7 @@ window.initDeidModal = function initDeidModal(sel) {
   const sampleArea  = $('#m-sample');
   const form        = root.querySelector('form');
   const testBtn     = root.querySelector('[data-deid-test]');
+  const paramControls = $('#param-controls');
 
   const hiddenParamMode = () => form?.querySelector('input[type="hidden"][name="param_mode"]') || null;
   const syncParamModeFromSelect = () => {
@@ -104,17 +105,39 @@ window.initDeidModal = function initDeidModal(sel) {
         }
       }
     });
+
+    if (paramControls && !paramControls.dataset.deidInitListener) {
+      paramControls.addEventListener('htmx:afterSwap', (evt) => {
+        if (evt.target === paramControls) {
+          paramControls.dataset.deidInitialLoaded = '1';
+        }
+      });
+      paramControls.dataset.deidInitListener = '1';
+    }
   }
 
   // first render
   updatePath();
   syncParamModeFromSelect();
+
+  if (paramControls && window.htmx) {
+    if (paramControls.dataset.deidInitialLoaded !== '1') {
+      window.setTimeout(() => {
+        if (paramControls.dataset.deidInitialLoaded === '1') return;
+        try {
+          window.htmx.trigger(paramControls, 'load');
+        } catch (err) {
+          console.error(err);
+        }
+      }, 20);
+    }
+  }
 };
 
 /* ========== HTMX hook ==========
    Any time HTMX swaps in content that includes a De-ID modal,
    this will run the initializer automatically. */
-document.addEventListener('htmx:afterSwap', (evt) => {
+document.addEventListener('htmx:afterSettle', (evt) => {
   const modal = document.querySelector('#deid-modal');
   if (modal) window.initDeidModal(modal);
 });

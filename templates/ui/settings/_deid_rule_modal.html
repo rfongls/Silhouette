@@ -1,7 +1,7 @@
 <div class="modal-backdrop"></div>
 <div class="modal" id="deid-modal"
      data-test-endpoint="{{ request.url_for('api_deid_test_rule') }}"
-     hx-on::after-swap="initDeidModal('#deid-modal')">
+     hx-on::after-settle="try { initDeidModal('#deid-modal'); } catch (e) { console.error(e); }">
   <div class="modal-card">
     <div class="modal-header">
       <h3 class="text-h3">{% if clone %}Clone De-identification Rule{% else %}Add De-identification Rule{% endif %}</h3>
@@ -44,7 +44,7 @@
 
       <div id="param-controls" class="mt"
            hx-get="{{ request.url_for('ui_settings_deid_param_controls') }}"
-           hx-trigger="load, change from:#m-action"
+           hx-trigger="load delay:10ms, change from:#m-action"
            hx-include="#deid-modal-form"
            hx-swap="innerHTML">
         <p class="muted">Loading parameters…</p>
