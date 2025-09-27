@@ -1,7 +1,7 @@
 <div class="modal-backdrop"></div>
 <div class="modal" id="deid-modal"
      data-test-endpoint="{{ request.url_for('api_deid_test_rule') }}"
-     hx-on::after-swap="initDeidModal('#deid-modal')">
+     hx-on::after-settle="try { initDeidModal('#deid-modal'); } catch (e) { console.error(e); }">
   <div class="modal-card">
     <div class="modal-header">
       <h3 class="text-h3">{% if clone %}Clone De-identification Rule{% else %}Add De-identification Rule{% endif %}</h3>
@@ -11,7 +11,7 @@
     <form id="deid-modal-form"
           hx-post="{{ request.url_for('ui_settings_deid_add_rule', name=tpl.name) }}"
           hx-target="#deid-rules"
-          hx-on::after-request="document.getElementById('deid-modal').remove()">
+          hx-on::after-request="if (event.detail.elt === this) { document.getElementById('deid-modal').remove() }">
 
       <div class="grid two">
         <label>Segment <input class="input" name="segment" id="m-seg" placeholder="PID" required value="{{ clone.segment if clone else '' }}"></label>
@@ -23,12 +23,7 @@
       <div class="grid two mt">
         <label>Action
           {% set act = clone.action if clone else 'redact' %}
-          <select class="input" name="action" id="m-action"
-                  hx-get="{{ request.url_for('ui_settings_deid_param_controls') }}"
-                  hx-target="#param-controls"
-                  hx-trigger="change"
-                  hx-swap="innerHTML"
-                  hx-vals="js:{ action: this.value, param_mode: (document.getElementById('m-param-mode')?.value || 'preset') }">
+          <select class="input" name="action" id="m-action">
             <option value="redact"        {{ 'selected' if act=='redact' else '' }}>redact</option>
             <option value="mask"          {{ 'selected' if act=='mask' else '' }}>mask</option>
             <option value="hash"          {{ 'selected' if act=='hash' else '' }}>hash</option>
@@ -40,24 +35,19 @@
         </label>
       </div>
 
-      <input type="hidden" name="param_mode" id="m-param-mode" value="preset">
+      <input type="hidden" name="param_mode" value="{{ initial_param_mode or 'preset' }}">
+      <input type="hidden" name="initial_param_mode" value="{{ initial_param_mode or 'preset' }}">
+      <input type="hidden" name="initial_param_preset" value="{{ initial_param_preset or '' }}">
+      <input type="hidden" name="initial_param_free" value="{{ initial_param_free or '' }}">
+      <input type="hidden" name="initial_pattern" value="{{ initial_pattern or '' }}">
+      <input type="hidden" name="initial_repl" value="{{ initial_repl or '' }}">
 
-      {% set act_label = clone.action if clone else 'redact' %}
-      {% set act_lower = (act_label or 'redact')|lower %}
-      {% if act_lower == 'replace (literal)' %}
-        {% set act_norm = 'replace' %}
-      {% elif act_lower == 'regex redact' %}
-        {% set act_norm = 'regex_redact' %}
-      {% elif act_lower == 'regex replace' %}
-        {% set act_norm = 'regex_replace' %}
-      {% else %}
-        {% set act_norm = act_lower|replace(' ', '_') %}
-      {% endif %}
-
-      <div id="param-controls" class="mt">
-        {% set action = act_norm %}
-        {% set param_mode = 'preset' %}
-        {% include "ui/settings/_deid_param_controls.html" %}
+      <div id="param-controls" class="mt"
+           hx-get="{{ request.url_for('ui_settings_deid_param_controls') }}"
+           hx-trigger="load delay:10ms, change from:#m-action"
+           hx-include="#deid-modal-form"
+           hx-swap="innerHTML">
+        <p class="muted">Loading parameters…</p>
       </div>
       <div class="card mt">
         <h4 class="text-h4">Test &amp; Preview</h4>
