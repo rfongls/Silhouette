@@ -44,7 +44,41 @@
       {% endif %}
     </div>
 
-  {% elif act in ['replace', 'mask', 'hash'] %}
+{% if request.headers.get('HX-Request') %}
+  <input type="hidden" name="param_mode" id="m-param-mode" value="{{ mode }}" hx-swap-oob="outerHTML">
+{% endif %}
+
+<div class="mt">
+  {% if act == 'preset' %}
+    <div class="grid two">
+      <label>Parameter mode
+        <select class="input" name="param_mode"
+                hx-get="{{ request.url_for('ui_settings_deid_param_controls') }}"
+                hx-target="#param-controls"
+                hx-include="#deid-modal-form"
+                hx-trigger="change"
+                hx-swap="innerHTML">
+          <option value="preset" {{ 'selected' if mode=='preset' else '' }}>Preset</option>
+          <option value="free"   {{ 'selected' if mode=='free'   else '' }}>Free-text</option>
+        </select>
+      </label>
+
+      {% if mode == 'preset' %}
+        <label>Preset key
+          <select class="input" name="param_preset">
+            {% for opt in preset_options %}
+              <option value="{{ opt }}" {{ 'selected' if preset_value == opt else '' }}>{{ opt }}</option>
+            {% endfor %}
+          </select>
+        </label>
+      {% else %}
+        <label>Value / Param
+          <input class="input" name="param_free" placeholder="fixed text" value="{{ free_value }}">
+        </label>
+      {% endif %}
+    </div>
+
+  {% elif act in ['replace','mask','hash'] %}
     <label class="mt">Value / Param
       <input class="input" name="param_free" placeholder="replace→fixed text; mask→mask char; hash→salt" value="{{ free_value }}">
     </label>
