@@ -35,7 +35,12 @@
         </label>
       </div>
 
-      <input type="hidden" name="param_mode" value="preset">
+      <input type="hidden" name="param_mode" value="{{ initial_param_mode or 'preset' }}">
+      <input type="hidden" name="initial_param_mode" value="{{ initial_param_mode or 'preset' }}">
+      <input type="hidden" name="initial_param_preset" value="{{ initial_param_preset or '' }}">
+      <input type="hidden" name="initial_param_free" value="{{ initial_param_free or '' }}">
+      <input type="hidden" name="initial_pattern" value="{{ initial_pattern or '' }}">
+      <input type="hidden" name="initial_repl" value="{{ initial_repl or '' }}">
 
       <div id="param-controls" class="mt"
            hx-get="{{ request.url_for('ui_settings_deid_param_controls') }}"

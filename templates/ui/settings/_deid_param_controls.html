@@ -1,8 +1,13 @@
 {# Server-rendered parameter controls for De-ID actions.
-   Expects: action, param_mode in the context. #}
+   Expects: action, param_mode, param_preset, param_free, pattern, repl, preset_options. #}
 
 {% set act  = (action or 'redact')|lower %}
 {% set mode = (param_mode or 'preset')|lower %}
+{% set presets = (preset_options or ['name','birthdate','datetime','gender','address','phone','language','race','mrn','ssn','facility','note','pdf_blob','xml_blob']) %}
+{% set preset_val = (param_preset or presets[0] or '')|lower %}
+{% set free_val = param_free or '' %}
+{% set pattern_val = pattern or '' %}
+{% set repl_val = repl or '' %}
 
 <div class="mt">
   {% if act == 'preset' %}
@@ -22,35 +27,36 @@
       {% if mode == 'preset' %}
         <label>Preset key
           <select class="input" name="param_preset">
-            {% for opt in ['name','birthdate','datetime','gender','address','phone','language','race','mrn','ssn','facility','note','pdf_blob','xml_blob'] %}
-              <option value="{{ opt }}">{{ opt }}</option>
+            {% for opt in presets %}
+              {% set opt_norm = (opt or '')|lower %}
+              <option value="{{ opt }}" {{ 'selected' if opt_norm == preset_val else '' }}>{{ opt }}</option>
             {% endfor %}
           </select>
         </label>
       {% else %}
         <label>Value / Param
-          <input class="input" name="param_free" placeholder="fixed text">
+          <input class="input" name="param_free" placeholder="fixed text" value="{{ free_val }}">
         </label>
       {% endif %}
     </div>
 
   {% elif act in ['replace','mask','hash'] %}
     <label class="mt">Value / Param
-      <input class="input" name="param_free" placeholder="replace→fixed text; mask→mask char; hash→salt">
+      <input class="input" name="param_free" placeholder="replace→fixed text; mask→mask char; hash→salt" value="{{ free_val }}">
     </label>
 
   {% elif act == 'regex_redact' %}
     <label class="mt">Regex pattern
-      <input class="input" name="pattern" placeholder="e.g., \\d{6}">
+      <input class="input" name="pattern" placeholder="e.g., \\d{6}" value="{{ pattern_val }}">
     </label>
 
   {% elif act == 'regex_replace' %}
     <div class="grid two">
       <label>Regex pattern
-        <input class="input" name="pattern" placeholder="e.g., (\\d{3})-(\\d{2})-(\\d{4})">
+        <input class="input" name="pattern" placeholder="e.g., (\\d{3})-(\\d{2})-(\\d{4})" value="{{ pattern_val }}">
       </label>
       <label>Replacement
-        <input class="input" name="repl" placeholder="***-**-****">
+        <input class="input" name="repl" placeholder="***-**-****" value="{{ repl_val }}">
       </label>
     </div>
 
@@ -59,7 +65,7 @@
 
   {% else %}
     <label class="mt">Parameter
-      <input class="input" name="param_free" placeholder="parameter value">
+      <input class="input" name="param_free" placeholder="parameter value" value="{{ free_val }}">
     </label>
   {% endif %}
 </div>
