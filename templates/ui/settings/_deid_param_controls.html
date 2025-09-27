@@ -1,37 +1,8 @@
-{% set options = preset_options if preset_options is defined else ['name','birthdate','datetime','gender','address','phone','language','race','mrn','ssn','facility','note','pdf_blob','xml_blob'] %}
-{% set act = (action or 'redact')|lower %}
-{% set mode = (param_mode or 'preset')|lower %}
-{% set preset_value = (param_preset or options[0]) %}
-{% set free_value = (param_free or '') %}
-{% set pattern_value = (pattern or '') %}
-{% set repl_value = (repl or '') %}
-{% if request.headers.get('HX-Request') %}
-  <input type="hidden" name="param_mode" id="m-param-mode" value="{{ mode }}" hx-swap-oob="outerHTML">
-{% endif %}
-{% if request.headers.get('HX-Request') %}
-  <input type="hidden" name="param_mode" id="m-param-mode" value="{{ mode }}" hx-swap-oob="outerHTML">
-{% endif %}
-{% if request.headers.get('HX-Request') %}
-  <input type="hidden" name="param_mode" id="m-param-mode" value="{{ mode }}" hx-swap-oob="outerHTML">
-{% endif %}
-<div class="mt">
-  {% if act == 'preset' %}
-    <div class="grid two">
-      <label>Parameter mode
-        <select class="input" name="param_mode"
-                hx-get="{{ request.url_for('ui_settings_deid_param_controls') }}"
-                hx-target="#param-controls"
-                hx-include="#deid-modal-form"
-                hx-trigger="change"
-                hx-swap="innerHTML">
-          <option value="preset" {{ 'selected' if mode == 'preset' else '' }}>Preset</option>
-          <option value="free" {{ 'selected' if mode == 'free' else '' }}>Free-text</option>
-        </select>
-      </label>
+{# Server-rendered parameter controls for De-ID actions.
+   Expects: action, param_mode in the context. #}
 
-{% if request.headers.get('HX-Request') %}
-  <input type="hidden" name="param_mode" id="m-param-mode" value="{{ mode }}" hx-swap-oob="outerHTML">
-{% endif %}
+{% set act  = (action or 'redact')|lower %}
+{% set mode = (param_mode or 'preset')|lower %}
 
 <div class="mt">
   {% if act == 'preset' %}
@@ -51,35 +22,35 @@
       {% if mode == 'preset' %}
         <label>Preset key
           <select class="input" name="param_preset">
-            {% for opt in options %}
-              <option value="{{ opt }}" {{ 'selected' if preset_value == opt else '' }}>{{ opt }}</option>
+            {% for opt in ['name','birthdate','datetime','gender','address','phone','language','race','mrn','ssn','facility','note','pdf_blob','xml_blob'] %}
+              <option value="{{ opt }}">{{ opt }}</option>
             {% endfor %}
           </select>
         </label>
       {% else %}
         <label>Value / Param
-          <input class="input" name="param_free" placeholder="fixed text" value="{{ free_value }}">
+          <input class="input" name="param_free" placeholder="fixed text">
         </label>
       {% endif %}
     </div>
 
   {% elif act in ['replace','mask','hash'] %}
     <label class="mt">Value / Param
-      <input class="input" name="param_free" placeholder="replace→fixed text; mask→mask char; hash→salt" value="{{ free_value }}">
+      <input class="input" name="param_free" placeholder="replace→fixed text; mask→mask char; hash→salt">
     </label>
 
   {% elif act == 'regex_redact' %}
     <label class="mt">Regex pattern
-      <input class="input" name="pattern" placeholder="e.g., \\d{6}" value="{{ pattern_value }}">
+      <input class="input" name="pattern" placeholder="e.g., \\d{6}">
     </label>
 
   {% elif act == 'regex_replace' %}
     <div class="grid two">
       <label>Regex pattern
-        <input class="input" name="pattern" placeholder="e.g., (\\d{3})-(\\d{2})-(\\d{4})" value="{{ pattern_value }}">
+        <input class="input" name="pattern" placeholder="e.g., (\\d{3})-(\\d{2})-(\\d{4})">
       </label>
       <label>Replacement
-        <input class="input" name="repl" placeholder="***-**-****" value="{{ repl_value }}">
+        <input class="input" name="repl" placeholder="***-**-****">
       </label>
     </div>
 
