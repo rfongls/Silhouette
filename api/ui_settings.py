@@ -119,6 +119,20 @@ def _build_rule_modal_context(request: Request, tpl: "DeidTemplate", clone: Opti
         "preset_options": PRESET_PARAM_OPTIONS,
     }
 
+ACTION_ALIASES = {
+    "replace (literal)": "replace",
+    "preset (synthetic)": "preset",
+    "regex redact": "regex_redact",
+    "regex replace": "regex_replace",
+}
+
+
+def _normalize_action(action: Optional[str]) -> str:
+    raw = (action or "redact").strip().lower()
+    raw = raw.replace("-", "_")
+    normalized = ACTION_ALIASES.get(raw, raw.replace(" ", "_"))
+    return normalized or "redact"
+
 # ---------- Models ----------
 @dataclass
 class DeidRule:
@@ -392,6 +406,11 @@ def ui_settings_deid_add_rule(
     param_free: Optional[str] = Form(None),
     pattern: Optional[str] = Form(None),
     repl: Optional[str] = Form(None),
+    initial_param_mode: Optional[str] = Form(None),
+    initial_param_preset: Optional[str] = Form(None),
+    initial_param_free: Optional[str] = Form(None),
+    initial_pattern: Optional[str] = Form(None),
+    initial_repl: Optional[str] = Form(None),
 ) -> Response:
     p = _json_path(DEID_DIR, name)
     tpl = DeidTemplate.from_dict(_load_json(p))
@@ -458,6 +477,11 @@ def api_deid_test_rule(
     param_free: Optional[str] = Form(None),
     pattern: Optional[str] = Form(None),
     repl: Optional[str] = Form(None),
+    initial_param_mode: Optional[str] = Form(None),
+    initial_param_preset: Optional[str] = Form(None),
+    initial_param_free: Optional[str] = Form(None),
+    initial_pattern: Optional[str] = Form(None),
+    initial_repl: Optional[str] = Form(None),
 ) -> JSONResponse:
     from silhouette_core.interop.deid import apply_single_rule
 
