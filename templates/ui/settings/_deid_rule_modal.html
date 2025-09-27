@@ -28,7 +28,7 @@
                   hx-target="#param-controls"
                   hx-trigger="change"
                   hx-swap="innerHTML"
-                  hx-include="#deid-modal-form">
+                  hx-vals="js:{ action: this.value, param_mode: (document.getElementById('m-param-mode')?.value || 'preset') }">
             <option value="redact"        {{ 'selected' if act=='redact' else '' }}>redact</option>
             <option value="mask"          {{ 'selected' if act=='mask' else '' }}>mask</option>
             <option value="hash"          {{ 'selected' if act=='hash' else '' }}>hash</option>
