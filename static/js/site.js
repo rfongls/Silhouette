@@ -25,8 +25,6 @@ window.initDeidModal = function initDeidModal(sel) {
   const sampleArea  = $('#m-sample');
   const form        = root.querySelector('form');
   const testBtn     = root.querySelector('[data-deid-test]');
-  const paramControls = $('#param-controls');
-
   const hiddenParamMode = () => form?.querySelector('input[type="hidden"][name="param_mode"]') || null;
   const syncParamModeFromSelect = () => {
     const select = root.querySelector('#m-param-mode');
@@ -105,31 +103,23 @@ window.initDeidModal = function initDeidModal(sel) {
         }
       }
     });
-
-    if (paramControls && !paramControls.dataset.deidInitListener) {
-      paramControls.addEventListener('htmx:afterSwap', (evt) => {
-        if (evt.target === paramControls) {
-          paramControls.dataset.deidInitialLoaded = '1';
-        }
-      });
-      paramControls.dataset.deidInitListener = '1';
-    }
   }
 
   // first render
   updatePath();
   syncParamModeFromSelect();
 
-  if (paramControls && window.htmx) {
-    if (paramControls.dataset.deidInitialLoaded !== '1') {
+  if (window.htmx) {
+    const actionSelect = $('#m-action');
+    if (actionSelect && !actionSelect.dataset.deidInitTriggered) {
+      actionSelect.dataset.deidInitTriggered = '1';
       window.setTimeout(() => {
-        if (paramControls.dataset.deidInitialLoaded === '1') return;
         try {
-          window.htmx.trigger(paramControls, 'load');
+          window.htmx.trigger(actionSelect, 'change');
         } catch (err) {
           console.error(err);
         }
-      }, 20);
+      }, 0);
     }
   }
 };
