@@ -27,8 +27,7 @@
                   hx-get="{{ request.url_for('ui_settings_deid_param_controls') }}"
                   hx-target="#param-controls"
                   hx-trigger="change"
-                  hx-swap="innerHTML"
-                  hx-include="#deid-modal-form">
+                  hx-swap="innerHTML">
             <option value="redact"        {{ 'selected' if act=='redact' else '' }}>redact</option>
             <option value="mask"          {{ 'selected' if act=='mask' else '' }}>mask</option>
             <option value="hash"          {{ 'selected' if act=='hash' else '' }}>hash</option>
