@@ -6,7 +6,7 @@ from dataclasses import dataclass, asdict
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, Form, HTTPException, Query, Request, UploadFile, File
+from fastapi import APIRouter, Form, HTTPException, Request, UploadFile, File
 from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse, Response
 from starlette.templating import Jinja2Templates
 
@@ -367,22 +367,55 @@ def ui_settings_deid_new_rule_modal(request: Request, name: str) -> Response:
 )
 def ui_settings_deid_param_controls(
     request: Request,
-    action: str = Query("redact"),
-    param_mode: str = Query("preset"),
+    action: Optional[str] = None,
+    param_mode: Optional[str] = None,
+    param_preset: Optional[str] = None,
+    param_free: Optional[str] = None,
+    pattern: Optional[str] = None,
+    repl: Optional[str] = None,
+    initial_param_mode: Optional[str] = None,
+    initial_param_preset: Optional[str] = None,
+    initial_param_free: Optional[str] = None,
+    initial_pattern: Optional[str] = None,
+    initial_repl: Optional[str] = None,
 ) -> Response:
-    act = (action or "").strip().lower()
-    if act == "replace (literal)":
-        act = "replace"
-    elif act == "regex redact":
-        act = "regex_redact"
-    elif act == "regex replace":
-        act = "regex_replace"
-    else:
-        act = act.replace(" ", "_")
-    mode = (param_mode or "preset").strip().lower()
+    params = request.query_params
+
+    def _last_value(key: str, *fallbacks: Optional[str]) -> Optional[str]:
+        values = [v for v in params.getlist(key) if v is not None]
+        if values:
+            return values[-1]
+        for fb in fallbacks:
+            if fb is not None:
+                return fb
+        return None
+
+    raw_action = _last_value("action", action, "redact")
+    raw_mode = _last_value("param_mode", param_mode, initial_param_mode, "preset")
+    preset_value = _last_value("param_preset", param_preset, initial_param_preset, DEFAULT_PRESET_KEY)
+    free_value = _last_value("param_free", param_free, initial_param_free, "")
+    pattern_value = _last_value("pattern", pattern, initial_pattern, "")
+    repl_value = _last_value("repl", repl, initial_repl, "")
+
+    act = _normalize_action(raw_action)
+    mode = (raw_mode or "preset").strip().lower() or "preset"
+    preset_selected = (preset_value or DEFAULT_PRESET_KEY).strip() or DEFAULT_PRESET_KEY
+    free_text = (free_value or "").strip()
+    pattern_text = (pattern_value or "").strip()
+    repl_text = (repl_value or "").strip()
+
     return templates.TemplateResponse(
         "ui/settings/_deid_param_controls.html",
-        {"request": request, "action": act, "param_mode": mode},
+        {
+            "request": request,
+            "action": act,
+            "param_mode": mode,
+            "param_preset": preset_selected,
+            "param_free": free_text,
+            "pattern": pattern_text,
+            "repl": repl_text,
+            "preset_options": PRESET_PARAM_OPTIONS,
+        },
     )
 
 
