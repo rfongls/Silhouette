@@ -28,7 +28,7 @@
                   hx-target="#param-controls"
                   hx-trigger="change"
                   hx-swap="innerHTML"
-                  hx-vals="js:{ action: this.value, param_mode: (document.getElementById('m-param-mode')?.value || 'preset') }">
+                  hx-include="#deid-modal-form">
             <option value="redact"        {{ 'selected' if act=='redact' else '' }}>redact</option>
             <option value="mask"          {{ 'selected' if act=='mask' else '' }}>mask</option>
             <option value="hash"          {{ 'selected' if act=='hash' else '' }}>hash</option>
@@ -40,7 +40,7 @@
         </label>
       </div>
 
-      <input type="hidden" name="param_mode" id="m-param-mode" value="preset">
+      <input type="hidden" name="param_mode" value="preset">
 
       {% set act_label = clone.action if clone else 'redact' %}
       {% set act_lower = (act_label or 'redact')|lower %}
