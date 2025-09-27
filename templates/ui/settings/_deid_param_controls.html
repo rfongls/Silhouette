@@ -1,7 +1,7 @@
+{% set options = preset_options if preset_options is defined else ['name','birthdate','datetime','gender','address','phone','language','race','mrn','ssn','facility','note','pdf_blob','xml_blob'] %}
 {% set act = (action or 'redact')|lower %}
 {% set mode = (param_mode or 'preset')|lower %}
-{% set preset_options = ['name','birthdate','datetime','gender','address','phone','language','race','mrn','ssn','facility','note','pdf_blob','xml_blob'] %}
-{% set preset_value = (param_preset or preset_options[0]) %}
+{% set preset_value = (param_preset or options[0]) %}
 {% set free_value = (param_free or '') %}
 {% set pattern_value = (pattern or '') %}
 {% set repl_value = (repl or '') %}
@@ -29,21 +29,6 @@
         </select>
       </label>
 
-      {% if mode == 'preset' %}
-        <label>Preset key
-          <select class="input" name="param_preset">
-            {% for opt in preset_options %}
-              <option value="{{ opt }}" {{ 'selected' if (preset_value or preset_options[0]) == opt else '' }}>{{ opt }}</option>
-            {% endfor %}
-          </select>
-        </label>
-      {% else %}
-        <label>Value / Param
-          <input class="input" name="param_free" placeholder="e.g., fixed text" value="{{ free_value }}">
-        </label>
-      {% endif %}
-    </div>
-
 {% if request.headers.get('HX-Request') %}
   <input type="hidden" name="param_mode" id="m-param-mode" value="{{ mode }}" hx-swap-oob="outerHTML">
 {% endif %}
@@ -66,7 +51,7 @@
       {% if mode == 'preset' %}
         <label>Preset key
           <select class="input" name="param_preset">
-            {% for opt in preset_options %}
+            {% for opt in options %}
               <option value="{{ opt }}" {{ 'selected' if preset_value == opt else '' }}>{{ opt }}</option>
             {% endfor %}
           </select>

@@ -27,7 +27,7 @@ VAL_DIR  = Path("configs/interop/validate_templates")
 for d in (DEID_DIR, VAL_DIR):
     d.mkdir(parents=True, exist_ok=True)
 
-PRESET_PARAM_KEYS = {
+PRESET_PARAM_OPTIONS = [
     "name",
     "birthdate",
     "datetime",
@@ -42,8 +42,82 @@ PRESET_PARAM_KEYS = {
     "note",
     "pdf_blob",
     "xml_blob",
+]
+PRESET_PARAM_KEYS = set(PRESET_PARAM_OPTIONS)
+DEFAULT_PRESET_KEY = PRESET_PARAM_OPTIONS[0]
+
+ACTION_ALIASES = {
+    "replace (literal)": "replace",
+    "preset (synthetic)": "preset",
+    "regex redact": "regex_redact",
+    "regex replace": "regex_replace",
 }
-DEFAULT_PRESET_KEY = "name"
+
+
+def _normalize_action(action: Optional[str]) -> str:
+    raw = (action or "redact").strip().lower()
+    raw = raw.replace("-", "_")
+    normalized = ACTION_ALIASES.get(raw, raw.replace(" ", "_"))
+    return normalized or "redact"
+
+
+def _initial_param_state(action: Optional[str], param: Optional[str]) -> Dict[str, str]:
+    normalized_action = _normalize_action(action)
+    state = {
+        "mode": "preset",
+        "param_preset": DEFAULT_PRESET_KEY,
+        "param_free": "",
+        "pattern": "",
+        "repl": "",
+    }
+
+    if not param:
+        return state
+
+    value = str(param)
+    if normalized_action == "preset":
+        if value in PRESET_PARAM_KEYS:
+            state["param_preset"] = value
+        else:
+            state["mode"] = "free"
+            state["param_free"] = value
+    elif normalized_action in {"replace", "mask", "hash"}:
+        state["param_free"] = value
+    elif normalized_action == "regex_redact":
+        state["pattern"] = value
+    elif normalized_action == "regex_replace":
+        parsed: Optional[Dict[str, Any]] = None
+        try:
+            parsed = json.loads(value)
+        except Exception:
+            parsed = None
+        if isinstance(parsed, dict):
+            state["pattern"] = str(parsed.get("pattern") or "")
+            state["repl"] = str(parsed.get("repl") or "")
+        elif ":::" in value:
+            pattern_val, repl_val = value.split(":::", 1)
+            state["pattern"] = pattern_val
+            state["repl"] = repl_val
+        else:
+            state["pattern"] = value
+    return state
+
+
+def _build_rule_modal_context(request: Request, tpl: "DeidTemplate", clone: Optional["DeidRule"]):
+    action_value = _normalize_action(clone.action if clone else "redact")
+    initial_state = _initial_param_state(action_value, getattr(clone, "param", None))
+    return {
+        "request": request,
+        "tpl": tpl,
+        "clone": clone,
+        "initial_action": action_value,
+        "initial_param_mode": initial_state["mode"],
+        "initial_param_preset": initial_state["param_preset"],
+        "initial_param_free": initial_state["param_free"],
+        "initial_pattern": initial_state["pattern"],
+        "initial_repl": initial_state["repl"],
+        "preset_options": PRESET_PARAM_OPTIONS,
+    }
 
 ACTION_ALIASES = {
     "replace (literal)": "replace",
@@ -280,12 +354,10 @@ def ui_settings_deid_edit(request: Request, name: str) -> Response:
 )
 def ui_settings_deid_new_rule_modal(request: Request, name: str) -> Response:
     tpl = DeidTemplate.from_dict(_load_json(_json_path(DEID_DIR, name)))
-    context = {
-        "request": request,
-        "tpl": tpl,
-        "clone": None,
-    }
-    return templates.TemplateResponse("ui/settings/_deid_rule_modal.html", context)
+    return templates.TemplateResponse(
+        "ui/settings/_deid_rule_modal.html",
+        _build_rule_modal_context(request, tpl, None),
+    )
 
 @router.get(
     "/ui/settings/deid/param_controls",
@@ -304,14 +376,18 @@ def ui_settings_deid_param_controls(
 ) -> Response:
     normalized_action = _normalize_action(action)
     mode = (param_mode or "preset").strip().lower() or "preset"
+    preset_value = (param_preset or "").strip()
+    if mode == "preset" and not preset_value:
+        preset_value = DEFAULT_PRESET_KEY
     ctx = {
         "request": request,
         "action": normalized_action,
         "param_mode": mode,
-        "param_preset": (param_preset or "").strip(),
+        "param_preset": preset_value,
         "param_free": (param_free or "").strip(),
         "pattern": (pattern or "").strip(),
         "repl": (repl or "").strip(),
+        "preset_options": PRESET_PARAM_OPTIONS,
     }
     return templates.TemplateResponse("ui/settings/_deid_param_controls.html", ctx)
 
@@ -499,12 +575,10 @@ def ui_settings_deid_clone_rule_modal(request: Request, name: str, index: int) -
     if index < 0 or index >= len(rules):
         raise HTTPException(status_code=404, detail="Rule not found")
     clone_rule = rules[index]
-    context = {
-        "request": request,
-        "tpl": tpl,
-        "clone": clone_rule,
-    }
-    return templates.TemplateResponse("ui/settings/_deid_rule_modal.html", context)
+    return templates.TemplateResponse(
+        "ui/settings/_deid_rule_modal.html",
+        _build_rule_modal_context(request, tpl, clone_rule),
+    )
 
 
 @router.post("/ui/settings/deid/seed_defaults/{name}", response_class=HTMLResponse, name="ui_settings_deid_seed_defaults", response_model=None)

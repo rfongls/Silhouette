@@ -22,7 +22,7 @@
 
       <div class="grid two mt">
         <label>Action
-          {% set act = clone.action if clone else 'redact' %}
+          {% set act = initial_action %}
           <select class="input" name="action" id="m-action"
                   hx-get="{{ request.url_for('ui_settings_deid_param_controls') }}"
                   hx-target="#param-controls"
@@ -39,64 +39,17 @@
           </select>
         </label>
       </div>
-      {% set preset_options = ['name','birthdate','datetime','gender','address','phone','language','race','mrn','ssn','facility','note','pdf_blob','xml_blob'] %}
 
-      {# Always provide a default mode so the first render is deterministic. #}
-      {% set act_label = clone.action if clone else 'redact' %}
-      {% set act_lower = (act_label or 'redact')|lower %}
-      {% if act_lower == 'replace (literal)' %}
-        {% set act_norm = 'replace' %}
-      {% elif act_lower == 'regex redact' %}
-        {% set act_norm = 'regex_redact' %}
-      {% elif act_lower == 'regex replace' %}
-        {% set act_norm = 'regex_replace' %}
-      {% else %}
-        {% set act_norm = act_lower|replace(' ', '_') %}
-      {% endif %}
-
-      {% set initial_mode = 'preset' %}
-      {% set preset_value = preset_options[0] %}
-      {% set free_value = '' %}
-      {% set pattern_value = '' %}
-      {% set repl_value = '' %}
-
-      {% if clone %}
-        {% if act_norm == 'preset' %}
-          {% if clone.param in preset_options %}
-            {% set preset_value = clone.param %}
-          {% elif clone.param %}
-            {% set initial_mode = 'free' %}
-            {% set free_value = clone.param %}
-          {% endif %}
-        {% elif act_norm in ['replace','mask','hash'] %}
-          {% set free_value = clone.param or '' %}
-        {% elif act_norm == 'regex_redact' %}
-          {% set pattern_value = clone.param or '' %}
-        {% elif act_norm == 'regex_replace' %}
-          {% set raw_regex_param = clone.param or '' %}
-          {% if raw_regex_param and raw_regex_param.strip().startswith('{') %}
-            {% set parsed = raw_regex_param | fromjson(default={}) %}
-            {% set pattern_value = parsed.get('pattern', '') %}
-            {% set repl_value = parsed.get('repl', '') %}
-          {% elif raw_regex_param and ':::' in raw_regex_param %}
-            {% set pattern_value = raw_regex_param.split(':::', 1)[0] %}
-            {% set repl_value = raw_regex_param.split(':::', 1)[1] %}
-          {% else %}
-            {% set pattern_value = raw_regex_param %}
-          {% endif %}
-        {% endif %}
-      {% endif %}
-
-      <input type="hidden" name="param_mode" id="m-param-mode" value="{{ initial_mode }}">
+      <input type="hidden" name="param_mode" id="m-param-mode" value="{{ initial_param_mode }}">
 
       {# ===== Server-side initial param controls (always shown immediately) ===== #}
       <div id="param-controls" class="mt">
-        {% set action = act_norm %}
-        {% set param_mode = initial_mode %}
-        {% set param_preset = preset_value %}
-        {% set param_free = free_value %}
-        {% set pattern = pattern_value %}
-        {% set repl = repl_value %}
+        {% set action = initial_action %}
+        {% set param_mode = initial_param_mode %}
+        {% set param_preset = initial_param_preset %}
+        {% set param_free = initial_param_free %}
+        {% set pattern = initial_pattern %}
+        {% set repl = initial_repl %}
         {% include "ui/settings/_deid_param_controls.html" %}
       </div>
       <div class="card mt">
