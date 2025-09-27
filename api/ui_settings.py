@@ -369,27 +369,21 @@ def ui_settings_deid_param_controls(
     request: Request,
     action: str = Query("redact"),
     param_mode: str = Query("preset"),
-    param_preset: Optional[str] = Query(None),
-    param_free: Optional[str] = Query(None),
-    pattern: Optional[str] = Query(None),
-    repl: Optional[str] = Query(None),
 ) -> Response:
-    normalized_action = _normalize_action(action)
-    mode = (param_mode or "preset").strip().lower() or "preset"
-    preset_value = (param_preset or "").strip()
-    if mode == "preset" and not preset_value:
-        preset_value = DEFAULT_PRESET_KEY
-    ctx = {
-        "request": request,
-        "action": normalized_action,
-        "param_mode": mode,
-        "param_preset": preset_value,
-        "param_free": (param_free or "").strip(),
-        "pattern": (pattern or "").strip(),
-        "repl": (repl or "").strip(),
-        "preset_options": PRESET_PARAM_OPTIONS,
-    }
-    return templates.TemplateResponse("ui/settings/_deid_param_controls.html", ctx)
+    act = (action or "").strip().lower()
+    if act == "replace (literal)":
+        act = "replace"
+    elif act == "regex redact":
+        act = "regex_redact"
+    elif act == "regex replace":
+        act = "regex_replace"
+    else:
+        act = act.replace(" ", "_")
+    mode = (param_mode or "preset").strip().lower()
+    return templates.TemplateResponse(
+        "ui/settings/_deid_param_controls.html",
+        {"request": request, "action": act, "param_mode": mode},
+    )
 
 
 @router.post("/ui/settings/deid/add_rule/{name}", response_class=HTMLResponse, name="ui_settings_deid_add_rule", response_model=None)
