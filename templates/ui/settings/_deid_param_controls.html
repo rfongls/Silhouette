@@ -8,12 +8,12 @@
   {% if act == 'preset' %}
     <div class="grid two">
       <label>Parameter mode
-        <select class="input" name="param_mode"
+        <select class="input" name="param_mode" id="m-param-mode"
                 hx-get="{{ request.url_for('ui_settings_deid_param_controls') }}"
                 hx-target="#param-controls"
-                hx-vals="js:{ action: (document.getElementById('m-action')?.value || 'preset'), param_mode: this.value }"
                 hx-trigger="change"
-                hx-swap="innerHTML">
+                hx-swap="innerHTML"
+                hx-include="#deid-modal-form">
           <option value="preset" {{ 'selected' if mode=='preset' else '' }}>Preset</option>
           <option value="free"   {{ 'selected' if mode=='free'   else '' }}>Free-text</option>
         </select>
