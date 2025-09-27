@@ -1,46 +1,3 @@
-{% set preset_options = ['name','birthdate','datetime','gender','address','phone','language','race','mrn','ssn','facility','note','pdf_blob','xml_blob'] %}
-{% set act = clone.action if clone else 'redact' %}
-{% set preset_value = preset_options[0] %}
-{% if clone and act == 'preset' and clone.param in preset_options %}
-  {% set preset_value = clone.param %}
-{% endif %}
-{% set param_mode = 'preset' %}
-{% if clone and act == 'preset' and (clone.param is not none) and (clone.param not in preset_options) %}
-  {% set param_mode = 'free' %}
-{% endif %}
-{% set free_value = '' %}
-{% if clone %}
-  {% if act in ['replace','mask','hash'] %}
-    {% set free_value = clone.param or '' %}
-  {% elif act == 'preset' and (clone.param is not none) and (clone.param not in preset_options) %}
-    {% set free_value = clone.param %}
-  {% endif %}
-{% endif %}
-{% set regex_pattern = '' %}
-{% set regex_replacement = '' %}
-{% if clone and act == 'regex_redact' %}
-  {% set regex_pattern = clone.param or '' %}
-{% elif clone and act == 'regex_replace' %}
-  {% set raw_regex_param = clone.param or '' %}
-  {% if raw_regex_param and raw_regex_param.strip().startswith('{') %}
-    {% set parsed = raw_regex_param | fromjson(default={}) %}
-    {% set regex_pattern = parsed.get('pattern', '') %}
-    {% set regex_replacement = parsed.get('repl', '') %}
-  {% elif raw_regex_param and ':::' in raw_regex_param %}
-    {% set regex_pattern = raw_regex_param.split(':::', 1)[0] %}
-    {% set regex_replacement = raw_regex_param.split(':::', 1)[1] %}
-  {% else %}
-    {% set regex_pattern = raw_regex_param %}
-  {% endif %}
-{% endif %}
-{% set param_payload = {
-  'param_mode': param_mode,
-  'param_preset': preset_value,
-  'param_free': free_value,
-  'pattern': regex_pattern,
-  'repl': regex_replacement
-} %}
-
 <div class="modal-backdrop"></div>
 <div class="modal" id="deid-modal"
      data-test-endpoint="{{ request.url_for('api_deid_test_rule') }}"
@@ -65,27 +22,36 @@
 
       <div class="grid two mt">
         <label>Action
+          {% set act = initial_action %}
           <select class="input" name="action" id="m-action"
                   hx-get="{{ request.url_for('ui_settings_deid_param_controls') }}"
                   hx-target="#param-controls"
-                  hx-trigger="load, change"
-                  hx-include="#deid-modal-form"
-                  hx-vals='{{ param_payload | tojson }}'>
-            <option value="redact"         {{ 'selected' if act=='redact' else '' }}>redact</option>
-            <option value="mask"           {{ 'selected' if act=='mask' else '' }}>mask</option>
-            <option value="hash"           {{ 'selected' if act=='hash' else '' }}>hash</option>
-            <option value="replace"        {{ 'selected' if act=='replace' else '' }}>replace (literal)</option>
-            <option value="preset"         {{ 'selected' if act=='preset' else '' }}>preset (synthetic)</option>
-            <option value="regex_redact"   {{ 'selected' if act=='regex_redact' else '' }}>regex redact</option>
-            <option value="regex_replace"  {{ 'selected' if act=='regex_replace' else '' }}>regex replace</option>
+                  hx-trigger="change"
+                  hx-swap="innerHTML"
+                  hx-include="#deid-modal-form">
+            <option value="redact"        {{ 'selected' if act=='redact' else '' }}>redact</option>
+            <option value="mask"          {{ 'selected' if act=='mask' else '' }}>mask</option>
+            <option value="hash"          {{ 'selected' if act=='hash' else '' }}>hash</option>
+            <option value="replace"       {{ 'selected' if act=='replace' else '' }}>replace (literal)</option>
+            <option value="preset"        {{ 'selected' if act=='preset' else '' }}>preset (synthetic)</option>
+            <option value="regex_redact"  {{ 'selected' if act=='regex_redact' else '' }}>regex redact</option>
+            <option value="regex_replace" {{ 'selected' if act=='regex_replace' else '' }}>regex replace</option>
           </select>
         </label>
       </div>
-      <div id="param-controls" class="mt">
-        {% include 'ui/settings/_deid_param_controls.html' with context %}
-      </div>
 
-      <div class="row gap small mt"><span class="badge muted">Path</span><span class="badge mono" id="m-path-badge">—</span></div>
+      <input type="hidden" name="param_mode" id="m-param-mode" value="{{ initial_param_mode }}">
+
+      {# ===== Server-side initial param controls (always shown immediately) ===== #}
+      <div id="param-controls" class="mt">
+        {% set action = initial_action %}
+        {% set param_mode = initial_param_mode %}
+        {% set param_preset = initial_param_preset %}
+        {% set param_free = initial_param_free %}
+        {% set pattern = initial_pattern %}
+        {% set repl = initial_repl %}
+        {% include "ui/settings/_deid_param_controls.html" %}
+      </div>
       <div class="card mt">
         <h4 class="text-h4">Test &amp; Preview</h4>
         <label>Sample HL7 snippet
