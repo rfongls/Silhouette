@@ -102,6 +102,14 @@ window.initDeidModal = function initDeidModal(sel) {
         } else {
           syncParamModeFromSelect();
         }
+        const harness = root.querySelector('#param-harness');
+        if (harness && window.htmx) {
+          try {
+            window.htmx.trigger(harness, 'load');
+          } catch (err) {
+            console.warn('Failed to trigger param controls refresh', err);
+          }
+        }
       }
     });
   }
@@ -110,10 +118,10 @@ window.initDeidModal = function initDeidModal(sel) {
   updatePath();
   syncParamModeFromSelect();
 
-  const panel = root.querySelector('#param-controls');
-  if (window.htmx && panel) {
+  const harness = root.querySelector('#param-harness');
+  if (window.htmx && harness) {
     try {
-      window.htmx.trigger(panel, 'load');
+      window.htmx.trigger(harness, 'load');
     } catch (err) {
       console.warn('Failed to trigger param controls load', err);
     }
@@ -124,9 +132,10 @@ window.initDeidModal = function initDeidModal(sel) {
 /* --- Debug wiring for param controls --- */
 window.attachParamDebug = function attachParamDebug(root){
   try{
+    const owner = root.querySelector('#param-harness');
     const panel = root.querySelector('#param-controls');
-    if (!panel || panel.dataset.debugBound === '1') return;
-    panel.dataset.debugBound = '1';
+    if (!owner || owner.dataset.debugBound === '1') return;
+    owner.dataset.debugBound = '1';
     const logArea = document.createElement('pre');
     logArea.id = 'param-debug';
     logArea.style.whiteSpace = 'pre-wrap';
@@ -135,7 +144,7 @@ window.attachParamDebug = function attachParamDebug(root){
     logArea.style.borderRadius = '.5rem';
     logArea.style.marginTop = '.5rem';
     logArea.textContent = '[param-debug] init';
-    panel.insertAdjacentElement('afterend', logArea);
+    (panel || owner).insertAdjacentElement('afterend', logArea);
     const log = (msg) => {
       const now = new Date().toISOString().slice(11,19);
       logArea.textContent += "\n" + now + " " + msg;
@@ -143,12 +152,12 @@ window.attachParamDebug = function attachParamDebug(root){
       if (lines.length > 200) logArea.textContent = lines.slice(-200).join("\n");
     };
     if (window.htmx){
-      panel.addEventListener('htmx:configRequest', (e)=> log('configRequest url='+(e.detail.path||'')+' params='+(new URLSearchParams(e.detail.parameters)).toString()));
-      panel.addEventListener('htmx:beforeRequest', (e)=> log('beforeRequest '+(e.detail.path||'')));
-      panel.addEventListener('htmx:sendError',     (e)=> log('sendError '+(e.detail.xhr && e.detail.xhr.status)));
-      panel.addEventListener('htmx:responseError', (e)=> log('responseError '+(e.detail.xhr && e.detail.xhr.status)));
-      panel.addEventListener('htmx:afterOnLoad',   (e)=> log('afterOnLoad status='+(e.detail.xhr && e.detail.xhr.status)));
-      panel.addEventListener('htmx:afterSwap',     ()=> log('afterSwap'));
+      owner.addEventListener('htmx:configRequest', (e)=> log('configRequest url='+(e.detail.path||'')+' params='+(new URLSearchParams(e.detail.parameters)).toString()));
+      owner.addEventListener('htmx:beforeRequest', (e)=> log('beforeRequest '+(e.detail.path||'')));
+      owner.addEventListener('htmx:sendError',     (e)=> log('sendError '+(e.detail.xhr && e.detail.xhr.status)));
+      owner.addEventListener('htmx:responseError', (e)=> log('responseError '+(e.detail.xhr && e.detail.xhr.status)));
+      owner.addEventListener('htmx:afterOnLoad',   (e)=> log('afterOnLoad status='+(e.detail.xhr && e.detail.xhr.status)));
+      owner.addEventListener('htmx:afterSwap',     ()=> log('afterSwap'));
     }
   }catch(e){ console.error(e); }
 };
