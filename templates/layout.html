@@ -62,7 +62,14 @@
     .button.danger { background: #7f1d1d; color: #fff; }
   </style>
   {% block extra_head %}{% endblock %}
-  <script src="{{ static_base }}htmx.min.js"></script>
+  <script src="{{ static_base }}vendor/htmx.min.js?v=1.9.12"></script>
+  <script>
+    (function () {
+      if (!window.htmx || !window.htmx.version) {
+        console.error('[HTMX] Not loaded — param controls will NOT render.');
+      }
+    })();
+  </script>
   <script type="module" src="{{ static_base }}js/examples.js"></script>
 </head>
 <body data-root="{{ root }}">
