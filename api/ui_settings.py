@@ -421,41 +421,29 @@ def api_deid_test_rule(payload: Dict[str, Any] = Body(...)) -> JSONResponse:
     if not segment or field <= 0:
         return JSONResponse({"ok": False, "error": "segment_and_field_required"}, status_code=400)
 
-    field_sep, comp_sep, sub_sep, detected_from_msh = _detect_hl7_separators(text)
+    field_sep, comp_sep, sub_sep, _ = _detect_hl7_separators(text)
     lines = (text or "").splitlines()
-    seg_index: Optional[int] = None
-    expected_prefix = None
-    if detected_from_msh and field_sep:
-        expected_prefix = f"{segment}{field_sep}"
 
+    expected_prefix = f"{segment}{field_sep}" if field_sep else None
+    match_indexes: list[int] = []
     for idx, raw in enumerate(lines):
         if expected_prefix:
             if raw.startswith(expected_prefix):
-                seg_index = idx
-                break
+                match_indexes.append(idx)
         else:
             if raw.startswith(segment):
-                seg_index = idx
-                break
-    if seg_index is None:
-        if expected_prefix:
-            return JSONResponse(
-                {
-                    "ok": False,
-                    "error": "segment_not_found",
-                    "message": f"Segment {segment} not found in sample.",
-                },
-                status_code=400,
-            )
-        for idx, raw in enumerate(lines):
-            if raw.strip():
-                seg_index = idx
-                break
-    if seg_index is None:
-        return JSONResponse({"ok": False, "error": "no_lines"}, status_code=400)
+                match_indexes.append(idx)
 
-    before_line = lines[seg_index]
-    fields = before_line.split(field_sep)
+    if not match_indexes:
+        return JSONResponse(
+            {
+                "ok": False,
+                "error": "segment_not_found",
+                "message": f"Segment {segment} not found in sample.",
+            },
+            status_code=400,
+        )
+
     token_index = field if segment != "MSH" else field - 1
 
     if segment == "MSH" and field == 1:
@@ -467,101 +455,95 @@ def api_deid_test_rule(payload: Dict[str, Any] = Body(...)) -> JSONResponse:
             },
             status_code=400,
         )
+      
+    before_first_field = ""
+    after_first_field = ""
+    before_first_line = ""
+    after_first_line = ""
+    changed_once = False
+    any_valid_target = False
 
-    if not (0 <= token_index < len(fields)):
-        return JSONResponse(
-            {
-                "ok": False,
-                "error": "field_out_of_range",
-                "message": f"Field {field} is out of range for segment {segment}.",
-            },
-            status_code=400,
-        )
-
-    before_field = ""
-    after_field = ""
+    original_lines = list(lines)
 
     try:
-        raw_field = fields[token_index]
-        if component:
-            components = raw_field.split(comp_sep)
-            if not (1 <= component <= len(components)):
-                return JSONResponse(
-                    {
-                        "ok": False,
-                        "error": "component_out_of_range",
-                        "message": f"Component {component} is out of range for field {field}.",
-                    },
-                    status_code=400,
-                )
-            comp_value = components[component - 1]
-            if subcomponent:
-                subcomponents = comp_value.split(sub_sep)
-                if not (1 <= subcomponent <= len(subcomponents)):
-                    return JSONResponse(
-                        {
-                            "ok": False,
-                            "error": "subcomponent_out_of_range",
-                            "message": f"Subcomponent {subcomponent} is out of range for component {component}.",
-                        },
-                        status_code=400,
-                    )
-                before_field = subcomponents[subcomponent - 1]
-                subcomponents[subcomponent - 1] = _apply_action(
-                    before_field,
-                    action,
-                    param_mode,
-                    param_preset,
-                    param_free,
-                    pattern,
-                    repl,
-                )
-                components[component - 1] = sub_sep.join(subcomponents)
-                fields[token_index] = comp_sep.join(components)
-                after_field = subcomponents[subcomponent - 1]
-            else:
-                before_field = comp_value
-                components[component - 1] = _apply_action(
-                    comp_value,
-                    action,
-                    param_mode,
-                    param_preset,
-                    param_free,
-                    pattern,
-                    repl,
-                )
-                fields[token_index] = comp_sep.join(components)
-                after_field = components[component - 1]
-        else:
-            before_field = raw_field
-            fields[token_index] = _apply_action(
-                raw_field,
-                action,
-                param_mode,
-                param_preset,
-                param_free,
-                pattern,
-                repl,
-            )
-            after_field = fields[token_index]
+        for seg_index in match_indexes:
+            before_line = lines[seg_index]
+            fields = before_line.split(field_sep)
 
-        after_line = field_sep.join(fields)
-        lines[seg_index] = after_line
+            if not (0 <= token_index < len(fields)):
+                continue
+
+            raw_field = fields[token_index]
+
+            def apply_to_value(val: str) -> str:
+                return _apply_action(
+                    val,
+                    action,
+                    param_mode,
+                    param_preset,
+                    param_free,
+                    pattern,
+                    repl,
+                )
+
+            if component:
+                components = raw_field.split(comp_sep)
+                if not (1 <= component <= len(components)):
+                    continue
+                comp_value = components[component - 1]
+                if subcomponent:
+                    subcomponents = comp_value.split(sub_sep)
+                    if not (1 <= subcomponent <= len(subcomponents)):
+                        continue
+                    before_val = subcomponents[subcomponent - 1]
+                    subcomponents[subcomponent - 1] = apply_to_value(before_val)
+                    components[component - 1] = sub_sep.join(subcomponents)
+                    fields[token_index] = comp_sep.join(components)
+                    after_val = subcomponents[subcomponent - 1]
+                else:
+                    before_val = comp_value
+                    components[component - 1] = apply_to_value(comp_value)
+                    fields[token_index] = comp_sep.join(components)
+                    after_val = components[component - 1]
+            else:
+                before_val = raw_field
+                fields[token_index] = apply_to_value(raw_field)
+                after_val = fields[token_index]
+
+            lines[seg_index] = field_sep.join(fields)
+            any_valid_target = True
+
+            if not changed_once:
+                before_first_field = before_val
+                after_first_field = after_val
+                before_first_line = before_line
+                after_first_line = lines[seg_index]
+                changed_once = True
+
     except Exception as exc:
         return JSONResponse({"ok": False, "error": "exception", "detail": str(exc)}, status_code=500)
 
+    if not any_valid_target:
+        return JSONResponse(
+            {
+                "ok": False,
+                "error": "target_out_of_range",
+                "message": "Segment found, but the requested field/component/subcomponent was not present.",
+            },
+            status_code=400,
+        )
     return JSONResponse(
         {
             "ok": True,
             "path": f"{segment}:{field}" + (f".{component}" if component else "") + (f".{subcomponent}" if subcomponent else ""),
             "before": {
-                "field": before_field,
-                "line": before_line,
-                "message": "\r".join((text or "").splitlines()),
+                "field": before_first_field,
+                "line": before_first_line,
+                "message": "\r".join(original_lines),
             },
             "after": {
-                "field": after_field,
-                "line": lines[seg_index],
+                "field": after_first_field,
+                "line": after_first_line,
                 "message": "\r".join(lines),
             },
         }

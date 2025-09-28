@@ -91,7 +91,9 @@ window.initDeidModal = function initDeidModal(sel) {
       beforeField.innerHTML = cd.beforeHTML;
       afterField.innerHTML  = cd.afterHTML;
 
-      const ld = window.diffLines(data.before?.line || '', data.after?.line || '');
+      const beforeMsg = (data.before && (data.before.message || data.before.line)) || '';
+      const afterMsg  = (data.after && (data.after.message || data.after.line)) || '';
+      const ld = window.diffLines(beforeMsg, afterMsg);
       msgBefore.innerHTML = ld.beforeHTML;
       msgAfter.innerHTML  = ld.afterHTML;
     }catch(e){
