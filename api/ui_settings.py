@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 import csv
+import hashlib
 import json
+import re
 from dataclasses import dataclass, asdict
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from fastapi import APIRouter, Form, HTTPException, Request, UploadFile, File
+from fastapi import APIRouter, Body, Form, HTTPException, Request, UploadFile, File
 from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse, Response
 from starlette.templating import Jinja2Templates
 
@@ -22,6 +24,79 @@ except Exception:
 router = APIRouter()
 templates = Jinja2Templates(directory="templates")
 install_link_for(templates)
+
+# ------------------------------
+# Test & Preview helpers
+# ------------------------------
+
+
+def _detect_hl7_separators(text: str) -> tuple[str, str, str, bool]:
+    """Return (field_sep, component_sep, subcomponent_sep, detected_from_msh)."""
+
+    field_sep, comp_sep, sub_sep = "|", "^", "&"
+    detected_from_msh = False
+    for raw in (text or "").splitlines():
+        if raw.startswith("MSH"):
+            detected_from_msh = True
+            field_sep = raw[3] if len(raw) > 3 else field_sep
+            parts = raw.split(field_sep)
+            encoding_chars = parts[1] if len(parts) > 1 else "^~\\&"
+            comp_sep = encoding_chars[0] if len(encoding_chars) > 0 else comp_sep
+            sub_sep = encoding_chars[3] if len(encoding_chars) > 3 else sub_sep
+            break
+    return field_sep, comp_sep, sub_sep, detected_from_msh
+
+
+def _apply_action(
+    value: str,
+    action: str,
+    param_mode: Optional[str],
+    param_preset: Optional[str],
+    param_free: Optional[str],
+    pattern: Optional[str],
+    repl: Optional[str],
+) -> str:
+    normalized_action = (action or "redact").strip().lower()
+    value = value or ""
+
+    if normalized_action == "redact":
+        return "[REDACTED]"
+    if normalized_action == "replace":
+        return repl or ""
+    if normalized_action == "mask":
+        mask_char = (param_free or "*")[0]
+        return "".join(mask_char if ch.isalnum() else ch for ch in value)
+    if normalized_action == "hash":
+        salt = param_free or ""
+        return hashlib.sha256((salt + value).encode("utf-8")).hexdigest()[:16]
+    if normalized_action == "regex_redact":
+        return re.sub(pattern or "", "", value) if pattern else value
+    if normalized_action == "regex_replace":
+        return re.sub(pattern or "", repl or "", value) if pattern else value
+    if normalized_action == "preset":
+        mode = (param_mode or "preset").strip().lower()
+        if mode == "free":
+            return param_free or ""
+        presets = {
+            "name": "JANE^DOE",
+            "birthdate": "19700101",
+            "datetime": "19700101120000",
+            "gender": "U",
+            "address": "123 MAIN ST",
+            "phone": "5551234567",
+            "language": "ENG",
+            "race": "OT",
+            "mrn": "000000",
+            "ssn": "000-00-0000",
+            "facility": "HOSPITAL",
+            "note": "[SYNTHETIC NOTE]",
+            "pdf_blob": "[SYNTHETIC PDF]",
+            "xml_blob": "[SYNTHETIC XML]",
+        }
+        key = (param_preset or "").strip().lower()
+        return presets.get(key, "")
+
+    return value
 
 # Storage roots
 DEID_DIR = Path("configs/interop/deid_templates")
@@ -312,6 +387,169 @@ def _build_rule_prefill(rule: Optional[DeidRule]) -> Dict[str, Any]:
 
     prefill["param_mode"] = param_mode
     return prefill
+
+
+@router.post("/api/tools/deid/test_rule", name="api_deid_test_rule")
+def api_deid_test_rule(payload: Dict[str, Any] = Body(...)) -> JSONResponse:
+    """Apply the selected action to a single HL7 field/component for preview."""
+
+    text = payload.get("text") or ""
+    segment = (payload.get("segment") or "").strip().upper()
+    try:
+        field = int(payload.get("field") or 0)
+    except (TypeError, ValueError):
+        field = 0
+    component_raw = payload.get("component")
+    try:
+        component = int(component_raw) if component_raw not in (None, "", 0) else None
+    except (TypeError, ValueError):
+        component = None
+    sub_raw = payload.get("subcomponent")
+    try:
+        subcomponent = int(sub_raw) if sub_raw not in (None, "", 0) else None
+    except (TypeError, ValueError):
+        subcomponent = None
+    action = (payload.get("action") or "redact").strip().lower()
+    param_mode = payload.get("param_mode")
+    param_preset = payload.get("param_preset")
+    param_free = payload.get("param_free")
+    pattern = payload.get("pattern")
+    repl = payload.get("repl")
+
+    if not text.strip():
+        return JSONResponse({"ok": False, "error": "empty_text"}, status_code=400)
+    if not segment or field <= 0:
+        return JSONResponse({"ok": False, "error": "segment_and_field_required"}, status_code=400)
+
+    field_sep, comp_sep, sub_sep, _ = _detect_hl7_separators(text)
+    lines = (text or "").splitlines()
+
+    expected_prefix = f"{segment}{field_sep}" if field_sep else None
+    match_indexes: list[int] = []
+    for idx, raw in enumerate(lines):
+        if expected_prefix:
+            if raw.startswith(expected_prefix):
+                match_indexes.append(idx)
+        else:
+            if raw.startswith(segment):
+                match_indexes.append(idx)
+
+    if not match_indexes:
+        return JSONResponse(
+            {
+                "ok": False,
+                "error": "segment_not_found",
+                "message": f"Segment {segment} not found in sample.",
+            },
+            status_code=400,
+        )
+
+    token_index = field if segment != "MSH" else field - 1
+
+    if segment == "MSH" and field == 1:
+        return JSONResponse(
+            {
+                "ok": False,
+                "error": "msh1_is_field_separator",
+                "message": "MSH-1 represents the field separator and cannot be transformed.",
+            },
+            status_code=400,
+        )
+
+    before_first_field = ""
+    after_first_field = ""
+    before_first_line = ""
+    after_first_line = ""
+    changed_once = False
+    any_valid_target = False
+
+    original_lines = list(lines)
+
+    try:
+        for seg_index in match_indexes:
+            before_line = lines[seg_index]
+            fields = before_line.split(field_sep)
+
+            if not (0 <= token_index < len(fields)):
+                continue
+
+            raw_field = fields[token_index]
+
+            def apply_to_value(val: str) -> str:
+                return _apply_action(
+                    val,
+                    action,
+                    param_mode,
+                    param_preset,
+                    param_free,
+                    pattern,
+                    repl,
+                )
+
+            if component:
+                components = raw_field.split(comp_sep)
+                if not (1 <= component <= len(components)):
+                    continue
+                comp_value = components[component - 1]
+                if subcomponent:
+                    subcomponents = comp_value.split(sub_sep)
+                    if not (1 <= subcomponent <= len(subcomponents)):
+                        continue
+                    before_val = subcomponents[subcomponent - 1]
+                    subcomponents[subcomponent - 1] = apply_to_value(before_val)
+                    components[component - 1] = sub_sep.join(subcomponents)
+                    fields[token_index] = comp_sep.join(components)
+                    after_val = subcomponents[subcomponent - 1]
+                else:
+                    before_val = comp_value
+                    components[component - 1] = apply_to_value(comp_value)
+                    fields[token_index] = comp_sep.join(components)
+                    after_val = components[component - 1]
+            else:
+                before_val = raw_field
+                fields[token_index] = apply_to_value(raw_field)
+                after_val = fields[token_index]
+
+            lines[seg_index] = field_sep.join(fields)
+            any_valid_target = True
+
+            if not changed_once:
+                before_first_field = before_val
+                after_first_field = after_val
+                before_first_line = before_line
+                after_first_line = lines[seg_index]
+                changed_once = True
+
+    except Exception as exc:
+        return JSONResponse({"ok": False, "error": "exception", "detail": str(exc)}, status_code=500)
+
+    if not any_valid_target:
+        return JSONResponse(
+            {
+                "ok": False,
+                "error": "target_out_of_range",
+                "message": "Segment found, but the requested field/component/subcomponent was not present.",
+            },
+            status_code=400,
+        )
+
+    return JSONResponse(
+        {
+            "ok": True,
+            "path": f"{segment}:{field}" + (f".{component}" if component else "") + (f".{subcomponent}" if subcomponent else ""),
+            "before": {
+                "field": before_first_field,
+                "line": before_first_line,
+                "message": "\r".join(original_lines),
+            },
+            "after": {
+                "field": after_first_field,
+                "line": after_first_line,
+                "message": "\r".join(lines),
+            },
+        }
+    )
+
 
 # ---------- Pages ----------
 @router.get("/ui/settings", response_class=HTMLResponse, name="ui_settings_index", response_model=None)
