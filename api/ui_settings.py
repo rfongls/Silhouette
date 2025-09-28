@@ -455,7 +455,7 @@ def api_deid_test_rule(payload: Dict[str, Any] = Body(...)) -> JSONResponse:
             },
             status_code=400,
         )
-
+      
     before_first_field = ""
     after_first_field = ""
     before_first_line = ""
@@ -532,7 +532,6 @@ def api_deid_test_rule(payload: Dict[str, Any] = Body(...)) -> JSONResponse:
             },
             status_code=400,
         )
-
     return JSONResponse(
         {
             "ok": True,
@@ -549,7 +548,6 @@ def api_deid_test_rule(payload: Dict[str, Any] = Body(...)) -> JSONResponse:
             },
         }
     )
-
 
 # ---------- Pages ----------
 @router.get("/ui/settings", response_class=HTMLResponse, name="ui_settings_index", response_model=None)
