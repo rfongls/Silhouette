@@ -102,6 +102,14 @@ window.initDeidModal = function initDeidModal(sel) {
         } else {
           syncParamModeFromSelect();
         }
+        const harness = root.querySelector('#param-harness');
+        if (harness && window.htmx) {
+          try {
+            window.htmx.trigger(harness, 'load');
+          } catch (err) {
+            console.warn('Failed to trigger param controls refresh', err);
+          }
+        }
       }
     });
   }
