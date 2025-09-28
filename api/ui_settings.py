@@ -30,19 +30,21 @@ install_link_for(templates)
 # ------------------------------
 
 
-def _detect_hl7_separators(text: str) -> tuple[str, str, str]:
-    """Return (field_sep, component_sep, subcomponent_sep)."""
+def _detect_hl7_separators(text: str) -> tuple[str, str, str, bool]:
+    """Return (field_sep, component_sep, subcomponent_sep, detected_from_msh)."""
 
     field_sep, comp_sep, sub_sep = "|", "^", "&"
+    detected_from_msh = False
     for raw in (text or "").splitlines():
         if raw.startswith("MSH"):
+            detected_from_msh = True
             field_sep = raw[3] if len(raw) > 3 else field_sep
             parts = raw.split(field_sep)
             encoding_chars = parts[1] if len(parts) > 1 else "^~\\&"
             comp_sep = encoding_chars[0] if len(encoding_chars) > 0 else comp_sep
             sub_sep = encoding_chars[3] if len(encoding_chars) > 3 else sub_sep
             break
-    return field_sep, comp_sep, sub_sep
+    return field_sep, comp_sep, sub_sep, detected_from_msh
 
 
 def _apply_action(
@@ -419,11 +421,19 @@ def api_deid_test_rule(payload: Dict[str, Any] = Body(...)) -> JSONResponse:
     if not segment or field <= 0:
         return JSONResponse({"ok": False, "error": "segment_and_field_required"}, status_code=400)
 
-    field_sep, comp_sep, sub_sep = _detect_hl7_separators(text)
+    field_sep, comp_sep, sub_sep, detected_from_msh = _detect_hl7_separators(text)
     lines = (text or "").splitlines()
     seg_index: Optional[int] = None
+    expected_prefix = None
+    if detected_from_msh and field_sep:
+        expected_prefix = f"{segment}{field_sep}"
+
     for idx, raw in enumerate(lines):
-        if raw.startswith(segment):
+        if expected_prefix:
+            if raw.startswith(expected_prefix):
+                seg_index = idx
+                break
+        elif raw.startswith(segment):
             seg_index = idx
             break
     if seg_index is None:
@@ -438,49 +448,57 @@ def api_deid_test_rule(payload: Dict[str, Any] = Body(...)) -> JSONResponse:
     fields = before_line.split(field_sep)
     token_index = field if segment != "MSH" else field - 1
 
+    if segment == "MSH" and field == 1:
+        return JSONResponse(
+            {
+                "ok": False,
+                "error": "msh1_is_field_separator",
+                "message": "MSH-1 represents the field separator and cannot be transformed.",
+            },
+            status_code=400,
+        )
+
+    if not (0 <= token_index < len(fields)):
+        return JSONResponse(
+            {
+                "ok": False,
+                "error": "field_out_of_range",
+                "message": f"Field {field} is out of range for segment {segment}.",
+            },
+            status_code=400,
+        )
+
     before_field = ""
     after_field = ""
 
     try:
-        if 0 <= token_index < len(fields):
-            raw_field = fields[token_index]
-            if component:
-                components = raw_field.split(comp_sep)
-                if 1 <= component <= len(components):
-                    comp_value = components[component - 1]
-                    if subcomponent:
-                        subcomponents = comp_value.split(sub_sep)
-                        if 1 <= subcomponent <= len(subcomponents):
-                            before_field = subcomponents[subcomponent - 1]
-                            subcomponents[subcomponent - 1] = _apply_action(
-                                before_field,
-                                action,
-                                param_mode,
-                                param_preset,
-                                param_free,
-                                pattern,
-                                repl,
-                            )
-                            components[component - 1] = sub_sep.join(subcomponents)
-                            fields[token_index] = comp_sep.join(components)
-                            after_field = subcomponents[subcomponent - 1]
-                    else:
-                        before_field = comp_value
-                        components[component - 1] = _apply_action(
-                            comp_value,
-                            action,
-                            param_mode,
-                            param_preset,
-                            param_free,
-                            pattern,
-                            repl,
-                        )
-                        fields[token_index] = comp_sep.join(components)
-                        after_field = components[component - 1]
-            else:
-                before_field = raw_field
-                fields[token_index] = _apply_action(
-                    raw_field,
+        raw_field = fields[token_index]
+        if component:
+            components = raw_field.split(comp_sep)
+            if not (1 <= component <= len(components)):
+                return JSONResponse(
+                    {
+                        "ok": False,
+                        "error": "component_out_of_range",
+                        "message": f"Component {component} is out of range for field {field}.",
+                    },
+                    status_code=400,
+                )
+            comp_value = components[component - 1]
+            if subcomponent:
+                subcomponents = comp_value.split(sub_sep)
+                if not (1 <= subcomponent <= len(subcomponents)):
+                    return JSONResponse(
+                        {
+                            "ok": False,
+                            "error": "subcomponent_out_of_range",
+                            "message": f"Subcomponent {subcomponent} is out of range for component {component}.",
+                        },
+                        status_code=400,
+                    )
+                before_field = subcomponents[subcomponent - 1]
+                subcomponents[subcomponent - 1] = _apply_action(
+                    before_field,
                     action,
                     param_mode,
                     param_preset,
@@ -488,7 +506,34 @@ def api_deid_test_rule(payload: Dict[str, Any] = Body(...)) -> JSONResponse:
                     pattern,
                     repl,
                 )
-                after_field = fields[token_index]
+                components[component - 1] = sub_sep.join(subcomponents)
+                fields[token_index] = comp_sep.join(components)
+                after_field = subcomponents[subcomponent - 1]
+            else:
+                before_field = comp_value
+                components[component - 1] = _apply_action(
+                    comp_value,
+                    action,
+                    param_mode,
+                    param_preset,
+                    param_free,
+                    pattern,
+                    repl,
+                )
+                fields[token_index] = comp_sep.join(components)
+                after_field = components[component - 1]
+        else:
+            before_field = raw_field
+            fields[token_index] = _apply_action(
+                raw_field,
+                action,
+                param_mode,
+                param_preset,
+                param_free,
+                pattern,
+                repl,
+            )
+            after_field = fields[token_index]
 
         after_line = field_sep.join(fields)
         lines[seg_index] = after_line

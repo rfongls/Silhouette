@@ -82,7 +82,7 @@ window.initDeidModal = function initDeidModal(sel) {
       const data = await res.json().catch(() => ({}));
 
       if (!res.ok || !data.ok) {
-        const err = (data && (data.error || data.detail)) || ('HTTP ' + res.status);
+        const err = (data && (data.message || data.error || data.detail)) || ('HTTP ' + res.status);
         afterField.innerHTML = esc('[Test failed] ' + err);
         return;
       }
