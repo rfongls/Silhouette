@@ -43,41 +43,54 @@ window.initDeidModal = function initDeidModal(sel) {
 
   async function testDeidRule(){
     try{
-      beforeField.innerHTML = esc('…'); afterField.innerHTML = esc('…');
-      msgBefore.innerHTML   = esc('…'); msgAfter.innerHTML   = esc('…');
-
-      const fd = form ? new FormData(form) : new FormData();
-      fd.set('message_text', sampleArea?.value || '');
-      if (!fd.has('segment')) fd.set('segment', seg?.value || '');
-      if (!fd.has('field')) fd.set('field', fld?.value || '');
-      if (!fd.has('component')) fd.set('component', cmp?.value || '');
-      if (!fd.has('subcomponent')) fd.set('subcomponent', sub?.value || '');
-      const hiddenMode = hiddenParamMode();
-      if (hiddenMode) fd.set('param_mode', hiddenMode.value || 'preset');
-
-      const url = root.getAttribute('data-test-endpoint');
-      const resp = await fetch(url, { method:'POST', body: fd });
-      let data; try { data = await resp.json(); } catch { data = { ok:false, error:'Non-JSON response' }; }
-
-      if (!data.ok) {
-        beforeField.innerHTML = '—';
-        afterField.innerHTML  = esc('Error: ' + (data.error || 'unknown'));
-        msgBefore.innerHTML   = esc(sampleArea?.value || '');
-        msgAfter.innerHTML    = esc(sampleArea?.value || '');
+      const ep = root.getAttribute('data-test-endpoint') || root.dataset.testEndpoint;
+      if (!ep) {
+        afterField.innerHTML = esc('Missing test endpoint');
         return;
       }
 
-      const beforeVal = data.preview.before ?? '';
-      const afterVal  = data.preview.after  ?? '';
-      const dField    = window.diffChars(beforeVal, afterVal);
-      beforeField.innerHTML = dField.beforeHTML; afterField.innerHTML = dField.afterHTML;
+      const actionSel = root.querySelector('#m-action');
+      const payload = {
+        text: sampleArea?.value || "",
+        segment: (seg?.value || "").trim(),
+        field: parseInt(fld?.value || "0", 10) || 0,
+        component: cmp?.value ? parseInt(cmp.value, 10) : null,
+        subcomponent: sub?.value ? parseInt(sub.value, 10) : null,
+        action: actionSel?.value || "redact",
+        param_mode: (form?.querySelector('input[name="param_mode"]')?.value
+                  || form?.querySelector('#m-param-mode')?.value || 'preset'),
+        param_preset: form?.querySelector('select[name="param_preset"]')?.value
+                   || form?.querySelector('input[name="param_preset"]')?.value || null,
+        param_free: form?.querySelector('input[name="param_free"]')?.value || null,
+        pattern: form?.querySelector('input[name="pattern"]')?.value || null,
+        repl: form?.querySelector('input[name="repl"]')?.value || null,
+      };
 
-      const lineB = data.preview.line_before ?? sampleArea?.value || '';
-      const lineA = data.preview.line_after  ?? data.preview.message_after ?? sampleArea?.value || '';
-      const dMsg  = window.diffLines(lineB, lineA);
-      msgBefore.innerHTML = dMsg.beforeHTML; msgAfter.innerHTML = dMsg.afterHTML;
+      beforeField.innerHTML = ""; afterField.innerHTML = "";
+      msgBefore.innerHTML = "";  msgAfter.innerHTML = "";
+
+      const res = await fetch(ep, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json().catch(() => ({}));
+
+      if (!res.ok || !data.ok) {
+        const err = (data && (data.error || data.detail)) || ('HTTP ' + res.status);
+        afterField.innerHTML = esc('[Test failed] ' + err);
+        return;
+      }
+
+      const cd = window.diffChars(data.before?.field || '', data.after?.field || '');
+      beforeField.innerHTML = cd.beforeHTML;
+      afterField.innerHTML  = cd.afterHTML;
+
+      const ld = window.diffLines(data.before?.line || '', data.after?.line || '');
+      msgBefore.innerHTML = ld.beforeHTML;
+      msgAfter.innerHTML  = ld.afterHTML;
     }catch(e){
-      afterField.innerHTML = esc('JS error: '+e);
+      afterField.innerHTML = esc('Test error: ' + e);
     }
   }
 
