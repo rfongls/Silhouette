@@ -8,10 +8,13 @@ window.diffChars = (a,b) => ({ beforeHTML: esc(a ?? ""), afterHTML: esc(b ?? "")
 window.diffLines = (a,b) => ({ beforeHTML: esc(a ?? ""), afterHTML: esc(b ?? "") });
 
 /* ========== De-ID modal initializer ========== */
-/* Call this AFTER the modal HTML is inserted (HTMX after-swap). */
+/* Call this AFTER the modal HTML is inserted (after HTMX settles). */
 window.initDeidModal = function initDeidModal(sel) {
   const root = (typeof sel === 'string') ? document.querySelector(sel) : sel;
   if (!root) return;
+
+  const alreadyInit = root.dataset.deidInit === '1';
+  root.dataset.deidInit = '1';
 
   const $ = id => root.querySelector(id);
 
@@ -21,6 +24,13 @@ window.initDeidModal = function initDeidModal(sel) {
   const msgBefore   = $('#m-msg-before'),  msgAfter   = $('#m-msg-after');
   const sampleArea  = $('#m-sample');
   const form        = root.querySelector('form');
+  const testBtn     = root.querySelector('[data-deid-test]');
+  const hiddenParamMode = () => form?.querySelector('input[type="hidden"][name="param_mode"]') || null;
+  const syncParamModeFromSelect = () => {
+    const select = root.querySelector('#m-param-mode');
+    const hidden = hiddenParamMode();
+    if (hidden) hidden.value = (select && select.value) ? select.value : (hidden.value || 'preset');
+  };
 
   function formatPath(){
     const s=(seg?.value||'').trim().toUpperCase();
@@ -41,6 +51,8 @@ window.initDeidModal = function initDeidModal(sel) {
       if (!fd.has('field')) fd.set('field', fld?.value || '');
       if (!fd.has('component')) fd.set('component', cmp?.value || '');
       if (!fd.has('subcomponent')) fd.set('subcomponent', sub?.value || '');
+      const hiddenMode = hiddenParamMode();
+      if (hiddenMode) fd.set('param_mode', hiddenMode.value || 'preset');
 
       const url = root.getAttribute('data-test-endpoint');
       const resp = await fetch(url, { method:'POST', body: fd });
@@ -69,18 +81,54 @@ window.initDeidModal = function initDeidModal(sel) {
   }
 
   // wire events (scoped to this modal)
-  [seg,fld,cmp,sub].forEach(el => el && el.addEventListener('input', updatePath));
-  const testBtn = root.querySelector('[data-deid-test]');
-  if (testBtn) testBtn.addEventListener('click', testDeidRule);
+  if (!alreadyInit) {
+    [seg,fld,cmp,sub].forEach(el => el && el.addEventListener('input', updatePath));
+    if (testBtn && !testBtn.dataset.deidBound) {
+      testBtn.addEventListener('click', testDeidRule);
+      testBtn.dataset.deidBound = '1';
+    }
+    root.addEventListener('change', (evt) => {
+      const target = evt.target;
+      if (!target || typeof target.matches !== 'function') return;
+      if (target.id === 'm-param-mode') {
+        const hidden = hiddenParamMode();
+        if (hidden) hidden.value = target.value || 'preset';
+      } else if (target.id === 'm-action') {
+        const hidden = hiddenParamMode();
+        if (!hidden) return;
+        if ((target.value || '').toLowerCase() !== 'preset') {
+          hidden.value = 'preset';
+        } else {
+          syncParamModeFromSelect();
+        }
+      }
+    });
+
+  }
 
   // first render
   updatePath();
+  syncParamModeFromSelect();
+
+  if (window.htmx) {
+    const actionSelect = $('#m-action');
+    if (actionSelect && !actionSelect.dataset.deidInitTriggered) {
+      actionSelect.dataset.deidInitTriggered = '1';
+      window.setTimeout(() => {
+        try {
+          window.htmx.trigger(actionSelect, 'change');
+        } catch (err) {
+          console.error(err);
+        }
+      }, 0);
+    }
+  }
 };
 
 /* ========== HTMX hook ==========
    Any time HTMX swaps in content that includes a De-ID modal,
    this will run the initializer automatically. */
-document.addEventListener('htmx:afterSwap', (evt) => {
+document.addEventListener('htmx:afterSettle', (evt) => {
   const modal = document.querySelector('#deid-modal');
   if (modal) window.initDeidModal(modal);
 });
