@@ -117,13 +117,6 @@ window.initDeidModal = function initDeidModal(sel) {
   // first render
   updatePath();
   syncParamModeFromSelect();
-  try {
-    const panel = root.querySelector('#param-controls');
-    if (window.htmx && panel) window.htmx.trigger(panel, 'load');
-  } catch (err) {
-    console.warn('Failed to trigger initial param load', err);
-  }
-
 };
 
 /* --- Debug wiring for param controls --- */
