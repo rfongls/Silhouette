@@ -10,6 +10,8 @@ from fastapi import APIRouter, Form, HTTPException, Request, UploadFile, File
 from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse, Response
 from starlette.templating import Jinja2Templates
 
+from api.debug_log import log_debug_event, is_debug_enabled
+
 # If you have a helper to add template globals, import it; otherwise this no-ops.
 try:
     from api.ui import install_link_for
@@ -381,6 +383,28 @@ def ui_settings_deid_param_controls(
 ) -> Response:
     params = request.query_params
 
+    if is_debug_enabled():
+        try:
+            log_debug_event(
+                "deid:param_controls_request",
+                path=str(request.url),
+                method=request.method,
+                query=dict(request.query_params.multi_items()),
+                action=action,
+                param_mode=param_mode,
+                param_preset=param_preset,
+                param_free=param_free,
+                pattern=pattern,
+                repl=repl,
+                initial_param_mode=initial_param_mode,
+                initial_param_preset=initial_param_preset,
+                initial_param_free=initial_param_free,
+                initial_pattern=initial_pattern,
+                initial_repl=initial_repl,
+            )
+        except Exception:
+            pass
+
     def _last_value(key: str, *fallbacks: Optional[str]) -> Optional[str]:
         values = [v for v in params.getlist(key) if v is not None]
         if values:
@@ -404,12 +428,28 @@ def ui_settings_deid_param_controls(
     pattern_text = (pattern_value or "").strip()
     repl_text = (repl_value or "").strip()
 
+    if is_debug_enabled():
+        try:
+            log_debug_event(
+                "deid:param_controls_resolved",
+                act=act,
+                mode=mode,
+                preset=preset_selected,
+                free=free_text,
+                pattern=pattern_text,
+                repl=repl_text,
+            )
+        except Exception:
+            pass
+
     return templates.TemplateResponse(
         "ui/settings/_deid_param_controls.html",
         {
             "request": request,
             "action": act,
+            "act": act,
             "param_mode": mode,
+            "mode": mode,
             "param_preset": preset_selected,
             "param_free": free_text,
             "pattern": pattern_text,
