@@ -12,6 +12,7 @@ window.diffLines = (a,b) => ({ beforeHTML: esc(a ?? ""), afterHTML: esc(b ?? "")
 window.initDeidModal = function initDeidModal(sel) {
   const root = (typeof sel === 'string') ? document.querySelector(sel) : sel;
   if (!root) return;
+  try { window.attachParamDebug(root); } catch (e) { console.warn(e); }
 
   const alreadyInit = root.dataset.deidInit === '1';
   root.dataset.deidInit = '1';
@@ -109,19 +110,38 @@ window.initDeidModal = function initDeidModal(sel) {
   updatePath();
   syncParamModeFromSelect();
 
-  if (window.htmx) {
-    const actionSelect = $('#m-action');
-    if (actionSelect && !actionSelect.dataset.deidInitTriggered) {
-      actionSelect.dataset.deidInitTriggered = '1';
-      window.setTimeout(() => {
-        try {
-          window.htmx.trigger(actionSelect, 'change');
-        } catch (err) {
-          console.error(err);
-        }
-      }, 0);
+};
+
+/* --- Debug wiring for param controls --- */
+window.attachParamDebug = function attachParamDebug(root){
+  try{
+    const panel = root.querySelector('#param-controls');
+    if (!panel || panel.dataset.debugBound === '1') return;
+    panel.dataset.debugBound = '1';
+    const logArea = document.createElement('pre');
+    logArea.id = 'param-debug';
+    logArea.style.whiteSpace = 'pre-wrap';
+    logArea.style.background = 'rgba(148,163,184,.15)';
+    logArea.style.padding = '.5rem';
+    logArea.style.borderRadius = '.5rem';
+    logArea.style.marginTop = '.5rem';
+    logArea.textContent = '[param-debug] init';
+    panel.insertAdjacentElement('afterend', logArea);
+    const log = (msg) => {
+      const now = new Date().toISOString().slice(11,19);
+      logArea.textContent += "\n" + now + " " + msg;
+      const lines = logArea.textContent.split(/\n/);
+      if (lines.length > 200) logArea.textContent = lines.slice(-200).join("\n");
+    };
+    if (window.htmx){
+      panel.addEventListener('htmx:configRequest', (e)=> log('configRequest url='+(e.detail.path||'')+' params='+(new URLSearchParams(e.detail.parameters)).toString()));
+      panel.addEventListener('htmx:beforeRequest', (e)=> log('beforeRequest '+(e.detail.path||'')));
+      panel.addEventListener('htmx:sendError',     (e)=> log('sendError '+(e.detail.xhr && e.detail.xhr.status)));
+      panel.addEventListener('htmx:responseError', (e)=> log('responseError '+(e.detail.xhr && e.detail.xhr.status)));
+      panel.addEventListener('htmx:afterOnLoad',   (e)=> log('afterOnLoad status='+(e.detail.xhr && e.detail.xhr.status)));
+      panel.addEventListener('htmx:afterSwap',     ()=> log('afterSwap'));
     }
-  }
+  }catch(e){ console.error(e); }
 };
 
 /* ========== HTMX hook ==========
