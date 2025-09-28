@@ -23,6 +23,7 @@
       <div id="param-harness"
            hx-get="{{ request.url_for('ui_settings_deid_param_controls') }}"
            hx-trigger="load, change from:#m-action"
+           hx-target="#param-controls"
            hx-include="#deid-modal-form"
            hx-target="#param-controls"
            hx-swap="innerHTML">
