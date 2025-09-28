@@ -23,12 +23,7 @@
       <div class="grid two mt">
         <label>Action
           {% set act = clone.action if clone else 'redact' %}
-          <select class="input" name="action" id="m-action"
-                  hx-get="{{ request.url_for('ui_settings_deid_param_controls') }}"
-                  hx-target="#param-controls"
-                  hx-trigger="change"
-                  hx-include="#deid-modal-form"
-                  hx-swap="innerHTML">
+          <select class="input" name="action" id="m-action">
             <option value="redact"        {{ 'selected' if act=='redact' else '' }}>redact</option>
             <option value="mask"          {{ 'selected' if act=='mask' else '' }}>mask</option>
             <option value="hash"          {{ 'selected' if act=='hash' else '' }}>hash</option>
@@ -47,7 +42,11 @@
       <input type="hidden" name="initial_pattern" value="{{ initial_pattern or '' }}">
       <input type="hidden" name="initial_repl" value="{{ initial_repl or '' }}">
 
-      <div id="param-controls" class="mt">
+      <div id="param-controls" class="mt"
+           hx-get="{{ request.url_for('ui_settings_deid_param_controls') }}"
+           hx-trigger="load, change from:#m-action"
+           hx-include="#deid-modal-form"
+           hx-swap="innerHTML">
         <p class="muted">Loading parameters…</p>
       </div>
       <div class="card mt">
