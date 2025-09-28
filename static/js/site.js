@@ -122,11 +122,12 @@ window.initDeidModal = function initDeidModal(sel) {
 /* --- Debug wiring for param controls --- */
 window.attachParamDebug = function attachParamDebug(root){
   try{
-    const owner = root.querySelector('#param-harness');
     const panel = root.querySelector('#param-controls');
+    const harness = root.querySelector('#param-harness');
     const actionSelect = root.querySelector('#m-action');
-    if (!owner || owner.dataset.debugBound === '1') return;
-    owner.dataset.debugBound = '1';
+    const debugKey = panel || harness;
+    if (!debugKey || debugKey.dataset.debugBound === '1') return;
+    debugKey.dataset.debugBound = '1';
     const logArea = document.createElement('pre');
     logArea.id = 'param-debug';
     logArea.style.whiteSpace = 'pre-wrap';
@@ -135,7 +136,7 @@ window.attachParamDebug = function attachParamDebug(root){
     logArea.style.borderRadius = '.5rem';
     logArea.style.marginTop = '.5rem';
     logArea.textContent = '[param-debug] init';
-    (panel || owner).insertAdjacentElement('afterend', logArea);
+    (panel || harness).insertAdjacentElement('afterend', logArea);
     const log = (msg) => {
       const now = new Date().toISOString().slice(11,19);
       logArea.textContent += "\n" + now + " " + msg;
@@ -152,7 +153,8 @@ window.attachParamDebug = function attachParamDebug(root){
         elt.addEventListener('htmx:afterOnLoad',   (e)=> log('afterOnLoad status='+(e.detail.xhr && e.detail.xhr.status)));
         elt.addEventListener('htmx:afterSwap',     ()=> log('afterSwap'));
       };
-      bind(owner);
+      bind(panel);
+      bind(harness);
       bind(actionSelect);
     }
   }catch(e){ console.error(e); }
