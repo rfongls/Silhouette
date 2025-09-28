@@ -1,6 +1,7 @@
 <!-- PARAM-MODAL v7 -->
 <div class="modal-backdrop"></div>
 <div class="modal" id="deid-modal"
+     data-param-debug="0"
      data-test-endpoint="{{ request.url_for('api_deid_test_rule') }}"
      hx-on::after-settle="try { initDeidModal('#deid-modal'); } catch (e) { console.error(e); }">
   <div class="modal-card">
