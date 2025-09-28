@@ -447,7 +447,9 @@ def ui_settings_deid_param_controls(
         {
             "request": request,
             "action": act,
+            "act": act,
             "param_mode": mode,
+            "mode": mode,
             "param_preset": preset_selected,
             "param_free": free_text,
             "pattern": pattern_text,

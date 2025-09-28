@@ -125,6 +125,7 @@ window.attachParamDebug = function attachParamDebug(root){
   try{
     const owner = root.querySelector('#param-harness');
     const panel = root.querySelector('#param-controls');
+    const actionSelect = root.querySelector('#m-action');
     if (!owner || owner.dataset.debugBound === '1') return;
     owner.dataset.debugBound = '1';
     const logArea = document.createElement('pre');
@@ -143,12 +144,17 @@ window.attachParamDebug = function attachParamDebug(root){
       if (lines.length > 200) logArea.textContent = lines.slice(-200).join("\n");
     };
     if (window.htmx){
-      owner.addEventListener('htmx:configRequest', (e)=> log('configRequest url='+(e.detail.path||'')+' params='+(new URLSearchParams(e.detail.parameters)).toString()));
-      owner.addEventListener('htmx:beforeRequest', (e)=> log('beforeRequest '+(e.detail.path||'')));
-      owner.addEventListener('htmx:sendError',     (e)=> log('sendError '+(e.detail.xhr && e.detail.xhr.status)));
-      owner.addEventListener('htmx:responseError', (e)=> log('responseError '+(e.detail.xhr && e.detail.xhr.status)));
-      owner.addEventListener('htmx:afterOnLoad',   (e)=> log('afterOnLoad status='+(e.detail.xhr && e.detail.xhr.status)));
-      owner.addEventListener('htmx:afterSwap',     ()=> log('afterSwap'));
+      const bind = (elt) => {
+        if (!elt) return;
+        elt.addEventListener('htmx:configRequest', (e)=> log('configRequest url='+(e.detail.path||'')+' params='+(new URLSearchParams(e.detail.parameters)).toString())) ;
+        elt.addEventListener('htmx:beforeRequest', (e)=> log('beforeRequest '+(e.detail.path||'')));
+        elt.addEventListener('htmx:sendError',     (e)=> log('sendError '+(e.detail.xhr && e.detail.xhr.status)));
+        elt.addEventListener('htmx:responseError', (e)=> log('responseError '+(e.detail.xhr && e.detail.xhr.status)));
+        elt.addEventListener('htmx:afterOnLoad',   (e)=> log('afterOnLoad status='+(e.detail.xhr && e.detail.xhr.status)));
+        elt.addEventListener('htmx:afterSwap',     ()=> log('afterSwap'));
+      };
+      bind(owner);
+      bind(actionSelect);
     }
   }catch(e){ console.error(e); }
 };
