@@ -433,10 +433,20 @@ def api_deid_test_rule(payload: Dict[str, Any] = Body(...)) -> JSONResponse:
             if raw.startswith(expected_prefix):
                 seg_index = idx
                 break
-        elif raw.startswith(segment):
-            seg_index = idx
-            break
+        else:
+            if raw.startswith(segment):
+                seg_index = idx
+                break
     if seg_index is None:
+        if expected_prefix:
+            return JSONResponse(
+                {
+                    "ok": False,
+                    "error": "segment_not_found",
+                    "message": f"Segment {segment} not found in sample.",
+                },
+                status_code=400,
+            )
         for idx, raw in enumerate(lines):
             if raw.strip():
                 seg_index = idx
