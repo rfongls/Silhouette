@@ -103,7 +103,6 @@ window.initDeidModal = function initDeidModal(sel) {
         }
       }
     });
-
   }
 
   // first render
