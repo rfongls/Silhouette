@@ -118,15 +118,6 @@ window.initDeidModal = function initDeidModal(sel) {
   updatePath();
   syncParamModeFromSelect();
 
-  const harness = root.querySelector('#param-harness');
-  if (window.htmx && harness) {
-    try {
-      window.htmx.trigger(harness, 'load');
-    } catch (err) {
-      console.warn('Failed to trigger param controls load', err);
-    }
-  }
-
 };
 
 /* --- Debug wiring for param controls --- */
