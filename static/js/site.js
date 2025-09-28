@@ -12,7 +12,12 @@ window.diffLines = (a,b) => ({ beforeHTML: esc(a ?? ""), afterHTML: esc(b ?? "")
 window.initDeidModal = function initDeidModal(sel) {
   const root = (typeof sel === 'string') ? document.querySelector(sel) : sel;
   if (!root) return;
-  try { window.attachParamDebug(root); } catch (e) { console.warn(e); }
+  if (root.dataset.paramDebug === '1') {
+    try { window.attachParamDebug(root); } catch (e) { console.warn(e); }
+  } else {
+    const dbg = root.querySelector('#param-debug');
+    if (dbg) dbg.remove();
+  }
 
   const alreadyInit = root.dataset.deidInit === '1';
   root.dataset.deidInit = '1';
