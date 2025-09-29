@@ -1,88 +1,118 @@
-<div id="val-modal" class="modal-root">
+{% set editing = check is defined %}
+{% set active_check = check if editing else None %}
+{% if editing %}
+  {% set chosen_action = 'matches_regex' if active_check.pattern else ('in_allowed' if active_check.allowed_values else 'required') %}
+  {% set chosen_mode = 'list' if active_check.allowed_values and active_check.allowed_values|length > 1 else 'single' %}
+  {% set allowed_text = '\n'.join(active_check.allowed_values or []) %}
+{% else %}
+  {% set chosen_action = 'required' %}
+  {% set chosen_mode = 'single' %}
+  {% set allowed_text = '' %}
+{% endif %}
+
+<div id="val-modal" class="modal-root"
+     data-test-endpoint="{{ request.url_for('api_validate_test_check') }}"
+     hx-on::after-settle="try { initValModal('#val-modal'); } catch (e) { console.error(e); }">
   <div class="modal-backdrop" onclick="document.getElementById('val-modal').remove()"></div>
   <div class="modal">
     <div class="modal-card">
       <div class="modal-header">
-        <h3 class="text-h3">Add Validation Check</h3>
+        <h3 class="text-h3">{{ 'Edit Validation Check' if editing else 'Add Validation Check' }}</h3>
         <button class="button ghost" type="button" onclick="document.getElementById('val-modal').remove()">✕</button>
       </div>
       <form
-        hx-post="{{ request.url_for('ui_settings_val_add_check', name=tpl.name) }}"
+        hx-post="{{ request.url_for('ui_settings_val_update_check' if editing else 'ui_settings_val_add_check', name=tpl.name) }}"
         hx-target="#val-checks"
         hx-on::after-request="document.getElementById('val-modal')?.remove()"
       >
+        {% if editing %}
+          <input type="hidden" name="index" value="{{ index }}">
+        {% endif %}
         <div class="grid two">
           <label>Segment
-            <input class="input" name="segment" id="vc-seg" placeholder="MSH" required>
+            <input class="input" name="segment" id="vc-seg" placeholder="MSH" value="{{ active_check.segment if editing else '' }}" required>
           </label>
           <label>Field
-            <input class="input" name="field" id="vc-field" type="number" min="1" required>
+            <input class="input" name="field" id="vc-field" type="number" min="1" value="{{ active_check.field if editing else '' }}" required>
           </label>
-          <label class="row small" style="align-items:center">
-            <input type="checkbox" name="required" id="vc-required" checked>
-            <span>Required</span>
+          <label>Check type (action)
+            <select class="input" name="vc_action" id="vc-action">
+              <option value="required" {{ 'selected' if chosen_action == 'required' else '' }}>Required (not empty)</option>
+              <option value="matches_regex" {{ 'selected' if chosen_action == 'matches_regex' else '' }}>Matches regex</option>
+              <option value="in_allowed" {{ 'selected' if chosen_action == 'in_allowed' else '' }}>In allowed values</option>
+            </select>
           </label>
-          <label>Pattern (regex)
-            <input class="input" name="pattern" id="vc-pattern" placeholder="^ADT\\^A0[14]$">
+          <label>Parameter mode
+            <select class="input" name="vc_param_mode" id="vc-param-mode">
+              <option value="single" {{ 'selected' if chosen_mode == 'single' else '' }}>Single value</option>
+              <option value="list" {{ 'selected' if chosen_mode == 'list' else '' }}>List</option>
+            </select>
           </label>
         </div>
-        <label class="mt">Allowed values (comma or semicolon separated)
-          <input class="input" name="allowed_values" id="vc-allowed" placeholder="ADT^A01, ADT^A04">
-        </label>
-        <div class="card mt">
-          <h4 class="text-h4">Test</h4>
-          <textarea class="input" id="vc-sample" rows="4">MSH|^~\&|S1|F1|R1|D1|202501011200||ADT^A01|MSGID|P|2.5</textarea>
-          <div class="row mt">
-            <button class="button" type="button" onclick="testValidationCheck()">Test</button>
+
+        <div id="vc-param-controls" class="mt">
+          <div data-pane="required" {% if chosen_action != 'required' %}hidden{% endif %}>
+            <label class="row small" style="align-items:center">
+              <input type="checkbox" id="vc-required" {{ 'checked' if not editing or active_check.required else '' }}>
+              <span>Required</span>
+            </label>
           </div>
-          <pre id="vc-report" class="mono mt" style="white-space:pre-wrap">—</pre>
+          <div data-pane="matches_regex" {% if chosen_action != 'matches_regex' %}hidden{% endif %}>
+            <label>Pattern (regex)
+              <input class="input" id="vc-pattern" placeholder="^ADT\\^A0[14]$" value="{{ active_check.pattern if editing else '' }}">
+            </label>
+          </div>
+          <div data-pane="in_allowed" {% if chosen_action != 'in_allowed' %}hidden{% endif %}>
+            <label>Allowed values (comma, semicolon, or newline separated)
+              <textarea class="input" id="vc-allowed" rows="3" placeholder="ADT^A01, ADT^A04">{{ allowed_text }}</textarea>
+            </label>
+          </div>
+        </div>
+
+        <input type="hidden" name="required" value="{{ 'true' if not editing or active_check.required else 'false' }}">
+        <input type="hidden" name="pattern" value="{{ active_check.pattern if editing else '' }}">
+        <input type="hidden" name="allowed_values" value="{{ allowed_text.replace('\n', ',') if allowed_text else '' }}">
+
+        <div class="card mt">
+          <h4 class="text-h4">Test &amp; Preview</h4>
+          <label>Sample HL7 snippet
+            <textarea class="input" id="vc-sample" rows="5">MSH|^~\&|S1|F1|R1|D1|202501011200||ADT^A01|MSGID|P|2.5</textarea>
+          </label>
+          <div class="row mt">
+            <button class="button" type="button" data-val-test>Test</button>
+          </div>
+          <div class="grid two mt">
+            <label>
+              <h5 class="text-h5">Value being validated</h5>
+              <div id="val-found" class="diff mono">—</div>
+            </label>
+            <label>
+              <h5 class="text-h5">Result</h5>
+              <div id="val-result" class="result-badge">—</div>
+              <div id="val-reason" class="muted mt" style="white-space:pre-wrap"></div>
+            </label>
+          </div>
+          <div class="mt">
+            <h5 class="text-h5">Validation report</h5>
+            <pre id="vc-report" class="mono diff">—</pre>
+          </div>
+        </div>
+
+        <div class="modal-scroll-controls">
+          <button type="button" class="btn" id="val-scroll-down">Scroll down</button>
+          <button type="button" class="btn" id="val-scroll-top" hidden>Back to top</button>
         </div>
         <div class="row end mt">
           <button type="button" class="button ghost" onclick="document.getElementById('val-modal').remove()">Cancel</button>
-          <button class="button">Save check</button>
+          <button class="button">{{ 'Update check' if editing else 'Save check' }}</button>
         </div>
       </form>
       <style>
-        .modal-root{position:fixed;inset:0;z-index:50;}
-        .modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.25);backdrop-filter:blur(1px);}
-        .modal{position:fixed;inset:0;display:grid;place-items:center;}
-        .modal-card{background:var(--card-bg,#0b1220);color:var(--card-fg,#e5e7eb);border-radius:1rem;padding:1rem 1.25rem;min-width:720px;max-width:88vw;box-shadow:0 14px 34px rgba(15,23,42,.35);}
-        .modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem;}
-        .grid.two{display:grid;grid-template-columns:1fr 1fr;gap:.75rem;}
-        .row{display:flex;gap:.5rem;align-items:center;}
-        .row.end{justify-content:flex-end;}
-        .row.small{gap:.35rem;}
-        .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;}
+        #val-modal .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;}
+        #val-modal .result-badge{display:inline-block;border-radius:.5rem;padding:.4rem .6rem;border:1px solid transparent;font-weight:600;}
+        #val-modal .result-badge.pass{color:#10b981;background:rgba(16,185,129,.1);border-color:rgba(16,185,129,.35);}
+        #val-modal .result-badge.fail{color:#ef4444;background:rgba(239,68,68,.1);border-color:rgba(239,68,68,.35);}
       </style>
-      <script>
-        async function testValidationCheck() {
-          const report = document.getElementById('vc-report');
-          report.textContent = 'Testing…';
-          const fd = new FormData();
-          fd.append('message_text', document.getElementById('vc-sample').value || '');
-          fd.append('segment', document.getElementById('vc-seg').value || '');
-          fd.append('field', document.getElementById('vc-field').value || '');
-          fd.append('required', document.getElementById('vc-required').checked ? 'true' : 'false');
-          fd.append('pattern', document.getElementById('vc-pattern').value || '');
-          fd.append('allowed_values', document.getElementById('vc-allowed').value || '');
-          try {
-            const resp = await fetch('{{ request.url_for("api_validate_test_check") }}', { method: 'POST', body: fd });
-            let data;
-            try {
-              data = await resp.json();
-            } catch {
-              data = { ok: false, error: 'Non-JSON response' };
-            }
-            if (!data.ok) {
-              report.textContent = 'Error: ' + (data.error || 'unknown');
-              return;
-            }
-            report.textContent = JSON.stringify(data.report, null, 2);
-          } catch (err) {
-            report.textContent = 'Error: ' + (err && err.message ? err.message : err);
-          }
-        }
-      </script>
     </div>
   </div>
 </div>
