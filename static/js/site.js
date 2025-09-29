@@ -7,6 +7,57 @@ window.esc = s => (s ?? "").toString()
 window.diffChars = (a,b) => ({ beforeHTML: esc(a ?? ""), afterHTML: esc(b ?? "") });
 window.diffLines = (a,b) => ({ beforeHTML: esc(a ?? ""), afterHTML: esc(b ?? "") });
 
+const __fallbackEsc = (s) => (s ?? "").toString()
+  .replace(/&/g, "&amp;")
+  .replace(/</g, "&lt;")
+  .replace(/>/g, "&gt;")
+  .replace(/"/g, "&quot;");
+const htmlEscape = (value) => {
+  const escFn = window.esc || __fallbackEsc;
+  return escFn(value);
+};
+
+function detectSeps(text) {
+  let fieldSep = '|';
+  let compSep = '^';
+  let subSep = '&';
+  const lines = (text || '').split(/\r?\n|\r/g);
+  const msh = lines.find(line => typeof line === 'string' && line.startsWith('MSH') && line.length >= 4);
+  if (msh) {
+    fieldSep = msh[3] || fieldSep;
+    const parts = msh.split(fieldSep);
+    const enc = parts[1] || '';
+    if (enc.length >= 1) compSep = enc[0];
+    if (enc.length >= 4) subSep = enc[3];
+  }
+  return { fieldSep, compSep, subSep };
+}
+
+function tokenIndexFor(segment, fieldNumber) {
+  return (String(segment).toUpperCase() === 'MSH') ? (fieldNumber - 1) : fieldNumber;
+}
+
+function renderLineWithFieldHTML(line, segment, fieldNumber, fieldSep, fieldHTML, fallbackValue) {
+  if (!line) return '';
+  const idx = tokenIndexFor(segment, fieldNumber);
+  const sep = fieldSep || '|';
+  const parts = line.split(sep);
+  if (idx < 0 || idx >= parts.length) {
+    return htmlEscape(line);
+  }
+  return parts
+    .map((token, tokenIdx) => {
+      if (tokenIdx !== idx) {
+        return htmlEscape(token);
+      }
+      if (fieldHTML && fieldHTML.length) {
+        return fieldHTML;
+      }
+      return htmlEscape(fallbackValue ?? token);
+    })
+    .join(sep);
+}
+
 // Minimal diff renderer (character-level by default)
 // Uses jsdiff if present; otherwise falls back to a simple char compare.
 window.renderDiff = function renderDiff(before, after) {
@@ -166,18 +217,61 @@ window.initDeidModal = function initDeidModal(sel) {
         return;
       }
 
-      {
-        const diff = window.renderDiff(data.before?.field || '', data.after?.field || '');
-        beforeField.innerHTML = diff.beforeHTML;
-        afterField.innerHTML  = diff.afterHTML;
+      const segVal = (seg?.value || '').trim().toUpperCase();
+      const fldNum = parseInt(fld?.value || '0', 10) || 0;
+      const sampleText = sampleArea?.value || '';
+      const beforeLineRaw = data.before?.line || '';
+      const afterLineRaw = data.after?.line || '';
+      const beforeMsgRaw = data.before?.message || '';
+      const afterMsgRaw = data.after?.message || '';
+      const seps = detectSeps(beforeLineRaw || beforeMsgRaw || afterLineRaw || afterMsgRaw || sampleText);
+
+      const fieldDiff = window.renderDiff(data.before?.field || '', data.after?.field || '');
+      if (beforeField) {
+        if (fieldDiff.beforeHTML) {
+          beforeField.innerHTML = fieldDiff.beforeHTML;
+        } else {
+          beforeField.textContent = '—';
+        }
+      }
+      if (afterField) {
+        if (fieldDiff.afterHTML) {
+          afterField.innerHTML = fieldDiff.afterHTML;
+        } else {
+          afterField.textContent = '—';
+        }
       }
 
-      {
-        const beforeMsg = (data.before && (data.before.message || data.before.line)) || '';
-        const afterMsg  = (data.after && (data.after.message || data.after.line)) || '';
-        const diff = window.renderDiff(beforeMsg, afterMsg);
-        msgBefore.innerHTML = diff.beforeHTML;
-        msgAfter.innerHTML  = diff.afterHTML;
+      if (msgBefore) {
+        if (beforeLineRaw) {
+          msgBefore.innerHTML = renderLineWithFieldHTML(
+            beforeLineRaw,
+            segVal,
+            fldNum,
+            seps.fieldSep,
+            fieldDiff.beforeHTML,
+            data.before?.field
+          );
+        } else {
+          const fallbackBefore = beforeMsgRaw || (segVal ? `Segment ${segVal} not found in sample` : '—');
+          msgBefore.textContent = fallbackBefore || '—';
+        }
+      }
+
+      if (msgAfter) {
+        if (afterLineRaw) {
+          msgAfter.innerHTML = renderLineWithFieldHTML(
+            afterLineRaw,
+            segVal,
+            fldNum,
+            seps.fieldSep,
+            fieldDiff.afterHTML,
+            data.after?.field
+          );
+        } else {
+          const fallbackAfter = afterMsgRaw || (segVal ? `Segment ${segVal} not found in sample` : '—');
+          msgAfter.textContent = fallbackAfter || '—';
+        }
       }
       fitModalToViewport();
     }catch(e){
@@ -251,28 +345,15 @@ window.initValModal = function initValModal(sel) {
   const requiredInput = $('#vc-required');
   const patternInput = $('#vc-pattern');
   const allowedInput = $('#vc-allowed');
-  const beforeField = $('#val-before-field');
-  const afterField = $('#val-after-field');
-  const msgBefore = $('#val-msg-before');
-  const msgAfter = $('#val-msg-after');
+  const foundEl   = $('#val-found');
+  const resultEl  = $('#val-result');
+  const reasonEl  = $('#val-reason');
   const report = $('#vc-report');
   const testBtn = root.querySelector('[data-val-test]');
   const card = root.querySelector('.modal-card');
   const btnDown = root.querySelector('#val-scroll-down');
   const btnTop = root.querySelector('#val-scroll-top');
   const endpoint = root.getAttribute('data-test-endpoint') || root.dataset.testEndpoint || '';
-
-  const setDiff = (el, html, fallback) => {
-    if (!el) return;
-    if (html && html.length) {
-      el.innerHTML = html;
-    } else if (fallback != null) {
-      el.textContent = fallback;
-    } else {
-      el.textContent = '—';
-    }
-  };
-
   const findLine = (sample, seg) => {
     if (!sample || !seg) return '';
     const lines = sample.split(/\r?\n|\r/g);
@@ -309,11 +390,9 @@ window.initValModal = function initValModal(sel) {
 
   async function runValidationTest() {
     if (report) report.textContent = 'Testing…';
-    setDiff(beforeField, '', '—');
-    setDiff(afterField, '', '—');
-    setDiff(msgBefore, '', '—');
-    setDiff(msgAfter, '', '—');
-
+    if (foundEl) foundEl.textContent = '—';
+    if (resultEl) { resultEl.textContent = '—'; resultEl.className = 'result-badge'; }
+    if (reasonEl) reasonEl.textContent = '';
     if (!endpoint) {
       if (report) report.textContent = 'Error: Missing test endpoint';
       return;
@@ -340,18 +419,59 @@ window.initValModal = function initValModal(sel) {
       const segment = (segmentInput?.value || '').trim().toUpperCase();
       const fieldIndex = parseInt(fieldInput?.value || '0', 10) || 0;
       const beforeLine = findLine(sample, segment);
-      const afterLine = beforeLine;
       const fieldValue = getFieldValue(beforeLine, segment, fieldIndex);
-      const afterFieldValue = fieldValue;
+      if (foundEl) foundEl.textContent = fieldValue || '—';
 
-      const fieldDiff = window.renderDiff(fieldValue, afterFieldValue);
-      setDiff(beforeField, fieldDiff.beforeHTML, fieldValue || '—');
-      setDiff(afterField, fieldDiff.afterHTML, afterFieldValue || '—');
+      let pass = true;
+      let reasons = [];
+      if (data && data.report && Array.isArray(data.report.issues)) {
+        pass = data.report.issues.length === 0;
+        reasons = data.report.issues.map((issue) => issue.message || issue.code || JSON.stringify(issue));
+      } else {
+        const required = !!(requiredInput && requiredInput.checked);
+        const patternText = (patternInput?.value || '').trim();
+        const allowedRaw = (allowedInput?.value || '').trim();
+        const allowedValues = allowedRaw
+          ? allowedRaw.split(/[;,\n]/).map((token) => token.trim()).filter(Boolean)
+          : [];
 
-      const lineDiff = window.renderDiff(beforeLine || '', afterLine || '');
-      const fallbackLine = beforeLine ? beforeLine : 'Segment not found in sample';
-      setDiff(msgBefore, lineDiff.beforeHTML, fallbackLine);
-      setDiff(msgAfter, lineDiff.afterHTML, afterLine || fallbackLine);
+        if (required && !fieldValue) {
+          pass = false;
+          reasons.push('Required but empty');
+        }
+
+        if (patternText) {
+          try {
+            const regex = new RegExp(patternText);
+            if (!regex.test(fieldValue || '')) {
+              pass = false;
+              reasons.push('Pattern not matched');
+            }
+          } catch (regexErr) {
+            pass = false;
+            reasons.push('Invalid regex');
+          }
+        }
+
+        if (allowedValues.length) {
+          if (!allowedValues.includes(fieldValue || '')) {
+            pass = false;
+            reasons.push('Value not in allowed list');
+          }
+        }
+      }
+
+      if (!pass && reasons.length === 0) {
+        reasons.push('Validation failed.');
+      }
+
+      if (resultEl) {
+        resultEl.textContent = pass ? 'MATCH' : 'FAIL';
+        resultEl.className = 'result-badge ' + (pass ? 'pass' : 'fail');
+      }
+      if (reasonEl) {
+        reasonEl.textContent = pass ? 'All checks passed.' : reasons.join('\n');
+      }
 
       if (report) {
         const formatted = formatIssues(data.report);

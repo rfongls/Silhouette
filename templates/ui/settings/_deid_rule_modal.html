@@ -88,26 +88,3 @@
     </form>
   </div>
 </div>
-
-<style>
-.modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.2);backdrop-filter:blur(1px);}
-.modal{position:fixed;inset:0;display:grid;place-items:center;z-index:50;padding:1rem;}
-.modal-card{background:var(--card-bg,#0b1220);color:var(--card-fg,#e5e7eb);border-radius:1rem;padding:1rem 1.25rem;width:min(760px,92vw);max-height:72vh;overflow:auto;box-shadow:0 10px 30px rgba(0,0,0,.25);border:1px solid var(--border-strong,#2b2f3a);}
-.modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem;}
-.grid.two{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:.75rem;}
-.grid.two>label{display:flex;flex-direction:column;gap:.25rem;min-width:0;}
-.row{display:flex;gap:.5rem;align-items:center}
-.row.end{justify-content:flex-end;}
-.input{width:100%;min-width:0;}
-.diff{white-space:pre-wrap;background:rgba(15,23,42,.45);border-radius:.5rem;padding:.5rem;min-height:2.25rem;color:var(--text-primary,#e6e9f2);word-break:break-word;}
-.badge{display:inline-block;font-size:.85rem;line-height:1;padding:.35rem .5rem;border-radius:.5rem;background:rgba(99,102,241,.12);color:#a5b4fc;border:1px solid rgba(99,102,241,.35)}
-.badge.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace}
-.badge.muted{background:rgba(148,163,184,.15);color:#cbd5e1;border-color:rgba(148,163,184,.35)}
-/* --- Precision highlight: only the changed bits in red --- */
-#deid-modal .diff ins.added{color:#ef4444;background:transparent;text-decoration:none;}
-#deid-modal .diff del.removed{color:#94a3b8;text-decoration:line-through;}
-#deid-modal .diff .same{color:inherit;}
-/* Sticky scroll controls inside modal */
-#deid-modal .modal-scroll-controls{position:sticky;bottom:8px;display:flex;gap:8px;justify-content:flex-end;padding:8px 0;pointer-events:none;}
-#deid-modal .modal-scroll-controls .btn{pointer-events:auto;border:1px solid var(--border-strong,#2b2f3a);background:rgba(20,24,31,.75);padding:6px 10px;border-radius:6px;font-size:12px;color:var(--text-primary,#e6e9f2);}
-</style>

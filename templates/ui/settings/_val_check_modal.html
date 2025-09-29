@@ -40,24 +40,15 @@
             <button class="button" type="button" data-val-test>Test</button>
           </div>
           <div class="grid two mt">
-            <div>
-              <h5 class="text-h5">Before (field)</h5>
-              <div id="val-before-field" class="diff muted">—</div>
-            </div>
-            <div>
-              <h5 class="text-h5">After (field)</h5>
-              <div id="val-after-field" class="diff">—</div>
-            </div>
-          </div>
-          <div class="grid two mt">
-            <div>
-              <h5 class="text-h5">Line — original</h5>
-              <div id="val-msg-before" class="diff">—</div>
-            </div>
-            <div>
-              <h5 class="text-h5">Line — transformed</h5>
-              <div id="val-msg-after" class="diff">—</div>
-            </div>
+            <label>
+              <h5 class="text-h5">Value being validated</h5>
+              <div id="val-found" class="diff mono">—</div>
+            </label>
+            <label>
+              <h5 class="text-h5">Result</h5>
+              <div id="val-result" class="result-badge">—</div>
+              <div id="val-reason" class="muted mt" style="white-space:pre-wrap"></div>
+            </label>
           </div>
           <div class="mt">
             <h5 class="text-h5">Validation report</h5>
@@ -75,24 +66,10 @@
         </div>
       </form>
       <style>
-        .modal-root{position:fixed;inset:0;z-index:50;}
-        .modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.25);backdrop-filter:blur(1px);}
-        .modal{position:fixed;inset:0;display:grid;place-items:center;padding:1rem;}
-        #val-modal .modal-card{background:var(--card-bg,#0b1220);color:var(--card-fg,#e5e7eb);border-radius:1rem;padding:1rem 1.25rem;width:min(760px,92vw);max-height:72vh;overflow:auto;box-shadow:0 14px 34px rgba(15,23,42,.35);border:1px solid var(--border-strong,#2b2f3a);}
-        #val-modal .modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem;}
-        #val-modal .grid.two{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;}
-        #val-modal .grid.two>label{display:flex;flex-direction:column;gap:6px;min-width:0;}
-        #val-modal .row{display:flex;gap:.5rem;align-items:center;}
-        #val-modal .row.end{justify-content:flex-end;}
-        #val-modal .row.small{gap:.35rem;}
-        #val-modal .input{width:100%;min-width:0;}
-        #val-modal .diff{color:var(--text-primary,#e6e9f2);white-space:pre-wrap;background:rgba(15,23,42,.45);border-radius:.5rem;padding:.5rem;min-height:2.25rem;word-break:break-word;}
-        #val-modal .modal-scroll-controls{position:sticky;bottom:8px;display:flex;gap:8px;justify-content:flex-end;padding:8px 0;pointer-events:none;}
-        #val-modal .modal-scroll-controls .btn{pointer-events:auto;border:1px solid var(--border-strong,#2b2f3a);background:rgba(20,24,31,.75);padding:6px 10px;border-radius:6px;font-size:12px;color:var(--text-primary,#e6e9f2);}
         #val-modal .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;}
-        #val-modal .diff ins.added{color:#ef4444;background:transparent;text-decoration:none;}
-        #val-modal .diff del.removed{color:#94a3b8;text-decoration:line-through;}
-        #val-modal .diff .same{color:inherit;}
+        #val-modal .result-badge{display:inline-block;border-radius:.5rem;padding:.4rem .6rem;border:1px solid transparent;font-weight:600;}
+        #val-modal .result-badge.pass{color:#10b981;background:rgba(16,185,129,.1);border-color:rgba(16,185,129,.35);}
+        #val-modal .result-badge.fail{color:#ef4444;background:rgba(239,68,68,.1);border-color:rgba(239,68,68,.35);}
       </style>
     </div>
   </div>
