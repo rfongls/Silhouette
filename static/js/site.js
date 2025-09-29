@@ -342,6 +342,8 @@ window.initValModal = function initValModal(sel) {
   const sampleArea = $('#vc-sample');
   const segmentInput = $('#vc-seg');
   const fieldInput = $('#vc-field');
+  const actionSelect = $('#vc-action');
+  const modeSelect = $('#vc-param-mode');
   const requiredInput = $('#vc-required');
   const patternInput = $('#vc-pattern');
   const allowedInput = $('#vc-allowed');
@@ -353,7 +355,11 @@ window.initValModal = function initValModal(sel) {
   const card = root.querySelector('.modal-card');
   const btnDown = root.querySelector('#val-scroll-down');
   const btnTop = root.querySelector('#val-scroll-top');
+  const form = root.querySelector('form');
   const endpoint = root.getAttribute('data-test-endpoint') || root.dataset.testEndpoint || '';
+  const hiddenRequired = root.querySelector('input[name="required"]');
+  const hiddenPattern  = root.querySelector('input[name="pattern"]');
+  const hiddenAllowed  = root.querySelector('input[name="allowed_values"]');
   const findLine = (sample, seg) => {
     if (!sample || !seg) return '';
     const lines = sample.split(/\r?\n|\r/g);
@@ -388,11 +394,90 @@ window.initValModal = function initValModal(sel) {
       .join('\n');
   };
 
+  const showParamPane = (kind) => {
+    root.querySelectorAll('#vc-param-controls [data-pane]').forEach((pane) => {
+      const matches = pane.getAttribute('data-pane') === kind;
+      pane.hidden = !matches;
+    });
+  };
+
+  const syncHiddenFromUI = () => {
+    const kind = (actionSelect?.value || 'required');
+    if (hiddenRequired) hiddenRequired.value = '';
+    if (hiddenPattern) hiddenPattern.value = '';
+    if (hiddenAllowed) hiddenAllowed.value = '';
+
+    if (kind === 'required') {
+      if (hiddenRequired) hiddenRequired.value = requiredInput && requiredInput.checked ? 'true' : 'false';
+    } else if (kind === 'matches_regex') {
+      if (hiddenPattern) hiddenPattern.value = patternInput?.value || '';
+      if (hiddenRequired) hiddenRequired.value = 'false';
+    } else if (kind === 'in_allowed') {
+      const mode = modeSelect?.value || 'single';
+      const raw = (allowedInput?.value || '').trim();
+      const values = raw
+        .split(/[;,\n]/)
+        .map((token) => token.trim())
+        .filter(Boolean);
+      if (hiddenAllowed) {
+        hiddenAllowed.value = mode === 'single'
+          ? (values[0] || '')
+          : values.join(',');
+      }
+      if (hiddenRequired) hiddenRequired.value = 'false';
+    }
+    return kind;
+  };
+
+  if (actionSelect && !actionSelect.dataset.bound) {
+    actionSelect.addEventListener('change', () => {
+      showParamPane(actionSelect.value);
+      syncHiddenFromUI();
+    });
+    actionSelect.dataset.bound = '1';
+  }
+
+  if (modeSelect && !modeSelect.dataset.bound) {
+    modeSelect.addEventListener('change', () => {
+      syncHiddenFromUI();
+    });
+    modeSelect.dataset.bound = '1';
+  }
+
+  if (requiredInput && !requiredInput.dataset.bound) {
+    requiredInput.addEventListener('change', () => {
+      syncHiddenFromUI();
+    });
+    requiredInput.dataset.bound = '1';
+  }
+
+  if (patternInput && !patternInput.dataset.bound) {
+    patternInput.addEventListener('input', () => {
+      syncHiddenFromUI();
+    });
+    patternInput.dataset.bound = '1';
+  }
+
+  if (allowedInput && !allowedInput.dataset.bound) {
+    allowedInput.addEventListener('input', () => {
+      syncHiddenFromUI();
+    });
+    allowedInput.dataset.bound = '1';
+  }
+
+  if (form && !form.dataset.valSubmitBound) {
+    form.addEventListener('submit', () => {
+      syncHiddenFromUI();
+    });
+    form.dataset.valSubmitBound = '1';
+  }
   async function runValidationTest() {
     if (report) report.textContent = 'Testing…';
     if (foundEl) foundEl.textContent = '—';
     if (resultEl) { resultEl.textContent = '—'; resultEl.className = 'result-badge'; }
     if (reasonEl) reasonEl.textContent = '';
+
+    const kind = syncHiddenFromUI();
     if (!endpoint) {
       if (report) report.textContent = 'Error: Missing test endpoint';
       return;
@@ -402,9 +487,9 @@ window.initValModal = function initValModal(sel) {
     fd.append('message_text', sampleArea?.value || '');
     fd.append('segment', segmentInput?.value || '');
     fd.append('field', fieldInput?.value || '');
-    fd.append('required', requiredInput && requiredInput.checked ? 'true' : 'false');
-    fd.append('pattern', patternInput?.value || '');
-    fd.append('allowed_values', allowedInput?.value || '');
+    fd.append('required', hiddenRequired?.value || '');
+    fd.append('pattern', hiddenPattern?.value || '');
+    fd.append('allowed_values', hiddenAllowed?.value || '');
 
     try {
       const res = await fetch(endpoint, { method: 'POST', body: fd });
@@ -428,14 +513,14 @@ window.initValModal = function initValModal(sel) {
         pass = data.report.issues.length === 0;
         reasons = data.report.issues.map((issue) => issue.message || issue.code || JSON.stringify(issue));
       } else {
-        const required = !!(requiredInput && requiredInput.checked);
-        const patternText = (patternInput?.value || '').trim();
-        const allowedRaw = (allowedInput?.value || '').trim();
-        const allowedValues = allowedRaw
-          ? allowedRaw.split(/[;,\n]/).map((token) => token.trim()).filter(Boolean)
-          : [];
+        const requiredFlag = (hiddenRequired?.value || '').toLowerCase() === 'true';
+        const patternText = (hiddenPattern?.value || '').trim();
+        const allowedValues = (hiddenAllowed?.value || '')
+          .split(',')
+          .map((token) => token.trim())
+          .filter(Boolean);
 
-        if (required && !fieldValue) {
+        if (requiredFlag && !fieldValue) {
           pass = false;
           reasons.push('Required but empty');
         }
@@ -458,6 +543,11 @@ window.initValModal = function initValModal(sel) {
             pass = false;
             reasons.push('Value not in allowed list');
           }
+        }
+
+        if (!patternText && kind === 'matches_regex') {
+          pass = false;
+          reasons.push('Pattern is required for regex checks');
         }
       }
 
@@ -505,6 +595,32 @@ window.initValModal = function initValModal(sel) {
     btnDown.dataset.scrollBound = '1';
     btnTop.hidden = card.scrollTop < 32;
   }
+
+  showParamPane(actionSelect?.value || 'required');
+  syncHiddenFromUI();
+};
+
+window.initValChecksPanel = function initValChecksPanel(sel) {
+  const root = (typeof sel === 'string') ? document.querySelector(sel) : sel;
+  if (!root || root.dataset.valChecksInit === '1') return;
+  root.dataset.valChecksInit = '1';
+
+  const select = root.querySelector('[data-val-rule-select]');
+  const editForm = root.querySelector('[data-val-edit-form]');
+  const deleteForm = root.querySelector('[data-val-delete-form]');
+  const editInput = editForm?.querySelector('input[name="index"]') || null;
+  const deleteInput = deleteForm?.querySelector('input[name="index"]') || null;
+
+  const syncIndex = () => {
+    const value = select ? select.value : '0';
+    if (editInput) editInput.value = value;
+    if (deleteInput) deleteInput.value = value;
+  };
+
+  if (select) {
+    select.addEventListener('change', syncIndex);
+    syncIndex();
+  }
 };
 
 /* --- Debug wiring for param controls --- */
@@ -548,12 +664,27 @@ window.attachParamDebug = function attachParamDebug(root){
   }catch(e){ console.error(e); }
 };
 
-/* ========== HTMX hook ==========
+const bootValPanels = () => {
+  document.querySelectorAll('[data-val-checks-panel]').forEach((panel) => {
+    window.initValChecksPanel(panel);
+  });
+};
+
+/* ========== HTMX hook ========== 
    Any time HTMX swaps in content that includes a De-ID modal,
    this will run the initializer automatically. */
 document.addEventListener('htmx:afterSettle', () => {
   const deidModal = document.querySelector('#deid-modal');
   if (deidModal) window.initDeidModal(deidModal);
+  const valModal = document.querySelector('#val-modal');
+  if (valModal && typeof window.initValModal === 'function') {
+    window.initValModal(valModal);
+  }
+  bootValPanels();
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+  bootValPanels();
   const valModal = document.querySelector('#val-modal');
   if (valModal && typeof window.initValModal === 'function') {
     window.initValModal(valModal);

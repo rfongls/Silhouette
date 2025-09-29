@@ -1,26 +1,60 @@
-<table class="table">
-  <thead>
-    <tr><th>#</th><th>Segment</th><th>Field</th><th>Required</th><th>Pattern</th><th>Allowed Values</th><th></th></tr>
-  </thead>
-  <tbody>
-  {% for c in (tpl.checks or []) %}
-    <tr>
-      <td>{{ loop.index0 }}</td>
-      <td>{{ c.segment }}</td>
-      <td>{{ c.field }}</td>
-      <td>{{ "yes" if c.required else "no" }}</td>
-      <td><code>{{ c.pattern or "" }}</code></td>
-      <td>{{ ", ".join(c.allowed_values) if c.allowed_values else "" }}</td>
-      <td>
-        <form hx-post="{{ request.url_for('ui_settings_val_delete_check', name=tpl.name) }}" hx-target="#val-checks">
-          <input type="hidden" name="index" value="{{ loop.index0 }}" />
-          <button class="button danger small" title="Delete">✕</button>
-        </form>
-      </td>
-    </tr>
-  {% else %}
-    <tr><td colspan="7" class="muted">No checks yet.</td></tr>
-  {% endfor %}
-  </tbody>
-</table>
+<div data-val-checks-panel>
+  {% set checks = tpl.checks or [] %}
+  {% if checks %}
+    <label class="block">
+      <span class="text-h5">Select rule</span>
+      <select class="input mt" data-val-rule-select>
+        {% for c in checks %}
+          <option value="{{ loop.index0 }}">{{ c.segment }}-{{ c.field }}{% if c.pattern %} · regex{% elif c.allowed_values %} · allowed list{% elif c.required %} · required{% endif %}</option>
+        {% endfor %}
+      </select>
+    </label>
+    <div class="row gap mt" data-val-rule-actions>
+      <form
+        class="row gap small"
+        data-val-edit-form
+        hx-get="{{ request.url_for('ui_settings_val_edit_check_modal', name=tpl.name) }}"
+        hx-target="body"
+        hx-swap="beforeend"
+      >
+        <input type="hidden" name="index" value="0" />
+        <button class="button" type="submit">Edit selected rule</button>
+      </form>
+      <form
+        class="row gap small"
+        data-val-delete-form
+        hx-post="{{ request.url_for('ui_settings_val_delete_check', name=tpl.name) }}"
+        hx-target="#val-checks"
+      >
+        <input type="hidden" name="index" value="0" />
+        <button class="button danger" type="submit">Delete selected rule</button>
+      </form>
+    </div>
+  {% endif %}
 
+  <table class="table mt">
+    <thead>
+      <tr><th>#</th><th>Segment</th><th>Field</th><th>Required</th><th>Pattern</th><th>Allowed Values</th><th></th></tr>
+    </thead>
+    <tbody>
+    {% for c in checks %}
+      <tr>
+        <td>{{ loop.index0 }}</td>
+        <td>{{ c.segment }}</td>
+        <td>{{ c.field }}</td>
+        <td>{{ "yes" if c.required else "no" }}</td>
+        <td><code>{{ c.pattern or "" }}</code></td>
+        <td>{{ ", ".join(c.allowed_values) if c.allowed_values else "" }}</td>
+        <td>
+          <form hx-post="{{ request.url_for('ui_settings_val_delete_check', name=tpl.name) }}" hx-target="#val-checks">
+            <input type="hidden" name="index" value="{{ loop.index0 }}" />
+            <button class="button danger small" title="Delete">✕</button>
+          </form>
+        </td>
+      </tr>
+    {% else %}
+      <tr><td colspan="7" class="muted">No checks yet.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>

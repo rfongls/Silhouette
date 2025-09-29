@@ -1,3 +1,15 @@
+{% set editing = check is defined %}
+{% set active_check = check if editing else None %}
+{% if editing %}
+  {% set chosen_action = 'matches_regex' if active_check.pattern else ('in_allowed' if active_check.allowed_values else 'required') %}
+  {% set chosen_mode = 'list' if active_check.allowed_values and active_check.allowed_values|length > 1 else 'single' %}
+  {% set allowed_text = '\n'.join(active_check.allowed_values or []) %}
+{% else %}
+  {% set chosen_action = 'required' %}
+  {% set chosen_mode = 'single' %}
+  {% set allowed_text = '' %}
+{% endif %}
+
 <div id="val-modal" class="modal-root"
      data-test-endpoint="{{ request.url_for('api_validate_test_check') }}"
      hx-on::after-settle="try { initValModal('#val-modal'); } catch (e) { console.error(e); }">
@@ -5,32 +17,62 @@
   <div class="modal">
     <div class="modal-card">
       <div class="modal-header">
-        <h3 class="text-h3">Add Validation Check</h3>
+        <h3 class="text-h3">{{ 'Edit Validation Check' if editing else 'Add Validation Check' }}</h3>
         <button class="button ghost" type="button" onclick="document.getElementById('val-modal').remove()">✕</button>
       </div>
       <form
-        hx-post="{{ request.url_for('ui_settings_val_add_check', name=tpl.name) }}"
+        hx-post="{{ request.url_for('ui_settings_val_update_check' if editing else 'ui_settings_val_add_check', name=tpl.name) }}"
         hx-target="#val-checks"
         hx-on::after-request="document.getElementById('val-modal')?.remove()"
       >
+        {% if editing %}
+          <input type="hidden" name="index" value="{{ index }}">
+        {% endif %}
         <div class="grid two">
           <label>Segment
-            <input class="input" name="segment" id="vc-seg" placeholder="MSH" required>
+            <input class="input" name="segment" id="vc-seg" placeholder="MSH" value="{{ active_check.segment if editing else '' }}" required>
           </label>
           <label>Field
-            <input class="input" name="field" id="vc-field" type="number" min="1" required>
+            <input class="input" name="field" id="vc-field" type="number" min="1" value="{{ active_check.field if editing else '' }}" required>
           </label>
-          <label class="row small" style="align-items:center">
-            <input type="checkbox" name="required" id="vc-required" checked>
-            <span>Required</span>
+          <label>Check type (action)
+            <select class="input" name="vc_action" id="vc-action">
+              <option value="required" {{ 'selected' if chosen_action == 'required' else '' }}>Required (not empty)</option>
+              <option value="matches_regex" {{ 'selected' if chosen_action == 'matches_regex' else '' }}>Matches regex</option>
+              <option value="in_allowed" {{ 'selected' if chosen_action == 'in_allowed' else '' }}>In allowed values</option>
+            </select>
           </label>
-          <label>Pattern (regex)
-            <input class="input" name="pattern" id="vc-pattern" placeholder="^ADT\\^A0[14]$">
+          <label>Parameter mode
+            <select class="input" name="vc_param_mode" id="vc-param-mode">
+              <option value="single" {{ 'selected' if chosen_mode == 'single' else '' }}>Single value</option>
+              <option value="list" {{ 'selected' if chosen_mode == 'list' else '' }}>List</option>
+            </select>
           </label>
         </div>
-        <label class="mt">Allowed values (comma or semicolon separated)
-          <input class="input" name="allowed_values" id="vc-allowed" placeholder="ADT^A01, ADT^A04">
-        </label>
+
+        <div id="vc-param-controls" class="mt">
+          <div data-pane="required" {% if chosen_action != 'required' %}hidden{% endif %}>
+            <label class="row small" style="align-items:center">
+              <input type="checkbox" id="vc-required" {{ 'checked' if not editing or active_check.required else '' }}>
+              <span>Required</span>
+            </label>
+          </div>
+          <div data-pane="matches_regex" {% if chosen_action != 'matches_regex' %}hidden{% endif %}>
+            <label>Pattern (regex)
+              <input class="input" id="vc-pattern" placeholder="^ADT\\^A0[14]$" value="{{ active_check.pattern if editing else '' }}">
+            </label>
+          </div>
+          <div data-pane="in_allowed" {% if chosen_action != 'in_allowed' %}hidden{% endif %}>
+            <label>Allowed values (comma, semicolon, or newline separated)
+              <textarea class="input" id="vc-allowed" rows="3" placeholder="ADT^A01, ADT^A04">{{ allowed_text }}</textarea>
+            </label>
+          </div>
+        </div>
+
+        <input type="hidden" name="required" value="{{ 'true' if not editing or active_check.required else 'false' }}">
+        <input type="hidden" name="pattern" value="{{ active_check.pattern if editing else '' }}">
+        <input type="hidden" name="allowed_values" value="{{ allowed_text.replace('\n', ',') if allowed_text else '' }}">
+
         <div class="card mt">
           <h4 class="text-h4">Test &amp; Preview</h4>
           <label>Sample HL7 snippet
@@ -62,7 +104,7 @@
         </div>
         <div class="row end mt">
           <button type="button" class="button ghost" onclick="document.getElementById('val-modal').remove()">Cancel</button>
-          <button class="button">Save check</button>
+          <button class="button">{{ 'Update check' if editing else 'Save check' }}</button>
         </div>
       </form>
       <style>
