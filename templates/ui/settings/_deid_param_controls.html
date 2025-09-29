@@ -1,9 +1,4 @@
 {# templates/ui/settings/_deid_param_controls.html #}
-{# --- DEBUG ECHO (remove later) --- #}
-<div class="muted" style="font-size:.85rem;margin-bottom:.25rem">
-  <!-- debug: action={{ action }} act={{ act }} param_mode={{ param_mode }} mode={{ mode }} -->
-</div>
-
 {% set A = (act or action or '').strip().lower() %}
 {% set M = (mode or param_mode or 'preset').strip().lower() %}
 
