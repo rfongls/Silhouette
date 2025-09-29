@@ -1,4 +1,6 @@
-<div id="val-modal" class="modal-root">
+<div id="val-modal" class="modal-root"
+     data-test-endpoint="{{ request.url_for('api_validate_test_check') }}"
+     hx-on::after-settle="try { initValModal('#val-modal'); } catch (e) { console.error(e); }">
   <div class="modal-backdrop" onclick="document.getElementById('val-modal').remove()"></div>
   <div class="modal">
     <div class="modal-card">
@@ -30,12 +32,33 @@
           <input class="input" name="allowed_values" id="vc-allowed" placeholder="ADT^A01, ADT^A04">
         </label>
         <div class="card mt">
-          <h4 class="text-h4">Test</h4>
-          <textarea class="input" id="vc-sample" rows="4">MSH|^~\&|S1|F1|R1|D1|202501011200||ADT^A01|MSGID|P|2.5</textarea>
+          <h4 class="text-h4">Test &amp; Preview</h4>
+          <label>Sample HL7 snippet
+            <textarea class="input" id="vc-sample" rows="5">MSH|^~\&|S1|F1|R1|D1|202501011200||ADT^A01|MSGID|P|2.5</textarea>
+          </label>
           <div class="row mt">
-            <button class="button" type="button" onclick="testValidationCheck()">Test</button>
+            <button class="button" type="button" data-val-test>Test</button>
           </div>
-          <pre id="vc-report" class="mono mt" style="white-space:pre-wrap">—</pre>
+          <div class="grid two mt">
+            <label>
+              <h5 class="text-h5">Value being validated</h5>
+              <div id="val-found" class="diff mono">—</div>
+            </label>
+            <label>
+              <h5 class="text-h5">Result</h5>
+              <div id="val-result" class="result-badge">—</div>
+              <div id="val-reason" class="muted mt" style="white-space:pre-wrap"></div>
+            </label>
+          </div>
+          <div class="mt">
+            <h5 class="text-h5">Validation report</h5>
+            <pre id="vc-report" class="mono diff">—</pre>
+          </div>
+        </div>
+
+        <div class="modal-scroll-controls">
+          <button type="button" class="btn" id="val-scroll-down">Scroll down</button>
+          <button type="button" class="btn" id="val-scroll-top" hidden>Back to top</button>
         </div>
         <div class="row end mt">
           <button type="button" class="button ghost" onclick="document.getElementById('val-modal').remove()">Cancel</button>
@@ -43,46 +66,11 @@
         </div>
       </form>
       <style>
-        .modal-root{position:fixed;inset:0;z-index:50;}
-        .modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.25);backdrop-filter:blur(1px);}
-        .modal{position:fixed;inset:0;display:grid;place-items:center;}
-        .modal-card{background:var(--card-bg,#0b1220);color:var(--card-fg,#e5e7eb);border-radius:1rem;padding:1rem 1.25rem;min-width:720px;max-width:88vw;box-shadow:0 14px 34px rgba(15,23,42,.35);}
-        .modal-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:.5rem;}
-        .grid.two{display:grid;grid-template-columns:1fr 1fr;gap:.75rem;}
-        .row{display:flex;gap:.5rem;align-items:center;}
-        .row.end{justify-content:flex-end;}
-        .row.small{gap:.35rem;}
-        .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;}
+        #val-modal .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;}
+        #val-modal .result-badge{display:inline-block;border-radius:.5rem;padding:.4rem .6rem;border:1px solid transparent;font-weight:600;}
+        #val-modal .result-badge.pass{color:#10b981;background:rgba(16,185,129,.1);border-color:rgba(16,185,129,.35);}
+        #val-modal .result-badge.fail{color:#ef4444;background:rgba(239,68,68,.1);border-color:rgba(239,68,68,.35);}
       </style>
-      <script>
-        async function testValidationCheck() {
-          const report = document.getElementById('vc-report');
-          report.textContent = 'Testing…';
-          const fd = new FormData();
-          fd.append('message_text', document.getElementById('vc-sample').value || '');
-          fd.append('segment', document.getElementById('vc-seg').value || '');
-          fd.append('field', document.getElementById('vc-field').value || '');
-          fd.append('required', document.getElementById('vc-required').checked ? 'true' : 'false');
-          fd.append('pattern', document.getElementById('vc-pattern').value || '');
-          fd.append('allowed_values', document.getElementById('vc-allowed').value || '');
-          try {
-            const resp = await fetch('{{ request.url_for("api_validate_test_check") }}', { method: 'POST', body: fd });
-            let data;
-            try {
-              data = await resp.json();
-            } catch {
-              data = { ok: false, error: 'Non-JSON response' };
-            }
-            if (!data.ok) {
-              report.textContent = 'Error: ' + (data.error || 'unknown');
-              return;
-            }
-            report.textContent = JSON.stringify(data.report, null, 2);
-          } catch (err) {
-            report.textContent = 'Error: ' + (err && err.message ? err.message : err);
-          }
-        }
-      </script>
     </div>
   </div>
 </div>

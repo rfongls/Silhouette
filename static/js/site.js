@@ -7,6 +7,106 @@ window.esc = s => (s ?? "").toString()
 window.diffChars = (a,b) => ({ beforeHTML: esc(a ?? ""), afterHTML: esc(b ?? "") });
 window.diffLines = (a,b) => ({ beforeHTML: esc(a ?? ""), afterHTML: esc(b ?? "") });
 
+const __fallbackEsc = (s) => (s ?? "").toString()
+  .replace(/&/g, "&amp;")
+  .replace(/</g, "&lt;")
+  .replace(/>/g, "&gt;")
+  .replace(/"/g, "&quot;");
+const htmlEscape = (value) => {
+  const escFn = window.esc || __fallbackEsc;
+  return escFn(value);
+};
+
+function detectSeps(text) {
+  let fieldSep = '|';
+  let compSep = '^';
+  let subSep = '&';
+  const lines = (text || '').split(/\r?\n|\r/g);
+  const msh = lines.find(line => typeof line === 'string' && line.startsWith('MSH') && line.length >= 4);
+  if (msh) {
+    fieldSep = msh[3] || fieldSep;
+    const parts = msh.split(fieldSep);
+    const enc = parts[1] || '';
+    if (enc.length >= 1) compSep = enc[0];
+    if (enc.length >= 4) subSep = enc[3];
+  }
+  return { fieldSep, compSep, subSep };
+}
+
+function tokenIndexFor(segment, fieldNumber) {
+  return (String(segment).toUpperCase() === 'MSH') ? (fieldNumber - 1) : fieldNumber;
+}
+
+function renderLineWithFieldHTML(line, segment, fieldNumber, fieldSep, fieldHTML, fallbackValue) {
+  if (!line) return '';
+  const idx = tokenIndexFor(segment, fieldNumber);
+  const sep = fieldSep || '|';
+  const parts = line.split(sep);
+  if (idx < 0 || idx >= parts.length) {
+    return htmlEscape(line);
+  }
+  return parts
+    .map((token, tokenIdx) => {
+      if (tokenIdx !== idx) {
+        return htmlEscape(token);
+      }
+      if (fieldHTML && fieldHTML.length) {
+        return fieldHTML;
+      }
+      return htmlEscape(fallbackValue ?? token);
+    })
+    .join(sep);
+}
+
+// Minimal diff renderer (character-level by default)
+// Uses jsdiff if present; otherwise falls back to a simple char compare.
+window.renderDiff = function renderDiff(before, after) {
+  const escHtml = window.esc || ((s) => (s ?? "").toString()
+    .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"));
+  const JsDiff = window.Diff || window.JsDiff || window.jsdiff || null;
+
+  if (JsDiff && typeof JsDiff.diffChars === 'function') {
+    const parts = JsDiff.diffChars(before || '', after || '');
+    let beforeHTML = '', afterHTML = '';
+    for (const part of parts) {
+      const value = escHtml(part.value);
+      if (part.added) {
+        afterHTML += `<ins class="added">${value}</ins>`;
+      } else if (part.removed) {
+        beforeHTML += `<del class="removed">${value}</del>`;
+      } else {
+        beforeHTML += `<span class="same">${value}</span>`;
+        afterHTML  += `<span class="same">${value}</span>`;
+      }
+    }
+    return { beforeHTML, afterHTML };
+  }
+
+  // Fallback (no jsdiff): naive char compare
+  const a = String(before || '');
+  const b = String(after || '');
+  let i = 0, j = 0;
+  let beforeHTML = '', afterHTML = '';
+  while (i < a.length || j < b.length) {
+    if (a[i] === b[j]) {
+      const value = escHtml(a[i] || '');
+      beforeHTML += `<span class="same">${value}</span>`;
+      afterHTML  += `<span class="same">${value}</span>`;
+      i += 1; j += 1;
+    } else {
+      if (a[i] !== undefined) {
+        beforeHTML += `<del class="removed">${escHtml(a[i])}</del>`;
+        i += 1;
+      }
+      if (b[j] !== undefined) {
+        afterHTML  += `<ins class="added">${escHtml(b[j])}</ins>`;
+        j += 1;
+      }
+    }
+  }
+  return { beforeHTML, afterHTML };
+};
+
 /* ========== De-ID modal initializer ========== */
 /* Call this AFTER the modal HTML is inserted (after HTMX settles). */
 window.initDeidModal = function initDeidModal(sel) {
@@ -31,6 +131,9 @@ window.initDeidModal = function initDeidModal(sel) {
   const sampleArea  = $('#m-sample');
   const form        = root.querySelector('form');
   const testBtn     = root.querySelector('[data-deid-test]');
+  const card        = root.querySelector('.modal-card');
+  const btnDown     = root.querySelector('#deid-scroll-down');
+  const btnTop      = root.querySelector('#deid-scroll-top');
   const hiddenParamMode = () => form?.querySelector('input[type="hidden"][name="param_mode"]') || null;
 
   function fitModalToViewport() {
@@ -114,15 +217,62 @@ window.initDeidModal = function initDeidModal(sel) {
         return;
       }
 
-      const cd = window.diffChars(data.before?.field || '', data.after?.field || '');
-      beforeField.innerHTML = cd.beforeHTML;
-      afterField.innerHTML  = cd.afterHTML;
+      const segVal = (seg?.value || '').trim().toUpperCase();
+      const fldNum = parseInt(fld?.value || '0', 10) || 0;
+      const sampleText = sampleArea?.value || '';
+      const beforeLineRaw = data.before?.line || '';
+      const afterLineRaw = data.after?.line || '';
+      const beforeMsgRaw = data.before?.message || '';
+      const afterMsgRaw = data.after?.message || '';
+      const seps = detectSeps(beforeLineRaw || beforeMsgRaw || afterLineRaw || afterMsgRaw || sampleText);
 
-      const beforeMsg = (data.before && (data.before.message || data.before.line)) || '';
-      const afterMsg  = (data.after && (data.after.message || data.after.line)) || '';
-      const ld = window.diffLines(beforeMsg, afterMsg);
-      msgBefore.innerHTML = ld.beforeHTML;
-      msgAfter.innerHTML  = ld.afterHTML;
+      const fieldDiff = window.renderDiff(data.before?.field || '', data.after?.field || '');
+      if (beforeField) {
+        if (fieldDiff.beforeHTML) {
+          beforeField.innerHTML = fieldDiff.beforeHTML;
+        } else {
+          beforeField.textContent = '—';
+        }
+      }
+      if (afterField) {
+        if (fieldDiff.afterHTML) {
+          afterField.innerHTML = fieldDiff.afterHTML;
+        } else {
+          afterField.textContent = '—';
+        }
+      }
+
+      if (msgBefore) {
+        if (beforeLineRaw) {
+          msgBefore.innerHTML = renderLineWithFieldHTML(
+            beforeLineRaw,
+            segVal,
+            fldNum,
+            seps.fieldSep,
+            fieldDiff.beforeHTML,
+            data.before?.field
+          );
+        } else {
+          const fallbackBefore = beforeMsgRaw || (segVal ? `Segment ${segVal} not found in sample` : '—');
+          msgBefore.textContent = fallbackBefore || '—';
+        }
+      }
+
+      if (msgAfter) {
+        if (afterLineRaw) {
+          msgAfter.innerHTML = renderLineWithFieldHTML(
+            afterLineRaw,
+            segVal,
+            fldNum,
+            seps.fieldSep,
+            fieldDiff.afterHTML,
+            data.after?.field
+          );
+        } else {
+          const fallbackAfter = afterMsgRaw || (segVal ? `Segment ${segVal} not found in sample` : '—');
+          msgAfter.textContent = fallbackAfter || '—';
+        }
+      }
       fitModalToViewport();
     }catch(e){
       afterField.innerHTML = esc('Test error: ' + e);
@@ -136,6 +286,19 @@ window.initDeidModal = function initDeidModal(sel) {
     if (testBtn && !testBtn.dataset.deidBound) {
       testBtn.addEventListener('click', testDeidRule);
       testBtn.dataset.deidBound = '1';
+    }
+    if (btnDown && btnTop && card && !btnDown.dataset.scrollBound) {
+      btnDown.addEventListener('click', () => {
+        card.scrollBy({ top: Math.round(card.clientHeight * 0.9), behavior: 'smooth' });
+      });
+      btnTop.addEventListener('click', () => {
+        card.scrollTo({ top: 0, behavior: 'smooth' });
+      });
+      card.addEventListener('scroll', () => {
+        btnTop.hidden = card.scrollTop < 32;
+      }, { passive: true });
+      btnDown.dataset.scrollBound = '1';
+      btnTop.hidden = card.scrollTop < 32;
     }
     root.addEventListener('change', (evt) => {
       const target = evt.target;
@@ -168,6 +331,182 @@ window.initDeidModal = function initDeidModal(sel) {
   updatePath();
   syncParamModeFromSelect();
   fitModalToViewport();
+};
+
+window.initValModal = function initValModal(sel) {
+  const root = (typeof sel === 'string') ? document.querySelector(sel) : sel;
+  if (!root || root.dataset.valInit === '1') return;
+  root.dataset.valInit = '1';
+
+  const $ = (selector) => root.querySelector(selector);
+  const sampleArea = $('#vc-sample');
+  const segmentInput = $('#vc-seg');
+  const fieldInput = $('#vc-field');
+  const requiredInput = $('#vc-required');
+  const patternInput = $('#vc-pattern');
+  const allowedInput = $('#vc-allowed');
+  const foundEl   = $('#val-found');
+  const resultEl  = $('#val-result');
+  const reasonEl  = $('#val-reason');
+  const report = $('#vc-report');
+  const testBtn = root.querySelector('[data-val-test]');
+  const card = root.querySelector('.modal-card');
+  const btnDown = root.querySelector('#val-scroll-down');
+  const btnTop = root.querySelector('#val-scroll-top');
+  const endpoint = root.getAttribute('data-test-endpoint') || root.dataset.testEndpoint || '';
+
+  const findLine = (sample, seg) => {
+    if (!sample || !seg) return '';
+    const lines = sample.split(/\r?\n|\r/g);
+    const target = seg.trim().toUpperCase();
+    if (!target) return '';
+    for (const line of lines) {
+      if (!line) continue;
+      if (line.trim().toUpperCase().startsWith(target + '|')) return line;
+    }
+    return '';
+  };
+
+  const getFieldValue = (line, seg, idx) => {
+    if (!line || !idx) return '';
+    const parts = line.split('|');
+    const tokenIdx = (String(seg).toUpperCase() === 'MSH') ? (idx - 1) : idx;
+    return tokenIdx >= 0 ? (parts[tokenIdx] ?? '') : '';
+  };
+
+  const formatIssues = (reportData) => {
+    if (!reportData || typeof reportData !== 'object') return '—';
+    const issues = Array.isArray(reportData.issues) ? reportData.issues : [];
+    if (!issues.length) return 'No issues detected.';
+    return issues
+      .map((issue, index) => {
+        const code = issue.code ? `[${issue.code}]` : 'Issue';
+        const location = [issue.segment, issue.field].filter(Boolean).join('-');
+        const occurrence = issue.occurrence != null ? ` (#${issue.occurrence + 1})` : '';
+        const message = issue.message || JSON.stringify(issue);
+        return `${index + 1}. ${code} ${location}${occurrence}: ${message}`;
+      })
+      .join('\n');
+  };
+
+  async function runValidationTest() {
+    if (report) report.textContent = 'Testing…';
+    if (foundEl) foundEl.textContent = '—';
+    if (resultEl) { resultEl.textContent = '—'; resultEl.className = 'result-badge'; }
+    if (reasonEl) reasonEl.textContent = '';
+
+    if (!endpoint) {
+      if (report) report.textContent = 'Error: Missing test endpoint';
+      return;
+    }
+
+    const fd = new FormData();
+    fd.append('message_text', sampleArea?.value || '');
+    fd.append('segment', segmentInput?.value || '');
+    fd.append('field', fieldInput?.value || '');
+    fd.append('required', requiredInput && requiredInput.checked ? 'true' : 'false');
+    fd.append('pattern', patternInput?.value || '');
+    fd.append('allowed_values', allowedInput?.value || '');
+
+    try {
+      const res = await fetch(endpoint, { method: 'POST', body: fd });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.ok) {
+        const err = (data && (data.error || data.detail || data.message)) || ('HTTP ' + res.status);
+        if (report) report.textContent = 'Error: ' + err;
+        return;
+      }
+
+      const sample = sampleArea?.value || '';
+      const segment = (segmentInput?.value || '').trim().toUpperCase();
+      const fieldIndex = parseInt(fieldInput?.value || '0', 10) || 0;
+      const beforeLine = findLine(sample, segment);
+      const fieldValue = getFieldValue(beforeLine, segment, fieldIndex);
+      if (foundEl) foundEl.textContent = fieldValue || '—';
+
+      let pass = true;
+      let reasons = [];
+      if (data && data.report && Array.isArray(data.report.issues)) {
+        pass = data.report.issues.length === 0;
+        reasons = data.report.issues.map((issue) => issue.message || issue.code || JSON.stringify(issue));
+      } else {
+        const required = !!(requiredInput && requiredInput.checked);
+        const patternText = (patternInput?.value || '').trim();
+        const allowedRaw = (allowedInput?.value || '').trim();
+        const allowedValues = allowedRaw
+          ? allowedRaw.split(/[;,\n]/).map((token) => token.trim()).filter(Boolean)
+          : [];
+
+        if (required && !fieldValue) {
+          pass = false;
+          reasons.push('Required but empty');
+        }
+
+        if (patternText) {
+          try {
+            const regex = new RegExp(patternText);
+            if (!regex.test(fieldValue || '')) {
+              pass = false;
+              reasons.push('Pattern not matched');
+            }
+          } catch (regexErr) {
+            pass = false;
+            reasons.push('Invalid regex');
+          }
+        }
+
+        if (allowedValues.length) {
+          if (!allowedValues.includes(fieldValue || '')) {
+            pass = false;
+            reasons.push('Value not in allowed list');
+          }
+        }
+      }
+
+      if (!pass && reasons.length === 0) {
+        reasons.push('Validation failed.');
+      }
+
+      if (resultEl) {
+        resultEl.textContent = pass ? 'MATCH' : 'FAIL';
+        resultEl.className = 'result-badge ' + (pass ? 'pass' : 'fail');
+      }
+      if (reasonEl) {
+        reasonEl.textContent = pass ? 'All checks passed.' : reasons.join('\n');
+      }
+
+      if (report) {
+        const formatted = formatIssues(data.report);
+        report.textContent =
+          (formatted && formatted !== '—')
+            ? formatted
+            : (typeof data.report === 'string'
+                ? data.report
+                : JSON.stringify(data.report ?? {}, null, 2));
+      }
+    } catch (err) {
+      if (report) report.textContent = 'Error: ' + err;
+    }
+  }
+
+  if (testBtn && !testBtn.dataset.valBound) {
+    testBtn.addEventListener('click', runValidationTest);
+    testBtn.dataset.valBound = '1';
+  }
+
+  if (btnDown && btnTop && card && !btnDown.dataset.scrollBound) {
+    btnDown.addEventListener('click', () => {
+      card.scrollBy({ top: Math.round(card.clientHeight * 0.9), behavior: 'smooth' });
+    });
+    btnTop.addEventListener('click', () => {
+      card.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+    card.addEventListener('scroll', () => {
+      btnTop.hidden = card.scrollTop < 32;
+    }, { passive: true });
+    btnDown.dataset.scrollBound = '1';
+    btnTop.hidden = card.scrollTop < 32;
+  }
 };
 
 /* --- Debug wiring for param controls --- */
@@ -214,7 +553,11 @@ window.attachParamDebug = function attachParamDebug(root){
 /* ========== HTMX hook ==========
    Any time HTMX swaps in content that includes a De-ID modal,
    this will run the initializer automatically. */
-document.addEventListener('htmx:afterSettle', (evt) => {
-  const modal = document.querySelector('#deid-modal');
-  if (modal) window.initDeidModal(modal);
+document.addEventListener('htmx:afterSettle', () => {
+  const deidModal = document.querySelector('#deid-modal');
+  if (deidModal) window.initDeidModal(deidModal);
+  const valModal = document.querySelector('#val-modal');
+  if (valModal && typeof window.initValModal === 'function') {
+    window.initValModal(valModal);
+  }
 });
