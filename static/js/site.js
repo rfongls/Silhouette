@@ -275,7 +275,7 @@ window.initValModal = function initValModal(sel) {
 
   const findLine = (sample, seg) => {
     if (!sample || !seg) return '';
-    const lines = sample.split(/\r?\n/);
+    const lines = sample.split(/\r?\n|\r/g);
     const target = seg.trim().toUpperCase();
     if (!target) return '';
     for (const line of lines) {
@@ -285,10 +285,11 @@ window.initValModal = function initValModal(sel) {
     return '';
   };
 
-  const getFieldValue = (line, idx) => {
+  const getFieldValue = (line, seg, idx) => {
     if (!line || !idx) return '';
     const parts = line.split('|');
-    return parts[idx] ?? '';
+    const tokenIdx = (String(seg).toUpperCase() === 'MSH') ? (idx - 1) : idx;
+    return tokenIdx >= 0 ? (parts[tokenIdx] ?? '') : '';
   };
 
   const formatIssues = (reportData) => {
@@ -340,7 +341,7 @@ window.initValModal = function initValModal(sel) {
       const fieldIndex = parseInt(fieldInput?.value || '0', 10) || 0;
       const beforeLine = findLine(sample, segment);
       const afterLine = beforeLine;
-      const fieldValue = getFieldValue(beforeLine, fieldIndex);
+      const fieldValue = getFieldValue(beforeLine, segment, fieldIndex);
       const afterFieldValue = fieldValue;
 
       const fieldDiff = window.renderDiff(fieldValue, afterFieldValue);
@@ -353,7 +354,13 @@ window.initValModal = function initValModal(sel) {
       setDiff(msgAfter, lineDiff.afterHTML, afterLine || fallbackLine);
 
       if (report) {
-        report.textContent = formatIssues(data.report);
+        const formatted = formatIssues(data.report);
+        report.textContent =
+          (formatted && formatted !== '—')
+            ? formatted
+            : (typeof data.report === 'string'
+                ? data.report
+                : JSON.stringify(data.report ?? {}, null, 2));
       }
     } catch (err) {
       if (report) report.textContent = 'Error: ' + err;
