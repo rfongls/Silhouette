@@ -1,13 +1,28 @@
-<div id="val-list" class="mt">
-  {% for name in val_templates %}
-    <div class="row between mb-1">
-      <a href="{{ request.url_for('ui_settings_val_edit', name=name) }}" class="link">{{ name }}</a>
-      <form hx-post="{{ request.url_for('ui_settings_val_delete') }}" hx-target="#val-list" class="row gap small" style="margin:0">
-        <input type="hidden" name="name" value="{{ name }}" />
-        <button class="button danger small" title="Delete template">Delete</button>
-      </form>
-    </div>
+<div id="val-templates">
+  <form class="row gap small mb"
+        hx-post="{{ request.url_for('ui_settings_val_create') }}"
+        hx-target="#val-templates">
+    <input class="input" name="name" placeholder="Template name (e.g., default)" required>
+    <button class="button">Create</button>
+  </form>
+
+  {% if val_templates %}
+    <form class="row gap small"
+          onsubmit="(function(f){var n=f.elements['name_select'].value; if(n){window.location.href='{{ request.url_for('ui_settings_val_edit', name='__NAME__') }}'.replace('__NAME__', encodeURIComponent(n));}})(this); return false;">
+      <select class="input" name="name_select">
+        {% for t in val_templates %}
+          <option value="{{ t }}">{{ t }}</option>
+        {% endfor %}
+      </select>
+      <button class="button" type="submit">Open</button>
+      <button class="button danger" type="button"
+              hx-post="{{ request.url_for('ui_settings_val_delete') }}"
+              hx-vals='js:{"name": this.form.elements["name_select"].value}'
+              hx-target="#val-templates">
+        Delete
+      </button>
+    </form>
   {% else %}
     <p class="muted">No templates yet.</p>
-  {% endfor %}
+  {% endif %}
 </div>

@@ -23,10 +23,6 @@
 
       <div class="card">
         <h2 class="text-h2">Validation Templates</h2>
-        <form hx-post="{{ request.url_for('ui_settings_val_create') }}" hx-target="#val-list" class="row gap small">
-          <input class="input" type="text" name="name" placeholder="Template name (e.g., default)" required />
-          <button class="button">Create</button>
-        </form>
         {% include "ui/settings/_val_list.html" %}
       </div>
     </div>
