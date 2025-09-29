@@ -76,6 +76,7 @@ window.initDeidModal = function initDeidModal(sel) {
       if (!ep) {
         afterField.innerHTML = esc('Missing test endpoint');
         fitModalToViewport();
+
         return;
       }
 

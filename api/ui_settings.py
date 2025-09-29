@@ -550,7 +550,6 @@ def api_deid_test_rule(payload: Dict[str, Any] = Body(...)) -> JSONResponse:
         }
     )
 
-
 # ---------- Pages ----------
 @router.get("/ui/settings", response_class=HTMLResponse, name="ui_settings_index", response_model=None)
 def ui_settings_index(request: Request) -> Response:
