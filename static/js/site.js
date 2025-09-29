@@ -32,6 +32,30 @@ window.initDeidModal = function initDeidModal(sel) {
   const form        = root.querySelector('form');
   const testBtn     = root.querySelector('[data-deid-test]');
   const hiddenParamMode = () => form?.querySelector('input[type="hidden"][name="param_mode"]') || null;
+
+  function fitModalToViewport() {
+    const card = root.querySelector('.modal-card');
+    if (!card) return;
+    card.style.transformOrigin = 'top center';
+    card.style.transform = '';
+    const margin = 24;
+    const available = window.innerHeight - margin * 2;
+    if (available <= 0) return;
+    const rect = card.getBoundingClientRect();
+    if (rect.height > available) {
+      const scale = Math.max(0.75, available / rect.height);
+      card.style.transform = `scale(${scale})`;
+    }
+  }
+
+  const resizeHandler = () => {
+    if (!document.body.contains(root)) {
+      window.removeEventListener('resize', resizeHandler);
+      return;
+    }
+    fitModalToViewport();
+  };
+
   const syncParamModeFromSelect = () => {
     const select = root.querySelector('#m-param-mode');
     const hidden = hiddenParamMode();
@@ -51,6 +75,8 @@ window.initDeidModal = function initDeidModal(sel) {
       const ep = root.getAttribute('data-test-endpoint') || root.dataset.testEndpoint;
       if (!ep) {
         afterField.innerHTML = esc('Missing test endpoint');
+        fitModalToViewport();
+
         return;
       }
 
@@ -84,6 +110,7 @@ window.initDeidModal = function initDeidModal(sel) {
       if (!res.ok || !data.ok) {
         const err = (data && (data.message || data.error || data.detail)) || ('HTTP ' + res.status);
         afterField.innerHTML = esc('[Test failed] ' + err);
+        fitModalToViewport();
         return;
       }
 
@@ -96,8 +123,10 @@ window.initDeidModal = function initDeidModal(sel) {
       const ld = window.diffLines(beforeMsg, afterMsg);
       msgBefore.innerHTML = ld.beforeHTML;
       msgAfter.innerHTML  = ld.afterHTML;
+      fitModalToViewport();
     }catch(e){
       afterField.innerHTML = esc('Test error: ' + e);
+      fitModalToViewport();
     }
   }
 
@@ -132,11 +161,13 @@ window.initDeidModal = function initDeidModal(sel) {
         }
       }
     });
+    window.addEventListener('resize', resizeHandler, { passive: true });
   }
 
   // first render
   updatePath();
   syncParamModeFromSelect();
+  fitModalToViewport();
 };
 
 /* --- Debug wiring for param controls --- */

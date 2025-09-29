@@ -99,4 +99,8 @@
 .badge{display:inline-block;font-size:.85rem;line-height:1;padding:.35rem .5rem;border-radius:.5rem;background:rgba(99,102,241,.12);color:#a5b4fc;border:1px solid rgba(99,102,241,.35)}
 .badge.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace}
 .badge.muted{background:rgba(148,163,184,.15);color:#cbd5e1;border-color:rgba(148,163,184,.35)}
+/* --- Overrides: red "After" text + modal scales instead of scrolling --- */
+#deid-modal .modal-card{max-height:none;overflow:visible;width:min(760px,92vw);transform-origin:top center;}
+#deid-modal #m-after-diff.diff{color:#ef4444;background:transparent;border:none;}
+#deid-modal #m-msg-after.diff{color:#ef4444;}
 </style>
