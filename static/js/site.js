@@ -354,7 +354,6 @@ window.initValModal = function initValModal(sel) {
   const btnDown = root.querySelector('#val-scroll-down');
   const btnTop = root.querySelector('#val-scroll-top');
   const endpoint = root.getAttribute('data-test-endpoint') || root.dataset.testEndpoint || '';
-
   const findLine = (sample, seg) => {
     if (!sample || !seg) return '';
     const lines = sample.split(/\r?\n|\r/g);
@@ -394,7 +393,6 @@ window.initValModal = function initValModal(sel) {
     if (foundEl) foundEl.textContent = '—';
     if (resultEl) { resultEl.textContent = '—'; resultEl.className = 'result-badge'; }
     if (reasonEl) reasonEl.textContent = '';
-
     if (!endpoint) {
       if (report) report.textContent = 'Error: Missing test endpoint';
       return;
