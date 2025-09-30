@@ -471,6 +471,7 @@ window.initValModal = function initValModal(sel) {
     });
     form.dataset.valSubmitBound = '1';
   }
+
   async function runValidationTest() {
     if (report) report.textContent = 'Testing…';
     if (foundEl) foundEl.textContent = '—';
@@ -478,6 +479,7 @@ window.initValModal = function initValModal(sel) {
     if (reasonEl) reasonEl.textContent = '';
 
     const kind = syncHiddenFromUI();
+
     if (!endpoint) {
       if (report) report.textContent = 'Error: Missing test endpoint';
       return;

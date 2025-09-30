@@ -1106,7 +1106,7 @@ async def ui_settings_val_import_csv(request: Request, name: str, file: UploadFi
         checks.append(ValidateCheck(
             segment=(row.get("segment") or "").strip().upper(),
             field=int(row.get("field") or 0),
-            required=(str(row.get("required") or "true").strip().lower() in ("1", "true", "yes", "y")),
+            required=_parse_required_flag(row.get("required") or "true"),
             pattern=row.get("pattern") or None,
             allowed_values=allowed,
         ))
