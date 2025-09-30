@@ -55,11 +55,86 @@
     .row { display: flex; gap: .5rem; align-items: center; }
     .row.gap { gap: .75rem; }
     .row.small { gap: .35rem; }
+    .row.wrap { flex-wrap: wrap; }
     .grid.two { display: grid; grid-template-columns: 1fr 1fr; gap: .75rem; }
+    .grid.two > label { display: flex; flex-direction: column; gap: .35rem; min-width: 0; }
     .table { width: 100%; border-collapse: collapse; }
     .table th, .table td { border-bottom: 1px solid rgba(148, 163, 184, .2); padding: .5rem .6rem; }
     .button.small { padding: .25rem .5rem; font-size: .9rem; }
     .button.danger { background: #7f1d1d; color: #fff; }
+
+    /* Shared modal chrome */
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, .2);
+      backdrop-filter: blur(1px);
+    }
+    .modal {
+      position: fixed;
+      inset: 0;
+      display: grid;
+      place-items: center;
+      z-index: 50;
+      padding: 1rem;
+    }
+    .modal-card {
+      background: var(--card-bg, #0b1220);
+      color: var(--card-fg, #e5e7eb);
+      border-radius: 1rem;
+      padding: 1rem 1.25rem;
+      width: min(760px, 92vw);
+      max-height: 72vh;
+      overflow: auto;
+      box-shadow: 0 14px 34px rgba(15, 23, 42, .35);
+      border: 1px solid var(--border-strong, #2b2f3a);
+    }
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: .5rem;
+    }
+    .modal-scroll-controls {
+      position: sticky;
+      bottom: 8px;
+      display: flex;
+      gap: 8px;
+      justify-content: flex-end;
+      padding: 8px 0;
+      pointer-events: none;
+    }
+    .modal-scroll-controls .btn {
+      pointer-events: auto;
+      border: 1px solid var(--border-strong, #2b2f3a);
+      background: rgba(20, 24, 31, .75);
+      padding: 6px 10px;
+      border-radius: 6px;
+      font-size: 12px;
+      color: var(--text-primary, #e6e9f2);
+    }
+
+    .diff {
+      color: var(--text-primary, #e6e9f2);
+      white-space: pre-wrap;
+      background: rgba(15, 23, 42, .45);
+      border-radius: .5rem;
+      padding: .5rem;
+      min-height: 2.25rem;
+      word-break: break-word;
+    }
+    .diff ins.added {
+      color: #ef4444;
+      background: transparent;
+      text-decoration: none;
+    }
+    .diff del.removed {
+      color: #94a3b8;
+      text-decoration: line-through;
+    }
+    .diff .same {
+      color: inherit;
+    }
   </style>
   {% block extra_head %}{% endblock %}
   <script src="{{ static_base }}vendor/htmx.min.js?v=1.9.12"></script>

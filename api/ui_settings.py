@@ -269,6 +269,9 @@ def _json_path(base: Path, name: str) -> Path:
 def _list_templates(base: Path) -> List[str]:
     return [p.stem for p in sorted(base.glob("*.json"))]
 
+def _parse_required_flag(value: Any) -> bool:
+    return str(value).strip().lower() in {"1", "true", "yes", "on"}
+
 def _load_json(path: Path) -> Dict[str, Any]:
     if not path.exists():
         raise HTTPException(status_code=404, detail=f"Template not found: {path.name}")
@@ -991,10 +994,38 @@ def ui_settings_val_add_check(
     tpl.checks.append(ValidateCheck(
         segment=segment.strip().upper(),
         field=int(field),
-        required=bool(required),
+        required=_parse_required_flag(required),
         pattern=pattern or None,
         allowed_values=allowed,
     ))
+    _save_json(p, tpl.to_dict())
+    return templates.TemplateResponse("ui/settings/_val_checks_table.html", {"request": request, "tpl": tpl})
+
+
+@router.post("/ui/settings/val/update_check/{name}", response_class=HTMLResponse, name="ui_settings_val_update_check", response_model=None)
+def ui_settings_val_update_check(
+    request: Request,
+    name: str,
+    index: int = Form(...),
+    segment: str = Form(...),
+    field: int = Form(...),
+    required: bool = Form(False),
+    pattern: Optional[str] = Form(None),
+    allowed_values: Optional[str] = Form(None),
+) -> Response:
+    p = _json_path(VAL_DIR, name)
+    tpl = ValidateTemplate.from_dict(_load_json(p))
+    tpl.checks = tpl.checks or []
+    if not (0 <= index < len(tpl.checks)):
+        raise HTTPException(status_code=404, detail="Check not found")
+    allowed = [v.strip() for v in (allowed_values or "").replace(";", ",").split(",") if v.strip()] or None
+    tpl.checks[index] = ValidateCheck(
+        segment=segment.strip().upper(),
+        field=int(field),
+        required=_parse_required_flag(required),
+        pattern=pattern or None,
+        allowed_values=allowed,
+    )
     _save_json(p, tpl.to_dict())
     return templates.TemplateResponse("ui/settings/_val_checks_table.html", {"request": request, "tpl": tpl})
 
@@ -1016,7 +1047,7 @@ def api_validate_test_check(
     from silhouette_core.interop.validate_workbook import validate_with_template
 
     allowed = [v.strip() for v in (allowed_values or "").replace(";", ",").split(",") if v.strip()] or None
-    required_flag = str(required).strip().lower() in {"1", "true", "yes", "on"}
+    required_flag = _parse_required_flag(required)
     tpl = {
         "name": "_preview",
         "checks": [
@@ -1075,7 +1106,7 @@ async def ui_settings_val_import_csv(request: Request, name: str, file: UploadFi
         checks.append(ValidateCheck(
             segment=(row.get("segment") or "").strip().upper(),
             field=int(row.get("field") or 0),
-            required=(str(row.get("required") or "true").strip().lower() in ("1", "true", "yes", "y")),
+            required=_parse_required_flag(row.get("required") or "true"),
             pattern=row.get("pattern") or None,
             allowed_values=allowed,
         ))
@@ -1093,6 +1124,23 @@ async def ui_settings_val_import_csv(request: Request, name: str, file: UploadFi
 def ui_settings_val_new_check_modal(request: Request, name: str) -> Response:
     tpl = ValidateTemplate.from_dict(_load_json(_json_path(VAL_DIR, name)))
     return templates.TemplateResponse("ui/settings/_val_check_modal.html", {"request": request, "tpl": tpl})
+
+
+@router.get(
+    "/ui/settings/val/edit_check_modal/{name}",
+    response_class=HTMLResponse,
+    name="ui_settings_val_edit_check_modal",
+    response_model=None,
+)
+def ui_settings_val_edit_check_modal(request: Request, name: str, index: int = 0) -> Response:
+    tpl = ValidateTemplate.from_dict(_load_json(_json_path(VAL_DIR, name)))
+    checks = tpl.checks or []
+    if not (0 <= index < len(checks)):
+        raise HTTPException(status_code=404, detail="Check not found")
+    return templates.TemplateResponse(
+        "ui/settings/_val_check_modal.html",
+        {"request": request, "tpl": tpl, "check": checks[index], "index": index},
+    )
 
 # Delete the entire Validate template (required by your template)
 @router.post("/ui/settings/val/delete", name="ui_settings_val_delete", response_class=HTMLResponse, response_model=None)
