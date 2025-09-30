@@ -360,7 +360,6 @@ window.initValModal = function initValModal(sel) {
   const hiddenRequired = root.querySelector('input[name="required"]');
   const hiddenPattern  = root.querySelector('input[name="pattern"]');
   const hiddenAllowed  = root.querySelector('input[name="allowed_values"]');
-
   const findLine = (sample, seg) => {
     if (!sample || !seg) return '';
     const lines = sample.split(/\r?\n|\r/g);
