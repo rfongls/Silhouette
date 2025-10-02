@@ -269,30 +269,10 @@ def _json_path(base: Path, name: str) -> Path:
 def _list_templates(base: Path) -> List[str]:
     return [p.stem for p in sorted(base.glob("*.json"))]
 
-def _parse_required_flag(value: Any, default: bool = False) -> bool:
-    """Normalize boolean-like inputs with a configurable default.
-
-    Truthy tokens: 1/"1", true/"true", t/"t", yes/"yes", y/"y", on/"on".
-    Falsy tokens: 0/"0", false/"false", f/"f", no/"no", n/"n", off/"off".
-    Blank/unknown values fall back to ``default``.
-    """
-
-    s = str(value or "").strip().lower()
-    if s == "":
-        return default
-
-    truey = {"1", "true", "t", "yes", "y", "on"}
-    falsy = {"0", "false", "f", "no", "n", "off"}
-
-    if s in truey:
-        return True
-    if s in falsy:
-        return False
-
-    try:
-        return bool(int(s))
-    except Exception:
-        return default
+def _parse_required_flag(value: Any) -> bool:
+    if isinstance(value, bool):
+        return value
+    return str(value).strip().lower() in {"1", "true", "t", "yes", "y", "on"}
 
 def _load_json(path: Path) -> Dict[str, Any]:
     if not path.exists():

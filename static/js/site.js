@@ -680,10 +680,9 @@ window.initAccordions = function initAccordions(rootSel) {
     if (!toggle || !body) return;
 
     const render = (open) => {
-      const isOpen = !!open;
-      toggle.setAttribute('aria-expanded', String(isOpen));
-      body.hidden = !isOpen;
-      if (isOpen) {
+      toggle.setAttribute('aria-expanded', String(!!open));
+      body.hidden = !open;
+      if (open) {
         body.style.setProperty('display', 'block', 'important');
         body.style.removeProperty('max-height');
         body.setAttribute('aria-hidden', 'false');
@@ -692,7 +691,7 @@ window.initAccordions = function initAccordions(rootSel) {
         body.style.setProperty('max-height', '0px', 'important');
         body.setAttribute('aria-hidden', 'true');
       }
-      if (label) label.textContent = isOpen ? 'Collapse' : 'Expand';
+      if (label) label.textContent = open ? 'Collapse' : 'Expand';
     };
 
     const getOpen = () => (acc.getAttribute('data-open') || '1') === '1';
@@ -716,6 +715,7 @@ window.initAccordions = function initAccordions(rootSel) {
 
     if (!toggle.hasAttribute('role')) toggle.setAttribute('role', 'button');
     if (!toggle.hasAttribute('tabindex')) toggle.setAttribute('tabindex', '0');
+
     toggle.addEventListener('keydown', (evt) => {
       if (evt.key === 'Enter' || evt.key === ' ') {
         onToggle(evt);
