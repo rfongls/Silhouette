@@ -683,27 +683,33 @@ window.initAccordions = function initAccordions(rootSel) {
     };
     const initial = acc.getAttribute('data-open') === '1';
     setOpen(initial);
-    // Make header behave like a button, with good UX & accessibility.
-    if (!toggle.hasAttribute('role')) toggle.setAttribute('role', 'button');
-    if (!toggle.hasAttribute('tabindex')) toggle.setAttribute('tabindex', '0');
-
-    const shouldIgnore = (e) => {
-      // Ignore modified clicks and non-primary buttons
-      if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return true;
-      // Do not hijack real interactive elements inside the header
-      if (e.target.closest('a[href], button:not([data-acc-toggle]), input, select, textarea, label')) return true;
+    // Helper: should this click toggle, or is the user clicking a real control/link?
+    const isInteractiveTarget = (evt) => {
+      const t = evt.target;
+      if (!t) return false;
+      // Allow normal navigation for real anchors (except href="#")
+      const a = t.closest && t.closest('a[href]');
+      if (a && a.getAttribute('href') && a.getAttribute('href') !== '#') return true;
+      // Don't hijack genuine form controls
+      if (t.closest && t.closest('button, input, select, textarea, label')) return true;
       return false;
     };
 
-    toggle.addEventListener('click', (e) => {
-      if (shouldIgnore(e) || e.defaultPrevented) return;
+    // Click to toggle, but never cancel actual link/navigation clicks
+    toggle.addEventListener('click', (evt) => {
+      if (isInteractiveTarget(evt)) return; // let default happen
+      // No default to prevent on <header/ div>, just flip the state.
       const open = acc.getAttribute('data-open') === '1';
       setOpen(!open);
     });
 
-    toggle.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' || e.key === ' ') {
-        e.preventDefault();
+    // Keyboard accessibility: Enter / Space toggles
+    if (!toggle.hasAttribute('role')) toggle.setAttribute('role', 'button');
+    if (!toggle.hasAttribute('tabindex')) toggle.setAttribute('tabindex', '0');
+    toggle.addEventListener('keydown', (evt) => {
+      const key = evt.key;
+      if (key === 'Enter' || key === ' ') {
+        evt.preventDefault();
         const open = acc.getAttribute('data-open') === '1';
         setOpen(!open);
       }
