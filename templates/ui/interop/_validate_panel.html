@@ -7,34 +7,40 @@
 {% endif %}
 {% set val_options = val_templates if val_templates is defined and val_templates else [] %}
 {% set default_val_template = 'default' if 'default' in val_options else (val_options[0] if val_options else '') %}
-<section id="validate-panel" class="panel interop-panel interop-panel-validate">
-  <form id="validate-form"
-        method="post"
-        action="{{ urls.ui_validate | default(root ~ '/ui/interop/validate', true) }}"
-        hx-post="{{ validate_api }}"
-        hx-target="#validate-report"
-        hx-swap="innerHTML"
-        hx-headers='{"Accept":"text/html"}'
-        hx-on::afterSwap="window.InteropUI.onValidateComplete(event)">
-    <input type="hidden" name="format" value="html" />
-    <label class="row gap small">
-      <span>Template</span>
-      <select name="val_template" id="val-template" class="input">
-        {% for name in val_options %}
-          <option value="{{ name }}" {% if name == default_val_template %}selected{% endif %}>{{ name }}</option>
-        {% endfor %}
-      </select>
-    </label>
-    <textarea class="input textarea-output" id="val-text" name="message" placeholder="Paste HL7 to validate"></textarea>
-    <div class="row gap mt">
-      <input class="input" type="text" name="profile" placeholder="profile/workbook (optional)" />
-      <button class="btn" type="submit" data-action="validate">Validate</button>
+<section id="validate-panel" class="panel interop-panel interop-panel-validate" data-accordion data-open="1">
+  <header class="row gap" data-acc-toggle aria-expanded="true" style="justify-content:space-between;align-items:center;cursor:pointer">
+    <h3 class="text-h3" style="margin:0">Validate</h3>
+    <span class="muted small" data-acc-label>Collapse</span>
+  </header>
+  <div class="module-body" data-acc-body>
+    <form id="validate-form"
+          method="post"
+          action="{{ urls.ui_validate | default(root ~ '/ui/interop/validate', true) }}"
+          hx-post="{{ validate_api }}"
+          hx-target="#validate-report"
+          hx-swap="innerHTML"
+          hx-headers='{"Accept":"text/html"}'
+          hx-on::afterSwap="window.InteropUI.onValidateComplete(event)">
+      <input type="hidden" name="format" value="html" />
+      <label class="row gap small">
+        <span>Template</span>
+        <select name="val_template" id="val-template" class="input">
+          {% for name in val_options %}
+            <option value="{{ name }}" {% if name == default_val_template %}selected{% endif %}>{{ name }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <textarea class="input textarea-output" id="val-text" name="message" placeholder="Paste HL7 to validate"></textarea>
+      <div class="row gap mt">
+        <input class="input" type="text" name="profile" placeholder="profile/workbook (optional)" />
+        <button class="btn" type="submit" data-action="validate">Validate</button>
+      </div>
+    </form>
+    <div class="form-row mt">
+      <button class="btn btn-secondary btn-sm" id="print-validate-report" type="button">Print report</button>
     </div>
-  </form>
-  <div class="form-row mt">
-    <button class="btn btn-secondary btn-sm" id="print-validate-report" type="button">Print report</button>
-  </div>
-  <div id="validate-report" class="mt">
-    <p class="muted">Run validation to see a report.</p>
+    <div id="validate-report" class="mt">
+      <p class="muted">Run validation to see a report.</p>
+    </div>
   </div>
 </section>
