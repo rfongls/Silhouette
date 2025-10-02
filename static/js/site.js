@@ -666,6 +666,66 @@ window.attachParamDebug = function attachParamDebug(root){
   }catch(e){ console.error(e); }
 };
 
+/* ========= Module accordion binding ========= */
+window.initAccordions = function initAccordions(rootSel) {
+  const root = rootSel ? document.querySelector(rootSel) : document;
+  if (!root) return;
+  root.querySelectorAll('[data-accordion]').forEach((acc) => {
+    if (acc.dataset.accordionBound === '1') return;
+    acc.dataset.accordionBound = '1';
+
+    const toggle = acc.querySelector('[data-acc-toggle]');
+    const body = acc.querySelector('[data-acc-body]') || acc.querySelector('.module-body');
+    const label = toggle && toggle.querySelector('[data-acc-label]');
+    if (!toggle || !body) return;
+
+    const apply = (open) => {
+      const isOpen = !!open;
+      acc.setAttribute('data-open', isOpen ? '1' : '0');
+      toggle.setAttribute('aria-expanded', String(isOpen));
+      body.hidden = !isOpen;
+      body.style.display = isOpen ? 'block' : 'none';
+      body.style.maxHeight = isOpen ? '' : '0px';
+      body.setAttribute('aria-hidden', isOpen ? 'false' : 'true');
+      if (label) label.textContent = isOpen ? 'Collapse' : 'Expand';
+    };
+
+    const initial = (acc.getAttribute('data-open') || '1') === '1';
+    apply(initial);
+
+    const isInteractiveTarget = (evt) => {
+      const t = evt.target;
+      if (!t) return false;
+      const anchor = t.closest && t.closest('a[href]');
+      if (anchor && anchor.getAttribute('href') && anchor.getAttribute('href') !== '#') return true;
+      if (t.closest && t.closest('button:not([data-acc-toggle]), input, select, textarea, [role="button"], label')) return true;
+      return false;
+    };
+
+    toggle.addEventListener('click', (evt) => {
+      if (isInteractiveTarget(evt) && evt.target !== toggle) return;
+      evt.preventDefault();
+      const open = acc.getAttribute('data-open') === '1';
+      apply(!open);
+    });
+
+    if (!toggle.hasAttribute('role')) toggle.setAttribute('role', 'button');
+    if (!toggle.hasAttribute('tabindex')) toggle.setAttribute('tabindex', '0');
+    toggle.addEventListener('keydown', (evt) => {
+      if (evt.key === 'Enter' || evt.key === ' ') {
+        evt.preventDefault();
+        const open = acc.getAttribute('data-open') === '1';
+        apply(!open);
+      }
+    });
+
+    const observer = new MutationObserver(() => {
+      apply(acc.getAttribute('data-open') === '1');
+    });
+    observer.observe(acc, { attributes: true, attributeFilter: ['data-open'] });
+  });
+};
+
 const bootValPanels = () => {
   document.querySelectorAll('[data-val-checks-panel]').forEach((panel) => {
     window.initValChecksPanel(panel);
@@ -683,9 +743,15 @@ document.addEventListener('htmx:afterSettle', () => {
     window.initValModal(valModal);
   }
   bootValPanels();
+  if (typeof window.initAccordions === 'function') {
+    window.initAccordions();
+  }
 });
 
 document.addEventListener('DOMContentLoaded', () => {
+  if (typeof window.initAccordions === 'function') {
+    window.initAccordions();
+  }
   bootValPanels();
   const valModal = document.querySelector('#val-modal');
   if (valModal && typeof window.initValModal === 'function') {
