@@ -666,61 +666,42 @@ window.attachParamDebug = function attachParamDebug(root){
   }catch(e){ console.error(e); }
 };
 
-/* ========= Module accordion binding ========= */
+/* ========= Interop module accordion binding =========
+   - Works even if the feature tabs were never clicked.
+   - Does NOT prevent default navigation or form interactions.
+*/
 window.initAccordions = function initAccordions(rootSel) {
   const root = rootSel ? document.querySelector(rootSel) : document;
   if (!root) return;
-  root.querySelectorAll('[data-accordion]').forEach((acc) => {
-    if (acc.dataset.accordionBound === '1') return;
-    acc.dataset.accordionBound = '1';
+  root.querySelectorAll('.interop-panel[data-accordion]').forEach((panel) => {
+    if (panel.dataset.accordionBound === '1') return;
+    panel.dataset.accordionBound = '1';
 
-    const toggle = acc.querySelector('[data-acc-toggle]');
-    const body = acc.querySelector('[data-acc-body]') || acc.querySelector('.module-body');
-    const label = toggle && toggle.querySelector('[data-acc-label]');
-    if (!toggle || !body) return;
+    const header = panel.querySelector('[data-acc-toggle]');
+    const body = panel.querySelector('[data-acc-body]') || panel.querySelector('.module-body');
+    const label = header ? (header.querySelector('[data-acc-label]') || header.querySelector('.acc-label')) : null;
+    if (!header || !body) return;
 
-    const render = (open) => {
-      toggle.setAttribute('aria-expanded', String(!!open));
-      body.hidden = !open;
-      if (open) {
-        body.style.setProperty('display', 'block', 'important');
-        body.style.removeProperty('max-height');
-        body.setAttribute('aria-hidden', 'false');
-      } else {
-        body.style.setProperty('display', 'none', 'important');
-        body.style.setProperty('max-height', '0px', 'important');
-        body.setAttribute('aria-hidden', 'true');
+    const write = (open) => {
+      panel.setAttribute('data-open', open ? '1' : '0');
+      header.setAttribute('aria-expanded', String(!!open));
+      if (label) label.textContent = open ? 'collapse' : 'expand';
+    };
+
+    write(panel.getAttribute('data-open') === '1');
+
+    header.addEventListener('click', (e) => {
+      if (e.target.closest('a,button,input,select,textarea,label')) return;
+      const open = panel.getAttribute('data-open') === '1';
+      write(!open);
+      try {
+        document.dispatchEvent(new CustomEvent('interop:panel:toggled', {
+          detail: { id: panel.id || panel.className || 'panel', open: !open }
+        }));
+      } catch {
+        /* ignore */
       }
-      if (label) label.textContent = open ? 'Collapse' : 'Expand';
-    };
-
-    const getOpen = () => (acc.getAttribute('data-open') || '1') === '1';
-    const setOpen = (open) => {
-      const val = open ? '1' : '0';
-      if (acc.getAttribute('data-open') !== val) acc.setAttribute('data-open', val);
-      render(open);
-    };
-
-    render(getOpen());
-
-    const onToggle = (evt) => {
-      const interactive = evt.target.closest('a[href],button:not([data-acc-toggle]),input,select,textarea,[role="button"]');
-      if (interactive && interactive !== toggle) return;
-      evt.preventDefault();
-      evt.stopPropagation();
-      setOpen(!getOpen());
-    };
-
-    toggle.addEventListener('click', onToggle);
-
-    if (!toggle.hasAttribute('role')) toggle.setAttribute('role', 'button');
-    if (!toggle.hasAttribute('tabindex')) toggle.setAttribute('tabindex', '0');
-
-    toggle.addEventListener('keydown', (evt) => {
-      if (evt.key === 'Enter' || evt.key === ' ') {
-        onToggle(evt);
-      }
-    });
+    }, { passive: true });
   });
 };
 
@@ -741,15 +722,11 @@ document.addEventListener('htmx:afterSettle', () => {
     window.initValModal(valModal);
   }
   bootValPanels();
-  if (typeof window.initAccordions === 'function') {
-    window.initAccordions();
-  }
+  window.initAccordions();
 });
 
 document.addEventListener('DOMContentLoaded', () => {
-  if (typeof window.initAccordions === 'function') {
-    window.initAccordions();
-  }
+  window.initAccordions();
   bootValPanels();
   const valModal = document.querySelector('#val-modal');
   if (valModal && typeof window.initValModal === 'function') {
