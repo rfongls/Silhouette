@@ -666,6 +666,45 @@ window.attachParamDebug = function attachParamDebug(root){
   }catch(e){ console.error(e); }
 };
 
+/* ========= Interop module accordion binding =========
+   - Works even if the feature tabs were never clicked.
+   - Does NOT prevent default navigation or form interactions.
+*/
+window.initAccordions = function initAccordions(rootSel) {
+  const root = rootSel ? document.querySelector(rootSel) : document;
+  if (!root) return;
+  root.querySelectorAll('.interop-panel[data-accordion]').forEach((panel) => {
+    if (panel.dataset.accordionBound === '1') return;
+    panel.dataset.accordionBound = '1';
+
+    const header = panel.querySelector('[data-acc-toggle]');
+    const body = panel.querySelector('[data-acc-body]') || panel.querySelector('.module-body');
+    const label = header ? (header.querySelector('[data-acc-label]') || header.querySelector('.acc-label')) : null;
+    if (!header || !body) return;
+
+    const write = (open) => {
+      panel.setAttribute('data-open', open ? '1' : '0');
+      header.setAttribute('aria-expanded', String(!!open));
+      if (label) label.textContent = open ? 'collapse' : 'expand';
+    };
+
+    write(panel.getAttribute('data-open') === '1');
+
+    header.addEventListener('click', (e) => {
+      if (e.target.closest('a,button,input,select,textarea,label')) return;
+      const open = panel.getAttribute('data-open') === '1';
+      write(!open);
+      try {
+        document.dispatchEvent(new CustomEvent('interop:panel:toggled', {
+          detail: { id: panel.id || panel.className || 'panel', open: !open }
+        }));
+      } catch {
+        /* ignore */
+      }
+    }, { passive: true });
+  });
+};
+
 const bootValPanels = () => {
   document.querySelectorAll('[data-val-checks-panel]').forEach((panel) => {
     window.initValChecksPanel(panel);
@@ -683,9 +722,11 @@ document.addEventListener('htmx:afterSettle', () => {
     window.initValModal(valModal);
   }
   bootValPanels();
+  window.initAccordions();
 });
 
 document.addEventListener('DOMContentLoaded', () => {
+  window.initAccordions();
   bootValPanels();
   const valModal = document.querySelector('#val-modal');
   if (valModal && typeof window.initValModal === 'function') {

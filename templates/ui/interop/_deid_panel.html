@@ -9,76 +9,83 @@
   {% set api_deidentify_plain = api_deidentify ~ '?format=txt' %}
 {% endif %}
 
-<section id="deid-panel" class="panel interop-panel interop-panel-deid">
-  <form id="deid-form"
-        class="mt"
-        method="post"
-        action="{{ urls.ui_deidentify | default(root ~ '/ui/interop/deidentify', true) }}"
-        hx-post="{{ api_deidentify_plain }}"
-        hx-encoding="application/x-www-form-urlencoded"
-        hx-headers='{"Accept":"text/plain"}'
-        hx-target="#deid-output"
-        hx-swap="textContent"
-        hx-on::afterSwap="window.InteropUI.onDeidentifyComplete(event)">
-    <div class="grid two">
-      <label>Template
-        <select id="deid-template" name="deid_template" class="input">
-          {% for name in deid_options %}
-            <option value="{{ name }}" {% if name == default_deid_template %}selected{% endif %}>{{ name }}</option>
-          {% endfor %}
-        </select>
-      </label>
-      <label class="row gap small" style="align-items:center">
-        <input type="checkbox" id="deid-apply-baseline" name="apply_baseline" />
-        <span>Use default rules (baseline)</span>
-      </label>
+<section id="deid-panel" class="panel interop-panel interop-panel-deid"
+         data-accordion data-open="0" aria-labelledby="deid-header">
+  <header id="deid-header" class="row gap" data-acc-toggle aria-expanded="false">
+    <h3 class="text-h3" style="margin:0">De‑Identify Message</h3>
+    <span class="muted small acc-label" data-acc-label>expand</span>
+  </header>
+  <div class="module-body" data-acc-body>
+    <form id="deid-form"
+          class="mt"
+          method="post"
+          action="{{ urls.ui_deidentify | default(root ~ '/ui/interop/deidentify', true) }}"
+          hx-post="{{ api_deidentify_plain }}"
+          hx-encoding="application/x-www-form-urlencoded"
+          hx-headers='{"Accept":"text/plain"}'
+          hx-target="#deid-output"
+          hx-swap="textContent"
+          hx-on::afterSwap="window.InteropUI.onDeidentifyComplete(event)">
+      <div class="grid two">
+        <label>Template
+          <select id="deid-template" name="deid_template" class="input">
+            {% for name in deid_options %}
+              <option value="{{ name }}" {% if name == default_deid_template %}selected{% endif %}>{{ name }}</option>
+            {% endfor %}
+          </select>
+        </label>
+        <label class="row gap small" style="align-items:center">
+          <input type="checkbox" id="deid-apply-baseline" name="apply_baseline" />
+          <span>Use default rules (baseline)</span>
+        </label>
+      </div>
+
+      <textarea id="deid-text"
+                name="text"
+                class="input textarea-output mt"
+                rows="8"
+                placeholder="Paste HL7 to de-identify"></textarea>
+
+      <div class="row gap mt">
+        <input class="input" id="deid-seed" name="seed" placeholder="seed (optional)" />
+        <button id="deid-run" class="button" type="submit" data-action="deidentify">Run De-identify</button>
+      </div>
+    </form>
+
+    <div id="deid-report"
+         class="card mt"
+         hx-post="{{ urls.api_deidentify_summary | default(root ~ '/api/interop/deidentify/summary', true) }}"
+         hx-include="#deid-text,#deid-seed,#deid-template,#deid-apply-baseline"
+         hx-trigger="htmx:afterRequest from:#deid-form"
+         hx-headers='{"Accept":"text/html"}'
+         hx-swap="innerHTML">
+      <details class="mini-report">
+        <summary>De-identification report</summary>
+        <div class="muted small">Run de-identify to see what fields changed.</div>
+      </details>
     </div>
 
-    <textarea id="deid-text"
-              name="text"
-              class="input textarea-output mt"
-              rows="8"
-              placeholder="Paste HL7 to de-identify"></textarea>
+    <pre id="deid-output" class="codepane limit10 scrollbox mt" aria-live="polite"></pre>
 
-    <div class="row gap mt">
-      <input class="input" id="deid-seed" name="seed" placeholder="seed (optional)" />
-      <button id="deid-run" class="button" type="submit" data-action="deidentify">Run De-identify</button>
-    </div>
-  </form>
-
-  <div id="deid-report"
-       class="card mt"
-       hx-post="{{ urls.api_deidentify_summary | default(root ~ '/api/interop/deidentify/summary', true) }}"
-       hx-include="#deid-text,#deid-seed,#deid-template,#deid-apply-baseline"
-       hx-trigger="htmx:afterRequest from:#deid-form"
-       hx-headers='{"Accept":"text/html"}'
-       hx-swap="innerHTML">
-    <details class="mini-report">
-      <summary>De-identification report</summary>
-      <div class="muted small">Run de-identify to see what fields changed.</div>
-    </details>
-  </div>
-
-  <pre id="deid-output" class="codepane limit10 scrollbox mt" aria-live="polite"></pre>
-
-  <div id="deid-run-tray" class="action-tray mt" hidden>
-    <div class="action-tray-header">
-      <h4>Next steps after De‑ID</h4>
-      <p>Choose what to do with the de‑identified message.</p>
-    </div>
-    <div class="action-cards">
-      <button class="action-card pipeline-run" type="button" data-run-to="validate">
-        <strong>✓ Validate</strong>
-        <small>Ensure structural correctness.</small>
-      </button>
-      <button class="action-card pipeline-run" type="button" data-run-to="mllp">
-        <strong>📤 Send via MLLP</strong>
-        <small>Deliver and view ACK.</small>
-      </button>
-      <button class="action-card pipeline-run" type="button" data-run-to="translate">
-        <strong>🔄 HL7 → FHIR</strong>
-        <small>Translate for downstream apps.</small>
-      </button>
+    <div id="deid-run-tray" class="action-tray mt" hidden>
+      <div class="action-tray-header">
+        <h4>Next steps after De‑ID</h4>
+        <p>Choose what to do with the de‑identified message.</p>
+      </div>
+      <div class="action-cards">
+        <button class="action-card pipeline-run" type="button" data-run-to="validate">
+          <strong>✓ Validate</strong>
+          <small>Ensure structural correctness.</small>
+        </button>
+        <button class="action-card pipeline-run" type="button" data-run-to="mllp">
+          <strong>📤 Send via MLLP</strong>
+          <small>Deliver and view ACK.</small>
+        </button>
+        <button class="action-card pipeline-run" type="button" data-run-to="translate">
+          <strong>🔄 HL7 → FHIR</strong>
+          <small>Translate for downstream apps.</small>
+        </button>
+      </div>
     </div>
   </div>
 </section>

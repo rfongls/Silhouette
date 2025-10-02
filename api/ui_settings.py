@@ -270,7 +270,9 @@ def _list_templates(base: Path) -> List[str]:
     return [p.stem for p in sorted(base.glob("*.json"))]
 
 def _parse_required_flag(value: Any) -> bool:
-    return str(value).strip().lower() in {"1", "true", "yes", "on"}
+    if isinstance(value, bool):
+        return value
+    return str(value).strip().lower() in {"1", "true", "yes", "y", "on"}
 
 def _load_json(path: Path) -> Dict[str, Any]:
     if not path.exists():
