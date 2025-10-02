@@ -269,8 +269,30 @@ def _json_path(base: Path, name: str) -> Path:
 def _list_templates(base: Path) -> List[str]:
     return [p.stem for p in sorted(base.glob("*.json"))]
 
-def _parse_required_flag(value: Any) -> bool:
-    return str(value).strip().lower() in {"1", "true", "yes", "on"}
+def _parse_required_flag(value: Any, default: bool = False) -> bool:
+    """Normalize boolean-like inputs with a configurable default.
+
+    Truthy tokens: 1/"1", true/"true", t/"t", yes/"yes", y/"y", on/"on".
+    Falsy tokens: 0/"0", false/"false", f/"f", no/"no", n/"n", off/"off".
+    Blank/unknown values fall back to ``default``.
+    """
+
+    s = str(value or "").strip().lower()
+    if s == "":
+        return default
+
+    truey = {"1", "true", "t", "yes", "y", "on"}
+    falsy = {"0", "false", "f", "no", "n", "off"}
+
+    if s in truey:
+        return True
+    if s in falsy:
+        return False
+
+    try:
+        return bool(int(s))
+    except Exception:
+        return default
 
 def _load_json(path: Path) -> Dict[str, Any]:
     if not path.exists():
@@ -1106,7 +1128,7 @@ async def ui_settings_val_import_csv(request: Request, name: str, file: UploadFi
         checks.append(ValidateCheck(
             segment=(row.get("segment") or "").strip().upper(),
             field=int(row.get("field") or 0),
-            required=_parse_required_flag(row.get("required") or "true"),
+            required=_parse_required_flag(row.get("required"), default=True),
             pattern=row.get("pattern") or None,
             allowed_values=allowed,
         ))
