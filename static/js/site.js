@@ -679,50 +679,48 @@ window.initAccordions = function initAccordions(rootSel) {
     const label = toggle && toggle.querySelector('[data-acc-label]');
     if (!toggle || !body) return;
 
-    const apply = (open) => {
+    const render = (open) => {
       const isOpen = !!open;
-      acc.setAttribute('data-open', isOpen ? '1' : '0');
       toggle.setAttribute('aria-expanded', String(isOpen));
       body.hidden = !isOpen;
-      body.style.display = isOpen ? 'block' : 'none';
-      body.style.maxHeight = isOpen ? '' : '0px';
-      body.setAttribute('aria-hidden', isOpen ? 'false' : 'true');
+      if (isOpen) {
+        body.style.setProperty('display', 'block', 'important');
+        body.style.removeProperty('max-height');
+        body.setAttribute('aria-hidden', 'false');
+      } else {
+        body.style.setProperty('display', 'none', 'important');
+        body.style.setProperty('max-height', '0px', 'important');
+        body.setAttribute('aria-hidden', 'true');
+      }
       if (label) label.textContent = isOpen ? 'Collapse' : 'Expand';
     };
 
-    const initial = (acc.getAttribute('data-open') || '1') === '1';
-    apply(initial);
-
-    const isInteractiveTarget = (evt) => {
-      const t = evt.target;
-      if (!t) return false;
-      const anchor = t.closest && t.closest('a[href]');
-      if (anchor && anchor.getAttribute('href') && anchor.getAttribute('href') !== '#') return true;
-      if (t.closest && t.closest('button:not([data-acc-toggle]), input, select, textarea, [role="button"], label')) return true;
-      return false;
+    const getOpen = () => (acc.getAttribute('data-open') || '1') === '1';
+    const setOpen = (open) => {
+      const val = open ? '1' : '0';
+      if (acc.getAttribute('data-open') !== val) acc.setAttribute('data-open', val);
+      render(open);
     };
 
-    toggle.addEventListener('click', (evt) => {
-      if (isInteractiveTarget(evt) && evt.target !== toggle) return;
+    render(getOpen());
+
+    const onToggle = (evt) => {
+      const interactive = evt.target.closest('a[href],button:not([data-acc-toggle]),input,select,textarea,[role="button"]');
+      if (interactive && interactive !== toggle) return;
       evt.preventDefault();
-      const open = acc.getAttribute('data-open') === '1';
-      apply(!open);
-    });
+      evt.stopPropagation();
+      setOpen(!getOpen());
+    };
+
+    toggle.addEventListener('click', onToggle);
 
     if (!toggle.hasAttribute('role')) toggle.setAttribute('role', 'button');
     if (!toggle.hasAttribute('tabindex')) toggle.setAttribute('tabindex', '0');
     toggle.addEventListener('keydown', (evt) => {
       if (evt.key === 'Enter' || evt.key === ' ') {
-        evt.preventDefault();
-        const open = acc.getAttribute('data-open') === '1';
-        apply(!open);
+        onToggle(evt);
       }
     });
-
-    const observer = new MutationObserver(() => {
-      apply(acc.getAttribute('data-open') === '1');
-    });
-    observer.observe(acc, { attributes: true, attributeFilter: ['data-open'] });
   });
 };
 
