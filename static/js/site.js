@@ -683,10 +683,30 @@ window.initAccordions = function initAccordions(rootSel) {
     };
     const initial = acc.getAttribute('data-open') === '1';
     setOpen(initial);
-    toggle.addEventListener('click', (event) => {
-      event.preventDefault();
+    // Make header behave like a button, with good UX & accessibility.
+    if (!toggle.hasAttribute('role')) toggle.setAttribute('role', 'button');
+    if (!toggle.hasAttribute('tabindex')) toggle.setAttribute('tabindex', '0');
+
+    const shouldIgnore = (e) => {
+      // Ignore modified clicks and non-primary buttons
+      if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return true;
+      // Do not hijack real interactive elements inside the header
+      if (e.target.closest('a[href], button:not([data-acc-toggle]), input, select, textarea, label')) return true;
+      return false;
+    };
+
+    toggle.addEventListener('click', (e) => {
+      if (shouldIgnore(e) || e.defaultPrevented) return;
       const open = acc.getAttribute('data-open') === '1';
       setOpen(!open);
+    });
+
+    toggle.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        const open = acc.getAttribute('data-open') === '1';
+        setOpen(!open);
+      }
     });
   });
 };
