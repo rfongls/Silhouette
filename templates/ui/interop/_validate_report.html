@@ -20,21 +20,27 @@
         <tr style="text-align:left;border-bottom:1px solid var(--color-border, #d1d5db)">
           <th style="padding:0.5rem">Severity</th>
           <th style="padding:0.5rem">Rule / Code</th>
-          <th style="padding:0.5rem">Location</th>
+          <th style="padding:0.5rem">Segment</th>
+          <th style="padding:0.5rem">Field</th>
+          <th style="padding:0.5rem">Comp</th>
+          <th style="padding:0.5rem">Subcomp</th>
           <th style="padding:0.5rem">Message</th>
         </tr>
       </thead>
       <tbody>
       {% for it in r.issues %}
-        <tr style="border-bottom:1px solid var(--color-border, #e5e7eb)">
-          <td style="padding:0.5rem">{{ it.severity | capitalize }}</td>
-          <td style="padding:0.5rem"><code class="mono">{{ it.code }}</code></td>
-          <td style="padding:0.5rem"><code class="mono">{{ it.location }}</code></td>
-          <td style="padding:0.5rem">{{ it.message }}</td>
+        <tr style="border-bottom:1px solid var(--color-border, #e5e7eb)" class="{{ (it.severity | default('error')) | lower }}">
+          <td style="padding:0.5rem">{{ it.severity | capitalize | default('Error') }}</td>
+          <td style="padding:0.5rem"><code class="mono">{{ it.code or it.rule or '—' }}</code></td>
+          <td style="padding:0.5rem"><code class="mono">{{ it.segment or '—' }}</code></td>
+          <td style="padding:0.5rem"><code class="mono">{{ it.field if it.field is not none else '—' }}</code></td>
+          <td style="padding:0.5rem"><code class="mono">{{ it.component if it.component is not none else '—' }}</code></td>
+          <td style="padding:0.5rem"><code class="mono">{{ it.subcomponent if it.subcomponent is not none else '—' }}</code></td>
+          <td style="padding:0.5rem">{{ it.message or '—' }}</td>
         </tr>
       {% else %}
         <tr>
-          <td colspan="4" style="padding:0.75rem" class="muted">No issues to display.</td>
+          <td colspan="7" style="padding:0.75rem" class="muted">No issues to display.</td>
         </tr>
       {% endfor %}
       </tbody>
