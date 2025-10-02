@@ -666,6 +666,31 @@ window.attachParamDebug = function attachParamDebug(root){
   }catch(e){ console.error(e); }
 };
 
+/* ========= Module accordion binding ========= */
+window.initAccordions = function initAccordions(rootSel) {
+  const root = rootSel ? document.querySelector(rootSel) : document;
+  if (!root) return;
+  root.querySelectorAll('[data-accordion]').forEach((acc) => {
+    if (acc.dataset.accordionBound === '1') return;
+    acc.dataset.accordionBound = '1';
+    const toggle = acc.querySelector('[data-acc-toggle]');
+    const body = acc.querySelector('[data-acc-body]');
+    if (!toggle || !body) return;
+    const setOpen = (open) => {
+      acc.setAttribute('data-open', open ? '1' : '0');
+      toggle.setAttribute('aria-expanded', String(!!open));
+      body.hidden = !open;
+    };
+    const initial = acc.getAttribute('data-open') === '1';
+    setOpen(initial);
+    toggle.addEventListener('click', (event) => {
+      event.preventDefault();
+      const open = acc.getAttribute('data-open') === '1';
+      setOpen(!open);
+    });
+  });
+};
+
 const bootValPanels = () => {
   document.querySelectorAll('[data-val-checks-panel]').forEach((panel) => {
     window.initValChecksPanel(panel);
@@ -683,9 +708,15 @@ document.addEventListener('htmx:afterSettle', () => {
     window.initValModal(valModal);
   }
   bootValPanels();
+  if (typeof window.initAccordions === 'function') {
+    window.initAccordions();
+  }
 });
 
 document.addEventListener('DOMContentLoaded', () => {
+  if (typeof window.initAccordions === 'function') {
+    window.initAccordions();
+  }
   bootValPanels();
   const valModal = document.querySelector('#val-modal');
   if (valModal && typeof window.initValModal === 'function') {
