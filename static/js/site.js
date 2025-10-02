@@ -673,47 +673,56 @@ window.initAccordions = function initAccordions(rootSel) {
   root.querySelectorAll('[data-accordion]').forEach((acc) => {
     if (acc.dataset.accordionBound === '1') return;
     acc.dataset.accordionBound = '1';
+
     const toggle = acc.querySelector('[data-acc-toggle]');
-    const body = acc.querySelector('[data-acc-body]');
+    const body = acc.querySelector('[data-acc-body]') || acc.querySelector('.module-body');
+    const label = toggle && toggle.querySelector('[data-acc-label]');
     if (!toggle || !body) return;
-    const setOpen = (open) => {
-      acc.setAttribute('data-open', open ? '1' : '0');
-      toggle.setAttribute('aria-expanded', String(!!open));
-      body.hidden = !open;
+
+    const apply = (open) => {
+      const isOpen = !!open;
+      acc.setAttribute('data-open', isOpen ? '1' : '0');
+      toggle.setAttribute('aria-expanded', String(isOpen));
+      body.hidden = !isOpen;
+      body.style.display = isOpen ? 'block' : 'none';
+      body.style.maxHeight = isOpen ? '' : '0px';
+      body.setAttribute('aria-hidden', isOpen ? 'false' : 'true');
+      if (label) label.textContent = isOpen ? 'Collapse' : 'Expand';
     };
-    const initial = acc.getAttribute('data-open') === '1';
-    setOpen(initial);
-    // Helper: should this click toggle, or is the user clicking a real control/link?
+
+    const initial = (acc.getAttribute('data-open') || '1') === '1';
+    apply(initial);
+
     const isInteractiveTarget = (evt) => {
       const t = evt.target;
       if (!t) return false;
-      // Allow normal navigation for real anchors (except href="#")
-      const a = t.closest && t.closest('a[href]');
-      if (a && a.getAttribute('href') && a.getAttribute('href') !== '#') return true;
-      // Don't hijack genuine form controls
-      if (t.closest && t.closest('button, input, select, textarea, label')) return true;
+      const anchor = t.closest && t.closest('a[href]');
+      if (anchor && anchor.getAttribute('href') && anchor.getAttribute('href') !== '#') return true;
+      if (t.closest && t.closest('button:not([data-acc-toggle]), input, select, textarea, [role="button"], label')) return true;
       return false;
     };
 
-    // Click to toggle, but never cancel actual link/navigation clicks
     toggle.addEventListener('click', (evt) => {
-      if (isInteractiveTarget(evt)) return; // let default happen
-      // No default to prevent on <header/ div>, just flip the state.
+      if (isInteractiveTarget(evt) && evt.target !== toggle) return;
+      evt.preventDefault();
       const open = acc.getAttribute('data-open') === '1';
-      setOpen(!open);
+      apply(!open);
     });
 
-    // Keyboard accessibility: Enter / Space toggles
     if (!toggle.hasAttribute('role')) toggle.setAttribute('role', 'button');
     if (!toggle.hasAttribute('tabindex')) toggle.setAttribute('tabindex', '0');
     toggle.addEventListener('keydown', (evt) => {
-      const key = evt.key;
-      if (key === 'Enter' || key === ' ') {
+      if (evt.key === 'Enter' || evt.key === ' ') {
         evt.preventDefault();
         const open = acc.getAttribute('data-open') === '1';
-        setOpen(!open);
+        apply(!open);
       }
     });
+
+    const observer = new MutationObserver(() => {
+      apply(acc.getAttribute('data-open') === '1');
+    });
+    observer.observe(acc, { attributes: true, attributeFilter: ['data-open'] });
   });
 };
 
