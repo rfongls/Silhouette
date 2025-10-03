@@ -681,7 +681,12 @@ window.initAccordions = function initAccordions(rootSel) {
     acc.dataset.accordionBound = '1';
     const toggle = acc.querySelector('[data-acc-toggle]');
     const body = acc.querySelector('[data-acc-body]');
+    const label = acc.querySelector('[data-acc-label]');
     if (!toggle || !body) return;
+
+    const isInteractive = (el) => {
+      return !!(el && el.closest('button, a, input, select, textarea, label, [role="button"], [data-ignore-acc-toggle]'));
+    };
 
     const setOpen = (open) => {
       const isOpen = !!open;
@@ -692,12 +697,24 @@ window.initAccordions = function initAccordions(rootSel) {
       } catch (err) {
         console.warn('accordion toggle failed', err);
       }
+      if (label) {
+        label.textContent = isOpen ? 'collapse' : 'expand';
+      }
     };
 
     setOpen(acc.getAttribute('data-open') === '1');
 
-    toggle.addEventListener('click', (evt) => {
-      evt.preventDefault();
+    toggle.addEventListener('click', (event) => {
+      if (isInteractive(event.target)) return;
+      event.preventDefault();
+      event.stopPropagation();
+      const next = acc.getAttribute('data-open') !== '1';
+      setOpen(next);
+    });
+
+    acc.addEventListener('click', (event) => {
+      if (body.contains(event.target)) return;
+      if (isInteractive(event.target)) return;
       const next = acc.getAttribute('data-open') !== '1';
       setOpen(next);
     });
@@ -719,10 +736,12 @@ window.InteropUI.openModule = function openModule(key) {
   if (!section) return;
   const toggle = section.querySelector('[data-acc-toggle]');
   const body = section.querySelector('[data-acc-body]');
+  const label = section.querySelector('[data-acc-label]');
   if (toggle && body) {
     section.setAttribute('data-open', '1');
     toggle.setAttribute('aria-expanded', 'true');
     body.hidden = false;
+    if (label) label.textContent = 'collapse';
   }
   try {
     section.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -796,7 +815,6 @@ window.InteropUI.bindDebugToggle = function bindDebugToggle(rootSel) {
     window.InteropUI.refreshDebugBadge();
   });
 };
-
 
 // Called after #deid-form swaps its output
 (function enhanceDeidHandlers(){

@@ -81,25 +81,18 @@
       padding: 1rem 1.25rem;
       user-select: none;
     }
-
+    .panel.interop-panel [data-acc-label] {
+      color: #94a3b8;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      font-size: .75rem;
+    }
     .panel.interop-panel [data-acc-body] {
       border-top: 1px solid rgba(148, 163, 184, .18);
       padding: 1rem 1.25rem 1.25rem 1.25rem;
     }
     .panel.interop-panel[data-open="0"] [data-acc-body] { display: none; }
     .panel.interop-panel[data-open="1"] [data-acc-body] { display: block; }
-    .toggle-label {
-      display: inline-flex;
-      gap: .5rem;
-      align-items: center;
-      color: #94a3b8;
-      text-transform: uppercase;
-      letter-spacing: .08em;
-      font-size: .75rem;
-    }
-    .toggle-label .when-open { display: none; }
-    .panel.interop-panel[data-open="1"] .toggle-label .when-open { display: inline; }
-    .panel.interop-panel[data-open="1"] .toggle-label .when-closed { display: none; }
     .grouped-deid-report { margin-top: .75rem; }
     .grouped-deid-report > details { margin-top: .5rem; }
     .grouped-deid-report details ul { margin: .5rem 0 0 1.25rem; padding-left: 1.25rem; }
