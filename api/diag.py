@@ -2,8 +2,9 @@ import html as _html
 from pathlib import Path
 from typing import Any, Dict
 from urllib.parse import quote_plus
-from fastapi import APIRouter, FastAPI, HTTPException, Request
+from fastapi import APIRouter, FastAPI, Request
 from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse
+from starlette.templating import Jinja2Templates
 
 from api.debug_log import (
     LOG_FILE,
@@ -12,11 +13,11 @@ from api.debug_log import (
     log_debug_message,
     set_debug_enabled,
     tail_debug_lines,
-    toggle_debug_enabled,
 )
 from api.activity_log import ACTIVITY_FILE, tail_activity_lines
 
 router = APIRouter()
+templates = Jinja2Templates(directory="templates")
 _BASE_DIR = Path(__file__).resolve().parents[1]
 _HTTP_LOG = _BASE_DIR / "out" / "interop" / "server_http.log"
 
@@ -119,29 +120,6 @@ async def get_debug_logs(request: Request, limit: int = 200, format: str = "json
     return JSONResponse(payload)
 
 
-def _render_debug_badge_html(enabled: bool, target: str = "debug-state-badge") -> str:
-    """Return a compact HTMX-friendly badge that toggles debug state."""
-    next_action = "disable" if enabled else "enable"
-    label = "Debug ON" if enabled else "Debug OFF"
-    button_class = "btn small success" if enabled else "btn small"
-    target_id = (target or "debug-state-badge").strip() or "debug-state-badge"
-    escaped_target = _html.escape(target_id, quote=True)
-    refresh_js = (
-        "htmx.ajax('/api/diag/debug/state?format=html',"
-        "{target:'#%s',swap:'outerHTML'})" % escaped_target
-    )
-    parts = [
-        f"<span id='{escaped_target}'>",
-        f"<button class='{button_class}' ",
-        f"hx-post='/api/diag/debug/state/{next_action}' ",
-        'hx-headers=\'{"Accept":"application/json"}\' ',
-        f"hx-on::afterRequest=\"{refresh_js}\">",
-        f"{_html.escape(label)}</button>",
-        "</span>",
-    ]
-    return "".join(parts)
-
-
 @router.get("/api/diag/activity")
 async def get_activity(limit: int = 50, format: str = "json"):
     try:
@@ -203,56 +181,82 @@ def _choose_format(format: str | None, request: Request | None = None) -> str:
     return "json"
 
 
-def _debug_state_response(
-    enabled: bool, fmt: str, *, action: str | None = None
+_DEFAULT_BADGE_ID = "debug-state-badge"
+
+
+def _normalize_target(target: str | None) -> str:
+    candidate = (target or _DEFAULT_BADGE_ID).strip()
+    return candidate or _DEFAULT_BADGE_ID
+
+
+async def _resolve_target_id(request: Request) -> str:
+    target_param = request.query_params.get("target")
+    if target_param:
+        return _normalize_target(target_param)
+    if request.method in {"POST", "PUT", "PATCH"}:
+        try:
+            form = await request.form()
+        except Exception:
+            form = None
+        if form is not None:
+            form_target = form.get("target")
+            if form_target:
+                return _normalize_target(form_target)
+    return _DEFAULT_BADGE_ID
+
+
+def _badge_template_response(request: Request, enabled: bool, target_id: str):
+    context = {"request": request, "enabled": enabled, "target_id": target_id}
+    return templates.TemplateResponse(
+        "diag/_debug_badge.html",
+        context,
+        headers={"Cache-Control": "no-store"},
+    )
+
+
+async def _debug_state_response(
+    request: Request,
+    enabled: bool,
+    format: str | None,
+    *,
+    action: str | None = None,
 ):
+    fmt = _choose_format(format, request)
     if fmt in {"html", "htm"}:
-        return HTMLResponse(_render_debug_badge_html(enabled))
+        target_id = await _resolve_target_id(request)
+        return _badge_template_response(request, enabled, target_id)
     payload: Dict[str, Any] = {"enabled": enabled}
     if action is not None:
         payload["action"] = action
     return JSONResponse(payload)
 
 
-@router.get("/api/diag/debug/state/snippet", response_class=HTMLResponse)
-async def get_debug_toggle_snippet(target: str = "interop-debug-log"):
+@router.get("/api/diag/debug/state/snippet")
+async def get_debug_toggle_snippet(request: Request, target: str = "interop-debug-log"):
     """Return the toggle button HTML snippet. Used by UI pages via HTMX."""
     enabled = is_debug_enabled()
-    return HTMLResponse(_render_debug_badge_html(enabled, target))
+    target_id = _normalize_target(target)
+    return _badge_template_response(request, enabled, target_id)
 
 
-@router.get("/api/diag/debug/state")
-async def get_debug_state(format: str | None = None):
+@router.get("/api/diag/debug/state", name="api_diag_debug_state")
+async def get_debug_state(request: Request, format: str | None = None):
     enabled = is_debug_enabled()
-    fmt = _choose_format(format)
-    return _debug_state_response(enabled, fmt)
+    return await _debug_state_response(request, enabled, format)
 
 
-@router.post("/api/diag/debug/state/{action}")
-async def mutate_debug_state(action: str, request: Request, format: str | None = None):
-    action = (action or "").strip().lower()
-    if action == "enable":
-        set_debug_enabled(True)
-    elif action == "disable":
-        set_debug_enabled(False)
-    elif action == "toggle":
-        toggle_debug_enabled()
-    else:
-        raise HTTPException(status_code=400, detail="Unknown debug action")
+@router.post("/api/diag/debug/state/enable", name="api_diag_debug_enable")
+async def api_diag_debug_enable(request: Request, format: str | None = None):
+    set_debug_enabled(True)
     enabled = is_debug_enabled()
-    fmt = _choose_format(format, request)
-    if fmt in {"html", "htm"}:
-        target_param = request.query_params.get("target")
-        if not target_param and request.method in {"POST", "PUT", "PATCH"}:
-            try:
-                form = await request.form()
-            except Exception:
-                form = None
-            if form is not None:
-                target_param = form.get("target")
-        target_id = (target_param or "debug-state-badge").strip() or "debug-state-badge"
-        return HTMLResponse(_render_debug_badge_html(enabled, target_id))
-    return _debug_state_response(enabled, fmt, action=action)
+    return await _debug_state_response(request, enabled, format, action="enable")
+
+
+@router.post("/api/diag/debug/state/disable", name="api_diag_debug_disable")
+async def api_diag_debug_disable(request: Request, format: str | None = None):
+    set_debug_enabled(False)
+    enabled = is_debug_enabled()
+    return await _debug_state_response(request, enabled, format, action="disable")
 
 
 @router.post("/api/diag/debug/event")

@@ -12,13 +12,13 @@
   <h2>Interoperability Dashboard</h2>
   <div class="row gap" style="align-items: center;">
     <a class="btn btn-secondary" href="{{ link_for(request, 'ui_reports', '/reports') }}">View reports</a>
-    <div id="debug-state-badge"
-         hx-get="{{ root }}/api/diag/debug/state?format=html"
-         hx-trigger="load"
-         hx-target="#debug-state-badge"
-         hx-swap="outerHTML">
+    <span id="debug-state-badge"
+          hx-get="{{ request.url_for('api_diag_debug_state') }}?format=html"
+          hx-trigger="load"
+          hx-target="this"
+          hx-swap="outerHTML">
       <span class="micro muted">Loading debug switch…</span>
-    </div>
+    </span>
   </div>
 </div>
 <div class="row gap mt">

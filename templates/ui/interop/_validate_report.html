@@ -29,13 +29,27 @@
       </thead>
       <tbody>
       {% for it in r.issues %}
+        {% set loc = it.location | default('') %}
+        {% set parts = (loc | string) | split('-') %}
+        {% set loc_seg = parts[0] if parts|length > 0 else None %}
+        {% set rest = parts[1] if parts|length > 1 else '' %}
+        {% set dots = rest | split('.') %}
+        {% set loc_fld = dots[0] if dots|length > 0 and dots[0] != '' else None %}
+        {% set loc_comp = dots[1] if dots|length > 1 else None %}
+        {% set loc_sub = dots[2] if dots|length > 2 else None %}
+
+        {% set seg_out = it.segment | default(loc_seg) %}
+        {% set fld_out = (it.field is not none and it.field) | default(loc_fld) %}
+        {% set cmp_out = (it.component is not none and it.component) | default(loc_comp) %}
+        {% set sub_out = (it.subcomponent is not none and it.subcomponent) | default(loc_sub) %}
+
         <tr style="border-bottom:1px solid var(--color-border, #e5e7eb)" class="{{ (it.severity | default('error')) | lower }}">
           <td style="padding:0.5rem">{{ it.severity | capitalize | default('Error') }}</td>
-          <td style="padding:0.5rem"><code class="mono">{{ it.code or it.rule or '—' }}</code></td>
-          <td style="padding:0.5rem"><code class="mono">{{ it.segment or '—' }}</code></td>
-          <td style="padding:0.5rem"><code class="mono">{{ it.field if it.field is not none else '—' }}</code></td>
-          <td style="padding:0.5rem"><code class="mono">{{ it.component if it.component is not none else '—' }}</code></td>
-          <td style="padding:0.5rem"><code class="mono">{{ it.subcomponent if it.subcomponent is not none else '—' }}</code></td>
+          <td style="padding:0.5rem"><code class="mono">{{ it.code or it.rule or it.id or it.name or it.type or '—' }}</code></td>
+          <td style="padding:0.5rem"><code class="mono">{{ seg_out or '—' }}</code></td>
+          <td style="padding:0.5rem"><code class="mono">{{ fld_out if fld_out is not none else '—' }}</code></td>
+          <td style="padding:0.5rem"><code class="mono">{{ cmp_out if cmp_out is not none else '—' }}</code></td>
+          <td style="padding:0.5rem"><code class="mono">{{ sub_out if sub_out is not none else '—' }}</code></td>
           <td style="padding:0.5rem">{{ it.message or '—' }}</td>
         </tr>
       {% else %}

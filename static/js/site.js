@@ -1,3 +1,9 @@
+// ------------------------------
+// Interop UI helpers and global utilities
+// ------------------------------
+
+window.InteropUI = window.InteropUI || {};
+
 /* ========== Global utilities ========== */
 window.esc = s => (s ?? "").toString()
   .replace(/&/g,"&amp;").replace(/</g,"&lt;")
@@ -666,66 +672,237 @@ window.attachParamDebug = function attachParamDebug(root){
   }catch(e){ console.error(e); }
 };
 
-/* ========= Module accordion binding ========= */
+/* ========= Simple accordion API used by Interop cards ========= */
 window.initAccordions = function initAccordions(rootSel) {
   const root = rootSel ? document.querySelector(rootSel) : document;
   if (!root) return;
   root.querySelectorAll('[data-accordion]').forEach((acc) => {
     if (acc.dataset.accordionBound === '1') return;
     acc.dataset.accordionBound = '1';
-
-    const toggle = acc.querySelector('[data-acc-toggle]') || acc.querySelector('summary');
-    const body = acc.querySelector('[data-acc-body]') || acc.querySelector('.module-body') || acc.querySelector('.panel-body');
-    const label = acc.querySelector('[data-acc-label]') || acc.querySelector('.acc-label');
+    const toggle = acc.querySelector('[data-acc-toggle]');
+    const body = acc.querySelector('[data-acc-body]');
+    const label = acc.querySelector('[data-acc-label]');
     if (!toggle || !body) return;
 
-    if (!toggle.hasAttribute('role')) toggle.setAttribute('role', 'button');
-    if (!toggle.hasAttribute('tabindex')) toggle.setAttribute('tabindex', '0');
-
-    const unhide = (el) => {
-      if (!el) return;
-      try { el.hidden = false; } catch {}
-      if (el.hasAttribute && el.hasAttribute('hidden')) el.removeAttribute('hidden');
-      if (el.style) {
-        if (el.style.display === 'none') el.style.removeProperty('display');
-        if (el.style.visibility === 'hidden') el.style.removeProperty('visibility');
-      }
-      if (label) label.textContent = open ? 'collapse' : 'expand';
+    const isInteractive = (el) => {
+      return !!(el && el.closest('button, a, input, select, textarea, label, [role="button"], [data-ignore-acc-toggle]'));
     };
 
-
-    const isOpen = () => (acc.getAttribute('data-open') === '1') || acc.open === true;
     const setOpen = (open) => {
-      const on = !!open;
-      acc.setAttribute('data-open', on ? '1' : '0');
-      toggle.setAttribute('aria-expanded', String(on));
-      try { body.hidden = !on; } catch {}
-      if (body.style) body.style.display = on ? '' : 'none';
-      if (on) {
-        unhide(body);
-        body.querySelectorAll('[hidden]').forEach((child) => unhide(child));
+      const isOpen = !!open;
+      acc.setAttribute('data-open', isOpen ? '1' : '0');
+      toggle.setAttribute('aria-expanded', String(isOpen));
+      try {
+        body.hidden = !isOpen;
+      } catch (err) {
+        console.warn('accordion toggle failed', err);
       }
-      if (label) label.textContent = on ? 'collapse' : 'expand';
+      if (label) {
+        label.textContent = isOpen ? 'collapse' : 'expand';
+      }
     };
 
-    setOpen(isOpen());
+    setOpen(acc.getAttribute('data-open') === '1');
 
-    const onToggleClick = (event) => {
-      const ctl = event.target.closest('a,button,input,select,textarea,label');
-      if (ctl) return;
+    toggle.addEventListener('click', (event) => {
+      if (isInteractive(event.target)) return;
       event.preventDefault();
-      setOpen(!isOpen());
-    };
+      event.stopPropagation();
+      const next = acc.getAttribute('data-open') !== '1';
+      setOpen(next);
+    });
 
-    toggle.addEventListener('click', onToggleClick, { passive: false });
-
-    toggle.addEventListener('keydown', (event) => {
-      if (event.key === ' ' || event.key === 'Enter') {
-        event.preventDefault();
-        setOpen(!isOpen());
-      }
+    acc.addEventListener('click', (event) => {
+      if (body.contains(event.target)) return;
+      if (isInteractive(event.target)) return;
+      const next = acc.getAttribute('data-open') !== '1';
+      setOpen(next);
     });
   });
+};
+
+window.InteropUI.openModule = function openModule(key) {
+  if (!key) return;
+  const lookup = [
+    `#${key}-panel`,
+    `#${key}panel`,
+    `[data-accordion][data-module="${key}"]`,
+  ];
+  let section = null;
+  for (const sel of lookup) {
+    section = document.querySelector(sel);
+    if (section) break;
+  }
+  if (!section) return;
+  const toggle = section.querySelector('[data-acc-toggle]');
+  const body = section.querySelector('[data-acc-body]');
+  const label = section.querySelector('[data-acc-label]');
+  if (toggle && body) {
+    section.setAttribute('data-open', '1');
+    toggle.setAttribute('aria-expanded', 'true');
+    body.hidden = false;
+    if (label) label.textContent = 'collapse';
+  }
+  try {
+    section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  } catch (err) {
+    console.warn('scrollIntoView failed', err);
+  }
+};
+
+window.InteropUI.bindPipelineCards = function bindPipelineCards(rootSel) {
+  const root = rootSel ? document.querySelector(rootSel) : document;
+  if (!root) return;
+  const flagKey = '__pipelineBound';
+  if (root[flagKey]) return;
+  root[flagKey] = true;
+  root.addEventListener('click', (evt) => {
+    const btn = evt.target && evt.target.closest('.pipeline-run,[data-run-to]');
+    if (!btn) return;
+    const to = (btn.getAttribute('data-run-to') || '').trim().toLowerCase();
+    if (!to || to === 'pipeline') return;
+    evt.preventDefault();
+    window.InteropUI.openModule(to);
+    let focusId = null;
+    if (to === 'validate') focusId = 'val-text';
+    else if (to === 'deid') focusId = 'deid-text';
+    else if (to === 'mllp') focusId = 'mllp-messages';
+    else if (to === 'generate') focusId = 'gen-text';
+    if (focusId) {
+      const field = document.getElementById(focusId);
+      if (field) {
+        try { field.focus(); } catch (err) { console.warn(err); }
+      }
+    }
+  }, { passive: false });
+};
+
+window.InteropUI.refreshDebugBadge = function refreshDebugBadge() {
+  const target = document.querySelector('#debug-state-badge');
+  if (!target || !window.htmx) return;
+  try {
+    window.htmx.ajax('GET', '/api/diag/debug/state?format=html', {
+      target: '#debug-state-badge',
+      swap: 'outerHTML',
+    });
+  } catch (err) {
+    console.warn('debug badge refresh failed', err);
+  }
+};
+
+window.InteropUI.bindDebugToggle = function bindDebugToggle(rootSel) {
+  const root = rootSel ? document.querySelector(rootSel) : document;
+  if (!root) return;
+  const flagKey = '__debugBound';
+  if (root[flagKey]) return;
+  root[flagKey] = true;
+  root.addEventListener('click', async (evt) => {
+    const btn = evt.target && evt.target.closest('[data-debug-toggle]');
+    if (!btn) return;
+    evt.preventDefault();
+    const state = (btn.getAttribute('data-debug-state') || '').toLowerCase();
+    let endpoint = '/api/diag/debug/state/toggle';
+    if (state === 'on') endpoint = '/api/diag/debug/state/disable';
+    else if (state === 'off') endpoint = '/api/diag/debug/state/enable';
+    try {
+      await fetch(endpoint, {
+        method: 'POST',
+        headers: { Accept: 'application/json' },
+      });
+    } catch (err) {
+      console.warn('debug toggle failed', err);
+    }
+    window.InteropUI.refreshDebugBadge();
+  });
+};
+
+// Called after #deid-form swaps its output
+(function enhanceDeidHandlers(){
+  const prior = window.InteropUI.onDeidentifyComplete;
+  window.InteropUI.onDeidentifyComplete = function onDeidentifyComplete(event) {
+    const out = document.getElementById('deid-output');
+    const text = out ? (out.textContent || '').trim() : '';
+    if (text) {
+      const message = out.textContent || '';
+      window.PipelineContext = window.PipelineContext || {};
+      window.PipelineContext.message = message;
+      let updatedViaHelper = false;
+      if (typeof window.PipelineContext.setMessage === 'function') {
+        try {
+          window.PipelineContext.setMessage(message);
+          updatedViaHelper = true;
+        } catch (err) {
+          console.warn('PipelineContext.setMessage failed', err);
+        }
+      }
+      if (!updatedViaHelper) {
+        document.querySelectorAll('[data-bind="pipeline.message"]').forEach((el) => {
+          if (!el) return;
+          if ('value' in el) {
+            if (el.value !== message) {
+              el.value = message;
+              try { el.dispatchEvent(new Event('input', { bubbles: true })); } catch (_) { /* ignore */ }
+            }
+          } else {
+            el.textContent = message;
+          }
+        });
+      }
+      const tray = document.getElementById('deid-run-tray');
+      if (tray) {
+        try { tray.hidden = false; } catch (_) { /* noop */ }
+        if (tray.hasAttribute?.('hidden')) tray.removeAttribute('hidden');
+      }
+    }
+    if (typeof prior === 'function') {
+      try { prior.apply(this, arguments); } catch (err) { console.warn(err); }
+    }
+    if (window.InteropUI && typeof window.InteropUI.onDeidentifySummary === 'function') {
+      try { window.InteropUI.onDeidentifySummary(); } catch (err) { console.warn(err); }
+    }
+    return undefined;
+  };
+})();
+
+window.InteropUI.onDeidentifySummary = function onDeidentifySummary() {
+  const host = document.getElementById('deid-report');
+  if (!host) return;
+  if (host.querySelector('.grouped-deid-report')) return;
+  if (host.querySelector('[data-deid-row]')) return;
+  const items = Array.from(host.querySelectorAll('li'));
+  if (!items.length) return;
+  const rx = /^([A-Z0-9]{3})-(\d+)(?:\.(\d+))?(?:\.(\d+))?/;
+  const bySeg = new Map();
+  items.forEach((li) => {
+    const text = (li.textContent || '').trim();
+    const match = text.match(rx);
+    const seg = match ? match[1] : 'OTHER';
+    if (!bySeg.has(seg)) bySeg.set(seg, []);
+    bySeg.get(seg).push(li.innerHTML);
+  });
+  const wrapper = document.createElement('div');
+  wrapper.className = 'grouped-deid-report';
+  const total = items.length;
+  const summary = document.createElement('details');
+  summary.open = false;
+  summary.innerHTML = `<summary class="text-h4" style="cursor:pointer">De‑identified fields (${total})</summary>`;
+  bySeg.forEach((list, seg) => {
+    const group = document.createElement('details');
+    group.className = 'deid-seg';
+    group.open = false;
+    group.innerHTML = `<summary class="text-h5" style="cursor:pointer">${seg} <span class="muted">(${list.length})</span></summary>`;
+    const ul = document.createElement('ul');
+    list.forEach((html) => {
+      const li = document.createElement('li');
+      li.innerHTML = html;
+      ul.appendChild(li);
+    });
+    group.appendChild(ul);
+    summary.appendChild(group);
+  });
+  wrapper.appendChild(summary);
+  host.innerHTML = '';
+  host.appendChild(wrapper);
 };
 
 const bootValPanels = () => {
@@ -745,165 +922,25 @@ document.addEventListener('htmx:afterSettle', () => {
     window.initValModal(valModal);
   }
   bootValPanels();
+  window.initAccordions();
+  window.InteropUI.bindPipelineCards(document);
+  window.InteropUI.bindDebugToggle(document);
+  if (window.InteropUI && typeof window.InteropUI.onDeidentifySummary === 'function') {
+    window.InteropUI.onDeidentifySummary();
+  }
 });
 
-/* ========= Debug ON/OFF badge (robust binder) ========= */
-(function bindDebugToggle(){
-  if (typeof document === 'undefined') return;
-
-  const doc = document;
-
-  const rootPath = (path) => {
-    const body = doc.body;
-    const rootAttr = body && body.dataset ? body.dataset.root : '';
-    const meta = doc.querySelector('meta[name="root-path"]');
-    const metaVal = meta && typeof meta.getAttribute === 'function' ? meta.getAttribute('content') : '';
-    const winRoot = typeof window !== 'undefined' && typeof window.ROOT === 'string' ? window.ROOT : '';
-    const baseRaw = rootAttr || metaVal || winRoot || '';
-    const base = baseRaw && baseRaw !== '/' ? baseRaw.replace(/\/+$/, '') : (baseRaw === '/' ? '' : baseRaw);
-    if (!path) return base || '';
-    const suffix = path.startsWith('/') ? path : '/' + path.replace(/^\/+/, '');
-    return (base || '') + suffix;
-  };
-
-  const REFRESH_URL = () => rootPath('/api/diag/debug/state?format=html');
-  const ENABLE_URL = () => rootPath('/api/diag/debug/state/enable');
-  const DISABLE_URL = () => rootPath('/api/diag/debug/state/disable');
-
-  async function postJSON(url){
-    try {
-      await fetch(url, {
-        method: 'POST',
-        headers: { 'Accept': 'application/json' },
-      });
-    } catch (err) {
-      console.warn('[debug-toggle] post failed:', err);
-    }
-  }
-
-  function refreshBadge(host){
-    if (!host) return;
-    const url = REFRESH_URL();
-    if (window.htmx && typeof window.htmx.ajax === 'function') {
-      try {
-        window.htmx.ajax('GET', url, { target: host, swap: 'outerHTML' });
-        return;
-      } catch (err) {
-        console.warn('[debug-toggle] htmx refresh failed:', err);
-      }
-    }
-    fetch(url, { method: 'GET', cache: 'no-cache' })
-      .then((r) => r.text())
-      .then((html) => {
-        if (!host.isConnected) return;
-        const wrapper = doc.createElement('div');
-        wrapper.innerHTML = html;
-        const replacement = wrapper.firstElementChild || wrapper;
-        if (replacement) {
-          host.replaceWith(replacement);
-          bindBadgeHosts();
-        }
-      })
-      .catch((err) => console.warn('[debug-toggle] refresh failed:', err));
-  }
-
-  function resolveAction(button){
-    if (!button) return '';
-    const hxPost = button.getAttribute('hx-post') || '';
-    if (/\/enable\b/.test(hxPost)) return 'enable';
-    if (/\/disable\b/.test(hxPost)) return 'disable';
-    const label = (button.textContent || '').toLowerCase();
-    if (label.includes('off')) return 'enable';
-    if (label.includes('on')) return 'disable';
-    return '';
-  }
-
-  function bindBadgeHosts(){
-    doc.querySelectorAll('#debug-state-badge').forEach((host) => {
-      if (host.dataset.debugBound === '1') return;
-      host.dataset.debugBound = '1';
-      host.addEventListener('click', async (event) => {
-        const btn = event.target.closest('button');
-        if (!btn || !host.contains(btn)) return;
-        event.preventDefault();
-        event.stopPropagation();
-        const action = resolveAction(btn);
-        const url = action === 'enable' ? ENABLE_URL() : action === 'disable' ? DISABLE_URL() : '';
-        if (!url) return;
-        btn.disabled = true;
-        await postJSON(url);
-        btn.disabled = false;
-        refreshBadge(host);
-      }, { capture: true });
-    });
-  }
-
-  doc.addEventListener('DOMContentLoaded', bindBadgeHosts);
-  doc.addEventListener('htmx:afterSwap', bindBadgeHosts);
-  doc.addEventListener('htmx:afterSettle', bindBadgeHosts);
-})();
-
 document.addEventListener('DOMContentLoaded', () => {
+  window.initAccordions();
+  window.InteropUI.bindPipelineCards(document);
+  window.InteropUI.bindDebugToggle(document);
+  window.InteropUI.refreshDebugBadge();
   bootValPanels();
   const valModal = document.querySelector('#val-modal');
   if (valModal && typeof window.initValModal === 'function') {
     window.initValModal(valModal);
   }
+  if (window.InteropUI && typeof window.InteropUI.onDeidentifySummary === 'function') {
+    window.InteropUI.onDeidentifySummary();
+  }
 });
-
-/* ========= InteropUI bridge: ensure module bodies are actually visible ========= */
-(function bridgeInteropShowFeatureAndUnhide(){
-  window.InteropUI = window.InteropUI || {};
-  const prior = window.InteropUI.showFeature;
-  /** remove any hard hide that legacy code may have applied */
-  function unhideBody(container){
-    if (!container) return;
-    const body = container.querySelector
-      ? container.querySelector('.module-body')
-      : (container.closest && container.closest('.module-body'));
-    if (!body) return;
-    try { body.hidden = false; } catch {}
-    if (body.hasAttribute && body.hasAttribute('hidden')) body.removeAttribute('hidden');
-    if (body.style) {
-      if (body.style.display === 'none') body.style.removeProperty('display');
-      if (body.style.visibility === 'hidden') body.style.removeProperty('visibility');
-    }
-  }
-  /** open the feature card and guarantee it's visible */
-  function openDetailsFor(feature){
-    const el =
-      document.querySelector(`details.interop-details[data-feature="${feature}"]`)
-      || document.getElementById(`${feature}-panel`);
-    if (!el) return false;
-    if (el.tagName && el.tagName.toLowerCase() === 'details') {
-      if (!el.open) el.open = true;
-      unhideBody(el);
-      try { el.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch {}
-      return true;
-    }
-    unhideBody(el);
-
-    try { el.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch {}
-    return true;
-  }
-  window.InteropUI.showFeature = function(feature){
-    if (openDetailsFor(feature)) return;
-    if (typeof prior === 'function') {
-      try { prior.apply(this, arguments); } catch (e) { console.warn(e); }
-    }
-  };
-
-  function ensureAllVisible(){
-    document.querySelectorAll('details.interop-details .module-body').forEach((body) => {
-      try { body.hidden = false; } catch {}
-      if (body.hasAttribute && body.hasAttribute('hidden')) body.removeAttribute('hidden');
-      if (body.style) {
-        if (body.style.display === 'none') body.style.removeProperty('display');
-        if (body.style.visibility === 'hidden') body.style.removeProperty('visibility');
-      }
-    });
-  }
-  document.addEventListener('DOMContentLoaded', ensureAllVisible);
-  document.addEventListener('htmx:afterSettle', ensureAllVisible);
-
-})();

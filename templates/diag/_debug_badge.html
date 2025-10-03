@@ -1,0 +1,23 @@
+<span id="{{ target_id }}">
+  {% if enabled %}
+    <button
+      type="button"
+      class="btn small success"
+      data-debug-toggle
+      data-debug-state="on"
+      aria-pressed="true"
+      title="Turn debug OFF">
+      Debug ON
+    </button>
+  {% else %}
+    <button
+      type="button"
+      class="btn small"
+      data-debug-toggle
+      data-debug-state="off"
+      aria-pressed="false"
+      title="Turn debug ON">
+      Debug OFF
+    </button>
+  {% endif %}
+</span>

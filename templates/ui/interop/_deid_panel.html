@@ -9,14 +9,12 @@
   {% set api_deidentify_plain = api_deidentify ~ '?format=txt' %}
 {% endif %}
 
-<section id="deid-panel" class="panel interop-panel interop-panel-deid"
-         data-accordion data-open="1" aria-labelledby="deid-header">
-  <header id="deid-header" class="row gap" data-acc-toggle aria-expanded="true"
-          aria-controls="deid-body" style="justify-content:space-between;align-items:center">
-    <h3 class="text-h3" style="margin:0">De‑Identify Message</h3>
-    <span class="acc-right muted small"><span data-acc-label>collapse</span></span>
+<section id="deid-panel" class="panel interop-panel interop-panel-deid" data-accordion data-open="0" data-module="deid">
+  <header class="row gap" data-acc-toggle aria-expanded="false" style="justify-content:space-between;align-items:center;cursor:pointer">
+    <h3 class="text-h3" style="margin:0">De‑identify</h3>
+    <span class="muted small" data-acc-label>expand</span>
   </header>
-  <div id="deid-body" class="module-body" data-acc-body>
+  <div id="deid-body" class="panel-body" data-acc-body>
     <form id="deid-form"
           class="mt"
           method="post"
@@ -53,20 +51,21 @@
       </div>
     </form>
 
+    <pre id="deid-output" class="codepane limit10 scrollbox mt" aria-live="polite"></pre>
+
     <div id="deid-report"
          class="card mt"
          hx-post="{{ urls.api_deidentify_summary | default(root ~ '/api/interop/deidentify/summary', true) }}"
          hx-include="#deid-text,#deid-seed,#deid-template,#deid-apply-baseline"
          hx-trigger="htmx:afterRequest from:#deid-form"
          hx-headers='{"Accept":"text/html"}'
-         hx-swap="innerHTML">
+         hx-swap="innerHTML"
+         hx-on::afterSwap="window.InteropUI && window.InteropUI.onDeidentifySummary && window.InteropUI.onDeidentifySummary()">
       <details class="mini-report">
-        <summary>De-identification report</summary>
+        <summary>De-identification results</summary>
         <div class="muted small">Run de-identify to see what fields changed.</div>
       </details>
     </div>
-
-    <pre id="deid-output" class="codepane limit10 scrollbox mt" aria-live="polite"></pre>
 
     <div id="deid-run-tray" class="action-tray mt" hidden>
       <div class="action-tray-header">
@@ -74,7 +73,7 @@
         <p>Choose what to do with the de‑identified message.</p>
       </div>
       <div class="action-cards">
-        <button class="action-card pipeline-run" type="button" data-run-to="validate">
+        <button class="action-card pipeline-run" type="button" data-run-to="validate" title="Open Validate with this message">
           <strong>✓ Validate</strong>
           <small>Ensure structural correctness.</small>
         </button>
@@ -89,4 +88,4 @@
       </div>
     </div>
   </div>
-</details>
+</section>
