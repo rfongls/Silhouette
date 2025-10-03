@@ -51,19 +51,20 @@
       </div>
     </form>
 
+    <!-- OUTPUT FIRST -->
     <pre id="deid-output" class="codepane limit10 scrollbox mt" aria-live="polite"></pre>
 
+    <!-- REPORT BELOW OUTPUT -->
     <div id="deid-report"
          class="card mt"
          hx-post="{{ urls.api_deidentify_summary | default(root ~ '/api/interop/deidentify/summary', true) }}"
          hx-include="#deid-text,#deid-seed,#deid-template,#deid-apply-baseline"
          hx-trigger="htmx:afterRequest from:#deid-form"
          hx-headers='{"Accept":"text/html"}'
-         hx-swap="innerHTML"
-         hx-on::afterSwap="window.InteropUI && window.InteropUI.onDeidentifySummary && window.InteropUI.onDeidentifySummary()">
+         hx-swap="innerHTML">
       <details class="mini-report">
-        <summary>De-identification results</summary>
-        <div class="muted small">Run de-identify to see what fields changed.</div>
+        <summary>De-identified fields</summary>
+        <div class="muted small">Run de-identify to see what changed.</div>
       </details>
     </div>
 
