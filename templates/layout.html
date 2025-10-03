@@ -67,6 +67,13 @@
     [data-accordion] [data-acc-body] { display: none; }
     [data-accordion][data-open="1"] [data-acc-body] { display: block; }
     .interop-panel[data-open="1"] [data-acc-body][hidden] { display: block !important; }
+    [data-acc-toggle] .acc-right {
+      margin-left: auto;
+      display: inline-flex;
+      align-items: center;
+      gap: .35rem;
+      color: var(--muted, #94a3b8);
+    }
 
     /* Shared modal chrome */
     .modal-backdrop {

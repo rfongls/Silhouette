@@ -690,27 +690,31 @@ window.initAccordions = function initAccordions(rootSel) {
         if (el.style.display === 'none') el.style.removeProperty('display');
         if (el.style.visibility === 'hidden') el.style.removeProperty('visibility');
       }
-    };
-
-    const setOpen = (open) => {
-      acc.setAttribute('data-open', open ? '1' : '0');
-      toggle.setAttribute('aria-expanded', String(!!open));
-      if (open) {
-        unhide(body);
-        body.querySelectorAll('[hidden]').forEach((child) => unhide(child));
-      }
       if (label) label.textContent = open ? 'collapse' : 'expand';
     };
 
-    const initial = acc.getAttribute('data-open') === '1' || acc.open === true;
-    setOpen(initial);
+
+    const isOpen = () => (acc.getAttribute('data-open') === '1') || acc.open === true;
+    const setOpen = (open) => {
+      const on = !!open;
+      acc.setAttribute('data-open', on ? '1' : '0');
+      toggle.setAttribute('aria-expanded', String(on));
+      try { body.hidden = !on; } catch {}
+      if (body.style) body.style.display = on ? '' : 'none';
+      if (on) {
+        unhide(body);
+        body.querySelectorAll('[hidden]').forEach((child) => unhide(child));
+      }
+      if (label) label.textContent = on ? 'collapse' : 'expand';
+    };
+
+    setOpen(isOpen());
 
     const onToggleClick = (event) => {
       const ctl = event.target.closest('a,button,input,select,textarea,label');
       if (ctl) return;
       event.preventDefault();
-      const open = acc.getAttribute('data-open') === '1';
-      setOpen(!open);
+      setOpen(!isOpen());
     };
 
     toggle.addEventListener('click', onToggleClick, { passive: false });
@@ -718,8 +722,7 @@ window.initAccordions = function initAccordions(rootSel) {
     toggle.addEventListener('keydown', (event) => {
       if (event.key === ' ' || event.key === 'Enter') {
         event.preventDefault();
-        const open = acc.getAttribute('data-open') === '1';
-        setOpen(!open);
+        setOpen(!isOpen());
       }
     });
   });
