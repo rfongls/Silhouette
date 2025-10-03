@@ -742,14 +742,69 @@ document.addEventListener('htmx:afterSettle', () => {
     window.initValModal(valModal);
   }
   bootValPanels();
-  window.initAccordions();
 });
 
 document.addEventListener('DOMContentLoaded', () => {
-  window.initAccordions();
   bootValPanels();
   const valModal = document.querySelector('#val-modal');
   if (valModal && typeof window.initValModal === 'function') {
     window.initValModal(valModal);
   }
 });
+
+/* ========= InteropUI bridge: ensure module bodies are actually visible ========= */
+(function bridgeInteropShowFeatureAndUnhide(){
+  window.InteropUI = window.InteropUI || {};
+  const prior = window.InteropUI.showFeature;
+  /** remove any hard hide that legacy code may have applied */
+  function unhideBody(container){
+    if (!container) return;
+    const body = container.querySelector
+      ? container.querySelector('.module-body')
+      : (container.closest && container.closest('.module-body'));
+    if (!body) return;
+    try { body.hidden = false; } catch {}
+    if (body.hasAttribute && body.hasAttribute('hidden')) body.removeAttribute('hidden');
+    if (body.style) {
+      if (body.style.display === 'none') body.style.removeProperty('display');
+      if (body.style.visibility === 'hidden') body.style.removeProperty('visibility');
+    }
+  }
+  /** open the feature card and guarantee it's visible */
+  function openDetailsFor(feature){
+    const el =
+      document.querySelector(`details.interop-details[data-feature="${feature}"]`)
+      || document.getElementById(`${feature}-panel`);
+    if (!el) return false;
+    if (el.tagName && el.tagName.toLowerCase() === 'details') {
+      if (!el.open) el.open = true;
+      unhideBody(el);
+      try { el.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch {}
+      return true;
+    }
+    unhideBody(el);
+
+    try { el.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch {}
+    return true;
+  }
+  window.InteropUI.showFeature = function(feature){
+    if (openDetailsFor(feature)) return;
+    if (typeof prior === 'function') {
+      try { prior.apply(this, arguments); } catch (e) { console.warn(e); }
+    }
+  };
+
+  function ensureAllVisible(){
+    document.querySelectorAll('details.interop-details .module-body').forEach((body) => {
+      try { body.hidden = false; } catch {}
+      if (body.hasAttribute && body.hasAttribute('hidden')) body.removeAttribute('hidden');
+      if (body.style) {
+        if (body.style.display === 'none') body.style.removeProperty('display');
+        if (body.style.visibility === 'hidden') body.style.removeProperty('visibility');
+      }
+    });
+  }
+  document.addEventListener('DOMContentLoaded', ensureAllVisible);
+  document.addEventListener('htmx:afterSettle', ensureAllVisible);
+
+})();
