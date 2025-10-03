@@ -3,9 +3,8 @@
     <button
       type="button"
       class="btn small success"
-      hx-post="{{ request.url_for('api_diag_debug_disable') }}"
-      hx-target="#{{ target_id }}"
-      hx-swap="outerHTML"
+      data-debug-toggle
+      data-debug-state="on"
       aria-pressed="true"
       title="Turn debug OFF">
       Debug ON
@@ -14,9 +13,8 @@
     <button
       type="button"
       class="btn small"
-      hx-post="{{ request.url_for('api_diag_debug_enable') }}"
-      hx-target="#{{ target_id }}"
-      hx-swap="outerHTML"
+      data-debug-toggle
+      data-debug-state="off"
       aria-pressed="false"
       title="Turn debug ON">
       Debug OFF

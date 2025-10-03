@@ -45,7 +45,7 @@
 
         <tr style="border-bottom:1px solid var(--color-border, #e5e7eb)" class="{{ (it.severity | default('error')) | lower }}">
           <td style="padding:0.5rem">{{ it.severity | capitalize | default('Error') }}</td>
-          <td style="padding:0.5rem"><code class="mono">{{ it.code or it.rule or '—' }}</code></td>
+          <td style="padding:0.5rem"><code class="mono">{{ it.code or it.rule or it.id or it.name or it.type or '—' }}</code></td>
           <td style="padding:0.5rem"><code class="mono">{{ seg_out or '—' }}</code></td>
           <td style="padding:0.5rem"><code class="mono">{{ fld_out if fld_out is not none else '—' }}</code></td>
           <td style="padding:0.5rem"><code class="mono">{{ cmp_out if cmp_out is not none else '—' }}</code></td>

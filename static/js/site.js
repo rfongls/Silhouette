@@ -1,3 +1,9 @@
+// ------------------------------
+// Interop UI helpers and global utilities
+// ------------------------------
+
+window.InteropUI = window.InteropUI || {};
+
 /* ========== Global utilities ========== */
 window.esc = s => (s ?? "").toString()
   .replace(/&/g,"&amp;").replace(/</g,"&lt;")
@@ -676,63 +682,121 @@ window.initAccordions = function initAccordions(rootSel) {
     const toggle = acc.querySelector('[data-acc-toggle]');
     const body = acc.querySelector('[data-acc-body]');
     if (!toggle || !body) return;
+
     const setOpen = (open) => {
       const isOpen = !!open;
       acc.setAttribute('data-open', isOpen ? '1' : '0');
-      if (acc.classList) acc.classList.toggle('collapsed', !isOpen);
       toggle.setAttribute('aria-expanded', String(isOpen));
       try {
         body.hidden = !isOpen;
-        if (!isOpen) {
-          if (!body.hasAttribute('hidden')) body.setAttribute('hidden', '');
-        } else if (body.hasAttribute('hidden')) {
-          body.removeAttribute('hidden');
-        }
-      } catch (_) {
-        /* noop */
+      } catch (err) {
+        console.warn('accordion toggle failed', err);
       }
     };
-    const initial = acc.getAttribute('data-open') === '1';
-    setOpen(initial);
-    toggle.addEventListener('click', (event) => {
-      event.preventDefault();
-      setOpen(acc.getAttribute('data-open') !== '1');
+
+    setOpen(acc.getAttribute('data-open') === '1');
+
+    toggle.addEventListener('click', (evt) => {
+      evt.preventDefault();
+      const next = acc.getAttribute('data-open') !== '1';
+      setOpen(next);
     });
   });
 };
 
-function openModule(modKey) {
-  const ids = {
-    generate: '#generate-panel',
-    deid: '#deid-panel',
-    validate: '#validate-panel',
-    mllp: '#mllp-panel',
-  };
-  const id = ids[modKey] || `#${modKey}-panel`;
-  const acc = document.querySelector(id);
-  if (!acc) return;
-  const body = acc.querySelector('[data-acc-body]');
-  const toggle = acc.querySelector('[data-acc-toggle]');
-  acc.setAttribute('data-open', '1');
-  if (acc.classList) acc.classList.remove('collapsed');
-  if (toggle) toggle.setAttribute('aria-expanded', 'true');
-  if (body) {
-    try {
-      body.hidden = false;
-      if (body.hasAttribute('hidden')) body.removeAttribute('hidden');
-      if (body.style?.display === 'none') body.style.removeProperty('display');
-    } catch (_) {
-      /* ignore */
-    }
+window.InteropUI.openModule = function openModule(key) {
+  if (!key) return;
+  const lookup = [
+    `#${key}-panel`,
+    `#${key}panel`,
+    `[data-accordion][data-module="${key}"]`,
+  ];
+  let section = null;
+  for (const sel of lookup) {
+    section = document.querySelector(sel);
+    if (section) break;
+  }
+  if (!section) return;
+  const toggle = section.querySelector('[data-acc-toggle]');
+  const body = section.querySelector('[data-acc-body]');
+  if (toggle && body) {
+    section.setAttribute('data-open', '1');
+    toggle.setAttribute('aria-expanded', 'true');
+    body.hidden = false;
   }
   try {
-    acc.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  } catch (_) {
-    /* ignore */
+    section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  } catch (err) {
+    console.warn('scrollIntoView failed', err);
   }
-}
+};
 
-window.InteropUI = window.InteropUI || {};
+window.InteropUI.bindPipelineCards = function bindPipelineCards(rootSel) {
+  const root = rootSel ? document.querySelector(rootSel) : document;
+  if (!root) return;
+  const flagKey = '__pipelineBound';
+  if (root[flagKey]) return;
+  root[flagKey] = true;
+  root.addEventListener('click', (evt) => {
+    const btn = evt.target && evt.target.closest('.pipeline-run,[data-run-to]');
+    if (!btn) return;
+    const to = (btn.getAttribute('data-run-to') || '').trim().toLowerCase();
+    if (!to || to === 'pipeline') return;
+    evt.preventDefault();
+    window.InteropUI.openModule(to);
+    let focusId = null;
+    if (to === 'validate') focusId = 'val-text';
+    else if (to === 'deid') focusId = 'deid-text';
+    else if (to === 'mllp') focusId = 'mllp-messages';
+    else if (to === 'generate') focusId = 'gen-text';
+    if (focusId) {
+      const field = document.getElementById(focusId);
+      if (field) {
+        try { field.focus(); } catch (err) { console.warn(err); }
+      }
+    }
+  }, { passive: false });
+};
+
+window.InteropUI.refreshDebugBadge = function refreshDebugBadge() {
+  const target = document.querySelector('#debug-state-badge');
+  if (!target || !window.htmx) return;
+  try {
+    window.htmx.ajax('GET', '/api/diag/debug/state?format=html', {
+      target: '#debug-state-badge',
+      swap: 'outerHTML',
+    });
+  } catch (err) {
+    console.warn('debug badge refresh failed', err);
+  }
+};
+
+window.InteropUI.bindDebugToggle = function bindDebugToggle(rootSel) {
+  const root = rootSel ? document.querySelector(rootSel) : document;
+  if (!root) return;
+  const flagKey = '__debugBound';
+  if (root[flagKey]) return;
+  root[flagKey] = true;
+  root.addEventListener('click', async (evt) => {
+    const btn = evt.target && evt.target.closest('[data-debug-toggle]');
+    if (!btn) return;
+    evt.preventDefault();
+    const state = (btn.getAttribute('data-debug-state') || '').toLowerCase();
+    let endpoint = '/api/diag/debug/state/toggle';
+    if (state === 'on') endpoint = '/api/diag/debug/state/disable';
+    else if (state === 'off') endpoint = '/api/diag/debug/state/enable';
+    try {
+      await fetch(endpoint, {
+        method: 'POST',
+        headers: { Accept: 'application/json' },
+      });
+    } catch (err) {
+      console.warn('debug toggle failed', err);
+    }
+    window.InteropUI.refreshDebugBadge();
+  });
+};
+
 
 // Called after #deid-form swaps its output
 (function enhanceDeidHandlers(){
@@ -784,7 +848,9 @@ window.InteropUI = window.InteropUI || {};
 
 window.InteropUI.onDeidentifySummary = function onDeidentifySummary() {
   const host = document.getElementById('deid-report');
-  if (!host || host.querySelector('.grouped-deid-report')) return;
+  if (!host) return;
+  if (host.querySelector('.grouped-deid-report')) return;
+  if (host.querySelector('[data-deid-row]')) return;
   const items = Array.from(host.querySelectorAll('li'));
   if (!items.length) return;
   const rx = /^([A-Z0-9]{3})-(\d+)(?:\.(\d+))?(?:\.(\d+))?/;
@@ -860,15 +926,19 @@ document.addEventListener('htmx:afterSettle', () => {
     window.initValModal(valModal);
   }
   bootValPanels();
-
-  if (typeof window.initAccordions === 'function') window.initAccordions();
+  window.initAccordions();
+  window.InteropUI.bindPipelineCards(document);
+  window.InteropUI.bindDebugToggle(document);
   if (window.InteropUI && typeof window.InteropUI.onDeidentifySummary === 'function') {
     window.InteropUI.onDeidentifySummary();
   }
 });
 
 document.addEventListener('DOMContentLoaded', () => {
-  if (typeof window.initAccordions === 'function') window.initAccordions();
+  window.initAccordions();
+  window.InteropUI.bindPipelineCards(document);
+  window.InteropUI.bindDebugToggle(document);
+  window.InteropUI.refreshDebugBadge();
   bootValPanels();
   const valModal = document.querySelector('#val-modal');
   if (valModal && typeof window.initValModal === 'function') {
