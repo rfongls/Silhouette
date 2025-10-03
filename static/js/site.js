@@ -682,65 +682,6 @@ window.initInterOpPanels = function initInterOpPanels(rootSel){
   });
 };
 
-/* ========= Debug badge: deterministic toggle without hx-on inline handler ========= */
-window.bindDebugBadge = function bindDebugBadge(rootSel) {
-  const root = rootSel ? document.querySelector(rootSel) : document;
-  if (!root) return;
-  const badges = root.querySelectorAll('#debug-state-badge');
-  if (!badges.length) return;
-
-  const resolveBase = (doc) => {
-    const body = doc && doc.body;
-    const rootAttr = body && body.dataset ? body.dataset.root : '';
-    const meta = doc ? doc.querySelector('meta[name="root-path"]') : null;
-    const metaVal = meta && typeof meta.getAttribute === 'function' ? meta.getAttribute('content') : '';
-    const winRoot = typeof window !== 'undefined' && typeof window.ROOT === 'string' ? window.ROOT : '';
-    const baseRaw = rootAttr || metaVal || winRoot || '';
-    if (!baseRaw) return '';
-    if (baseRaw === '/') return '';
-    return baseRaw.replace(/\/+$/, '');
-  };
-
-  const buildUrl = (doc, path) => {
-    const base = resolveBase(doc || document);
-    if (!path) return base;
-    const suffix = path.startsWith('/') ? path : `/${path.replace(/^\/+/, '')}`;
-    return `${base}${suffix}`;
-  };
-
-  badges.forEach((badge) => {
-    if (badge.dataset.bound === '1') return;
-    badge.dataset.bound = '1';
-    badge.addEventListener('click', async (e) => {
-      const btn = e.target.closest('button[data-debug]');
-      if (!btn || !badge.contains(btn)) return;
-      e.preventDefault();
-      try {
-        const enabled = btn.getAttribute('data-debug') === 'on';
-        const url = buildUrl(badge.ownerDocument, enabled ? '/api/diag/debug/state/disable' : '/api/diag/debug/state/enable');
-        await fetch(url, { method: 'POST' });
-      } catch (err) {
-        console.warn('Debug toggle failed', err);
-      }
-      try {
-        const refreshUrl = buildUrl(badge.ownerDocument, '/api/diag/debug/state?format=html');
-        const res = await fetch(refreshUrl, { headers: { 'Accept': 'text/html' } });
-        const html = await res.text();
-        const tmp = document.createElement('div');
-        tmp.innerHTML = html;
-        const next = tmp.querySelector('#debug-state-badge');
-        if (next) {
-          const replacement = next.cloneNode(true);
-          badge.replaceWith(replacement);
-          window.bindDebugBadge();
-        }
-      } catch (err) {
-        console.warn('Debug badge refresh failed', err);
-      }
-    }, { passive: false });
-  });
-};
-
 const bootValPanels = () => {
   document.querySelectorAll('[data-val-checks-panel]').forEach((panel) => {
     window.initValChecksPanel(panel);
@@ -759,12 +700,10 @@ document.addEventListener('htmx:afterSettle', () => {
   }
   bootValPanels();
   if (typeof window.initInterOpPanels === 'function') window.initInterOpPanels();
-  if (typeof window.bindDebugBadge === 'function') window.bindDebugBadge();
 });
 
 document.addEventListener('DOMContentLoaded', () => {
   if (typeof window.initInterOpPanels === 'function') window.initInterOpPanels();
-  if (typeof window.bindDebugBadge === 'function') window.bindDebugBadge();
   bootValPanels();
   const valModal = document.querySelector('#val-modal');
   if (valModal && typeof window.initValModal === 'function') {
