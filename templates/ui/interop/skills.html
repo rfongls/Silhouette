@@ -14,13 +14,13 @@
 {% set root = request.scope.get('root_path', '') %}
 <div class="row mb" style="justify-content: space-between; align-items: center;">
   <h2>Interoperability</h2>
-  <div id="debug-state-badge"
-       hx-get="{{ root }}/api/diag/debug/state?format=html"
-      hx-trigger="load"
-      hx-target="#debug-state-badge"
-      hx-swap="outerHTML">
+  <span id="debug-state-badge"
+        hx-get="{{ root }}/api/diag/debug/state?format=html"
+        hx-trigger="load"
+        hx-target="this"
+        hx-swap="outerHTML">
     <span class="micro muted">Loading debug switch…</span>
-  </div>
+  </span>
 </div>
 <nav class="module-nav" id="interop-feature-bar">
   <button class="module-btn active" type="button" data-feature="gen" data-panel="generate-panel"

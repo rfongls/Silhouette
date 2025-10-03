@@ -126,16 +126,10 @@ def _render_debug_badge_html(enabled: bool, target: str = "debug-state-badge") -
     button_class = "btn small success" if enabled else "btn small"
     target_id = (target or "debug-state-badge").strip() or "debug-state-badge"
     escaped_target = _html.escape(target_id, quote=True)
-    refresh_js = (
-        "htmx.ajax('/api/diag/debug/state?format=html',"
-        "{target:'#%s',swap:'outerHTML'})" % escaped_target
-    )
+    state_attr = "on" if enabled else "off"
     parts = [
         f"<span id='{escaped_target}'>",
-        f"<button class='{button_class}' ",
-        f"hx-post='/api/diag/debug/state/{next_action}' ",
-        'hx-headers=\'{"Accept":"application/json"}\' ',
-        f"hx-on::afterRequest=\"{refresh_js}\">",
+        f"<button type='button' class='{button_class}' data-debug='{state_attr}'>",
         f"{_html.escape(label)}</button>",
         "</span>",
     ]
