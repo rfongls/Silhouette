@@ -177,6 +177,12 @@
         <a class="nav-link {% if current_path.startswith(settings_path) %}active{% endif %}" href="{{ settings_url }}">Settings</a>
       </nav>
       <div class="nav-actions">
+        <span id="debug-state-badge"
+              class="muted small"
+              hx-get="{{ root }}/api/diag/debug/state?format=html"
+              hx-trigger="load"
+              hx-target="this"
+              hx-swap="outerHTML">Debug OFF</span>
         <button class="hamburger-btn" id="hamburger-toggle"
                 onclick="window.SilhouetteMenuToggle && window.SilhouetteMenuToggle()"
                 aria-label="Open settings" aria-expanded="false">

@@ -744,6 +744,102 @@ document.addEventListener('htmx:afterSettle', () => {
   bootValPanels();
 });
 
+/* ========= Debug ON/OFF badge (robust binder) ========= */
+(function bindDebugToggle(){
+  if (typeof document === 'undefined') return;
+
+  const doc = document;
+
+  const rootPath = (path) => {
+    const body = doc.body;
+    const rootAttr = body && body.dataset ? body.dataset.root : '';
+    const meta = doc.querySelector('meta[name="root-path"]');
+    const metaVal = meta && typeof meta.getAttribute === 'function' ? meta.getAttribute('content') : '';
+    const winRoot = typeof window !== 'undefined' && typeof window.ROOT === 'string' ? window.ROOT : '';
+    const baseRaw = rootAttr || metaVal || winRoot || '';
+    const base = baseRaw && baseRaw !== '/' ? baseRaw.replace(/\/+$/, '') : (baseRaw === '/' ? '' : baseRaw);
+    if (!path) return base || '';
+    const suffix = path.startsWith('/') ? path : '/' + path.replace(/^\/+/, '');
+    return (base || '') + suffix;
+  };
+
+  const REFRESH_URL = () => rootPath('/api/diag/debug/state?format=html');
+  const ENABLE_URL = () => rootPath('/api/diag/debug/state/enable');
+  const DISABLE_URL = () => rootPath('/api/diag/debug/state/disable');
+
+  async function postJSON(url){
+    try {
+      await fetch(url, {
+        method: 'POST',
+        headers: { 'Accept': 'application/json' },
+      });
+    } catch (err) {
+      console.warn('[debug-toggle] post failed:', err);
+    }
+  }
+
+  function refreshBadge(host){
+    if (!host) return;
+    const url = REFRESH_URL();
+    if (window.htmx && typeof window.htmx.ajax === 'function') {
+      try {
+        window.htmx.ajax('GET', url, { target: host, swap: 'outerHTML' });
+        return;
+      } catch (err) {
+        console.warn('[debug-toggle] htmx refresh failed:', err);
+      }
+    }
+    fetch(url, { method: 'GET', cache: 'no-cache' })
+      .then((r) => r.text())
+      .then((html) => {
+        if (!host.isConnected) return;
+        const wrapper = doc.createElement('div');
+        wrapper.innerHTML = html;
+        const replacement = wrapper.firstElementChild || wrapper;
+        if (replacement) {
+          host.replaceWith(replacement);
+          bindBadgeHosts();
+        }
+      })
+      .catch((err) => console.warn('[debug-toggle] refresh failed:', err));
+  }
+
+  function resolveAction(button){
+    if (!button) return '';
+    const hxPost = button.getAttribute('hx-post') || '';
+    if (/\/enable\b/.test(hxPost)) return 'enable';
+    if (/\/disable\b/.test(hxPost)) return 'disable';
+    const label = (button.textContent || '').toLowerCase();
+    if (label.includes('off')) return 'enable';
+    if (label.includes('on')) return 'disable';
+    return '';
+  }
+
+  function bindBadgeHosts(){
+    doc.querySelectorAll('#debug-state-badge').forEach((host) => {
+      if (host.dataset.debugBound === '1') return;
+      host.dataset.debugBound = '1';
+      host.addEventListener('click', async (event) => {
+        const btn = event.target.closest('button');
+        if (!btn || !host.contains(btn)) return;
+        event.preventDefault();
+        event.stopPropagation();
+        const action = resolveAction(btn);
+        const url = action === 'enable' ? ENABLE_URL() : action === 'disable' ? DISABLE_URL() : '';
+        if (!url) return;
+        btn.disabled = true;
+        await postJSON(url);
+        btn.disabled = false;
+        refreshBadge(host);
+      }, { capture: true });
+    });
+  }
+
+  doc.addEventListener('DOMContentLoaded', bindBadgeHosts);
+  doc.addEventListener('htmx:afterSwap', bindBadgeHosts);
+  doc.addEventListener('htmx:afterSettle', bindBadgeHosts);
+})();
+
 document.addEventListener('DOMContentLoaded', () => {
   bootValPanels();
   const valModal = document.querySelector('#val-modal');
