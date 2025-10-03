@@ -684,7 +684,6 @@ window.initAccordions = function initAccordions(rootSel) {
 
     header.setAttribute('role', 'button');
     if (!header.hasAttribute('tabindex')) header.setAttribute('tabindex', '0');
-
     const write = (open) => {
       panel.setAttribute('data-open', open ? '1' : '0');
       header.setAttribute('aria-expanded', String(!!open));
