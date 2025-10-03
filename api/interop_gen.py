@@ -13,7 +13,6 @@ import sys
 import inspect
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
-import html as _html
 from fastapi.responses import JSONResponse, PlainTextResponse, HTMLResponse
 from fastapi.templating import Jinja2Templates
 from starlette.datastructures import UploadFile
@@ -681,18 +680,8 @@ def _summarize_hl7_changes(orig: str, deid: str) -> list[dict[str, Any]]:
 
 
 def _render_deid_summary_html(changes: list[dict[str, Any]]) -> str:
-    count = len(changes)
-    if not count:
-        return "<details class='mini-report'><summary>No de-identifiable fields changed</summary></details>"
-    lis = "".join(
-        f"<li><code>{_html.escape(c['label'])}</code></li>" for c in changes[:200]
-    )
-    return (
-        f"<details class='mini-report' open>"
-        f"<summary>De-identified fields: {count}</summary>"
-        f"<ul class='compact'>{lis}</ul>"
-        f"</details>"
-    )
+    template = templates.get_template("ui/interop/_deid_summary.html")
+    return template.render({"changes": changes})
 
 
 @router.post("/api/interop/deidentify")
