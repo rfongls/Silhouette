@@ -724,6 +724,7 @@ document.addEventListener('DOMContentLoaded', () => {
       return true;
     }
     unhideBody(el);
+
     try { el.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch {}
     return true;
   }
@@ -746,4 +747,5 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   document.addEventListener('DOMContentLoaded', ensureAllVisible);
   document.addEventListener('htmx:afterSettle', ensureAllVisible);
+
 })();
