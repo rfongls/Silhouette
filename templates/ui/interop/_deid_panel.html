@@ -10,12 +10,13 @@
 {% endif %}
 
 <section id="deid-panel" class="panel interop-panel interop-panel-deid"
-         data-accordion data-open="0" aria-labelledby="deid-header">
-  <header id="deid-header" class="row gap" data-acc-toggle aria-expanded="false">
+         data-accordion data-open="1" aria-labelledby="deid-header">
+  <header id="deid-header" class="row gap" data-acc-toggle aria-expanded="true"
+          aria-controls="deid-body" style="justify-content:space-between;align-items:center">
     <h3 class="text-h3" style="margin:0">De‑Identify Message</h3>
-    <span class="muted small acc-label" data-acc-label>expand</span>
+    <span class="acc-right muted small"><span data-acc-label>collapse</span></span>
   </header>
-  <div class="module-body" data-acc-body>
+  <div id="deid-body" class="module-body" data-acc-body>
     <form id="deid-form"
           class="mt"
           method="post"

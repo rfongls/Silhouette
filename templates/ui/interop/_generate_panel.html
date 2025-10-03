@@ -1,11 +1,12 @@
 {% set root = request.scope.get('root_path', '') %}
 <section id="generate-panel" class="panel interop-panel interop-panel-generate"
-         data-accordion data-open="0" aria-labelledby="generate-header">
-  <header id="generate-header" class="row gap" data-acc-toggle aria-expanded="false">
+         data-accordion data-open="1" aria-labelledby="generate-header">
+  <header id="generate-header" class="row gap" data-acc-toggle aria-expanded="true"
+          aria-controls="gen-body" style="justify-content:space-between;align-items:center">
     <h3 class="text-h3" style="margin:0">Generate Messages</h3>
-    <span class="muted small acc-label" data-acc-label>expand</span>
+    <span class="acc-right muted small"><span data-acc-label>collapse</span></span>
   </header>
-  <div class="module-body" data-acc-body>
+  <div id="gen-body" class="module-body" data-acc-body>
     <form id="gen-form"
           method="post" autocomplete="off" novalidate
           action="{{ urls.ui_generate | default(root ~ '/ui/interop/generate', true) }}"
