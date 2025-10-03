@@ -152,6 +152,11 @@
       cursor: pointer;
       user-select: none;
     }
+    details.interop-details > summary::-webkit-details-marker { display: none; }
+    details.interop-details .acc-toggle .txt-collapse { display: none; }
+    details.interop-details[open] .acc-toggle .txt-expand { display: none; }
+    details.interop-details[open] .acc-toggle .txt-collapse { display: inline; }
+    details.interop-details .module-body { padding: 0 1rem 1rem 1rem; }
   </style>
   {% block extra_head %}{% endblock %}
   <script src="{{ static_base }}vendor/htmx.min.js?v=1.9.12"></script>
