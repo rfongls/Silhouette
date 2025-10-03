@@ -666,68 +666,60 @@ window.attachParamDebug = function attachParamDebug(root){
   }catch(e){ console.error(e); }
 };
 
-/* ========= Interop module accordion binding =========
-   - Works even if the feature tabs were never clicked.
-   - Does NOT prevent default navigation or form interactions.
-*/
+/* ========= Module accordion binding ========= */
 window.initAccordions = function initAccordions(rootSel) {
   const root = rootSel ? document.querySelector(rootSel) : document;
   if (!root) return;
-  root.querySelectorAll('.interop-panel[data-accordion]').forEach((panel) => {
-    if (panel.dataset.accordionBound === '1') return;
-    panel.dataset.accordionBound = '1';
+  root.querySelectorAll('[data-accordion]').forEach((acc) => {
+    if (acc.dataset.accordionBound === '1') return;
+    acc.dataset.accordionBound = '1';
 
-    const header = panel.querySelector('[data-acc-toggle]');
-    const body = panel.querySelector('[data-acc-body]') || panel.querySelector('.module-body');
-    const label = header ? (header.querySelector('[data-acc-label]') || header.querySelector('.acc-label')) : null;
-    if (!header || !body) return;
+    const toggle = acc.querySelector('[data-acc-toggle]') || acc.querySelector('summary');
+    const body = acc.querySelector('[data-acc-body]') || acc.querySelector('.module-body') || acc.querySelector('.panel-body');
+    const label = acc.querySelector('[data-acc-label]') || acc.querySelector('.acc-label');
+    if (!toggle || !body) return;
 
-    header.setAttribute('role', 'button');
-    if (!header.hasAttribute('tabindex')) header.setAttribute('tabindex', '0');
-    const write = (open) => {
-      panel.setAttribute('data-open', open ? '1' : '0');
-      header.setAttribute('aria-expanded', String(!!open));
-      if (label) label.textContent = open ? 'collapse' : 'expand';
+    if (!toggle.hasAttribute('role')) toggle.setAttribute('role', 'button');
+    if (!toggle.hasAttribute('tabindex')) toggle.setAttribute('tabindex', '0');
+
+    const unhide = (el) => {
+      if (!el) return;
+      try { el.hidden = false; } catch {}
+      if (el.hasAttribute && el.hasAttribute('hidden')) el.removeAttribute('hidden');
+      if (el.style) {
+        if (el.style.display === 'none') el.style.removeProperty('display');
+        if (el.style.visibility === 'hidden') el.style.removeProperty('visibility');
+      }
+    };
+
+    const setOpen = (open) => {
+      acc.setAttribute('data-open', open ? '1' : '0');
+      toggle.setAttribute('aria-expanded', String(!!open));
       if (open) {
-        try { body.removeAttribute('hidden'); } catch (_) {}
-        try {
-          if (body.style) {
-            if (body.style.display === 'none') {
-              body.style.removeProperty('display');
-            }
-            body.style.removeProperty('max-height');
-          }
-        } catch (_) {}
-        body.setAttribute('aria-hidden', 'false');
-      } else {
-        body.setAttribute('aria-hidden', 'true');
-        body.setAttribute('hidden', '');
+        unhide(body);
+        body.querySelectorAll('[hidden]').forEach((child) => unhide(child));
       }
+      if (label) label.textContent = open ? 'collapse' : 'expand';
     };
 
-    write(panel.getAttribute('data-open') === '1');
+    const initial = acc.getAttribute('data-open') === '1' || acc.open === true;
+    setOpen(initial);
 
-    const toggle = () => {
-      const open = panel.getAttribute('data-open') === '1';
-      write(!open);
-      try {
-        document.dispatchEvent(new CustomEvent('interop:panel:toggled', {
-          detail: { id: panel.id || panel.className || 'panel', open: !open }
-        }));
-      } catch {
-        /* ignore */
-      }
+    const onToggleClick = (event) => {
+      const ctl = event.target.closest('a,button,input,select,textarea,label');
+      if (ctl) return;
+      event.preventDefault();
+      const open = acc.getAttribute('data-open') === '1';
+      setOpen(!open);
     };
 
-    header.addEventListener('click', (e) => {
-      if (e.target.closest('a,button,input,select,textarea,label')) return;
-      toggle();
-    }, { passive: true });
+    toggle.addEventListener('click', onToggleClick, { passive: false });
 
-    header.addEventListener('keydown', (e) => {
-      if (e.key === ' ' || e.key === 'Enter') {
-        e.preventDefault();
-        toggle();
+    toggle.addEventListener('keydown', (event) => {
+      if (event.key === ' ' || event.key === 'Enter') {
+        event.preventDefault();
+        const open = acc.getAttribute('data-open') === '1';
+        setOpen(!open);
       }
     });
   });
@@ -739,7 +731,7 @@ const bootValPanels = () => {
   });
 };
 
-/* ========== HTMX hook ========== 
+/* ========== HTMX hook ==========
    Any time HTMX swaps in content that includes a De-ID modal,
    this will run the initializer automatically. */
 document.addEventListener('htmx:afterSettle', () => {
@@ -752,6 +744,102 @@ document.addEventListener('htmx:afterSettle', () => {
   bootValPanels();
   window.initAccordions();
 });
+
+/* ========= Debug ON/OFF badge (robust binder) ========= */
+(function bindDebugToggle(){
+  if (typeof document === 'undefined') return;
+
+  const doc = document;
+
+  const rootPath = (path) => {
+    const body = doc.body;
+    const rootAttr = body && body.dataset ? body.dataset.root : '';
+    const meta = doc.querySelector('meta[name="root-path"]');
+    const metaVal = meta && typeof meta.getAttribute === 'function' ? meta.getAttribute('content') : '';
+    const winRoot = typeof window !== 'undefined' && typeof window.ROOT === 'string' ? window.ROOT : '';
+    const baseRaw = rootAttr || metaVal || winRoot || '';
+    const base = baseRaw && baseRaw !== '/' ? baseRaw.replace(/\/+$/, '') : (baseRaw === '/' ? '' : baseRaw);
+    if (!path) return base || '';
+    const suffix = path.startsWith('/') ? path : '/' + path.replace(/^\/+/, '');
+    return (base || '') + suffix;
+  };
+
+  const REFRESH_URL = () => rootPath('/api/diag/debug/state?format=html');
+  const ENABLE_URL = () => rootPath('/api/diag/debug/state/enable');
+  const DISABLE_URL = () => rootPath('/api/diag/debug/state/disable');
+
+  async function postJSON(url){
+    try {
+      await fetch(url, {
+        method: 'POST',
+        headers: { 'Accept': 'application/json' },
+      });
+    } catch (err) {
+      console.warn('[debug-toggle] post failed:', err);
+    }
+  }
+
+  function refreshBadge(host){
+    if (!host) return;
+    const url = REFRESH_URL();
+    if (window.htmx && typeof window.htmx.ajax === 'function') {
+      try {
+        window.htmx.ajax('GET', url, { target: host, swap: 'outerHTML' });
+        return;
+      } catch (err) {
+        console.warn('[debug-toggle] htmx refresh failed:', err);
+      }
+    }
+    fetch(url, { method: 'GET', cache: 'no-cache' })
+      .then((r) => r.text())
+      .then((html) => {
+        if (!host.isConnected) return;
+        const wrapper = doc.createElement('div');
+        wrapper.innerHTML = html;
+        const replacement = wrapper.firstElementChild || wrapper;
+        if (replacement) {
+          host.replaceWith(replacement);
+          bindBadgeHosts();
+        }
+      })
+      .catch((err) => console.warn('[debug-toggle] refresh failed:', err));
+  }
+
+  function resolveAction(button){
+    if (!button) return '';
+    const hxPost = button.getAttribute('hx-post') || '';
+    if (/\/enable\b/.test(hxPost)) return 'enable';
+    if (/\/disable\b/.test(hxPost)) return 'disable';
+    const label = (button.textContent || '').toLowerCase();
+    if (label.includes('off')) return 'enable';
+    if (label.includes('on')) return 'disable';
+    return '';
+  }
+
+  function bindBadgeHosts(){
+    doc.querySelectorAll('#debug-state-badge').forEach((host) => {
+      if (host.dataset.debugBound === '1') return;
+      host.dataset.debugBound = '1';
+      host.addEventListener('click', async (event) => {
+        const btn = event.target.closest('button');
+        if (!btn || !host.contains(btn)) return;
+        event.preventDefault();
+        event.stopPropagation();
+        const action = resolveAction(btn);
+        const url = action === 'enable' ? ENABLE_URL() : action === 'disable' ? DISABLE_URL() : '';
+        if (!url) return;
+        btn.disabled = true;
+        await postJSON(url);
+        btn.disabled = false;
+        refreshBadge(host);
+      }, { capture: true });
+    });
+  }
+
+  doc.addEventListener('DOMContentLoaded', bindBadgeHosts);
+  doc.addEventListener('htmx:afterSwap', bindBadgeHosts);
+  doc.addEventListener('htmx:afterSettle', bindBadgeHosts);
+})();
 
 document.addEventListener('DOMContentLoaded', () => {
   window.initAccordions();
