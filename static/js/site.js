@@ -860,6 +860,7 @@ document.addEventListener('htmx:afterSettle', () => {
     window.initValModal(valModal);
   }
   bootValPanels();
+
   if (typeof window.initAccordions === 'function') window.initAccordions();
   if (window.InteropUI && typeof window.InteropUI.onDeidentifySummary === 'function') {
     window.InteropUI.onDeidentifySummary();
