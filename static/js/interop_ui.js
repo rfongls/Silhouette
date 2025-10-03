@@ -236,6 +236,26 @@
     return byId(id);
   }
 
+  function ensurePanelVisible(panel) {
+    if (!panel || !panel.querySelector) return;
+    const body = panel.querySelector('[data-acc-body]') || panel.querySelector('.module-body');
+    if (!body) return;
+    try { body.hidden = false; } catch (_) {}
+    if (body.hasAttribute && body.hasAttribute('hidden')) body.removeAttribute('hidden');
+    if (body.style) {
+      if (body.style.display === 'none') body.style.removeProperty('display');
+      if (body.style.visibility === 'hidden') body.style.removeProperty('visibility');
+    }
+    body.querySelectorAll('[hidden]').forEach((child) => {
+      try { child.hidden = false; } catch (_) {}
+      if (child.hasAttribute && child.hasAttribute('hidden')) child.removeAttribute('hidden');
+      if (child.style) {
+        if (child.style.display === 'none') child.style.removeProperty('display');
+        if (child.style.visibility === 'hidden') child.style.removeProperty('visibility');
+      }
+    });
+  }
+
   function expandCard(feature, highlight) {
     const card = cardEl(feature);
     if (!card) return;
@@ -247,6 +267,12 @@
       }
     } else {
       card.classList.remove('collapsed');
+      card.setAttribute('data-open', '1');
+      const header = card.querySelector('[data-acc-toggle]');
+      if (header) header.setAttribute('aria-expanded', 'true');
+      const label = card.querySelector('[data-acc-label]') || card.querySelector('.acc-label');
+      if (label) label.textContent = 'collapse';
+      ensurePanelVisible(card);
       if (highlight) {
         card.classList.add('highlight');
         setTimeout(() => card.classList.remove('highlight'), 900);
@@ -276,6 +302,11 @@
         card.open = false;
       } else {
         card.classList.add('collapsed');
+        card.setAttribute('data-open', '0');
+        const header = card.querySelector('[data-acc-toggle]');
+        if (header) header.setAttribute('aria-expanded', 'false');
+        const label = card.querySelector('[data-acc-label]') || card.querySelector('.acc-label');
+        if (label) label.textContent = 'expand';
       }
     });
   }

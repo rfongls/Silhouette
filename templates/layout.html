@@ -63,6 +63,11 @@
     .button.small { padding: .25rem .5rem; font-size: .9rem; }
     .button.danger { background: #7f1d1d; color: #fff; }
 
+    /* Accordion: body is shown only when container is open */
+    [data-accordion] [data-acc-body] { display: none; }
+    [data-accordion][data-open="1"] [data-acc-body] { display: block; }
+    .interop-panel[data-open="1"] [data-acc-body][hidden] { display: block !important; }
+
     /* Shared modal chrome */
     .modal-backdrop {
       position: fixed;
@@ -136,17 +141,9 @@
       color: inherit;
     }
 
-    details.interop-details.panel { padding: 0; }
-    details.interop-details > summary {
-      list-style: none;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
+    [data-acc-toggle] {
       cursor: pointer;
-      padding: 1rem;
-      border-radius: .75rem;
-      background: var(--card-bg, #0b1220);
-      box-shadow: 0 16px 32px rgba(15, 23, 42, .18);
+      user-select: none;
     }
     details.interop-details > summary::-webkit-details-marker { display: none; }
     details.interop-details .acc-toggle .txt-collapse { display: none; }

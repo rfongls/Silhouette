@@ -666,13 +666,72 @@ window.attachParamDebug = function attachParamDebug(root){
   }catch(e){ console.error(e); }
 };
 
+/* ========= Module accordion binding ========= */
+window.initAccordions = function initAccordions(rootSel) {
+  const root = rootSel ? document.querySelector(rootSel) : document;
+  if (!root) return;
+  root.querySelectorAll('[data-accordion]').forEach((acc) => {
+    if (acc.dataset.accordionBound === '1') return;
+    acc.dataset.accordionBound = '1';
+
+    const toggle = acc.querySelector('[data-acc-toggle]') || acc.querySelector('summary');
+    const body = acc.querySelector('[data-acc-body]') || acc.querySelector('.module-body') || acc.querySelector('.panel-body');
+    const label = acc.querySelector('[data-acc-label]') || acc.querySelector('.acc-label');
+    if (!toggle || !body) return;
+
+    if (!toggle.hasAttribute('role')) toggle.setAttribute('role', 'button');
+    if (!toggle.hasAttribute('tabindex')) toggle.setAttribute('tabindex', '0');
+
+    const unhide = (el) => {
+      if (!el) return;
+      try { el.hidden = false; } catch {}
+      if (el.hasAttribute && el.hasAttribute('hidden')) el.removeAttribute('hidden');
+      if (el.style) {
+        if (el.style.display === 'none') el.style.removeProperty('display');
+        if (el.style.visibility === 'hidden') el.style.removeProperty('visibility');
+      }
+    };
+
+    const setOpen = (open) => {
+      acc.setAttribute('data-open', open ? '1' : '0');
+      toggle.setAttribute('aria-expanded', String(!!open));
+      if (open) {
+        unhide(body);
+        body.querySelectorAll('[hidden]').forEach((child) => unhide(child));
+      }
+      if (label) label.textContent = open ? 'collapse' : 'expand';
+    };
+
+    const initial = acc.getAttribute('data-open') === '1' || acc.open === true;
+    setOpen(initial);
+
+    const onToggleClick = (event) => {
+      const ctl = event.target.closest('a,button,input,select,textarea,label');
+      if (ctl) return;
+      event.preventDefault();
+      const open = acc.getAttribute('data-open') === '1';
+      setOpen(!open);
+    };
+
+    toggle.addEventListener('click', onToggleClick, { passive: false });
+
+    toggle.addEventListener('keydown', (event) => {
+      if (event.key === ' ' || event.key === 'Enter') {
+        event.preventDefault();
+        const open = acc.getAttribute('data-open') === '1';
+        setOpen(!open);
+      }
+    });
+  });
+};
+
 const bootValPanels = () => {
   document.querySelectorAll('[data-val-checks-panel]').forEach((panel) => {
     window.initValChecksPanel(panel);
   });
 };
 
-/* ========== HTMX hook ========== 
+/* ========== HTMX hook ==========
    Any time HTMX swaps in content that includes a De-ID modal,
    this will run the initializer automatically. */
 document.addEventListener('htmx:afterSettle', () => {
