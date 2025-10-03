@@ -9,12 +9,12 @@
   {% set api_deidentify_plain = api_deidentify ~ '?format=txt' %}
 {% endif %}
 
-<details id="deid-panel" class="interop-panel interop-panel-deid" open>
-  <summary aria-expanded="false">
-    <span class="text-h3" style="margin:0">De‑Identify Message</span>
+<section id="deid-panel" class="panel interop-panel interop-panel-deid" data-accordion data-open="1">
+  <header class="row gap" data-acc-toggle aria-expanded="true" style="justify-content:space-between;align-items:center;cursor:pointer">
+    <h3 class="text-h3" style="margin:0">De‑identify</h3>
     <span class="toggle-label"><span class="when-closed">expand</span><span class="when-open">collapse</span></span>
-  </summary>
-  <div id="deid-body" class="panel-body">
+  </header>
+  <div id="deid-body" class="panel-body" data-acc-body>
     <form id="deid-form"
           class="mt"
           method="post"
@@ -51,20 +51,21 @@
       </div>
     </form>
 
+    <pre id="deid-output" class="codepane limit10 scrollbox mt" aria-live="polite"></pre>
+
     <div id="deid-report"
          class="card mt"
          hx-post="{{ urls.api_deidentify_summary | default(root ~ '/api/interop/deidentify/summary', true) }}"
          hx-include="#deid-text,#deid-seed,#deid-template,#deid-apply-baseline"
          hx-trigger="htmx:afterRequest from:#deid-form"
          hx-headers='{"Accept":"text/html"}'
-         hx-swap="innerHTML">
+         hx-swap="innerHTML"
+         hx-on::afterSwap="window.InteropUI && window.InteropUI.onDeidentifySummary && window.InteropUI.onDeidentifySummary()">
       <details class="mini-report">
         <summary>De-identification report</summary>
         <div class="muted small">Run de-identify to see what fields changed.</div>
       </details>
     </div>
-
-    <pre id="deid-output" class="codepane limit10 scrollbox mt" aria-live="polite"></pre>
 
     <div id="deid-run-tray" class="action-tray mt" hidden>
       <div class="action-tray-header">
@@ -87,4 +88,4 @@
       </div>
     </div>
   </div>
-</details>
+</section>

@@ -63,8 +63,8 @@
     .button.small { padding: .25rem .5rem; font-size: .9rem; }
     .button.danger { background: #7f1d1d; color: #fff; }
 
-    /* Interop details/summary panels */
-    details.interop-panel {
+    /* Interop panel accordions */
+    .panel.interop-panel {
       background: var(--card-bg, #0b1220);
       color: var(--card-fg, #e5e7eb);
       border-radius: .75rem;
@@ -72,9 +72,9 @@
       border: 1px solid rgba(148, 163, 184, .18);
       padding: 0;
     }
-    details.interop-panel + details.interop-panel { margin-top: 1rem; }
-    details.interop-panel summary {
-      list-style: none;
+
+    .panel.interop-panel + .panel.interop-panel { margin-top: 1rem; }
+    .panel.interop-panel [data-acc-toggle] {
       cursor: pointer;
       display: flex;
       align-items: center;
@@ -82,13 +82,13 @@
       padding: 1rem 1.25rem;
       user-select: none;
     }
-    details.interop-panel summary::-webkit-details-marker { display: none; }
-    details.interop-panel .panel-body {
+
+    .panel.interop-panel [data-acc-body] {
       border-top: 1px solid rgba(148, 163, 184, .18);
       padding: 1rem 1.25rem 1.25rem 1.25rem;
     }
-    details.interop-panel .panel-body { display: none; }
-    details.interop-panel[open] .panel-body { display: block; }
+    .panel.interop-panel[data-open="0"] [data-acc-body] { display: none; }
+    .panel.interop-panel[data-open="1"] [data-acc-body] { display: block; }
     .toggle-label {
       display: inline-flex;
       gap: .5rem;
@@ -99,8 +99,12 @@
       font-size: .75rem;
     }
     .toggle-label .when-open { display: none; }
-    details.interop-panel[open] .toggle-label .when-open { display: inline; }
-    details.interop-panel[open] .toggle-label .when-closed { display: none; }
+    .panel.interop-panel[data-open="1"] .toggle-label .when-open { display: inline; }
+    .panel.interop-panel[data-open="1"] .toggle-label .when-closed { display: none; }
+    .grouped-deid-report { margin-top: .75rem; }
+    .grouped-deid-report > details { margin-top: .5rem; }
+    .grouped-deid-report details ul { margin: .5rem 0 0 1.25rem; padding-left: 1.25rem; }
+    .grouped-deid-report details ul li { margin: .25rem 0; }
 
     /* Shared modal chrome */
     .modal-backdrop {
@@ -175,11 +179,6 @@
       color: inherit;
     }
 
-    details.interop-details > summary::-webkit-details-marker { display: none; }
-    details.interop-details .acc-toggle .txt-collapse { display: none; }
-    details.interop-details[open] .acc-toggle .txt-expand { display: none; }
-    details.interop-details[open] .acc-toggle .txt-collapse { display: inline; }
-    details.interop-details .module-body { padding: 0 1rem 1rem 1rem; }
   </style>
   {% block extra_head %}{% endblock %}
   <script src="{{ static_base }}vendor/htmx.min.js?v=1.9.12"></script>

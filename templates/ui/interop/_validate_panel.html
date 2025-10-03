@@ -7,12 +7,12 @@
 {% endif %}
 {% set val_options = val_templates if val_templates is defined and val_templates else [] %}
 {% set default_val_template = 'default' if 'default' in val_options else (val_options[0] if val_options else '') %}
-<details id="validate-panel" class="interop-panel interop-panel-validate" open>
-  <summary aria-expanded="false">
-    <span class="text-h3" style="margin:0">Validate Message</span>
+<section id="validate-panel" class="panel interop-panel interop-panel-validate" data-accordion data-open="1">
+  <header class="row gap" data-acc-toggle aria-expanded="true" style="justify-content:space-between;align-items:center;cursor:pointer">
+    <h3 class="text-h3" style="margin:0">Validate</h3>
     <span class="toggle-label"><span class="when-closed">expand</span><span class="when-open">collapse</span></span>
-  </summary>
-  <div id="val-body" class="panel-body">
+  </header>
+  <div id="val-body" class="panel-body" data-acc-body>
     <form id="validate-form"
           method="post"
           action="{{ urls.ui_validate | default(root ~ '/ui/interop/validate', true) }}"
@@ -43,4 +43,4 @@
       <p class="muted">Run validation to see a report.</p>
     </div>
   </div>
-</details>
+</section>
