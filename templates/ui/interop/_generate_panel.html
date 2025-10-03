@@ -1,12 +1,10 @@
 {% set root = request.scope.get('root_path', '') %}
-<section id="generate-panel" class="panel interop-panel interop-panel-generate"
-         data-accordion data-open="1" aria-labelledby="generate-header">
-  <header id="generate-header" class="row gap" data-acc-toggle aria-expanded="true"
-          aria-controls="gen-body" style="justify-content:space-between;align-items:center">
-    <h3 class="text-h3" style="margin:0">Generate Messages</h3>
-    <span class="acc-right muted small"><span data-acc-label>collapse</span></span>
+<section id="generate-panel" class="panel interop-panel interop-panel-generate" data-accordion data-open="0" data-module="generate">
+  <header class="row gap" data-acc-toggle aria-expanded="false" style="justify-content:space-between;align-items:center;cursor:pointer">
+    <h3 class="text-h3" style="margin:0">Generate</h3>
+    <span class="toggle-label"><span class="when-closed">expand</span><span class="when-open">collapse</span></span>
   </header>
-  <div id="gen-body" class="module-body" data-acc-body>
+  <div id="gen-body" class="panel-body" data-acc-body>
 
     <form id="gen-form"
           method="post" autocomplete="off" novalidate
@@ -70,4 +68,4 @@
       </div>
     </div>
   </div>
-</details>
+</section>

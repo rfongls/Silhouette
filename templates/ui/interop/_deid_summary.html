@@ -1,0 +1,65 @@
+{# Client-side helper template for richer De-ID reports; not wired yet but kept for reference. #}
+{% set rows = changes or [] %}
+{% set grouped = grouped or {} %}
+<div class="row wrap small" style="align-items:center;gap:.5rem">
+  <strong>De‑identified fields ({{ rows|length }})</strong>
+  <label class="row small">
+    <span class="muted">Filter by logic:</span>
+    <select class="input" id="deid-logic-filter" style="min-width:16rem">
+      <option value="">All</option>
+      {% for logic in (rows | map(attribute='logic') | list | unique) %}
+        {% if logic %}<option value="{{ logic }}">{{ logic }}</option>{% endif %}
+      {% endfor %}
+    </select>
+  </label>
+  <small class="muted">Click a segment to collapse/expand.</small>
+  <script>
+    (function(){
+      const root = document.currentScript && document.currentScript.closest('#deid-report');
+      if (!root) return;
+      const filter = root.querySelector('#deid-logic-filter');
+      if (!filter) return;
+      filter.addEventListener('change', () => {
+        const val = filter.value || '';
+        root.querySelectorAll('[data-deid-row]').forEach((tr) => {
+          const key = tr.getAttribute('data-logic') || '';
+          tr.hidden = val && key !== val;
+        });
+      });
+    })();
+  </script>
+</div>
+
+{% for seg, items in grouped.items() %}
+  <details open class="mt">
+    <summary class="text-h5">{{ seg }} <span class="muted">({{ items|length }})</span></summary>
+    <div class="scrollbox mt">
+      <table class="table mono" style="font-size:.95rem">
+        <thead>
+          <tr>
+            <th style="white-space:nowrap">Field</th>
+            <th>Comp</th>
+            <th>Subcomp</th>
+            <th style="width:35%">Before</th>
+            <th style="width:35%">After</th>
+            <th>Logic</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in items %}
+            <tr data-deid-row data-logic="{{ row.logic or '' }}">
+              <td>{{ row.field }}</td>
+              <td>{{ row.component if row.component is not none else '' }}</td>
+              <td>{{ row.subcomponent if row.subcomponent is not none else '' }}</td>
+              <td><code>{{ row.before }}</code></td>
+              <td><code>{{ row.after }}</code></td>
+              <td>{{ row.logic or '' }}</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </details>
+{% else %}
+  <p class="muted">No changes detected.</p>
+{% endfor %}
