@@ -905,6 +905,28 @@ window.InteropUI.onDeidentifySummary = function onDeidentifySummary() {
   host.appendChild(wrapper);
 };
 
+// Pipeline “Next step” jump: open the destination card & focus
+document.addEventListener('click', (e) => {
+  const btn = e.target.closest('.pipeline-run');
+  if (!btn) return;
+  const to = (btn.getAttribute('data-run-to') || '').toLowerCase();
+  if (!to) return;
+  const handled = to === 'validate' || to === 'deid' || to === 'mllp' || to === 'generate';
+  if (!handled) return;
+  e.preventDefault();
+  openModule(to);
+  if (to === 'validate') {
+    const field = document.getElementById('val-text');
+    if (field) field.focus();
+  } else if (to === 'deid') {
+    const field = document.getElementById('deid-text');
+    if (field) field.focus();
+  } else if (to === 'mllp') {
+    const field = document.getElementById('mllp-messages');
+    if (field) field.focus();
+  }
+}, { passive: false });
+
 const bootValPanels = () => {
   document.querySelectorAll('[data-val-checks-panel]').forEach((panel) => {
     window.initValChecksPanel(panel);
