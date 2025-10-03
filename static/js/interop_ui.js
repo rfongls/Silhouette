@@ -238,7 +238,9 @@
 
   function ensurePanelVisible(panel) {
     if (!panel || !panel.querySelector) return;
-    const body = panel.querySelector('[data-acc-body]') || panel.querySelector('.module-body');
+    const body = panel.querySelector('.panel-body')
+      || panel.querySelector('[data-acc-body]')
+      || panel.querySelector('.module-body');
     if (!body) return;
     try { body.hidden = false; } catch (_) {}
     if (body.hasAttribute && body.hasAttribute('hidden')) body.removeAttribute('hidden');
