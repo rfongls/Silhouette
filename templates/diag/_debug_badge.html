@@ -1,0 +1,25 @@
+<span id="{{ target_id }}">
+  {% if enabled %}
+    <button
+      type="button"
+      class="btn small success"
+      hx-post="{{ request.url_for('api_diag_debug_disable') }}"
+      hx-target="#{{ target_id }}"
+      hx-swap="outerHTML"
+      aria-pressed="true"
+      title="Turn debug OFF">
+      Debug ON
+    </button>
+  {% else %}
+    <button
+      type="button"
+      class="btn small"
+      hx-post="{{ request.url_for('api_diag_debug_enable') }}"
+      hx-target="#{{ target_id }}"
+      hx-swap="outerHTML"
+      aria-pressed="false"
+      title="Turn debug ON">
+      Debug OFF
+    </button>
+  {% endif %}
+</span>
