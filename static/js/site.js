@@ -682,16 +682,32 @@ window.initAccordions = function initAccordions(rootSel) {
     const label = header ? (header.querySelector('[data-acc-label]') || header.querySelector('.acc-label')) : null;
     if (!header || !body) return;
 
+    header.setAttribute('role', 'button');
+    if (!header.hasAttribute('tabindex')) header.setAttribute('tabindex', '0');
     const write = (open) => {
       panel.setAttribute('data-open', open ? '1' : '0');
       header.setAttribute('aria-expanded', String(!!open));
       if (label) label.textContent = open ? 'collapse' : 'expand';
+      if (open) {
+        try { body.removeAttribute('hidden'); } catch (_) {}
+        try {
+          if (body.style) {
+            if (body.style.display === 'none') {
+              body.style.removeProperty('display');
+            }
+            body.style.removeProperty('max-height');
+          }
+        } catch (_) {}
+        body.setAttribute('aria-hidden', 'false');
+      } else {
+        body.setAttribute('aria-hidden', 'true');
+        body.setAttribute('hidden', '');
+      }
     };
 
     write(panel.getAttribute('data-open') === '1');
 
-    header.addEventListener('click', (e) => {
-      if (e.target.closest('a,button,input,select,textarea,label')) return;
+    const toggle = () => {
       const open = panel.getAttribute('data-open') === '1';
       write(!open);
       try {
@@ -701,7 +717,19 @@ window.initAccordions = function initAccordions(rootSel) {
       } catch {
         /* ignore */
       }
+    };
+
+    header.addEventListener('click', (e) => {
+      if (e.target.closest('a,button,input,select,textarea,label')) return;
+      toggle();
     }, { passive: true });
+
+    header.addEventListener('keydown', (e) => {
+      if (e.key === ' ' || e.key === 'Enter') {
+        e.preventDefault();
+        toggle();
+      }
+    });
   });
 };
 

@@ -139,6 +139,8 @@
     /* ===== Interop module accordion ===== */
     .interop-panel[data-open="0"] .module-body { display: none; }
     .interop-panel[data-open="1"] .module-body { display: block; }
+    .interop-panel[data-open="1"] .module-body[hidden] { display: block !important; }
+    .interop-panel .module-body [data-acc-label] { display: none !important; }
     .interop-panel header[data-acc-toggle] {
       cursor: pointer;
       user-select: none;
