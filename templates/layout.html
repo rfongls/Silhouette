@@ -199,13 +199,11 @@
       </nav>
       <div class="nav-actions">
         <span id="debug-state-badge"
-              class="nav-link"
               hx-get="{{ request.url_for('api_diag_debug_state') }}?format=html"
               hx-trigger="load"
-              hx-target="#debug-state-badge"
-              hx-swap="outerHTML">
-          <button class="btn small" type="button" data-debug-toggle data-debug-state="off">Debug</button>
-        </span>
+              hx-target="this"
+              hx-swap="outerHTML"
+              style="margin-left:1rem"></span>
         <button class="hamburger-btn" id="hamburger-toggle"
                 onclick="window.SilhouetteMenuToggle && window.SilhouetteMenuToggle()"
                 aria-label="Open settings" aria-expanded="false">
