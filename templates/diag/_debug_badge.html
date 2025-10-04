@@ -1,22 +1,23 @@
+{% set target_selector = '#' ~ target_id %}
 <span id="{{ target_id }}">
   {% if enabled %}
     <button
       type="button"
       class="btn small success"
-      data-debug-toggle
-      data-debug-state="on"
-      aria-pressed="true"
-      title="Turn debug OFF">
+      hx-post="{{ request.url_for('api_diag_debug_disable') }}"
+      hx-headers='{"Accept":"application/json"}'
+      hx-swap="none"
+      hx-on::afterRequest="htmx.ajax('{{ request.url_for('api_diag_debug_state') }}?format=html',{target:'{{ target_selector }}',swap:'outerHTML'})">
       Debug ON
     </button>
   {% else %}
     <button
       type="button"
       class="btn small"
-      data-debug-toggle
-      data-debug-state="off"
-      aria-pressed="false"
-      title="Turn debug ON">
+      hx-post="{{ request.url_for('api_diag_debug_enable') }}"
+      hx-headers='{"Accept":"application/json"}'
+      hx-swap="none"
+      hx-on::afterRequest="htmx.ajax('{{ request.url_for('api_diag_debug_state') }}?format=html',{target:'{{ target_selector }}',swap:'outerHTML'})">
       Debug OFF
     </button>
   {% endif %}

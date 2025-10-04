@@ -13,7 +13,6 @@ import sys
 import inspect
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
-import html as _html
 from fastapi.responses import JSONResponse, PlainTextResponse, HTMLResponse
 from fastapi.templating import Jinja2Templates
 from starlette.datastructures import UploadFile
@@ -32,6 +31,7 @@ from api.metrics import record_event
 router = APIRouter()
 logger = logging.getLogger(__name__)
 templates = Jinja2Templates(directory="templates")
+templates.env.filters["split"] = lambda s, sep=" ", maxsplit=-1: ("" if s is None else str(s)).split(sep, maxsplit)
 
 DEID_DIR = Path("configs/interop/deid_templates")
 VAL_DIR = Path("configs/interop/validate_templates")
@@ -108,6 +108,111 @@ def _maybe_load_validation_template(name: Any) -> dict | None:
     if not normalized or normalized.lower() in {"builtin", "legacy", "none"}:
         return None
     return load_validation_template(normalized)
+
+
+_ISSUE_VALUE_PATTERNS = (
+    re.compile(r"[Vv]alue ['\"]([^'\"]+)['\"]"),
+    re.compile(r"got ['\"]([^'\"]+)['\"]"),
+    re.compile(r"was ['\"]([^'\"]+)['\"]"),
+)
+
+
+def _parse_hl7_location(loc: Any):
+    """Return (segment, field, component, subcomponent) parsed from an HL7 location string."""
+    if loc in (None, "", "—"):
+        return None, None, None, None
+    text = str(loc).strip()
+    if not text or text == "—":
+        return None, None, None, None
+    if "-" in text:
+        segment, rest = text.split("-", 1)
+    else:
+        segment, rest = text, ""
+    field = component = subcomponent = None
+    if rest:
+        rest = rest.replace("^", ".")
+        pieces = [part for part in rest.split(".") if part]
+
+        def _to_int(value: str):
+            try:
+                digits = "".join(ch for ch in value if ch.isdigit())
+                return int(digits) if digits else None
+            except Exception:
+                return None
+
+        if len(pieces) >= 1:
+            field = _to_int(pieces[0])
+        if len(pieces) >= 2:
+            component = _to_int(pieces[1])
+        if len(pieces) >= 3:
+            subcomponent = _to_int(pieces[2])
+    return (segment or None), field, component, subcomponent
+
+
+def _extract_issue_value(message: Any) -> str | None:
+    if not message:
+        return None
+    text = str(message)
+    for pattern in _ISSUE_VALUE_PATTERNS:
+        match = pattern.search(text)
+        if not match:
+            continue
+        for group in match.groups():
+            if group:
+                return group
+    return None
+
+
+def _enrich_validate_issues(issues: Any) -> list[dict[str, Any]]:
+    """Ensure validation issues expose code, segment, field, component, subcomponent."""
+    enriched: list[dict[str, Any]] = []
+    for issue in issues or []:
+        if isinstance(issue, dict):
+            item = dict(issue)
+        else:
+            item = {"message": str(issue)}
+        seg = item.get("segment")
+        field = item.get("field")
+        component = item.get("component")
+        subcomponent = item.get("subcomponent")
+        location = item.get("location")
+        parsed = _parse_hl7_location(location)
+        seg = seg or parsed[0]
+        if field in ("", None):
+            field = parsed[1]
+        if component in ("", None):
+            component = parsed[2]
+        if subcomponent in ("", None):
+            subcomponent = parsed[3]
+        severity = (item.get("severity") or "error").lower()
+        if "warn" in severity:
+            severity = "warning"
+        elif "err" in severity or "fail" in severity:
+            severity = "error"
+        elif any(tag in severity for tag in ("info", "ok", "pass")):
+            severity = "info"
+        else:
+            severity = severity or "error"
+        message_text = item.get("message") or ""
+        enriched.append(
+            {
+                "severity": severity,
+                "code": item.get("code")
+                or item.get("rule")
+                or item.get("id")
+                or item.get("type")
+                or "",
+                "segment": seg or "",
+                "field": field,
+                "component": component,
+                "subcomponent": subcomponent,
+                "location": location or "",
+                "occurrence": item.get("occurrence"),
+                "message": message_text,
+                "value": item.get("value") or _extract_issue_value(message_text),
+            }
+        )
+    return enriched
 
 
 async def parse_any_request(request: Request) -> dict:
@@ -681,18 +786,8 @@ def _summarize_hl7_changes(orig: str, deid: str) -> list[dict[str, Any]]:
 
 
 def _render_deid_summary_html(changes: list[dict[str, Any]]) -> str:
-    count = len(changes)
-    if not count:
-        return "<details class='mini-report'><summary>No de-identifiable fields changed</summary></details>"
-    lis = "".join(
-        f"<li><code>{_html.escape(c['label'])}</code></li>" for c in changes[:200]
-    )
-    return (
-        f"<details class='mini-report' open>"
-        f"<summary>De-identified fields: {count}</summary>"
-        f"<ul class='compact'>{lis}</ul>"
-        f"</details>"
-    )
+    template = templates.get_template("ui/interop/_deid_summary.html")
+    return template.render({"changes": changes})
 
 
 @router.post("/api/interop/deidentify")
@@ -787,6 +882,7 @@ async def api_validate(request: Request):
     )
     format_hint = body.get("format")
     model = _normalize_validation_result(results, text)
+    model["issues"] = _enrich_validate_issues(model.get("issues"))
     if _wants_validation_html(request, format_hint=format_hint):
         return templates.TemplateResponse(
             "ui/interop/_validate_report.html",
