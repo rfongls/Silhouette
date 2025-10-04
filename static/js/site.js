@@ -672,6 +672,7 @@ window.attachParamDebug = function attachParamDebug(root){
   }catch(e){ console.error(e); }
 };
 
+
 /* ========= Accordion system (robust to HTMX swaps; single source of truth) ========= */
 (function () {
   // Try several selectors so outer interop cards can control inner module content.
@@ -710,6 +711,7 @@ window.attachParamDebug = function attachParamDebug(root){
     acc.dataset.accordionBound = '1';
     const toggle = acc.querySelector('[data-acc-toggle]');
     const body = findBody(acc);
+
     if (!toggle || !body) return;
     const initialAttr = acc.getAttribute('data-open');
     const initialOpen = (initialAttr === '1') || (initialAttr !== '0' && !body.hasAttribute('hidden'));
