@@ -672,7 +672,6 @@ window.attachParamDebug = function attachParamDebug(root){
   }catch(e){ console.error(e); }
 };
 
-
 /* ========= Accordion system (robust to HTMX swaps; single source of truth) ========= */
 (function () {
   // Try several selectors so outer interop cards can control inner module content.
@@ -870,4 +869,55 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     }
   }, { passive: false });
+});
+
+/* ========= Interop: open cards from header buttons ========= */
+document.addEventListener('click', (event) => {
+  const trigger = event.target && event.target.closest('[data-open-card]');
+  if (!trigger) return;
+  const selector = trigger.getAttribute('data-open-card');
+  if (!selector) return;
+  const card = document.querySelector(selector);
+  if (!card) return;
+  event.preventDefault();
+  try {
+    if (card.matches('details')) {
+      card.open = true;
+    } else if (card.matches('[data-accordion]')) {
+      if (typeof window.openAccordion === 'function') {
+        window.openAccordion(card);
+      } else {
+        card.setAttribute('data-open', '1');
+      }
+    } else {
+      card.classList?.remove('collapsed');
+      card.hidden = false;
+      if (card.style && card.style.display === 'none') {
+        card.style.display = '';
+      }
+    }
+  } catch (_) {}
+  try { card.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch (_) {}
+  window.requestAnimationFrame?.(() => {
+    const focusTarget = card.querySelector('textarea, input, select, button');
+    if (focusTarget) {
+      try { focusTarget.focus({ preventScroll: true }); } catch (_) {}
+    }
+  });
+});
+
+/* ========= Interop: ensure Validate button submits via HTMX ========= */
+document.addEventListener('click', (event) => {
+  const btn = event.target && event.target.closest('button[data-action="validate"]');
+  if (!btn) return;
+  const form = btn.closest('form#validate-form') || document.getElementById('validate-form');
+  if (!form) return;
+  event.preventDefault();
+  if (window.htmx && typeof window.htmx.trigger === 'function') {
+    window.htmx.trigger(form, 'submit');
+  } else if (typeof form.requestSubmit === 'function') {
+    form.requestSubmit(btn);
+  } else {
+    form.submit();
+  }
 });
