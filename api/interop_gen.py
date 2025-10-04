@@ -109,6 +109,11 @@ def _maybe_load_validation_template(name: Any) -> dict | None:
         return None
     return load_validation_template(normalized)
 
+_ISSUE_VALUE_PATTERNS = (
+    re.compile(r"[Vv]alue ['\"]([^'\"]+)['\"]"),
+    re.compile(r"got ['\"]([^'\"]+)['\"]"),
+    re.compile(r"was ['\"]([^'\"]+)['\"]"),
+)
 
 def _parse_hl7_location(loc: Any):
     """Return (segment, field, component, subcomponent) parsed from an HL7 location string."""
@@ -142,6 +147,19 @@ def _parse_hl7_location(loc: Any):
     return (segment or None), field, component, subcomponent
 
 
+def _extract_issue_value(message: Any) -> str | None:
+    if not message:
+        return None
+    text = str(message)
+    for pattern in _ISSUE_VALUE_PATTERNS:
+        match = pattern.search(text)
+        if not match:
+            continue
+        for group in match.groups():
+            if group:
+                return group
+    return None
+
 def _enrich_validate_issues(issues: Any) -> list[dict[str, Any]]:
     """Ensure validation issues expose code, segment, field, component, subcomponent."""
     enriched: list[dict[str, Any]] = []
@@ -154,18 +172,43 @@ def _enrich_validate_issues(issues: Any) -> list[dict[str, Any]]:
         field = item.get("field")
         component = item.get("component")
         subcomponent = item.get("subcomponent")
-        if not any(value is not None and value != "" for value in (seg, field, component, subcomponent)):
-            parsed = _parse_hl7_location(item.get("location"))
-            seg = seg or parsed[0]
-            field = field if field not in ("", None) else parsed[1]
-            component = component if component not in ("", None) else parsed[2]
-            subcomponent = subcomponent if subcomponent not in ("", None) else parsed[3]
-        item["segment"] = seg or None
-        item["field"] = field
-        item["component"] = component
-        item["subcomponent"] = subcomponent
-        item["code"] = item.get("code") or item.get("rule") or item.get("id") or item.get("type") or ""
-        enriched.append(item)
+        location = item.get("location")
+        parsed = _parse_hl7_location(location)
+        seg = seg or parsed[0]
+        if field in ("", None):
+            field = parsed[1]
+        if component in ("", None):
+            component = parsed[2]
+        if subcomponent in ("", None):
+            subcomponent = parsed[3]
+        severity = (item.get("severity") or "error").lower()
+        if "warn" in severity:
+            severity = "warning"
+        elif "err" in severity or "fail" in severity:
+            severity = "error"
+        elif any(tag in severity for tag in ("info", "ok", "pass")):
+            severity = "info"
+        else:
+            severity = severity or "error"
+        message_text = item.get("message") or ""
+        enriched.append(
+            {
+                "severity": severity,
+                "code": item.get("code")
+                or item.get("rule")
+                or item.get("id")
+                or item.get("type")
+                or "",
+                "segment": seg or "",
+                "field": field,
+                "component": component,
+                "subcomponent": subcomponent,
+                "location": location or "",
+                "occurrence": item.get("occurrence"),
+                "message": message_text,
+                "value": item.get("value") or _extract_issue_value(message_text),
+            }
+        )
     return enriched
 
 
