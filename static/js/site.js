@@ -672,30 +672,46 @@ window.attachParamDebug = function attachParamDebug(root){
   }catch(e){ console.error(e); }
 };
 
-/* ========= Accordion system (robust to HTMX swaps & nesting) ========= */
+
+/* ========= Accordion system (robust to HTMX swaps; single source of truth) ========= */
 (function () {
-  function directBodyOf(acc) {
-    return acc.querySelector(':scope > [data-acc-body]') || acc.querySelector('[data-acc-body]');
+  // Try several selectors so outer interop cards can control inner module content.
+  function findBody(acc) {
+    return (
+      acc.querySelector(':scope > [data-acc-body], :scope > .module-body, :scope > .panel-body, :scope > .card-body') ||
+      acc.querySelector('[data-acc-body]') ||
+      (function () {
+        const ids = ['gen-form', 'deid-form', 'validate-form', 'mllp-form'];
+        for (const id of ids) {
+          const form = acc.querySelector('#' + id);
+          if (form) {
+            return form.closest('.module-body') || form.closest('.card-body') || form.parentElement;
+          }
+        }
+        return null;
+      })()
+    );
   }
   function setAccOpen(acc, open) {
-    const body = directBodyOf(acc);
-    acc.setAttribute('data-open', open ? '1' : '0');
+    const body = findBody(acc);
+    if (acc && typeof acc.setAttribute === 'function') {
+      acc.setAttribute('data-open', open ? '1' : '0');
+    }
     const toggle = acc.querySelector('[data-acc-toggle]');
     if (toggle) toggle.setAttribute('aria-expanded', String(!!open));
     const label = acc.querySelector('[data-acc-label]') || acc.querySelector('.acc-label');
-    if (label) {
-      label.textContent = open ? 'collapse' : 'expand';
-    }
+    if (label) label.textContent = open ? 'collapse' : 'expand';
     if (body) {
       body.hidden = !open;
-      body.style.display = open ? '' : 'none';
+      if (body.style) body.style.display = open ? '' : 'none';
     }
   }
   function bindAccordion(acc) {
     if (!acc || acc.dataset.accordionBound === '1') return;
     acc.dataset.accordionBound = '1';
     const toggle = acc.querySelector('[data-acc-toggle]');
-    const body = directBodyOf(acc);
+    const body = findBody(acc);
+
     if (!toggle || !body) return;
     const initialAttr = acc.getAttribute('data-open');
     const initialOpen = (initialAttr === '1') || (initialAttr !== '0' && !body.hasAttribute('hidden'));
@@ -793,28 +809,52 @@ document.addEventListener('DOMContentLoaded', () => {
     window.initValModal(valModal);
   }
 
-  /* Pipeline step buttons expand the right card immediately */
+  /* Pipeline step buttons expand the right OUTER interop card immediately */
   document.addEventListener('click', (e) => {
     const btn = e.target.closest('.pipeline-run');
     if (!btn) return;
-    const to = (btn.getAttribute('data-run-to') || '').toLowerCase();
-    const map = {
-      generate: '#generate-panel',
-      deid: '#deid-panel',
-      deidentify: '#deid-panel',
-      validate: '#validate-panel',
-      mllp: '#mllp-panel',
-      translate: '#translate-panel',
-      pipeline: '#pipeline-panel'
-    };
-    const sel = map[to] || (to.startsWith('#') ? to : null);
-    if (!sel) return;
     e.preventDefault();
-    const acc = sel && document.querySelector(sel);
-    if (acc) {
-      window.openAccordion(acc);
-      try { acc.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch (err) {}
+    const to = (btn.getAttribute('data-run-to') || '').toLowerCase();
+    if (!to) return;
+    const formByName = {
+      generate: 'gen-form',
+      deid: 'deid-form',
+      deidentify: 'deid-form',
+      validate: 'validate-form',
+      mllp: 'mllp-form'
+    };
+    function findOuterCard(name) {
+      const fid = formByName[name];
+      if (fid) {
+        const form = document.getElementById(fid);
+        if (form) {
+          const outer = form.closest('[data-accordion], details.card, .card[data-accordion]');
+          if (outer) return outer;
+        }
+      }
+      const guesses = [
+        '#' + name + '-panel',
+        '#' + name + '-card',
+        '#interop-' + name,
+        '.interop-card-' + name,
+        '.interop-panel-' + name
+      ];
+      for (const sel of guesses) {
+        const el = document.querySelector(sel);
+        if (el) {
+          return el.closest('[data-accordion], details.card, .card[data-accordion]') || el;
+        }
+      }
+      return null;
     }
+    const acc = findOuterCard(to);
+    if (!acc) return;
+    if (acc.matches && acc.matches('details')) {
+      acc.open = true;
+    } else {
+      window.openAccordion(acc);
+    }
+    try { acc.scrollIntoView({ behavior: 'smooth', block: 'start' }); } catch (err) {}
     const focusMap = {
       validate: 'val-text',
       deid: 'deid-text',

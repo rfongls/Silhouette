@@ -9,12 +9,9 @@
   {% set api_deidentify_plain = api_deidentify ~ '?format=txt' %}
 {% endif %}
 
-<section id="deid-panel" class="panel interop-panel interop-panel-deid" data-accordion data-open="0" data-module="deid">
-  <header class="row gap" data-acc-toggle aria-expanded="false" style="justify-content:space-between;align-items:center;cursor:pointer">
-    <h3 class="text-h3" style="margin:0">De‑identify</h3>
-    <span class="muted small" data-acc-label>expand</span>
-  </header>
-  <div id="deid-body" class="panel-body" data-acc-body>
+<section id="deid-panel" class="interop-panel interop-panel-deid">
+  <div class="module-body" data-acc-body>
+    <h3 class="text-h3 mb">De‑identify</h3>
     <form id="deid-form"
           class="mt"
           method="post"

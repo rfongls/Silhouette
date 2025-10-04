@@ -63,36 +63,12 @@
     .button.small { padding: .25rem .5rem; font-size: .9rem; }
     .button.danger { background: #7f1d1d; color: #fff; }
 
-    /* Interop panel accordions */
-    .panel.interop-panel {
-      background: var(--card-bg, #0b1220);
-      color: var(--card-fg, #e5e7eb);
-      border-radius: .75rem;
-      box-shadow: 0 16px 32px rgba(15, 23, 42, .18);
-      border: 1px solid rgba(148, 163, 184, .18);
-      padding: 0;
+    .interop-panel {
+      margin: 0;
     }
-    .panel.interop-panel + .panel.interop-panel { margin-top: 1rem; }
-    .panel.interop-panel [data-acc-toggle] {
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding: 1rem 1.25rem;
-      user-select: none;
+    .interop-panel .module-body {
+      display: block;
     }
-    .panel.interop-panel [data-acc-label] {
-      color: #94a3b8;
-      text-transform: uppercase;
-      letter-spacing: .08em;
-      font-size: .75rem;
-    }
-    .panel.interop-panel [data-acc-body] {
-      border-top: 1px solid rgba(148, 163, 184, .18);
-      padding: 1rem 1.25rem 1.25rem 1.25rem;
-    }
-    .panel.interop-panel[data-open="0"] [data-acc-body] { display: none; }
-    .panel.interop-panel[data-open="1"] [data-acc-body] { display: block; }
     .grouped-deid-report { margin-top: .75rem; }
     .grouped-deid-report > details { margin-top: .5rem; }
     .grouped-deid-report details ul { margin: .5rem 0 0 1.25rem; padding-left: 1.25rem; }

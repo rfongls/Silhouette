@@ -1,10 +1,7 @@
 {% set root = request.scope.get('root_path', '') %}
-<section id="generate-panel" class="panel interop-panel interop-panel-generate" data-accordion data-open="0" data-module="generate">
-  <header class="row gap" data-acc-toggle aria-expanded="false" style="justify-content:space-between;align-items:center;cursor:pointer">
-    <h3 class="text-h3" style="margin:0">Generate</h3>
-    <span class="muted small" data-acc-label>expand</span>
-  </header>
-  <div id="gen-body" class="panel-body" data-acc-body>
+<section id="generate-panel" class="interop-panel interop-panel-generate">
+  <div class="module-body" data-acc-body>
+    <h3 class="text-h3 mb">Generate</h3>
 
     <form id="gen-form"
           method="post" autocomplete="off" novalidate
