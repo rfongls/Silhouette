@@ -682,6 +682,10 @@ window.attachParamDebug = function attachParamDebug(root){
     acc.setAttribute('data-open', open ? '1' : '0');
     const toggle = acc.querySelector('[data-acc-toggle]');
     if (toggle) toggle.setAttribute('aria-expanded', String(!!open));
+    const label = acc.querySelector('[data-acc-label]') || acc.querySelector('.acc-label');
+    if (label) {
+      label.textContent = open ? 'collapse' : 'expand';
+    }
     if (body) {
       body.hidden = !open;
       body.style.display = open ? '' : 'none';
