@@ -34,28 +34,28 @@
   <a class="module-btn" data-feature="pipe" href="{{ root }}/ui/interop/pipeline">→ Full Pipeline</a>
 </nav>
 
-<details id="card-gen" class="card collapsible" open>
+<details id="card-gen" class="card collapsible interop-card-generate" open>
   <summary>Generate Messages <span class="minimax"></span></summary>
   <div class="card-body">
     {% include "ui/interop/_generate_panel.html" %}
   </div>
 </details>
 
-<details id="card-deid" class="card collapsible">
+<details id="card-deid" class="card collapsible interop-card-deid">
   <summary>De‑Identify Message <span class="minimax"></span></summary>
   <div class="card-body">
     {% include "ui/interop/_deid_panel.html" %}
   </div>
 </details>
 
-<details id="card-validate" class="card collapsible">
+<details id="card-validate" class="card collapsible interop-card-validate">
   <summary>Validate Message <span class="minimax"></span></summary>
   <div class="card-body">
     {% include "ui/interop/_validate_panel.html" %}
   </div>
 </details>
 
-<details id="card-mllp" class="card collapsible">
+<details id="card-mllp" class="card collapsible interop-card-mllp">
   <summary>Transport (MLLP) &amp; FHIR Options <span class="minimax"></span></summary>
   <div class="card-body">
     {% include "ui/interop/_mllp_panel.html" %}
