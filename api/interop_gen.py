@@ -109,13 +109,11 @@ def _maybe_load_validation_template(name: Any) -> dict | None:
         return None
     return load_validation_template(normalized)
 
-
 _ISSUE_VALUE_PATTERNS = (
     re.compile(r"[Vv]alue ['\"]([^'\"]+)['\"]"),
     re.compile(r"got ['\"]([^'\"]+)['\"]"),
     re.compile(r"was ['\"]([^'\"]+)['\"]"),
 )
-
 
 def _parse_hl7_location(loc: Any):
     """Return (segment, field, component, subcomponent) parsed from an HL7 location string."""
@@ -161,7 +159,6 @@ def _extract_issue_value(message: Any) -> str | None:
             if group:
                 return group
     return None
-
 
 def _enrich_validate_issues(issues: Any) -> list[dict[str, Any]]:
     """Ensure validation issues expose code, segment, field, component, subcomponent."""
