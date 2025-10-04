@@ -1,10 +1,7 @@
 {% set root = request.scope.get('root_path', '') %}
-<section id="mllp-panel" class="panel interop-panel interop-panel-mllp" data-accordion data-open="0" data-module="mllp">
-  <header class="row gap" data-acc-toggle aria-expanded="false" style="justify-content:space-between;align-items:center;cursor:pointer">
-    <h3 class="text-h3" style="margin:0">Transport (MLLP) &amp; FHIR Options</h3>
-    <span class="muted small" data-acc-label>expand</span>
-  </header>
-  <div id="mllp-body" class="panel-body" data-acc-body>
+<section id="mllp-panel" class="interop-panel interop-panel-mllp">
+  <div class="module-body" data-acc-body>
+    <h3 class="text-h3 mb">Transport (MLLP) &amp; FHIR Options</h3>
     <form id="mllp-form"
           method="post"
           hx-post="{{ root }}/api/interop/mllp/send"

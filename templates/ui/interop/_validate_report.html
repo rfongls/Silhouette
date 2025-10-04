@@ -43,9 +43,32 @@
         {% set cmp_out = (it.component is not none and it.component) | default(loc_comp) %}
         {% set sub_out = (it.subcomponent is not none and it.subcomponent) | default(loc_sub) %}
 
+        {% set code_out = '—' %}
+        {% if it.code is defined and it.code %}
+          {% set code_out = it.code %}
+        {% elif it['code'] is defined and it['code'] %}
+          {% set code_out = it['code'] %}
+        {% elif it.rule is defined and it.rule %}
+          {% set code_out = it.rule %}
+        {% elif it['rule'] is defined and it['rule'] %}
+          {% set code_out = it['rule'] %}
+        {% elif it.id is defined and it.id %}
+          {% set code_out = it.id %}
+        {% elif it['id'] is defined and it['id'] %}
+          {% set code_out = it['id'] %}
+        {% elif it.name is defined and it.name %}
+          {% set code_out = it.name %}
+        {% elif it['name'] is defined and it['name'] %}
+          {% set code_out = it['name'] %}
+        {% elif it.type is defined and it.type %}
+          {% set code_out = it.type %}
+        {% elif it['type'] is defined and it['type'] %}
+          {% set code_out = it['type'] %}
+        {% endif %}
+
         <tr style="border-bottom:1px solid var(--color-border, #e5e7eb)" class="{{ (it.severity | default('error')) | lower }}">
           <td style="padding:0.5rem">{{ it.severity | capitalize | default('Error') }}</td>
-          <td style="padding:0.5rem"><code class="mono">{{ it.code or it.rule or it.id or it.name or it.type or '—' }}</code></td>
+          <td style="padding:0.5rem"><code class="mono">{{ code_out }}</code></td>
           <td style="padding:0.5rem"><code class="mono">{{ seg_out or '—' }}</code></td>
           <td style="padding:0.5rem"><code class="mono">{{ fld_out if fld_out is not none else '—' }}</code></td>
           <td style="padding:0.5rem"><code class="mono">{{ cmp_out if cmp_out is not none else '—' }}</code></td>
