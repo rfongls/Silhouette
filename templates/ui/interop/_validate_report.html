@@ -15,6 +15,7 @@
     <p class="text-small" style="margin-top:0.5rem;color:#0f5132">No blocking errors detected. You can proceed to MLLP send.</p>
   {% endif %}
 
+  {% set has_problem_rows = (r.counts.errors | default(0)) or (r.counts.warnings | default(0)) %}
   <div class="scrollbox" style="margin-top:0.75rem">
     <table class="validate-report__table" data-val-table style="width:100%;border-collapse:collapse;font-size:0.875rem">
       <thead>
@@ -32,7 +33,7 @@
       <tbody>
       {% for it in r.issues %}
         {% set severity = (it.severity | default('error')) | lower %}
-        <tr data-severity="{{ severity }}" style="border-bottom:1px solid var(--color-border, #e5e7eb)">
+        <tr data-severity="{{ severity }}" style="border-bottom:1px solid var(--color-border, #e5e7eb)"{% if severity == 'ok' and has_problem_rows %} hidden{% endif %}>
           <td style="padding:0.5rem">{{ severity | capitalize }}</td>
           <td style="padding:0.5rem"><code class="mono">{{ it.code or '—' }}</code></td>
           <td style="padding:0.5rem"><code class="mono">{{ it.segment or '—' }}</code></td>
@@ -40,11 +41,11 @@
           <td style="padding:0.5rem"><code class="mono">{{ it.component if it.component is not none else '—' }}</code></td>
           <td style="padding:0.5rem"><code class="mono">{{ it.subcomponent if it.subcomponent is not none else '—' }}</code></td>
           <td style="padding:0.5rem"><code class="mono">{{ it.value or '—' }}</code></td>
-          <td style="padding:0.5rem">{{ it.message or '—' }}</td>
+          <td style="padding:0.5rem">{{ it.message or (severity == 'ok' and 'Passed') or '—' }}</td>
         </tr>
       {% else %}
         <tr>
-          <td colspan="8" style="padding:0.75rem" class="muted">No issues to display.</td>
+          <td colspan="8" style="padding:0.75rem" class="muted">No rows to display.</td>
         </tr>
       {% endfor %}
       </tbody>
@@ -91,20 +92,7 @@
       if (!root) return;
       var table = root.querySelector('[data-val-table]');
       if (!table) return;
-      function toggleNote(show) {
-        var existing = root.querySelector('[data-val-ok-note]');
-        if (show) {
-          if (existing) return;
-          var note = document.createElement('p');
-          note.className = 'muted small';
-          note.dataset.valOkNote = '1';
-          note.style.marginTop = '0.5rem';
-          note.textContent = 'This validator reports only issues; no per-field OK rows are returned.';
-          root.appendChild(note);
-        } else if (existing) {
-          existing.remove();
-        }
-      }
+
       root.querySelectorAll('[data-val-filter]').forEach(function(btn){
         btn.addEventListener('click', function(ev){
           ev.preventDefault();
@@ -113,7 +101,6 @@
             var sev = row.getAttribute('data-severity');
             row.hidden = filter && filter !== 'all' && sev !== filter;
           });
-          toggleNote(filter === 'ok');
         });
       });
     })();
