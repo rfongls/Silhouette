@@ -1,61 +1,45 @@
-{% set rows = changes or [] %}
-<section class="deid-summary">
+<section class="card">
   <header class="row wrap" style="justify-content:space-between;align-items:center">
-    <h4 class="text-h4" style="margin:0">De‑identified fields ({{ rows|length }})</h4>
-    <label class="small row" style="gap:.5rem">
-      <span>Filter by logic</span>
-      <input class="input" id="deid-filter" placeholder="e.g., NAME, PHONE, ADDRESS" style="width:18rem">
-    </label>
+    <h4 class="text-h4" style="margin:0">De‑identified fields</h4>
+    <input class="input small" placeholder="Filter by logic (e.g. NAME, PHONE)"
+           oninput="(function(v){document.querySelectorAll('#deid-summary tbody tr').forEach(function(row){var logic=(row.dataset.logic||'').toLowerCase();row.hidden=!!v && !logic.includes(v);});})(this.value.trim().toLowerCase())">
   </header>
 
-  {% for seg, grp in rows|groupby('segment') %}
-    <details class="mt" open>
-      <summary class="text-h5">{{ seg or '—' }} <span class="muted small">({{ grp.list|length }})</span></summary>
-      <div class="scrollbox mt" style="border:1px solid rgba(148,163,184,.18);border-radius:.5rem">
-        <table class="table small" data-deid-table>
-          <thead>
-            <tr>
-              <th style="white-space:nowrap">Field</th>
-              <th>Comp</th>
-              <th>Subcomp</th>
-              <th style="width:33%">Before</th>
-              <th style="width:33%">After</th>
-              <th>Logic</th>
-            </tr>
-          </thead>
-          <tbody>
-          {% for r in grp.list %}
-            <tr>
-              <td class="mono">{{ r.field if r.field is not none else '—' }}</td>
-              <td class="mono">{{ r.component if r.component is not none else '—' }}</td>
-              <td class="mono">{{ r.subcomponent if r.subcomponent is not none else '—' }}</td>
-              <td class="mono">{{ r.before or '' }}</td>
-              <td class="mono">{{ r.after or '' }}</td>
-              <td class="mono" data-logic="{{ (r.logic or r.rule or '') | upper }}">{{ r.logic or r.rule or '—' }}</td>
-            </tr>
-          {% endfor %}
-          </tbody>
-        </table>
-      </div>
-    </details>
-  {% else %}
-    <p class="muted small" style="margin-top:1rem">No changes detected.</p>
-  {% endfor %}
+  <div id="deid-summary" class="mt">
+    {% for group in groups or [] %}
+      <details open class="mt">
+        <summary class="text-h5">{{ group.segment or '—' }} <span class="muted small">({{ group.count }})</span></summary>
+        <div class="scrollbox" style="margin-top:0.5rem">
+          <table class="table small">
+            <thead>
+              <tr>
+                <th style="padding:0.5rem">Field</th>
+                <th style="padding:0.5rem">Comp</th>
+                <th style="padding:0.5rem">Subcomp</th>
+                <th style="padding:0.5rem">Before</th>
+                <th style="padding:0.5rem">After</th>
+                <th style="padding:0.5rem">Logic</th>
+              </tr>
+            </thead>
+            <tbody>
+            {% for row in group.items %}
+              <tr data-logic="{{ (row.logic or '') | lower }}">
+                <td style="padding:0.5rem"><code class="mono">{{ row.field if row.field is not none else '—' }}</code></td>
+                <td style="padding:0.5rem"><code class="mono">{{ row.component if row.component is not none else '—' }}</code></td>
+                <td style="padding:0.5rem"><code class="mono">{{ row.subcomponent if row.subcomponent is not none else '—' }}</code></td>
+                <td style="padding:0.5rem"><code class="mono">{{ row.before or '' }}</code></td>
+                <td style="padding:0.5rem"><code class="mono">{{ row.after or '' }}</code></td>
+                <td style="padding:0.5rem"><code class="mono">{{ row.logic or '—' }}</code></td>
+              </tr>
+            {% else %}
+              <tr><td colspan="6" class="muted" style="padding:0.5rem">No changes in this segment.</td></tr>
+            {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </details>
+    {% else %}
+      <p class="muted" style="margin-top:1rem">No de-identifiable fields changed.</p>
+    {% endfor %}
+  </div>
 </section>
-<script>
-  (function(){
-    const inp = document.getElementById('deid-filter');
-    if (!inp) return;
-    const tables = Array.from(document.querySelectorAll('[data-deid-table]'));
-    function apply(){
-      const q = (inp.value || '').trim().toUpperCase();
-      for (const tbl of tables){
-        for (const tr of tbl.tBodies[0].rows){
-          const logic = (tr.querySelector('td[data-logic]')?.dataset.logic || '');
-          tr.style.display = (!q || logic.includes(q)) ? '' : 'none';
-        }
-      }
-    }
-    inp.addEventListener('input', apply);
-  })();
-</script>

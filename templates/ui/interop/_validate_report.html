@@ -1,11 +1,48 @@
 <section class="validate-report" data-val-report>
   <header class="validate-report__header" style="display:flex;align-items:center;justify-content:space-between;gap:0.75rem">
     <h4 class="text-h3" style="margin:0">Validation report</h4>
+    {% set current = r.show or 'errors' %}
     <nav class="validate-report__counts" style="display:flex;flex-wrap:wrap;gap:0.5rem">
-      <button type="button" class="chip" data-val-filter="ok" style="background:#10b981;color:#0b1e15">OK: {{ r.counts.ok | default(0) }}</button>
-      <button type="button" class="chip" data-val-filter="warning" style="background:#f59e0b;color:#1f1300">Warnings: {{ r.counts.warnings | default(0) }}</button>
-      <button type="button" class="chip" data-val-filter="error" style="background:#ef4444;color:#250101">Errors: {{ r.counts.errors | default(0) }}</button>
-      <button type="button" class="chip" data-val-filter="all" style="background:#64748b;color:#0b1220">Show all</button>
+      <button type="button"
+              class="chip"
+              hx-post="{{ validate_api }}?format=html&amp;show=ok"
+              hx-include="#validate-form"
+              hx-target="#validate-report"
+              hx-swap="innerHTML"
+              aria-pressed="{{ 'true' if current == 'ok' else 'false' }}"
+              style="background:#10b981;color:#0b1e15;{% if current == 'ok' %}box-shadow:0 0 0 2px rgba(0,0,0,0.25) inset;{% endif %}">
+        OK: {{ r.counts.ok | default(0) }}
+      </button>
+      <button type="button"
+              class="chip"
+              hx-post="{{ validate_api }}?format=html&amp;show=warnings"
+              hx-include="#validate-form"
+              hx-target="#validate-report"
+              hx-swap="innerHTML"
+              aria-pressed="{{ 'true' if current == 'warnings' else 'false' }}"
+              style="background:#f59e0b;color:#1f1300;{% if current == 'warnings' %}box-shadow:0 0 0 2px rgba(0,0,0,0.25) inset;{% endif %}">
+        Warnings: {{ r.counts.warnings | default(0) }}
+      </button>
+      <button type="button"
+              class="chip"
+              hx-post="{{ validate_api }}?format=html&amp;show=errors"
+              hx-include="#validate-form"
+              hx-target="#validate-report"
+              hx-swap="innerHTML"
+              aria-pressed="{{ 'true' if current == 'errors' else 'false' }}"
+              style="background:#ef4444;color:#250101;{% if current == 'errors' %}box-shadow:0 0 0 2px rgba(0,0,0,0.25) inset;{% endif %}">
+        Errors: {{ r.counts.errors | default(0) }}
+      </button>
+      <button type="button"
+              class="chip"
+              hx-post="{{ validate_api }}?format=html&amp;show=all"
+              hx-include="#validate-form"
+              hx-target="#validate-report"
+              hx-swap="innerHTML"
+              aria-pressed="{{ 'true' if current == 'all' else 'false' }}"
+              style="background:#64748b;color:#0b1220;{% if current == 'all' %}box-shadow:0 0 0 2px rgba(255,255,255,0.35) inset;{% endif %}">
+        Show all
+      </button>
     </nav>
   </header>
 
@@ -31,9 +68,9 @@
         </tr>
       </thead>
       <tbody>
-      {% for it in r.issues %}
+      {% for it in r.rows %}
         {% set severity = (it.severity | default('error')) | lower %}
-        <tr data-severity="{{ severity }}" style="border-bottom:1px solid var(--color-border, #e5e7eb)"{% if severity == 'ok' and has_problem_rows %} hidden{% endif %}>
+        <tr data-severity="{{ severity }}" style="border-bottom:1px solid var(--color-border, #e5e7eb)">
           <td style="padding:0.5rem">{{ severity | capitalize }}</td>
           <td style="padding:0.5rem"><code class="mono">{{ it.code or '—' }}</code></td>
           <td style="padding:0.5rem"><code class="mono">{{ it.segment or '—' }}</code></td>
