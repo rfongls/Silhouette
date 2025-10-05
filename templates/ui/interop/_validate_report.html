@@ -92,6 +92,7 @@
       if (!root) return;
       var table = root.querySelector('[data-val-table]');
       if (!table) return;
+
       root.querySelectorAll('[data-val-filter]').forEach(function(btn){
         btn.addEventListener('click', function(ev){
           ev.preventDefault();
