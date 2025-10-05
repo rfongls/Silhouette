@@ -10,7 +10,6 @@
   <a class="btn btn-xs" href="{{ root }}/api/diag/logs?format=html" target="_blank" rel="noopener">Open full log</a>
 </form>
 <div id="interop-debug-log"
-     data-debug-log-target="interop-debug-log"
      hx-get="{{ root }}/api/diag/debug/log-widget?format=html&target=interop-debug-log&limit=200&include=%23debug-log-settings"
      hx-trigger="load"
      hx-target="this"

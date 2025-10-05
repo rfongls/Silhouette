@@ -1,25 +1,24 @@
-{% set target_selector = '#' ~ target_id %}
-{% set state_refresh = "htmx.ajax('" ~ request.url_for('api_diag_debug_state') ~ "?format=html',{target:'" ~ target_selector ~ "',swap:'outerHTML'});" %}
-{% set widget_refresh = "if(window.SilhouetteRefreshDebugWidget){window.SilhouetteRefreshDebugWidget();}" %}
+{% set badge_url = request.url_for('api_diag_debug_state') %}
+{% set enable_url = request.url_for('api_diag_debug_enable') %}
+{% set disable_url = request.url_for('api_diag_debug_disable') %}
+{% set widget_url = request.url_for('api_diag_debug_log_widget') %}
 <span id="{{ target_id }}">
   {% if enabled %}
-    <button
-      type="button"
-      class="btn small success"
-      hx-post="{{ request.url_for('api_diag_debug_disable') }}"
-      hx-headers='{"Accept":"application/json"}'
-      hx-swap="none"
-      hx-on::afterRequest="{{ state_refresh ~ ' ' ~ widget_refresh }}">
+    <button type="button"
+            class="btn small success"
+            hx-post="{{ disable_url }}"
+            hx-headers='{"Accept":"application/json"}'
+            hx-swap="none"
+            hx-on::afterRequest="htmx.ajax('{{ badge_url }}?format=html',{target:'#{{ target_id }}',swap:'outerHTML'});htmx.ajax('{{ widget_url }}?format=html&target=interop-debug-log',{target:'#interop-debug-log',swap:'outerHTML'});">
       Debug ON
     </button>
   {% else %}
-    <button
-      type="button"
-      class="btn small"
-      hx-post="{{ request.url_for('api_diag_debug_enable') }}"
-      hx-headers='{"Accept":"application/json"}'
-      hx-swap="none"
-      hx-on::afterRequest="{{ state_refresh ~ ' ' ~ widget_refresh }}">
+    <button type="button"
+            class="btn small"
+            hx-post="{{ enable_url }}"
+            hx-headers='{"Accept":"application/json"}'
+            hx-swap="none"
+            hx-on::afterRequest="htmx.ajax('{{ badge_url }}?format=html',{target:'#{{ target_id }}',swap:'outerHTML'});htmx.ajax('{{ widget_url }}?format=html&target=interop-debug-log',{target:'#interop-debug-log',swap:'outerHTML'});">
       Debug OFF
     </button>
   {% endif %}

@@ -4,30 +4,45 @@
 
 window.InteropUI = window.InteropUI || {};
 
-// --- De-identify helpers (ensures summary refresh fires) --------------------
-if (typeof window.InteropUI.onDeidentifyComplete !== 'function') {
-  window.InteropUI.onDeidentifyComplete = function onDeidentifyComplete() {
-    try {
-      document.body.dispatchEvent(new Event('deid:complete', { bubbles: true }));
-    } catch (e) {
-      console.error('[deid] dispatch failed', e);
-    }
-  };
-}
+(function ensureDeidCompleteEvent() {
+  const prior =
+    typeof window.InteropUI.onDeidentifyComplete === 'function'
+      ? window.InteropUI.onDeidentifyComplete
+      : null;
 
-if (typeof window.SilhouetteRefreshDebugWidget !== 'function') {
-  window.SilhouetteRefreshDebugWidget = function SilhouetteRefreshDebugWidget() {
-    if (!window.htmx) return;
-    const nodes = document.querySelectorAll('[data-debug-widget-url]');
-    nodes.forEach((node) => {
-      const url = node.getAttribute('data-debug-widget-url');
-      if (!url) return;
-      const id = node.getAttribute('id');
-      if (!id) return;
-      window.htmx.ajax(url, { target: `#${id}`, swap: 'outerHTML' });
-    });
+  function dispatchCompleteEvent() {
+    try {
+      const evt = new CustomEvent('deid:complete', { bubbles: true });
+      document.body.dispatchEvent(evt);
+    } catch (err) {
+      try {
+        document.body.dispatchEvent(new Event('deid:complete', { bubbles: true }));
+      } catch (fallbackErr) {
+        console.warn('[deid] notify failed', fallbackErr);
+      }
+    }
+  }
+
+  window.InteropUI.onDeidentifyComplete = function wrappedDeidComplete(event) {
+    if (prior) {
+      try {
+        prior.call(this, event);
+      } catch (err) {
+        console.warn(err);
+      }
+    }
+    dispatchCompleteEvent();
   };
-}
+})();
+
+document.addEventListener('htmx:afterSwap', (event) => {
+  const target = event?.target;
+  if (!target || typeof target.closest !== 'function') return;
+  const details = target.closest('details[data-autoclose]');
+  if (details) {
+    details.open = true;
+  }
+});
 
 /* ========== Global utilities ========== */
 window.esc = s => (s ?? "").toString()
@@ -816,15 +831,20 @@ window.attachParamDebug = function attachParamDebug(root){
     }
     if (typeof prior === 'function') {
       try {
-        prior.apply(this, arguments);
+        prior.call(this, event);
       } catch (err) {
         console.warn(err);
       }
     } else {
       try {
-        document.body.dispatchEvent(new Event('deid:complete', { bubbles: true }));
+        const evt = new CustomEvent('deid:complete', { bubbles: true });
+        document.body.dispatchEvent(evt);
       } catch (err) {
-        console.error('[deid] dispatch failed', err);
+        try {
+          document.body.dispatchEvent(new Event('deid:complete', { bubbles: true }));
+        } catch (fallbackErr) {
+          console.error('[deid] dispatch failed', fallbackErr);
+        }
       }
     }
     return undefined;
@@ -854,6 +874,16 @@ document.addEventListener('htmx:afterSettle', () => {
 });
 
 document.addEventListener('DOMContentLoaded', () => {
+  if (window.htmx) {
+    try {
+      window.htmx.ajax('/api/diag/debug/state?format=html', {
+        target: '#debug-state-badge',
+        swap: 'outerHTML'
+      });
+    } catch (err) {
+      console.warn('[debug] badge refresh failed', err);
+    }
+  }
   if (typeof window.initAccordions === 'function') {
     window.initAccordions();
   }

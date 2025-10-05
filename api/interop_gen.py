@@ -14,7 +14,7 @@ import sys
 import inspect
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import JSONResponse, PlainTextResponse, HTMLResponse
+from fastapi.responses import JSONResponse, PlainTextResponse
 from fastapi.templating import Jinja2Templates
 from starlette.datastructures import UploadFile
 from silhouette_core.interop.hl7_mutate import (
@@ -2097,9 +2097,49 @@ def _compute_deid_coverage(before: str, after: str) -> tuple[dict[tuple[str, int
     return coverage, total
 
 
-def _render_deid_summary_html(groups: list[dict[str, Any]], total_messages: int) -> str:
-    template = templates.get_template("ui/interop/_deid_summary.html")
-    return template.render({"groups": groups, "total_messages": total_messages})
+def _aggregate_validation_rows(
+    issues: List[Dict[str, Any]] | None, total_messages: int
+) -> Dict[str, Any]:
+    total = max(int(total_messages or 1), 1)
+    buckets: Dict[Tuple[Any, ...], int] = defaultdict(int)
+    for entry in issues or []:
+        sev = (entry.get("severity") or "error").lower() or "error"
+        code = entry.get("code") or entry.get("rule")
+        segment = entry.get("segment")
+        field = entry.get("field")
+        component = entry.get("component")
+        subcomponent = entry.get("subcomponent")
+        message = entry.get("message")
+        key = (sev, code, segment, field, component, subcomponent, message)
+        buckets[key] += 1
+
+    rows: List[Dict[str, Any]] = []
+    for (sev, code, segment, field, component, subcomponent, message), count in buckets.items():
+        pct = int(round((count / total) * 100.0)) if total else 0
+        rows.append(
+            {
+                "severity": sev,
+                "code": code,
+                "segment": segment,
+                "field": field,
+                "component": component,
+                "subcomponent": subcomponent,
+                "message": message,
+                "count": count,
+                "pct": pct,
+            }
+        )
+
+    rows.sort(
+        key=lambda row: (
+            0 if row.get("severity") not in {"ok", "info"} else 1,
+            row.get("segment") or "",
+            row.get("field") or 0,
+            row.get("code") or "",
+            row.get("message") or "",
+        )
+    )
+    return {"total": total, "rows": rows}
 
 
 def _build_logic_map(raw_changes: Any) -> dict[tuple[str, int, int, int], str]:
@@ -2278,24 +2318,12 @@ async def api_deidentify_summary(request: Request):
             }
         )
 
-    grouped: Dict[str, List[dict[str, Any]]] = {}
-    for row in rows:
-        grouped.setdefault(row["segment"], []).append(row)
-    groups: List[dict[str, Any]] = []
-    for seg in sorted(grouped):
-        items = sorted(
-            grouped[seg],
-            key=lambda r: (
-                r.get("field") or 0,
-                r.get("component") or 0,
-                r.get("subcomponent") or 0,
-            ),
-        )
-        groups.append({"segment": seg, "items": items, "count": len(items)})
-
     accept = (request.headers.get("accept") or "").lower()
     if "text/html" in accept:
-        return HTMLResponse(_render_deid_summary_html(groups, total_messages))
+        return templates.TemplateResponse(
+            "ui/interop/_deid_coverage.html",
+            {"request": request, "rows": rows, "total": total_messages},
+        )
     return JSONResponse(
         {
             "total_messages": total_messages,
@@ -2334,6 +2362,9 @@ async def api_validate(request: Request):
     model["issues"] = combined_rows
     model["passes"] = success_rows
     model["counts"] = counts
+    message_count = max(len(_split_hl7_messages(text)), 1)
+    model["total_messages"] = message_count
+    model["summary"] = _aggregate_validation_rows(model["issues"], message_count)
 
     show_raw = body.get("show") or request.query_params.get("show") or "errors"
     show = str(show_raw).lower()
