@@ -1,4 +1,6 @@
 {% set target_selector = '#' ~ target_id %}
+{% set state_refresh = "htmx.ajax('" ~ request.url_for('api_diag_debug_state') ~ "?format=html',{target:'" ~ target_selector ~ "',swap:'outerHTML'});" %}
+{% set widget_refresh = "if(window.SilhouetteRefreshDebugWidget){window.SilhouetteRefreshDebugWidget();}" %}
 <span id="{{ target_id }}">
   {% if enabled %}
     <button
@@ -7,7 +9,7 @@
       hx-post="{{ request.url_for('api_diag_debug_disable') }}"
       hx-headers='{"Accept":"application/json"}'
       hx-swap="none"
-      hx-on::afterRequest="htmx.ajax('{{ request.url_for('api_diag_debug_state') }}?format=html',{target:'{{ target_selector }}',swap:'outerHTML'})">
+      hx-on::afterRequest="{{ state_refresh ~ ' ' ~ widget_refresh }}">
       Debug ON
     </button>
   {% else %}
@@ -17,7 +19,7 @@
       hx-post="{{ request.url_for('api_diag_debug_enable') }}"
       hx-headers='{"Accept":"application/json"}'
       hx-swap="none"
-      hx-on::afterRequest="htmx.ajax('{{ request.url_for('api_diag_debug_state') }}?format=html',{target:'{{ target_selector }}',swap:'outerHTML'})">
+      hx-on::afterRequest="{{ state_refresh ~ ' ' ~ widget_refresh }}">
       Debug OFF
     </button>
   {% endif %}
