@@ -4,6 +4,17 @@
 
 window.InteropUI = window.InteropUI || {};
 
+// --- De-identify helpers (ensures summary refresh fires) --------------------
+if (typeof window.InteropUI.onDeidentifyComplete !== 'function') {
+  window.InteropUI.onDeidentifyComplete = function onDeidentifyComplete() {
+    try {
+      document.body.dispatchEvent(new Event('deid:complete', { bubbles: true }));
+    } catch (e) {
+      console.error('[deid] dispatch failed', e);
+    }
+  };
+}
+
 /* ========== Global utilities ========== */
 window.esc = s => (s ?? "").toString()
   .replace(/&/g,"&amp;").replace(/</g,"&lt;")
@@ -730,6 +741,8 @@ window.attachParamDebug = function attachParamDebug(root){
 })();
 
 
+// ---------------- Interop helpers ----------------
+
 // Called after #deid-form swaps its output
 (function enhanceDeidHandlers(){
   const prior = window.InteropUI.onDeidentifyComplete;
@@ -779,7 +792,17 @@ window.attachParamDebug = function attachParamDebug(root){
       }
     }
     if (typeof prior === 'function') {
-      try { prior.apply(this, arguments); } catch (err) { console.warn(err); }
+      try {
+        prior.apply(this, arguments);
+      } catch (err) {
+        console.warn(err);
+      }
+    } else {
+      try {
+        document.body.dispatchEvent(new Event('deid:complete', { bubbles: true }));
+      } catch (err) {
+        console.error('[deid] dispatch failed', err);
+      }
     }
     return undefined;
   };
