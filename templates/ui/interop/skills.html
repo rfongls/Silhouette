@@ -23,39 +23,39 @@
   </span>
 </div>
 <nav class="module-nav" id="interop-feature-bar">
-  <button class="module-btn active" type="button" data-feature="gen" data-panel="generate-panel"
+  <button class="module-btn active" type="button" data-feature="gen" data-panel="generate-panel" data-open-card="#card-gen"
           aria-controls="generate-panel" aria-expanded="true">⚡ Generate</button>
-  <button class="module-btn" type="button" data-feature="deid" data-panel="deid-panel"
+  <button class="module-btn" type="button" data-feature="deid" data-panel="deid-panel" data-open-card="#card-deid"
           aria-controls="deid-panel" aria-expanded="false">🔒 De‑identify</button>
-  <button class="module-btn" type="button" data-feature="val" data-panel="validate-panel"
+  <button class="module-btn" type="button" data-feature="val" data-panel="validate-panel" data-open-card="#card-validate"
           aria-controls="validate-panel" aria-expanded="false">✓ Validate</button>
-  <button class="module-btn" type="button" data-feature="mllp" data-panel="mllp-panel"
+  <button class="module-btn" type="button" data-feature="mllp" data-panel="mllp-panel" data-open-card="#card-mllp"
           aria-controls="mllp-panel" aria-expanded="false">📤 MLLP Send</button>
   <a class="module-btn" data-feature="pipe" href="{{ root }}/ui/interop/pipeline">→ Full Pipeline</a>
 </nav>
 
-<details id="card-gen" class="card collapsible" open>
+<details id="card-gen" class="card collapsible interop-card-generate" open>
   <summary>Generate Messages <span class="minimax"></span></summary>
   <div class="card-body">
     {% include "ui/interop/_generate_panel.html" %}
   </div>
 </details>
 
-<details id="card-deid" class="card collapsible">
+<details id="card-deid" class="card collapsible interop-card-deid">
   <summary>De‑Identify Message <span class="minimax"></span></summary>
   <div class="card-body">
     {% include "ui/interop/_deid_panel.html" %}
   </div>
 </details>
 
-<details id="card-validate" class="card collapsible">
+<details id="card-validate" class="card collapsible interop-card-validate">
   <summary>Validate Message <span class="minimax"></span></summary>
   <div class="card-body">
     {% include "ui/interop/_validate_panel.html" %}
   </div>
 </details>
 
-<details id="card-mllp" class="card collapsible">
+<details id="card-mllp" class="card collapsible interop-card-mllp">
   <summary>Transport (MLLP) &amp; FHIR Options <span class="minimax"></span></summary>
   <div class="card-body">
     {% include "ui/interop/_mllp_panel.html" %}
