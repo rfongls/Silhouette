@@ -54,12 +54,14 @@
     <pre id="deid-output" class="codepane limit10 scrollbox mt" aria-live="polite"></pre>
 
     <!-- REPORT BELOW OUTPUT -->
+    <!-- Custom event fired from JS after the form successfully swaps its output -->
     <div id="deid-report"
          class="card mt"
          hx-post="{{ urls.api_deidentify_summary | default(root ~ '/api/interop/deidentify/summary', true) }}"
-         hx-include="#deid-text,#deid-after,#deid-template"
-         hx-trigger="htmx:afterRequest from:#deid-form"
+         hx-include="#deid-text,#deid-after,#deid-template,#deid-apply-baseline,#deid-seed"
+         hx-trigger="deid:complete from:body"
          hx-headers='{"Accept":"text/html"}'
+         hx-target="this"
          hx-swap="innerHTML">
       <details class="mini-report">
         <summary>De-identification report</summary>
