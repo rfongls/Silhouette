@@ -1,10 +1,11 @@
 {#
   De‑identify coverage summary (compact).
   Expected context:
-    r.total / r.message_count (total messages, optional)
-    r.by_segment (mapping: SEG -> [items])  OR  r.segments / r.summary
-    item fields: field, component, subcomponent, logic|rule|reason, pct?, count?, total?
+    r OR result (be liberal in what we accept)
+    └── total/message_count, by_segment/segments/summary { SEG -> [items] }
+    item: field, component, subcomponent, logic|rule|reason, pct?|count?|total?
 #}
+{% set r = r or result or {} %}
 <section class="deid-summary">
   <header class="row wrap" style="align-items:center;justify-content:space-between;gap:.75rem;margin-bottom:.5rem">
     <h4 class="text-h3" style="margin:0">De‑identification report</h4>
@@ -15,18 +16,13 @@
              placeholder="Filter by logic (e.g., NAME, PHONE, ADDRESS)" />
     </div>
   </header>
-
-  {% set seg_source = r.by_segment or r.segments or r.summary or [] %}
+  {% set segmap = r.by_segment or r.segments or r.summary or {} %}
   {% set grand_total = r.total or r.message_count or 0 %}
-
-  {% if seg_source %}
-    {% if seg_source is mapping %}
-      {% for seg, rows in seg_source.items() %}
-        {% if rows is mapping %}{% set rows = rows.values() %}{% endif %}
-        {% set rows = rows | list %}
+  {% if segmap %}
+    {% for seg, items in segmap.items() %}
       <details class="mt" open>
         <summary class="text-h4" style="margin:0 0 .5rem 0">
-          {{ seg }} <span class="muted small">({{ rows|length }})</span>
+          {{ seg }} <span class="muted small">({{ items|length }})</span>
         </summary>
         <div class="scrollbox">
           <table class="validate-report__table" style="width:100%;border-collapse:collapse;font-size:0.9rem">
@@ -40,12 +36,11 @@
               </tr>
             </thead>
             <tbody>
-            {% for it in rows %}
+            {% for it in items %}
               {# Determine total and pct robustly #}
               {% set it_total = (it.total if it.total is defined else grand_total) %}
               {% if it_total == 0 %}{% set it_total = (it.count if it.count is defined else 1) %}{% endif %}
-              {% set it_count = (it.count if it.count is defined else it_total) %}
-              {% set computed_pct = (it.pct if it.pct is defined else ((it_count / (it_total or 1)) * 100)) %}
+              {% set computed_pct = (it.pct if it.pct is defined else (((it.count|default(it_total)) / (it_total|default(1))) * 100)) %}
               {% set pct = computed_pct|round(1) %}
               <tr data-logic="{{ (it.logic or it.rule or it.reason or '') | lower }}"
                   style="border-bottom:1px solid var(--color-border,#eef2f7)">
@@ -63,60 +58,6 @@
         </div>
       </details>
     {% endfor %}
-    {% else %}
-      {% for segment in seg_source %}
-        {% set seg = segment.segment or segment.name or segment.key or ('Segment ' ~ loop.index) %}
-        {% set rows = segment.items or segment.rows or segment.summary or segment.coverage or segment.entries or [] %}
-        {% if rows is mapping %}{% set rows = rows.values() %}{% endif %}
-        {% if rows is string or rows is not iterable %}
-          {% if segment is sequence and segment|length == 2 %}
-            {% set seg = segment[0] %}
-            {% set rows = segment[1] %}
-          {% else %}
-            {% set rows = [] %}
-          {% endif %}
-        {% endif %}
-        {% set rows = rows | list %}
-      <details class="mt" open>
-        <summary class="text-h4" style="margin:0 0 .5rem 0">
-          {{ seg }} <span class="muted small">({{ rows|length }})</span>
-        </summary>
-        <div class="scrollbox">
-          <table class="validate-report__table" style="width:100%;border-collapse:collapse;font-size:0.9rem">
-            <thead>
-              <tr style="text-align:left;border-bottom:1px solid var(--color-border,#e5e7eb)">
-                <th style="padding:.5rem">Field</th>
-                <th style="padding:.5rem">Comp</th>
-                <th style="padding:.5rem">Subcomp</th>
-                <th style="padding:.5rem">Logic</th>
-                <th style="padding:.5rem;text-align:right">%</th>
-              </tr>
-            </thead>
-            <tbody>
-            {% for it in rows %}
-              {# Determine total and pct robustly #}
-              {% set it_total = (it.total if it.total is defined else grand_total) %}
-              {% if it_total == 0 %}{% set it_total = (it.count if it.count is defined else 1) %}{% endif %}
-              {% set it_count = (it.count if it.count is defined else it_total) %}
-              {% set computed_pct = (it.pct if it.pct is defined else ((it_count / (it_total or 1)) * 100)) %}
-              {% set pct = computed_pct|round(1) %}
-              <tr data-logic="{{ (it.logic or it.rule or it.reason or '') | lower }}"
-                  style="border-bottom:1px solid var(--color-border,#eef2f7)">
-                <td style="padding:.5rem"><code class="mono">{{ it.field if it.field is not none else '—' }}</code></td>
-                <td style="padding:.5rem"><code class="mono">{{ it.component if it.component is not none else '—' }}</code></td>
-                <td style="padding:.5rem"><code class="mono">{{ it.subcomponent if it.subcomponent is not none else '—' }}</code></td>
-                <td style="padding:.5rem" class="small mono">
-                  {{ it.logic or it.rule or it.reason or '—' }}
-                </td>
-                <td style="padding:.5rem;text-align:right">{{ pct }}%</td>
-              </tr>
-            {% endfor %}
-            </tbody>
-          </table>
-        </div>
-      </details>
-      {% endfor %}
-    {% endif %}
   {% else %}
     <div class="muted small">No coverage computed for this run.</div>
   {% endif %}

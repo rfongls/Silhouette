@@ -59,7 +59,8 @@
          class="card mt"
          hx-post="{{ urls.api_deidentify_summary | default(root ~ '/api/interop/deidentify/summary', true) }}"
          hx-include="#deid-text,#deid-after,#deid-template,#deid-apply-baseline,#deid-seed"
-         hx-trigger="deid:complete from:body"
+         <!-- Important: listen to both HTMX lifecycle and our custom event -->
+         hx-trigger="htmx:afterRequest from:#deid-form, deid:complete from:body"
          hx-headers='{"Accept":"text/html"}'
          hx-target="this"
          hx-swap="innerHTML">
