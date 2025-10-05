@@ -132,7 +132,6 @@ def test_diag_debug_log_widget(monkeypatch, tmp_path):
     assert "limit=150" in resp.text
     assert "hx-include=\"#debug-log-settings\"" in resp.text
 
-
 def test_diag_debug_state_toggle_returns_html_when_requested(monkeypatch, tmp_path):
     _prime_debug_log(monkeypatch, tmp_path)
     resp = client.post(
