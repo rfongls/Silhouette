@@ -57,13 +57,13 @@
     <div id="deid-report"
          class="card mt"
          hx-post="{{ urls.api_deidentify_summary | default(root ~ '/api/interop/deidentify/summary', true) }}"
-         hx-include="#deid-text,#deid-after,#deid-seed,#deid-template,#deid-apply-baseline"
+         hx-include="#deid-text,#deid-after,#deid-template"
          hx-trigger="htmx:afterRequest from:#deid-form"
          hx-headers='{"Accept":"text/html"}'
          hx-swap="innerHTML">
       <details class="mini-report">
-        <summary>De-identified fields</summary>
-        <div class="muted small">Run de-identify to see what changed.</div>
+        <summary>De-identification report</summary>
+        <div class="muted small">Run de-identify to see coverage by rule.</div>
       </details>
     </div>
 

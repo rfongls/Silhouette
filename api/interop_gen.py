@@ -1,10 +1,9 @@
 from __future__ import annotations
 import hashlib
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any, Optional, Dict, List, Set, Tuple
 import re
 from collections import defaultdict
-from itertools import groupby
 from urllib.parse import parse_qs
 import json
 import logging
@@ -347,6 +346,286 @@ def _hl7_value_for_position(
                 value = ""
         if subcomponent and subcomponent > 0:
             sub_parts = value.split("&")
+            if len(sub_parts) >= subcomponent:
+                value = sub_parts[subcomponent - 1] or ""
+            else:
+                value = ""
+        return value or None
+    return None
+
+
+def _build_success_rows(
+    template: dict[str, Any] | None,
+    issues: list[dict[str, Any]],
+    message_text: str,
+) -> list[dict[str, Any]]:
+    """Create synthetic OK rows for checks that passed."""
+    if not template:
+        return []
+    checks = (template or {}).get("checks") or []
+    if not isinstance(checks, list):
+        return []
+    failed_fields: set[tuple[str | None, int | None]] = set()
+    failed_components: set[tuple[str | None, int | None, int | None, int | None]] = set()
+    for issue in issues:
+        sev = (issue.get("severity") or "").lower()
+        if sev in {"error", "warning"}:
+            seg_key = (issue.get("segment") or "").strip().upper() or None
+            failed_fields.add((seg_key, issue.get("field")))
+            failed_components.add(
+                (
+                    seg_key,
+                    issue.get("field"),
+                    issue.get("component"),
+                    issue.get("subcomponent"),
+                )
+            )
+
+    success_rows: list[dict[str, Any]] = []
+    for raw in checks:
+        if not isinstance(raw, dict):
+            continue
+        segment = (raw.get("segment") or "").strip().upper()
+        field_val = raw.get("field")
+        try:
+            field_int = int(field_val)
+        except Exception:
+            continue
+        seg_key = (segment or "").strip().upper() or None
+        comp_val = raw.get("component")
+        sub_val = raw.get("subcomponent")
+        try:
+            comp_int = int(comp_val) if comp_val not in (None, "") else None
+        except Exception:
+            comp_int = None
+        try:
+            sub_int = int(sub_val) if sub_val not in (None, "") else None
+        except Exception:
+            sub_int = None
+        if (seg_key, field_int) in failed_fields:
+            continue
+        if (seg_key, field_int, comp_int, sub_int) in failed_components:
+            continue
+        value = _hl7_value_for_position(message_text, segment or None, field_int, comp_int, sub_int)
+        success_rows.append(
+            {
+                "severity": "ok",
+                "code": "OK",
+                "segment": segment or "",
+                "field": field_int,
+                "component": comp_int,
+                "subcomponent": sub_int,
+                "occurrence": None,
+                "location": f"{segment}-{field_int}" if segment else "",
+                "message": "",
+                "value": value,
+            }
+        )
+    return success_rows
+
+
+def _count_issue_severities(rows: list[dict[str, Any]]) -> dict[str, int]:
+    counts = {"ok": 0, "warnings": 0, "errors": 0}
+    for row in rows:
+        sev = (row.get("severity") or "").lower()
+        if sev == "ok":
+            counts["ok"] += 1
+        elif sev == "warning":
+            counts["warnings"] += 1
+        elif sev == "error":
+            counts["errors"] += 1
+    return counts
+
+
+_ISSUE_VALUE_PATTERNS = (
+    re.compile(r"[Vv]alue ['\"]([^'\"]+)['\"]"),
+    re.compile(r"got ['\"]([^'\"]+)['\"]"),
+    re.compile(r"was ['\"]([^'\"]+)['\"]"),
+)
+
+
+def _parse_hl7_location(loc: Any):
+    """Return (segment, field, component, subcomponent) parsed from an HL7 location string."""
+    if loc in (None, "", "—"):
+        return None, None, None, None
+    text = str(loc).strip()
+    if not text or text == "—":
+        return None, None, None, None
+    if "-" in text:
+        segment, rest = text.split("-", 1)
+    else:
+        segment, rest = text, ""
+    field = component = subcomponent = None
+    if rest:
+        rest = rest.replace("^", ".")
+        pieces = [part for part in rest.split(".") if part]
+
+        def _to_int(value: str):
+            try:
+                digits = "".join(ch for ch in value if ch.isdigit())
+                return int(digits) if digits else None
+            except Exception:
+                return None
+
+        if len(pieces) >= 1:
+            field = _to_int(pieces[0])
+        if len(pieces) >= 2:
+            component = _to_int(pieces[1])
+        if len(pieces) >= 3:
+            subcomponent = _to_int(pieces[2])
+    return (segment or None), field, component, subcomponent
+
+
+def _extract_issue_value(message: Any) -> str | None:
+    if not message:
+        return None
+    text = str(message)
+    for pattern in _ISSUE_VALUE_PATTERNS:
+        match = pattern.search(text)
+        if not match:
+            continue
+        for group in match.groups():
+            if group:
+                return group
+    return None
+
+
+def _hl7_separators(message: str) -> tuple[str, str, str, str]:
+    """Return (field, component, repetition, subcomponent) separators."""
+    default = ("|", "^", "~", "&")
+    if not message:
+        return default
+    first_line = ""
+    for line in message.splitlines():
+        if line.strip():
+            first_line = line
+            break
+    if not first_line.startswith("MSH") or len(first_line) < 8:
+        return default
+    field_sep = first_line[3]
+    enc = first_line[4:8]
+    comp = enc[0] if len(enc) >= 1 else "^"
+    rep = enc[1] if len(enc) >= 2 else "~"
+    sub = enc[3] if len(enc) >= 4 else "&"
+    return field_sep or "|", comp or "^", rep or "~", sub or "&"
+
+
+def _enrich_validate_issues(issues: Any, message_text: str) -> list[dict[str, Any]]:
+    """Ensure validation issues expose code, segment, field, component, subcomponent."""
+    enriched: list[dict[str, Any]] = []
+    message_text = message_text or ""
+    for issue in issues or []:
+        if isinstance(issue, dict):
+            item = dict(issue)
+        else:
+            item = {"message": str(issue)}
+        seg = item.get("segment")
+        field = item.get("field")
+        component = item.get("component")
+        subcomponent = item.get("subcomponent")
+        location = item.get("location")
+        parsed = _parse_hl7_location(location)
+        seg = (seg or parsed[0] or "").strip().upper()
+
+        def _coerce_int(value: Any) -> int | None:
+            if value in ("", None, "—"):
+                return None
+            if isinstance(value, int):
+                return value
+            try:
+                text = str(value).strip()
+            except Exception:
+                return None
+            digits = "".join(ch for ch in text if ch.isdigit())
+            return int(digits) if digits else None
+
+        field = _coerce_int(field) if field is not None else parsed[1]
+        if field is None:
+            field = parsed[1]
+        component = _coerce_int(component) if component is not None else parsed[2]
+        if component is None:
+            component = parsed[2]
+        subcomponent = _coerce_int(subcomponent) if subcomponent is not None else parsed[3]
+        if subcomponent is None:
+            subcomponent = parsed[3]
+
+        severity_raw = (item.get("severity") or "error").lower()
+        if "warn" in severity_raw:
+            severity = "warning"
+        elif any(tag in severity_raw for tag in ("err", "fail")):
+            severity = "error"
+        elif any(tag in severity_raw for tag in ("ok", "pass", "success", "info")):
+            severity = "ok"
+        else:
+            severity = severity_raw or "error"
+
+        message_body = item.get("message") or ""
+        value = item.get("value") or _extract_issue_value(message_body)
+        if value in (None, ""):
+            value = _hl7_value_for_position(
+                message_text,
+                seg,
+                field,
+                component,
+                subcomponent,
+            )
+
+        enriched.append(
+            {
+                "severity": severity,
+                "code": item.get("code")
+                or item.get("rule")
+                or item.get("id")
+                or item.get("type")
+                or "",
+                "segment": seg or "",
+                "field": field,
+                "component": component,
+                "subcomponent": subcomponent,
+                "location": location or "",
+                "occurrence": item.get("occurrence"),
+                "message": message_body,
+                "value": value,
+            }
+        )
+    return enriched
+
+
+def _hl7_value_for_position(
+    message: str,
+    segment: str | None,
+    field: int | None,
+    component: int | None = None,
+    subcomponent: int | None = None,
+) -> str | None:
+    """Return the first value for the given HL7 segment/field position."""
+    if not message or not segment or field is None:
+        return None
+    seg = segment.strip().upper()
+    if not seg or field <= 0:
+        return None
+    field_sep, comp_sep, _, sub_sep = _hl7_separators(message)
+    for line in (message or "").splitlines():
+        if not line.startswith(seg + field_sep):
+            continue
+        parts = line.split(field_sep)
+        if seg == "MSH":
+            if field == 1:
+                return field_sep
+            idx = field - 1
+        else:
+            idx = field
+        if idx >= len(parts):
+            continue
+        value = parts[idx] or ""
+        if component and component > 0:
+            comp_parts = value.split(comp_sep)
+            if len(comp_parts) >= component:
+                value = comp_parts[component - 1] or ""
+            else:
+                value = ""
+        if subcomponent and subcomponent > 0:
+            sub_parts = value.split(sub_sep)
             if len(sub_parts) >= subcomponent:
                 value = sub_parts[subcomponent - 1] or ""
             else:
@@ -1709,23 +1988,118 @@ def _summarize_hl7_changes(
     )
     return ordered
 
+def _normalize_index(value: Any) -> int:
+    if value in (None, "", "—"):
+        return 0
+    try:
+        return int(value)
+    except Exception:
+        digits = "".join(ch for ch in str(value) if ch.isdigit())
+        try:
+            return int(digits)
+        except Exception:
+            return 0
 
-def _render_deid_summary_html(changes: list[dict[str, Any]]) -> str:
+
+def _split_hl7_messages(text: str) -> list[str]:
+    if not text or not str(text).strip():
+        return []
+    normalized = str(text).replace("\r\n", "\n").replace("\r", "\n")
+    messages: list[str] = []
+    current: list[str] = []
+    for line in normalized.split("\n"):
+        if line.startswith("MSH") and current:
+            messages.append("\n".join(current).strip("\n"))
+            current = [line]
+        else:
+            if not current and not line.strip():
+                continue
+            current.append(line)
+    if current:
+        messages.append("\n".join(current).strip("\n"))
+    cleaned = [msg for msg in messages if msg and msg.strip()]
+    if len(cleaned) <= 1 and "\n\n" in normalized:
+        blocks = [blk.strip() for blk in re.split(r"(?:\r?\n){2,}", normalized) if blk.strip()]
+        if len(blocks) > 1:
+            return blocks
+    return cleaned if cleaned else ([normalized.strip()] if normalized.strip() else [])
+
+
+def _extract_deid_targets_from_template(template: Any) -> list[dict[str, Any]]:
+    targets: list[dict[str, Any]] = []
+    if not isinstance(template, dict):
+        return targets
+    candidate_lists: list[list[Any]] = []
+    for key in ("targets", "rules", "items"):
+        value = template.get(key)
+        if isinstance(value, list):
+            candidate_lists.append(value)
+    seen: set[tuple[str, int, int, int]] = set()
+    for entries in candidate_lists:
+        for row in entries:
+            if not isinstance(row, dict):
+                continue
+            seg = str(row.get("segment") or row.get("seg") or "").strip().upper()
+            if not seg:
+                continue
+            field = _normalize_index(row.get("field") or row.get("field_no") or row.get("field_index"))
+            if field <= 0:
+                continue
+            comp = _normalize_index(row.get("component") or row.get("component_index"))
+            sub = _normalize_index(row.get("subcomponent") or row.get("subcomponent_index"))
+            key = (seg, field, comp, sub)
+            if key in seen:
+                continue
+            seen.add(key)
+            logic = (
+                row.get("logic")
+                or row.get("label")
+                or row.get("name")
+                or row.get("rule")
+                or "—"
+            )
+            targets.append(
+                {
+                    "segment": seg,
+                    "field": field,
+                    "component": comp,
+                    "subcomponent": sub,
+                    "logic": logic,
+                }
+            )
+    return targets
+
+
+def _compute_deid_coverage(before: str, after: str) -> tuple[dict[tuple[str, int, int, int], set[int]], int]:
+    coverage: dict[tuple[str, int, int, int], set[int]] = {}
+    before_messages = _split_hl7_messages(before)
+    after_messages = _split_hl7_messages(after)
+    total = max(len(before_messages), len(after_messages))
+    if total == 0:
+        return coverage, 0
+    for idx in range(total):
+        src = before_messages[idx] if idx < len(before_messages) else ""
+        dst = after_messages[idx] if idx < len(after_messages) else ""
+        if not src and not dst:
+            continue
+        diffs = _summarize_hl7_changes(src, dst, {})
+        for item in diffs:
+            seg = (item.get("segment") or "").strip().upper()
+            if not seg:
+                continue
+            field_no = _normalize_index(item.get("field"))
+            if field_no <= 0:
+                continue
+            comp_no = _normalize_index(item.get("component"))
+            sub_no = _normalize_index(item.get("subcomponent"))
+            key = (seg, field_no, comp_no, sub_no)
+            coverage.setdefault(key, set()).add(idx)
+    return coverage, total
+
+
+def _render_deid_summary_html(groups: list[dict[str, Any]], total_messages: int) -> str:
     template = templates.get_template("ui/interop/_deid_summary.html")
-    sorted_changes = sorted(
-        changes,
-        key=lambda item: (
-            item.get("segment") or "",
-            int(item.get("field") or 0),
-            item.get("component") or 0,
-            item.get("subcomponent") or 0,
-        ),
-    )
-    groups = []
-    for segment, rows in groupby(sorted_changes, key=lambda item: item.get("segment") or "—"):
-        items = list(rows)
-        groups.append({"segment": segment, "items": items, "count": len(items)})
-    return template.render({"groups": groups})
+    return template.render({"groups": groups, "total_messages": total_messages})
 
 
 def _build_logic_map(raw_changes: Any) -> dict[tuple[str, int, int, int], str]:
@@ -1778,7 +2152,6 @@ async def api_deidentify(request: Request):
     if template or apply_baseline:
         tpl_payload = template or {"rules": []}
         deid_result = apply_deid_with_template(text_value, tpl_payload, apply_baseline=apply_baseline)
-
     else:
         deid_result = deidentify_message(text_value, seed=seed_int)
 
@@ -1821,7 +2194,7 @@ async def api_deidentify(request: Request):
 
 @router.post("/api/interop/deidentify/summary")
 async def api_deidentify_summary(request: Request):
-    """Return a compact HTML (or JSON) report of fields changed by de-identification."""
+    """Return a compact coverage report (% applied per rule) for de-identification."""
     body = await parse_any_request(request)
     text = body.get("text") or ""
     after_text = (
@@ -1864,12 +2237,71 @@ async def api_deidentify_summary(request: Request):
         if isinstance(changes_payload, list):
             raw_changes = changes_payload
 
+    template_targets = _extract_deid_targets_from_template(template)
+    logic_lookup: dict[tuple[str, int, int, int], str] = {
+        (
+            target["segment"],
+            target["field"],
+            target.get("component", 0),
+            target.get("subcomponent", 0),
+        ): target.get("logic") or "—"
+        for target in template_targets
+    }
     logic_map = _build_logic_map(raw_changes)
-    changes = _summarize_hl7_changes(src, after_text, logic_map)
+    for key, value in logic_map.items():
+        if value:
+            logic_lookup.setdefault(key, value)
+
+    coverage_map, total_messages = _compute_deid_coverage(src, after_text)
+    keyset: Set[Tuple[str, int, int, int]] = set(coverage_map.keys())
+    keyset.update(logic_lookup.keys())
+    keyset.update(logic_map.keys())
+
+    rows: list[dict[str, Any]] = []
+    denominator = total_messages if total_messages else 1
+    for seg, field_no, comp_no, sub_no in sorted(
+        keyset, key=lambda item: (item[0], item[1], item[2], item[3])
+    ):
+        if not seg or field_no <= 0:
+            continue
+        applied = len(coverage_map.get((seg, field_no, comp_no, sub_no), set()))
+        pct = round(100.0 * applied / denominator) if denominator else 0
+        rows.append(
+            {
+                "segment": seg,
+                "field": field_no,
+                "component": comp_no or None,
+                "subcomponent": sub_no or None,
+                "logic": logic_lookup.get((seg, field_no, comp_no, sub_no), "—"),
+                "applied": applied,
+                "pct": pct,
+            }
+        )
+
+    grouped: Dict[str, List[dict[str, Any]]] = {}
+    for row in rows:
+        grouped.setdefault(row["segment"], []).append(row)
+    groups: List[dict[str, Any]] = []
+    for seg in sorted(grouped):
+        items = sorted(
+            grouped[seg],
+            key=lambda r: (
+                r.get("field") or 0,
+                r.get("component") or 0,
+                r.get("subcomponent") or 0,
+            ),
+        )
+        groups.append({"segment": seg, "items": items, "count": len(items)})
+
     accept = (request.headers.get("accept") or "").lower()
     if "text/html" in accept:
-        return HTMLResponse(_render_deid_summary_html(changes))
-    return JSONResponse({"count": len(changes), "changes": changes})
+        return HTMLResponse(_render_deid_summary_html(groups, total_messages))
+    return JSONResponse(
+        {
+            "total_messages": total_messages,
+            "rows": rows,
+        }
+    )
 
 
 @router.post("/api/interop/validate")
