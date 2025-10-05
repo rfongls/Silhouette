@@ -9,12 +9,9 @@
   {% set api_deidentify_plain = api_deidentify ~ '?format=txt' %}
 {% endif %}
 
-<section id="deid-panel" class="panel interop-panel interop-panel-deid" data-accordion data-open="0" data-module="deid">
-  <header class="row gap" data-acc-toggle aria-expanded="false" style="justify-content:space-between;align-items:center;cursor:pointer">
-    <h3 class="text-h3" style="margin:0">De‑identify</h3>
-    <span class="muted small" data-acc-label>expand</span>
-  </header>
-  <div id="deid-body" class="panel-body" data-acc-body>
+<section id="deid-panel" class="interop-panel interop-panel-deid">
+  <div class="module-body" data-acc-body>
+    <h3 class="text-h3 mb">De‑identify</h3>
     <form id="deid-form"
           class="mt"
           method="post"
@@ -51,19 +48,23 @@
       </div>
     </form>
 
+    <!-- Hidden holder for the de-identified result so the summary sees the exact text the user received -->
+    <textarea id="deid-after" name="after_text" hidden></textarea>
+
+    <!-- OUTPUT FIRST -->
     <pre id="deid-output" class="codepane limit10 scrollbox mt" aria-live="polite"></pre>
 
+    <!-- REPORT BELOW OUTPUT -->
     <div id="deid-report"
          class="card mt"
          hx-post="{{ urls.api_deidentify_summary | default(root ~ '/api/interop/deidentify/summary', true) }}"
-         hx-include="#deid-text,#deid-seed,#deid-template,#deid-apply-baseline"
+         hx-include="#deid-text,#deid-after,#deid-template"
          hx-trigger="htmx:afterRequest from:#deid-form"
          hx-headers='{"Accept":"text/html"}'
-         hx-swap="innerHTML"
-         hx-on::afterSwap="window.InteropUI && window.InteropUI.onDeidentifySummary && window.InteropUI.onDeidentifySummary()">
+         hx-swap="innerHTML">
       <details class="mini-report">
-        <summary>De-identification results</summary>
-        <div class="muted small">Run de-identify to see what fields changed.</div>
+        <summary>De-identification report</summary>
+        <div class="muted small">Run de-identify to see coverage by rule.</div>
       </details>
     </div>
 

@@ -1,11 +1,49 @@
-<section class="validate-report">
+<section class="validate-report" data-val-report>
   <header class="validate-report__header" style="display:flex;align-items:center;justify-content:space-between;gap:0.75rem">
     <h4 class="text-h3" style="margin:0">Validation report</h4>
-    <div class="validate-report__counts" style="display:flex;flex-wrap:wrap;gap:0.5rem">
-      <span class="chip" style="background:#10b981;color:#0b1e15">OK: {{ r.counts.ok | default(0) }}</span>
-      <span class="chip" style="background:#f59e0b;color:#1f1300">Warnings: {{ r.counts.warnings | default(0) }}</span>
-      <span class="chip" style="background:#ef4444;color:#250101">Errors: {{ r.counts.errors | default(0) }}</span>
-    </div>
+    {% set current = r.show or 'errors' %}
+    <nav class="validate-report__counts" style="display:flex;flex-wrap:wrap;gap:0.5rem">
+      <button type="button"
+              class="chip"
+              hx-post="{{ validate_api }}?format=html&amp;show=ok"
+              hx-include="#validate-form"
+              hx-target="#validate-report"
+              hx-swap="innerHTML"
+              aria-pressed="{{ 'true' if current == 'ok' else 'false' }}"
+              style="background:#10b981;color:#0b1e15;{% if current == 'ok' %}box-shadow:0 0 0 2px rgba(0,0,0,0.25) inset;{% endif %}">
+        OK: {{ r.counts.ok | default(0) }}
+      </button>
+      <button type="button"
+              class="chip"
+              hx-post="{{ validate_api }}?format=html&amp;show=warnings"
+              hx-include="#validate-form"
+              hx-target="#validate-report"
+              hx-swap="innerHTML"
+              aria-pressed="{{ 'true' if current == 'warnings' else 'false' }}"
+              style="background:#f59e0b;color:#1f1300;{% if current == 'warnings' %}box-shadow:0 0 0 2px rgba(0,0,0,0.25) inset;{% endif %}">
+        Warnings: {{ r.counts.warnings | default(0) }}
+      </button>
+      <button type="button"
+              class="chip"
+              hx-post="{{ validate_api }}?format=html&amp;show=errors"
+              hx-include="#validate-form"
+              hx-target="#validate-report"
+              hx-swap="innerHTML"
+              aria-pressed="{{ 'true' if current == 'errors' else 'false' }}"
+              style="background:#ef4444;color:#250101;{% if current == 'errors' %}box-shadow:0 0 0 2px rgba(0,0,0,0.25) inset;{% endif %}">
+        Errors: {{ r.counts.errors | default(0) }}
+      </button>
+      <button type="button"
+              class="chip"
+              hx-post="{{ validate_api }}?format=html&amp;show=all"
+              hx-include="#validate-form"
+              hx-target="#validate-report"
+              hx-swap="innerHTML"
+              aria-pressed="{{ 'true' if current == 'all' else 'false' }}"
+              style="background:#64748b;color:#0b1220;{% if current == 'all' %}box-shadow:0 0 0 2px rgba(255,255,255,0.35) inset;{% endif %}">
+        Show all
+      </button>
+    </nav>
   </header>
 
   {% if r.counts.errors | default(0) %}
@@ -15,7 +53,7 @@
   {% endif %}
 
   <div class="scrollbox" style="margin-top:0.75rem">
-    <table class="validate-report__table" style="width:100%;border-collapse:collapse;font-size:0.875rem">
+    <table class="validate-report__table" data-val-table style="width:100%;border-collapse:collapse;font-size:0.875rem">
       <thead>
         <tr style="text-align:left;border-bottom:1px solid var(--color-border, #d1d5db)">
           <th style="padding:0.5rem">Severity</th>
@@ -24,37 +62,26 @@
           <th style="padding:0.5rem">Field</th>
           <th style="padding:0.5rem">Comp</th>
           <th style="padding:0.5rem">Subcomp</th>
+          <th style="padding:0.5rem">Value</th>
           <th style="padding:0.5rem">Message</th>
         </tr>
       </thead>
       <tbody>
-      {% for it in r.issues %}
-        {% set loc = it.location | default('') %}
-        {% set parts = (loc | string) | split('-') %}
-        {% set loc_seg = parts[0] if parts|length > 0 else None %}
-        {% set rest = parts[1] if parts|length > 1 else '' %}
-        {% set dots = rest | split('.') %}
-        {% set loc_fld = dots[0] if dots|length > 0 and dots[0] != '' else None %}
-        {% set loc_comp = dots[1] if dots|length > 1 else None %}
-        {% set loc_sub = dots[2] if dots|length > 2 else None %}
-
-        {% set seg_out = it.segment | default(loc_seg) %}
-        {% set fld_out = (it.field is not none and it.field) | default(loc_fld) %}
-        {% set cmp_out = (it.component is not none and it.component) | default(loc_comp) %}
-        {% set sub_out = (it.subcomponent is not none and it.subcomponent) | default(loc_sub) %}
-
-        <tr style="border-bottom:1px solid var(--color-border, #e5e7eb)" class="{{ (it.severity | default('error')) | lower }}">
-          <td style="padding:0.5rem">{{ it.severity | capitalize | default('Error') }}</td>
-          <td style="padding:0.5rem"><code class="mono">{{ it.code or it.rule or it.id or it.name or it.type or '—' }}</code></td>
-          <td style="padding:0.5rem"><code class="mono">{{ seg_out or '—' }}</code></td>
-          <td style="padding:0.5rem"><code class="mono">{{ fld_out if fld_out is not none else '—' }}</code></td>
-          <td style="padding:0.5rem"><code class="mono">{{ cmp_out if cmp_out is not none else '—' }}</code></td>
-          <td style="padding:0.5rem"><code class="mono">{{ sub_out if sub_out is not none else '—' }}</code></td>
-          <td style="padding:0.5rem">{{ it.message or '—' }}</td>
+      {% for it in r.rows %}
+        {% set severity = (it.severity | default('error')) | lower %}
+        <tr data-severity="{{ severity }}" style="border-bottom:1px solid var(--color-border, #e5e7eb)">
+          <td style="padding:0.5rem">{{ severity | capitalize }}</td>
+          <td style="padding:0.5rem"><code class="mono">{{ it.code or '—' }}</code></td>
+          <td style="padding:0.5rem"><code class="mono">{{ it.segment or '—' }}</code></td>
+          <td style="padding:0.5rem"><code class="mono">{{ it.field if it.field is not none else '—' }}</code></td>
+          <td style="padding:0.5rem"><code class="mono">{{ it.component if it.component is not none else '—' }}</code></td>
+          <td style="padding:0.5rem"><code class="mono">{{ it.subcomponent if it.subcomponent is not none else '—' }}</code></td>
+          <td style="padding:0.5rem"><code class="mono">{{ it.value or '—' }}</code></td>
+          <td style="padding:0.5rem">{{ it.message or (severity == 'ok' and 'Passed') or '—' }}</td>
         </tr>
       {% else %}
         <tr>
-          <td colspan="7" style="padding:0.75rem" class="muted">No issues to display.</td>
+          <td colspan="8" style="padding:0.75rem" class="muted">No rows to display.</td>
         </tr>
       {% endfor %}
       </tbody>
