@@ -734,10 +734,20 @@ window.attachParamDebug = function attachParamDebug(root){
 (function enhanceDeidHandlers(){
   const prior = window.InteropUI.onDeidentifyComplete;
   window.InteropUI.onDeidentifyComplete = function onDeidentifyComplete(event) {
-    const out = document.getElementById('deid-output');
-    const text = out ? (out.textContent || '').trim() : '';
-    if (text) {
-      const message = out.textContent || '';
+    let message = '';
+    if (event?.detail?.xhr) {
+      message = event.detail.xhr.responseText || '';
+    }
+    if (!message) {
+      const out = document.getElementById('deid-output');
+      message = out ? ((out.textContent || out.innerText || '')) : '';
+    }
+    const holder = document.getElementById('deid-after');
+    if (holder) {
+      holder.value = message || '';
+    }
+    const trimmed = (message || '').trim();
+    if (trimmed) {
       window.PipelineContext = window.PipelineContext || {};
       window.PipelineContext.message = message;
       let updatedViaHelper = false;
