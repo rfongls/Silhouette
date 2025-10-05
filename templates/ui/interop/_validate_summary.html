@@ -1,0 +1,43 @@
+{# expects: r.summary = { total:int, rows:[{severity,code,segment,field,component,subcomponent,message,count,pct}] } #}
+{% set s = r.summary or {} %}
+{% set total = s.total or r.total_messages or 1 %}
+<details class="mini-report" data-autoclose open>
+  <summary>Summary (unique results)</summary>
+  {% if not s.rows or s.rows|length == 0 %}
+    <div class="muted small">No results to summarize.</div>
+  {% else %}
+    <p class="small muted" style="margin:.25rem 0 .5rem 0">Across {{ total }} message{{ 's' if total != 1 else '' }}. Counts and percentages are de‑duplicated by rule.</p>
+    <div class="scrollbox">
+      <table style="width:100%;border-collapse:collapse;font-size:.95rem">
+        <thead>
+        <tr style="text-align:left;border-bottom:1px solid var(--color-border,#253247)">
+          <th style="padding:.5rem">Severity</th>
+          <th style="padding:.5rem">Rule / Code</th>
+          <th style="padding:.5rem">Segment</th>
+          <th style="padding:.5rem">Field</th>
+          <th style="padding:.5rem">Comp</th>
+          <th style="padding:.5rem">Subcomp</th>
+          <th style="padding:.5rem">Count</th>
+          <th style="padding:.5rem">% of messages</th>
+          <th style="padding:.5rem">Message</th>
+        </tr>
+        </thead>
+        <tbody>
+        {% for it in s.rows %}
+          <tr class="row-{{ it.severity }}" style="border-bottom:1px solid var(--color-border,#1b2436)">
+            <td style="padding:.5rem">{{ 'Passed' if it.severity=='ok' else it.severity|capitalize }}</td>
+            <td style="padding:.5rem"><code class="mono">{{ it.code or '—' }}</code></td>
+            <td style="padding:.5rem"><code class="mono">{{ it.segment or '—' }}</code></td>
+            <td style="padding:.5rem"><code class="mono">{{ it.field if it.field is not none else '—' }}</code></td>
+            <td style="padding:.5rem"><code class="mono">{{ it.component if it.component is not none else '—' }}</code></td>
+            <td style="padding:.5rem"><code class="mono">{{ it.subcomponent if it.subcomponent is not none else '—' }}</code></td>
+            <td style="padding:.5rem">{{ it.count }}</td>
+            <td style="padding:.5rem">{{ it.pct }}%</td>
+            <td style="padding:.5rem">{{ it.message or '—' }}</td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% endif %}
+</details>

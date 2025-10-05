@@ -4,6 +4,46 @@
 
 window.InteropUI = window.InteropUI || {};
 
+(function ensureDeidCompleteEvent() {
+  const prior =
+    typeof window.InteropUI.onDeidentifyComplete === 'function'
+      ? window.InteropUI.onDeidentifyComplete
+      : null;
+
+  function dispatchCompleteEvent() {
+    try {
+      const evt = new CustomEvent('deid:complete', { bubbles: true });
+      document.body.dispatchEvent(evt);
+    } catch (err) {
+      try {
+        document.body.dispatchEvent(new Event('deid:complete', { bubbles: true }));
+      } catch (fallbackErr) {
+        console.warn('[deid] notify failed', fallbackErr);
+      }
+    }
+  }
+
+  window.InteropUI.onDeidentifyComplete = function wrappedDeidComplete(event) {
+    if (prior) {
+      try {
+        prior.call(this, event);
+      } catch (err) {
+        console.warn(err);
+      }
+    }
+    dispatchCompleteEvent();
+  };
+})();
+
+document.addEventListener('htmx:afterSwap', (event) => {
+  const target = event?.target;
+  if (!target || typeof target.closest !== 'function') return;
+  const details = target.closest('details[data-autoclose]');
+  if (details) {
+    details.open = true;
+  }
+});
+
 /* ========== Global utilities ========== */
 window.esc = s => (s ?? "").toString()
   .replace(/&/g,"&amp;").replace(/</g,"&lt;")
@@ -730,6 +770,8 @@ window.attachParamDebug = function attachParamDebug(root){
 })();
 
 
+// ---------------- Interop helpers ----------------
+
 // Called after #deid-form swaps its output
 (function enhanceDeidHandlers(){
   const prior = window.InteropUI.onDeidentifyComplete;
@@ -779,7 +821,22 @@ window.attachParamDebug = function attachParamDebug(root){
       }
     }
     if (typeof prior === 'function') {
-      try { prior.apply(this, arguments); } catch (err) { console.warn(err); }
+      try {
+        prior.call(this, event);
+      } catch (err) {
+        console.warn(err);
+      }
+    } else {
+      try {
+        const evt = new CustomEvent('deid:complete', { bubbles: true });
+        document.body.dispatchEvent(evt);
+      } catch (err) {
+        try {
+          document.body.dispatchEvent(new Event('deid:complete', { bubbles: true }));
+        } catch (fallbackErr) {
+          console.error('[deid] dispatch failed', fallbackErr);
+        }
+      }
     }
     return undefined;
   };
@@ -808,6 +865,16 @@ document.addEventListener('htmx:afterSettle', () => {
 });
 
 document.addEventListener('DOMContentLoaded', () => {
+  if (window.htmx) {
+    try {
+      window.htmx.ajax('/api/diag/debug/state?format=html', {
+        target: '#debug-state-badge',
+        swap: 'outerHTML'
+      });
+    } catch (err) {
+      console.warn('[debug] badge refresh failed', err);
+    }
+  }
   if (typeof window.initAccordions === 'function') {
     window.initAccordions();
   }

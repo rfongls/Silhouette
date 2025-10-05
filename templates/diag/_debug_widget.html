@@ -1,0 +1,10 @@
+{% if enabled %}
+<pre id="{{ target_id }}"
+     class="codepane small mt scrollbox"
+     hx-get="{{ hx_url }}"
+     hx-trigger="load, every 8s"
+     hx-target="this"
+     hx-swap="outerHTML"{% if include_selector %} hx-include="{{ include_selector }}"{% endif %}>Loading recent debug entries…</pre>
+{% else %}
+<div id="{{ target_id }}" class="codepane small mt scrollbox muted">Debug is OFF</div>
+{% endif %}
