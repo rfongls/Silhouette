@@ -67,9 +67,15 @@
     </div>
   </section>
 
-  {% include "ui/interop/_generate_panel.html" %}
-  {% include "ui/interop/_deid_panel.html" %}
-  {% include "ui/interop/_validate_panel.html" %}
+  <section class="card interop-card-generate">
+    {% include "ui/interop/_generate_panel.html" %}
+  </section>
+  <section class="card interop-card-deid">
+    {% include "ui/interop/_deid_panel.html" %}
+  </section>
+  <section class="card interop-card-validate">
+    {% include "ui/interop/_validate_panel.html" %}
+  </section>
   <section class="card">
     <h3>Recent Activity</h3>
     <div id="interop-activity"
@@ -88,7 +94,9 @@
       <div class="muted small">Loading generator diagnostics…</div>
     </div>
   </section>
-  {% include "ui/interop/_mllp_panel.html" %}
+  <section class="card interop-card-mllp">
+    {% include "ui/interop/_mllp_panel.html" %}
+  </section>
   <div class="card">
     <h3>HL7 → FHIR Pipeline</h3>
     <p class="muted">Select/Generate → Analyze → Translate → (optional) POST</p>
