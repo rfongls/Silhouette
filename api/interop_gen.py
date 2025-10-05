@@ -111,6 +111,332 @@ def _maybe_load_validation_template(name: Any) -> dict | None:
         return None
     return load_validation_template(normalized)
 
+_ISSUE_VALUE_PATTERNS = (
+    re.compile(r"[Vv]alue ['\"]([^'\"]+)['\"]"),
+    re.compile(r"got ['\"]([^'\"]+)['\"]"),
+    re.compile(r"was ['\"]([^'\"]+)['\"]"),
+)
+
+def _parse_hl7_location(loc: Any):
+    """Return (segment, field, component, subcomponent) parsed from an HL7 location string."""
+    if loc in (None, "", "—"):
+        return None, None, None, None
+    text = str(loc).strip()
+    if not text or text == "—":
+        return None, None, None, None
+    if "-" in text:
+        segment, rest = text.split("-", 1)
+    else:
+        segment, rest = text, ""
+    field = component = subcomponent = None
+    if rest:
+        rest = rest.replace("^", ".")
+        pieces = [part for part in rest.split(".") if part]
+
+        def _to_int(value: str):
+            try:
+                digits = "".join(ch for ch in value if ch.isdigit())
+                return int(digits) if digits else None
+            except Exception:
+                return None
+
+        if len(pieces) >= 1:
+            field = _to_int(pieces[0])
+        if len(pieces) >= 2:
+            component = _to_int(pieces[1])
+        if len(pieces) >= 3:
+            subcomponent = _to_int(pieces[2])
+    return (segment or None), field, component, subcomponent
+
+
+def _extract_issue_value(message: Any) -> str | None:
+    if not message:
+        return None
+    text = str(message)
+    for pattern in _ISSUE_VALUE_PATTERNS:
+        match = pattern.search(text)
+        if not match:
+            continue
+        for group in match.groups():
+            if group:
+                return group
+    return None
+
+def _enrich_validate_issues(issues: Any) -> list[dict[str, Any]]:
+    """Ensure validation issues expose code, segment, field, component, subcomponent."""
+    enriched: list[dict[str, Any]] = []
+    for issue in issues or []:
+        if isinstance(issue, dict):
+            item = dict(issue)
+        else:
+            item = {"message": str(issue)}
+        seg = item.get("segment")
+        field = item.get("field")
+        component = item.get("component")
+        subcomponent = item.get("subcomponent")
+        location = item.get("location")
+        parsed = _parse_hl7_location(location)
+        seg = seg or parsed[0]
+        if field in ("", None):
+            field = parsed[1]
+        if component in ("", None):
+            component = parsed[2]
+        if subcomponent in ("", None):
+            subcomponent = parsed[3]
+        severity = (item.get("severity") or "error").lower()
+        if "warn" in severity:
+            severity = "warning"
+        elif "err" in severity or "fail" in severity:
+            severity = "error"
+        elif any(tag in severity for tag in ("info", "ok", "pass")):
+            severity = "info"
+        else:
+            severity = severity or "error"
+        message_text = item.get("message") or ""
+        enriched.append(
+            {
+                "severity": severity,
+                "code": item.get("code")
+                or item.get("rule")
+                or item.get("id")
+                or item.get("type")
+                or "",
+                "segment": seg or "",
+                "field": field,
+                "component": component,
+                "subcomponent": subcomponent,
+                "location": location or "",
+                "occurrence": item.get("occurrence"),
+                "message": message_text,
+                "value": item.get("value") or _extract_issue_value(message_text),
+            }
+        )
+    return enriched
+
+
+_ISSUE_VALUE_PATTERNS = (
+    re.compile(r"[Vv]alue ['\"]([^'\"]+)['\"]"),
+    re.compile(r"got ['\"]([^'\"]+)['\"]"),
+    re.compile(r"was ['\"]([^'\"]+)['\"]"),
+)
+
+
+def _parse_hl7_location(loc: Any):
+    """Return (segment, field, component, subcomponent) parsed from an HL7 location string."""
+    if loc in (None, "", "—"):
+        return None, None, None, None
+    text = str(loc).strip()
+    if not text or text == "—":
+        return None, None, None, None
+    if "-" in text:
+        segment, rest = text.split("-", 1)
+    else:
+        segment, rest = text, ""
+    field = component = subcomponent = None
+    if rest:
+        rest = rest.replace("^", ".")
+        pieces = [part for part in rest.split(".") if part]
+
+        def _to_int(value: str):
+            try:
+                digits = "".join(ch for ch in value if ch.isdigit())
+                return int(digits) if digits else None
+            except Exception:
+                return None
+
+        if len(pieces) >= 1:
+            field = _to_int(pieces[0])
+        if len(pieces) >= 2:
+            component = _to_int(pieces[1])
+        if len(pieces) >= 3:
+            subcomponent = _to_int(pieces[2])
+    return (segment or None), field, component, subcomponent
+
+
+def _extract_issue_value(message: Any) -> str | None:
+    if not message:
+        return None
+    text = str(message)
+    for pattern in _ISSUE_VALUE_PATTERNS:
+        match = pattern.search(text)
+        if not match:
+            continue
+        for group in match.groups():
+            if group:
+                return group
+    return None
+
+
+def _enrich_validate_issues(issues: Any) -> list[dict[str, Any]]:
+    """Ensure validation issues expose code, segment, field, component, subcomponent."""
+    enriched: list[dict[str, Any]] = []
+    for issue in issues or []:
+        if isinstance(issue, dict):
+            item = dict(issue)
+        else:
+            item = {"message": str(issue)}
+        seg = item.get("segment")
+        field = item.get("field")
+        component = item.get("component")
+        subcomponent = item.get("subcomponent")
+        location = item.get("location")
+        parsed = _parse_hl7_location(location)
+        seg = seg or parsed[0]
+        if field in ("", None):
+            field = parsed[1]
+        if component in ("", None):
+            component = parsed[2]
+        if subcomponent in ("", None):
+            subcomponent = parsed[3]
+        severity = (item.get("severity") or "error").lower()
+        if "warn" in severity:
+            severity = "warning"
+        elif "err" in severity or "fail" in severity:
+            severity = "error"
+        elif any(tag in severity for tag in ("info", "ok", "pass")):
+            severity = "info"
+        else:
+            severity = severity or "error"
+        message_text = item.get("message") or ""
+        enriched.append(
+            {
+                "severity": severity,
+                "code": item.get("code")
+                or item.get("rule")
+                or item.get("id")
+                or item.get("type")
+                or "",
+                "segment": seg or "",
+                "field": field,
+                "component": component,
+                "subcomponent": subcomponent,
+                "location": location or "",
+                "occurrence": item.get("occurrence"),
+                "message": message_text,
+                "value": item.get("value") or _extract_issue_value(message_text),
+            }
+        )
+    return enriched
+
+
+def _hl7_value_for_position(
+    message: str,
+    segment: str | None,
+    field: int | None,
+    component: int | None = None,
+    subcomponent: int | None = None,
+) -> str | None:
+    """Return the first value for the given HL7 segment/field position."""
+    if not message or not segment or field is None:
+        return None
+    seg = segment.strip().upper()
+    if not seg or field <= 0:
+        return None
+    for line in (message or "").splitlines():
+        if not line.startswith(seg + "|"):
+            continue
+        parts = line.split("|")
+        if len(parts) <= field:
+            continue
+        value = parts[field] or ""
+        if component and component > 0:
+            comp_parts = value.split("^")
+            if len(comp_parts) >= component:
+                value = comp_parts[component - 1] or ""
+            else:
+                value = ""
+        if subcomponent and subcomponent > 0:
+            sub_parts = value.split("&")
+            if len(sub_parts) >= subcomponent:
+                value = sub_parts[subcomponent - 1] or ""
+            else:
+                value = ""
+        return value or None
+    return None
+
+
+def _build_success_rows(
+    template: dict[str, Any] | None,
+    issues: list[dict[str, Any]],
+    message_text: str,
+) -> list[dict[str, Any]]:
+    """Create synthetic OK rows for checks that passed."""
+    if not template:
+        return []
+    checks = (template or {}).get("checks") or []
+    if not isinstance(checks, list):
+        return []
+    failed_fields: set[tuple[str | None, int | None]] = set()
+    failed_components: set[tuple[str | None, int | None, int | None, int | None]] = set()
+    for issue in issues:
+        sev = (issue.get("severity") or "").lower()
+        if sev in {"error", "warning"}:
+            seg_key = (issue.get("segment") or "").strip().upper() or None
+            failed_fields.add((seg_key, issue.get("field")))
+            failed_components.add(
+                (
+                    seg_key,
+                    issue.get("field"),
+                    issue.get("component"),
+                    issue.get("subcomponent"),
+                )
+            )
+
+    success_rows: list[dict[str, Any]] = []
+    for raw in checks:
+        if not isinstance(raw, dict):
+            continue
+        segment = (raw.get("segment") or "").strip().upper()
+        field_val = raw.get("field")
+        try:
+            field_int = int(field_val)
+        except Exception:
+            continue
+        seg_key = (segment or "").strip().upper() or None
+        comp_val = raw.get("component")
+        sub_val = raw.get("subcomponent")
+        try:
+            comp_int = int(comp_val) if comp_val not in (None, "") else None
+        except Exception:
+            comp_int = None
+        try:
+            sub_int = int(sub_val) if sub_val not in (None, "") else None
+        except Exception:
+            sub_int = None
+        if (seg_key, field_int) in failed_fields:
+            continue
+        if (seg_key, field_int, comp_int, sub_int) in failed_components:
+            continue
+        value = _hl7_value_for_position(message_text, segment or None, field_int, comp_int, sub_int)
+        success_rows.append(
+            {
+                "severity": "ok",
+                "code": "OK",
+                "segment": segment or "",
+                "field": field_int,
+                "component": comp_int,
+                "subcomponent": sub_int,
+                "occurrence": None,
+                "location": f"{segment}-{field_int}" if segment else "",
+                "message": "",
+                "value": value,
+            }
+        )
+    return success_rows
+
+
+def _count_issue_severities(rows: list[dict[str, Any]]) -> dict[str, int]:
+    counts = {"ok": 0, "warnings": 0, "errors": 0}
+    for row in rows:
+        sev = (row.get("severity") or "").lower()
+        if sev == "ok":
+            counts["ok"] += 1
+        elif sev == "warning":
+            counts["warnings"] += 1
+        elif sev == "error":
+            counts["errors"] += 1
+    return counts
+
 
 _ISSUE_VALUE_PATTERNS = (
     re.compile(r"[Vv]alue ['\"]([^'\"]+)['\"]"),
