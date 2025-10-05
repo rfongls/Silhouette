@@ -52,6 +52,7 @@
     <p class="text-small" style="margin-top:0.5rem;color:#0f5132">No blocking errors detected. You can proceed to MLLP send.</p>
   {% endif %}
 
+  {% set has_problem_rows = (r.counts.errors | default(0)) or (r.counts.warnings | default(0)) %}
   <div class="scrollbox" style="margin-top:0.75rem">
     <table class="validate-report__table" data-val-table style="width:100%;border-collapse:collapse;font-size:0.875rem">
       <thead>
@@ -122,6 +123,23 @@
       if (window.InteropUI && typeof window.InteropUI.onValidateComplete === 'function') {
         try { window.InteropUI.onValidateComplete(); } catch (err) { /* ignore */ }
       }
+    })();
+    (function(){
+      var root = document.currentScript && document.currentScript.closest('[data-val-report]');
+      if (!root) return;
+      var table = root.querySelector('[data-val-table]');
+      if (!table) return;
+
+      root.querySelectorAll('[data-val-filter]').forEach(function(btn){
+        btn.addEventListener('click', function(ev){
+          ev.preventDefault();
+          var filter = btn.getAttribute('data-val-filter');
+          table.querySelectorAll('tbody tr[data-severity]').forEach(function(row){
+            var sev = row.getAttribute('data-severity');
+            row.hidden = filter && filter !== 'all' && sev !== filter;
+          });
+        });
+      });
     })();
   </script>
 
