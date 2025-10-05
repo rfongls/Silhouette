@@ -15,6 +15,20 @@ if (typeof window.InteropUI.onDeidentifyComplete !== 'function') {
   };
 }
 
+if (typeof window.SilhouetteRefreshDebugWidget !== 'function') {
+  window.SilhouetteRefreshDebugWidget = function SilhouetteRefreshDebugWidget() {
+    if (!window.htmx) return;
+    const nodes = document.querySelectorAll('[data-debug-widget-url]');
+    nodes.forEach((node) => {
+      const url = node.getAttribute('data-debug-widget-url');
+      if (!url) return;
+      const id = node.getAttribute('id');
+      if (!id) return;
+      window.htmx.ajax(url, { target: `#${id}`, swap: 'outerHTML' });
+    });
+  };
+}
+
 /* ========== Global utilities ========== */
 window.esc = s => (s ?? "").toString()
   .replace(/&/g,"&amp;").replace(/</g,"&lt;")
