@@ -18,7 +18,6 @@
   </header>
   {% set segmap = r.by_segment or r.segments or r.summary or {} %}
   {% set grand_total = r.total or r.message_count or 0 %}
-
   {% if segmap %}
     {% for seg, items in segmap.items() %}
       <details class="mt" open>

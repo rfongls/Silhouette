@@ -805,6 +805,15 @@ window.attachParamDebug = function attachParamDebug(root){
         if (tray.hasAttribute?.('hidden')) tray.removeAttribute('hidden');
       }
     }
+    try {
+      setTimeout(() => {
+        if (document?.body) {
+          document.body.dispatchEvent(new Event('deid:complete'));
+        }
+      }, 0);
+    } catch (err) {
+      console.error('[deid] notify failed', err);
+    }
     if (typeof prior === 'function') {
       try {
         prior.apply(this, arguments);
