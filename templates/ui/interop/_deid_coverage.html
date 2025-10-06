@@ -72,17 +72,16 @@
         (function(){
           const rowsEl = document.getElementById('deid-rows-json');
           let rows = [];
-          try { rows = JSON.parse(rowsEl.textContent || '[]') || []; } catch(e) { rows = []; }
+
+          try { rows = JSON.parse(rowsEl.textContent || '[]') || []; } catch (e) { rows = []; }
           const segSel = document.getElementById('deid-filter-seg');
           const fldSel = document.getElementById('deid-filter-field');
           const actSel = document.getElementById('deid-filter-action');
           const valInp = document.getElementById('deid-filter-value');
           const noteEl = document.getElementById('deid-filter-note');
           const body = document.getElementById('deid-body');
-
-          // Build lookup maps to scope Field & Action options
-          const bySeg = new Map();               // seg -> Set(fields)
-          const bySegField = new Map();          // seg|field -> Set(actions)
+          const bySeg = new Map();
+          const bySegField = new Map();
           const segSet = new Set();
           for (const r of rows) {
             if (!r) continue;
@@ -101,142 +100,173 @@
             }
           }
 
-          // Populate Segment options
-          Array.from(segSet).sort().forEach(s => {
-            const o=document.createElement('option'); o.value=s; o.textContent=s; segSel.appendChild(o);
+          Array.from(segSet).sort().forEach(seg => {
+            const option = document.createElement('option');
+            option.value = seg;
+            option.textContent = seg;
+            segSel.appendChild(option);
           });
 
           function populateFields(segValue) {
-            // reset Field
             fldSel.innerHTML = '<option value="all">All</option>';
-            // reset Action
             actSel.innerHTML = '<option value="all">All</option>';
             if (segValue === 'all') {
-              // add all distinct fields across all segments
               const allFields = new Set();
-              for (const set of bySeg.values()) for (const f of set) allFields.add(f);
-              Array.from(allFields).sort((a,b)=>parseInt(a,10)-parseInt(b,10))
-                .forEach(f => { const o=document.createElement('option'); o.value=f; o.textContent=f; fldSel.appendChild(o); });
-              // add all actions across everything
-              const allActions = new Set(rows.map(r => String((r.action||'')).toUpperCase()).filter(Boolean));
-              Array.from(allActions).sort()
-                .forEach(a => { const o=document.createElement('option'); o.value=a; o.textContent=a; actSel.appendChild(o); });
+              for (const set of bySeg.values()) {
+                for (const f of set) allFields.add(f);
+              }
+              Array.from(allFields).sort((a, b) => parseInt(a, 10) - parseInt(b, 10)).forEach(field => {
+                const option = document.createElement('option');
+                option.value = field;
+                option.textContent = field;
+                fldSel.appendChild(option);
+              });
+              const allActions = new Set(rows.map(r => String((r.action || '')).toUpperCase()).filter(Boolean));
+              Array.from(allActions).sort().forEach(action => {
+                const option = document.createElement('option');
+                option.value = action;
+                option.textContent = action;
+                actSel.appendChild(option);
+              });
               return;
             }
             const fields = bySeg.get(segValue) || new Set();
-            Array.from(fields).sort((a,b)=>parseInt(a,10)-parseInt(b,10))
-              .forEach(f => { const o=document.createElement('option'); o.value=f; o.textContent=f; fldSel.appendChild(o); });
-            // actions for all fields under this segment
+            Array.from(fields).sort((a, b) => parseInt(a, 10) - parseInt(b, 10)).forEach(field => {
+              const option = document.createElement('option');
+              option.value = field;
+              option.textContent = field;
+              fldSel.appendChild(option);
+            });
             const actions = new Set();
-            for (const f of fields) {
-              const key = segValue + '|' + f;
+            for (const field of fields) {
+              const key = segValue + '|' + field;
               const set = bySegField.get(key) || new Set();
-              for (const a of set) actions.add(a);
+              for (const action of set) actions.add(action);
             }
-            Array.from(actions).sort()
-              .forEach(a => { const o=document.createElement('option'); o.value=a; o.textContent=a; actSel.appendChild(o); });
+            Array.from(actions).sort().forEach(action => {
+              const option = document.createElement('option');
+              option.value = action;
+              option.textContent = action;
+              actSel.appendChild(option);
+            });
           }
 
           function populateActions(segValue, fieldValue) {
             actSel.innerHTML = '<option value="all">All</option>';
             if (segValue === 'all' || fieldValue === 'all') {
-              // When scope is broad, list all actions in scope
               const actions = new Set();
               for (const r of rows) {
-                if (segValue !== 'all' && String(r.segment||'') !== segValue) continue;
+                if (segValue !== 'all' && String(r.segment || '') !== segValue) continue;
                 if (fieldValue !== 'all' && String(r.field ?? '') !== fieldValue) continue;
-                const a = String((r.action||'')).toUpperCase();
-                if (a) actions.add(a);
+                const action = String((r.action || '')).toUpperCase();
+                if (action) actions.add(action);
               }
-              Array.from(actions).sort()
-                .forEach(a => { const o=document.createElement('option'); o.value=a; o.textContent=a; actSel.appendChild(o); });
+              Array.from(actions).sort().forEach(action => {
+                const option = document.createElement('option');
+                option.value = action;
+                option.textContent = action;
+                actSel.appendChild(option);
+              });
               return;
             }
             const set = bySegField.get(segValue + '|' + fieldValue) || new Set();
-            Array.from(set).sort()
-              .forEach(a => { const o=document.createElement('option'); o.value=a; o.textContent=a; actSel.appendChild(o); });
+            Array.from(set).sort().forEach(action => {
+              const option = document.createElement('option');
+              option.value = action;
+              option.textContent = action;
+              actSel.appendChild(option);
+            });
           }
 
-          // Initialize dependent selects
           populateFields('all');
 
-          segSel.addEventListener('change', function(){
+          segSel.addEventListener('change', () => {
             populateFields(segSel.value);
             apply();
           });
-          fldSel.addEventListener('change', function(){
+          fldSel.addEventListener('change', () => {
             populateActions(segSel.value, fldSel.value);
             apply();
           });
           actSel.addEventListener('change', apply);
           valInp.addEventListener('input', apply);
 
-          // Dice similarity over bigrams for ranking “closest match first”
           function diceSimilarity(a, b) {
-            a = (a||'').toLowerCase(); b=(b||'').toLowerCase();
+            a = (a || '').toLowerCase();
+            b = (b || '').toLowerCase();
             if (!a && !b) return 1;
             if (!a || !b) return 0;
-            if (b.includes(a)) return 1.0; // LIKE match ranks first
-            function bigrams(s){
-              const out=[]; for(let i=0;i<s.length-1;i++){ out.push(s.slice(i,i+2)); } return out;
-            }
-            const A = bigrams(a); const B = bigrams(b);
-            if (A.length===0 || B.length===0) return 0;
+            if (b.includes(a)) return 1.0;
+            const bigrams = s => {
+              const out = [];
+              for (let i = 0; i < s.length - 1; i++) out.push(s.slice(i, i + 2));
+              return out;
+            };
+            const A = bigrams(a);
+            const B = bigrams(b);
+            if (A.length === 0 || B.length === 0) return 0;
             const setB = new Map();
-            for (const g of B) setB.set(g, (setB.get(g)||0)+1);
-            let inter=0;
-            for (const g of A) { const c=setB.get(g)||0; if (c>0){ inter++; setB.set(g,c-1);} }
-            return (2*inter)/(A.length + B.length);
+            for (const g of B) setB.set(g, (setB.get(g) || 0) + 1);
+            let inter = 0;
+            for (const g of A) {
+              const c = setB.get(g) || 0;
+              if (c > 0) {
+                inter++;
+                setB.set(g, c - 1);
+              }
+            }
+            return (2 * inter) / (A.length + B.length);
           }
 
-          function apply(){
+          function apply() {
             const wantSeg = segSel.value;
             const wantField = fldSel.value;
-            const wantAction = actSel.value; // 'all' or UPPER action
+            const wantAction = actSel.value;
             const q = (valInp.value || '').trim().toLowerCase();
 
-            // Collect all candidate rows in the current scope
-            const allTr = Array.from(body.querySelectorAll('tr'));
+            const rowsInDom = Array.from(body.querySelectorAll('tr'));
             const inScope = [];
-            for (const tr of allTr) {
+            for (const tr of rowsInDom) {
               const seg = tr.getAttribute('data-segment') || '';
               const fld = tr.getAttribute('data-field') || '';
               const act = tr.getAttribute('data-action') || '';
-              if (wantSeg !== 'all' && seg !== wantSeg) { tr.style.display='none'; continue; }
-              if (wantField !== 'all' && fld !== wantField) { tr.style.display='none'; continue; }
-              if (wantAction !== 'all' && act !== wantAction) { tr.style.display='none'; continue; }
+              if (wantSeg !== 'all' && seg !== wantSeg) {
+                tr.style.display = 'none';
+                continue;
+              }
+              if (wantField !== 'all' && fld !== wantField) {
+                tr.style.display = 'none';
+                continue;
+              }
+              if (wantAction !== 'all' && act !== wantAction) {
+                tr.style.display = 'none';
+                continue;
+              }
               inScope.push(tr);
             }
-
-            // If there is a parameter query, try LIKE over the parameter (logic)
             const hits = [];
             if (q) {
               for (const tr of inScope) {
                 const logic = tr.getAttribute('data-logic') || '';
                 if (logic.includes(q)) {
-                  // Rank: substring hit gets a top score; add secondary Dice for ordering of ties
-                  const score = 1.0 + diceSimilarity(q, logic); // >1 beats any non-substring
-                  hits.push({tr, score});
+                  const score = 1 + diceSimilarity(q, logic);
+                  hits.push({ tr, score });
                 }
               }
             }
 
-            // When we have direct matches, show only those, sorted by closeness
             if (q && hits.length > 0) {
               noteEl.style.display = 'none';
-              hits.sort((a,b)=>b.score - a.score);
-              // hide everything first
-              for (const tr of inScope) tr.style.display='none';
-              // show in ranked order
-              for (const {tr} of hits) tr.style.display='';
-              // reorder rows in DOM to reflect ranking
+              hits.sort((a, b) => b.score - a.score);
+              for (const tr of rowsInDom) tr.style.display = 'none';
               const frag = document.createDocumentFragment();
-              for (const {tr} of hits) frag.appendChild(tr);
+              for (const { tr } of hits) {
+                tr.style.display = '';
+                frag.appendChild(tr);
+              }
               body.appendChild(frag);
               return;
             }
-
-            // Fallback: no parameter match; show available actions/parameters for selection
             if (q && hits.length === 0) {
               noteEl.textContent = 'No parameter match; showing available actions/parameters for the current selection.';
               noteEl.style.display = '';
@@ -244,13 +274,10 @@
               noteEl.style.display = 'none';
             }
 
-            // Show all in-scope (natural table order); hide others
-            for (const tr of allTr) {
+            for (const tr of rowsInDom) {
               tr.style.display = inScope.includes(tr) ? '' : 'none';
             }
           }
-
-          // Initial render
           apply();
         })();
       </script>
