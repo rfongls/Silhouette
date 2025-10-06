@@ -1,4 +1,4 @@
-<section id="validate-report" class="validate-report" data-val-root hx-swap-oob="outerHTML">
+<section id="validate-report" class="validate-report" data-val-report hx-swap-oob="outerHTML">
   {% set _r = r if r is defined else None %}
   {% set _issues = (_r.issues if _r is not none else (issues if issues is defined else [])) %}
   {% set _issues = _issues or [] %}
@@ -19,7 +19,7 @@
     <h4 class="text-h3" style="margin:0">Validation report</h4>
     <div class="validate-report__counts" style="display:flex;flex-wrap:wrap;gap:0.5rem">
       <button type="button" class="chip" data-vf="passed" style="background:#10b981;color:#0b1e15">Passed: {{ _counts.ok | default(0) }}</button>
-      <button type="button" class="chip" data-vf="errors" style="background:#ef4444;color:#250101">Errors: {{ _counts.errors | default(0) }}</button>
+      <button type="button" class="chip" data-vf="error" style="background:#ef4444;color:#250101">Errors: {{ _counts.errors | default(0) }}</button>
       <button type="button" class="chip" data-vf="all" style="background:#475569;color:#e5e7eb">Show all</button>
     </div>
   </header>
@@ -33,7 +33,7 @@
 
   <div class="card mt" style="padding:.5rem;display:flex;gap:.5rem;flex-wrap:wrap;align-items:center">
     <label class="small">Severity
-      <select class="input" data-val-sev style="min-width:8rem">
+      <select class="input" data-role="val-filter-sev" style="min-width:8rem">
         <option value="all">All</option>
         <option value="passed">Passed</option>
         <option value="error" selected>Error</option>
@@ -41,7 +41,7 @@
       </select>
     </label>
     <label class="small">Segment
-      <select class="input" data-val-seg style="min-width:8rem">
+      <select class="input" data-role="val-filter-seg" style="min-width:8rem">
         <option value="all">All</option>
         {% for seg in _seg_opts %}
           <option value="{{ seg | e }}">{{ seg }}</option>
@@ -49,9 +49,9 @@
       </select>
     </label>
     <label class="small" style="flex:1 1 240px">Search
-      <input class="input" data-val-q placeholder="Filter by rule, message, or value…" />
+      <input class="input" data-role="val-filter-text" placeholder="Filter by rule, message, or value…" />
     </label>
-    <button type="button" class="btn btn-xs" data-val-reset style="margin-left:auto">Reset filters</button>
+    <button type="button" class="btn btn-xs" data-role="val-filter-reset" style="margin-left:auto">Reset filters</button>
     <span class="muted small">Across {{ _total_msgs }} message{{ '' if _total_msgs == 1 else 's' }}. Unique rows are de-duplicated by rule.</span>
   </div>
 
@@ -72,50 +72,7 @@
           <th style="padding:0.5rem">%</th>
         </tr>
       </thead>
-      <tbody data-val-body>
-        {% for row in _summary_rows %}
-          {% set _sev = (row.severity or 'error') %}
-          {% set _seg = row.segment or '' %}
-          {% set _field = row.field if row.field is not none else '' %}
-          {% set _comp = row.component if row.component is not none else '' %}
-          {% set _sub = row.subcomponent if row.subcomponent is not none else '' %}
-          {% set _values = row.shown_values or '' %}
-          {% set _extra = row.extra_values | int %}
-          {% set _message = row.message or '' %}
-          {% set _severity_label = 'Error' %}
-          {% if _sev == 'warning' %}
-            {% set _severity_label = 'Warning' %}
-          {% elif _sev == 'passed' %}
-            {% set _severity_label = 'Passed' %}
-          {% endif %}
-          <tr
-            class="{{ _sev }}"
-            data-severity="{{ _sev | e }}"
-            data-segment="{{ _seg | e }}"
-            data-text="{{ (row.search_text or '') | e }}"
-          >
-            <td style="padding:0.5rem">{{ _severity_label }}</td>
-            <td style="padding:0.5rem"><code class="mono">{{ row.code or '—' }}</code></td>
-            <td style="padding:0.5rem"><code class="mono">{{ _seg or '—' }}</code></td>
-            <td style="padding:0.5rem"><code class="mono">{{ row.field if row.field is not none else '—' }}</code></td>
-            <td style="padding:0.5rem"><code class="mono">{{ row.component if row.component is not none else '—' }}</code></td>
-            <td style="padding:0.5rem"><code class="mono">{{ row.subcomponent if row.subcomponent is not none else '—' }}</code></td>
-            <td style="padding:0.5rem">
-              {% if _values %}{{ _values }}{% else %}—{% endif %}
-              {% if _extra > 0 %} (+{{ _extra }} more){% endif %}
-            </td>
-            <td style="padding:0.5rem">{{ _message or '—' }}</td>
-            <td style="padding:0.5rem">{{ row.count }}</td>
-            <td style="padding:0.5rem">{{ row.count }}/{{ row.total }}</td>
-            <td style="padding:0.5rem">{{ row.pct }}%</td>
-          </tr>
-        {% endfor %}
-        {% if _summary_rows|length == 0 %}
-          <tr>
-            <td colspan="11" class="muted" style="padding:.75rem">No issues to display.</td>
-          </tr>
-        {% endif %}
-      </tbody>
+      <tbody data-role="val-summary-body"></tbody>
     </table>
   </div>
 
@@ -123,98 +80,214 @@
     <summary class="text-small">Show raw JSON</summary>
     <pre class="codepane mono" style="margin-top:0.5rem">{{ _raw | tojson(indent=2) }}</pre>
   </details>
-
+  <script type="application/json" data-role="val-issues" data-total="{{ _total_msgs }}">{{ _issues | tojson }}</script>
   <script>
-    (function(){
-      const root   = document.currentScript.closest('[data-val-root]');
-      const body = root.querySelector('[data-val-body]');
-      const rows = Array.from(body.querySelectorAll('tr')).filter((tr) => tr.hasAttribute('data-severity'));
-      const chip = (name) => root.querySelector(`.chip[data-vf="${name}"]`);
-      const selSev = root.querySelector('[data-val-sev]');
-      const selSeg = root.querySelector('[data-val-seg]');
-      const txt    = root.querySelector('[data-val-q]');
-      const reset  = root.querySelector('[data-val-reset]');
-
-      if (!selSev || !selSeg || !txt) {
-        return;
+    (function(script){
+      const root = script.closest('#validate-report');
+      if (!root) return;
+      const dataEl = root.querySelector('[data-role="val-issues"]');
+      if (!dataEl) return;
+      let issues = [];
+      try {
+        issues = JSON.parse(dataEl.textContent || '[]') || [];
+      } catch (err) {
+        issues = [];
       }
+      const TOTAL = parseInt(dataEl.dataset.total || '1', 10) || 1;
 
-      function updateChipStyles() {
-        const current = selSev.value;
-        for (const btn of root.querySelectorAll('.validate-report__counts .chip')) {
-          const active = btn.dataset.vf === current;
+      const severitySelect = root.querySelector('[data-role="val-filter-sev"]');
+      const segmentSelect = root.querySelector('[data-role="val-filter-seg"]');
+      const searchInput = root.querySelector('[data-role="val-filter-text"]');
+      const resetButton = root.querySelector('[data-role="val-filter-reset"]');
+      const body = root.querySelector('[data-role="val-summary-body"]');
+      if (!severitySelect || !segmentSelect || !searchInput || !body) return;
+
+      const chips = Array.from(root.querySelectorAll('.chip[data-vf]'));
+      const segments = new Set();
+      const aggregate = new Map();
+
+      const normalize = (item) => {
+        if (!item || typeof item !== 'object') return {};
+        const severity = String(item.severity || item.status || 'error').toLowerCase();
+        let normalizedSeverity = 'error';
+        if (severity.includes('warn')) {
+          normalizedSeverity = 'warning';
+        } else if (severity.includes('ok') || severity.includes('pass') || severity.includes('info')) {
+          normalizedSeverity = 'passed';
+        }
+        const code = String(item.code || item.rule || item.id || '').trim();
+        const segment = String(item.segment || '').trim();
+        const field = item.field === 0 ? '0' : String(item.field ?? '').trim();
+        const component = item.component === 0 ? '0' : String(item.component ?? '').trim();
+        const subcomponent = item.subcomponent === 0 ? '0' : String(item.subcomponent ?? '').trim();
+        const message = String(item.message || '').trim();
+        const value = String(item.value || item.actual || item.expected || '').trim();
+        if (segment) segments.add(segment);
+        return {
+          severity: normalizedSeverity,
+          code,
+          segment,
+          field,
+          component,
+          subcomponent,
+          message,
+          value,
+        };
+      };
+
+      issues.forEach((raw) => {
+        const row = normalize(raw);
+        const key = [
+          row.severity,
+          row.code,
+          row.segment,
+          row.field,
+          row.component,
+          row.subcomponent,
+          row.message,
+        ].join('|');
+        if (!aggregate.has(key)) {
+          aggregate.set(key, {
+            severity: row.severity,
+            code: row.code,
+            segment: row.segment,
+            field: row.field,
+            component: row.component,
+            subcomponent: row.subcomponent,
+            message: row.message,
+            values: new Set(),
+            count: 0,
+          });
+        }
+        const slot = aggregate.get(key);
+        if (row.value) slot.values.add(row.value);
+        slot.count += 1;
+      });
+
+      const bySeverity = (severity) => {
+        if (severity === 'error') return 0;
+        if (severity === 'warning') return 1;
+        if (severity === 'passed') return 2;
+        return 3;
+      };
+
+      const rows = Array.from(aggregate.values()).sort((a, b) => {
+        return bySeverity(a.severity) - bySeverity(b.severity)
+          || (a.segment || '').localeCompare(b.segment || '')
+          || (parseInt(a.field || '0', 10) - parseInt(b.field || '0', 10))
+          || (a.code || '').localeCompare(b.code || '');
+      }).map((row) => {
+        const values = Array.from(row.values);
+        const shown = values.slice(0, 8);
+        const extra = values.length > 8 ? ` (+${values.length - 8} more)` : '';
+        return {
+          severity: row.severity,
+          severityLabel: row.severity === 'passed' ? 'Passed' : (row.severity === 'warning' ? 'Warning' : 'Error'),
+          code: row.code || '—',
+          segment: row.segment || '—',
+          field: row.field || '—',
+          component: row.component || '—',
+          subcomponent: row.subcomponent || '—',
+          message: row.message || '—',
+          valuesText: shown.length ? shown.join(', ') : '—',
+          valuesExtra: extra,
+          count: row.count,
+          percent: TOTAL ? Math.round((row.count / TOTAL) * 100) : 0,
+          total: TOTAL,
+          searchText: [row.code, row.segment, row.field, row.component, row.subcomponent, values.join(' '), row.message]
+            .join(' ')
+            .toLowerCase(),
+        };
+      });
+
+      const segmentOptions = Array.from(segments).sort();
+      segmentOptions.forEach((segment) => {
+        const opt = document.createElement('option');
+        opt.value = segment;
+        opt.textContent = segment;
+        segmentSelect.appendChild(opt);
+      });
+
+      let chipMode = 'error';
+
+      function syncChips() {
+        chips.forEach((btn) => {
+          const active = (chipMode === 'all' && btn.dataset.vf === 'all') || btn.dataset.vf === chipMode;
           btn.style.outline = active ? '2px solid var(--color-border, #94a3b8)' : 'none';
           btn.setAttribute('aria-pressed', active ? 'true' : 'false');
+        });
+      }
+
+      function render() {
+        const wantSev = severitySelect.value;
+        const wantSeg = segmentSelect.value;
+        const query = (searchInput.value || '').trim().toLowerCase();
+        body.innerHTML = '';
+        let visible = 0;
+        rows.forEach((row) => {
+          if (chipMode !== 'all' && row.severity !== chipMode) return;
+          if (wantSev !== 'all' && row.severity !== wantSev) return;
+          if (wantSeg !== 'all' && row.segment !== wantSeg) return;
+          if (query && !row.searchText.includes(query)) return;
+          const tr = document.createElement('tr');
+          tr.setAttribute('data-severity', row.severity);
+          tr.setAttribute('data-segment', row.segment);
+          tr.innerHTML = `
+            <td style="padding:0.5rem">${row.severityLabel}</td>
+            <td style="padding:0.5rem"><code class="mono">${row.code}</code></td>
+            <td style="padding:0.5rem"><code class="mono">${row.segment}</code></td>
+            <td style="padding:0.5rem"><code class="mono">${row.field}</code></td>
+            <td style="padding:0.5rem"><code class="mono">${row.component}</code></td>
+            <td style="padding:0.5rem"><code class="mono">${row.subcomponent}</code></td>
+            <td style="padding:0.5rem">${row.valuesText}${row.valuesExtra}</td>
+            <td style="padding:0.5rem">${row.message}</td>
+            <td style="padding:0.5rem">${row.count}</td>
+            <td style="padding:0.5rem">${row.count}/${row.total}</td>
+            <td style="padding:0.5rem">${row.percent}%</td>
+          `;
+          body.appendChild(tr);
+          visible += 1;
+        });
+        if (!visible) {
+          const tr = document.createElement('tr');
+          tr.innerHTML = '<td colspan="11" class="muted" style="padding:.75rem">No issues to display.</td>';
+          body.appendChild(tr);
         }
       }
 
-      function applyFilter() {
-        const wantSev = selSev.value;
-        const wantSeg = selSeg.value;
-        const query = (txt.value || '').trim().toLowerCase();
-        for (const tr of rows) {
-          const sev = tr.getAttribute('data-severity');
-          const seg = tr.getAttribute('data-segment');
-          const text = tr.getAttribute('data-text') || '';
-          let show = true;
-          if (wantSev !== 'all') show = show && (sev === wantSev);
-          if (wantSeg !== 'all') show = show && (seg === wantSeg);
-          if (query) show = show && text.includes(query);
-          tr.style.display = show ? '' : 'none';
-        }
-        updateChipStyles();
-      }
-
-      if (selSev) selSev.addEventListener('change', () => {
-        applyFilter();
+      severitySelect.addEventListener('change', () => {
+        chipMode = severitySelect.value === 'all' ? 'all' : severitySelect.value;
+        syncChips();
+        render();
       });
-      if (selSeg) selSeg.addEventListener('change', applyFilter);
-      if (txt) txt.addEventListener('input', applyFilter);
-
-      const passedChip = chip('passed');
-      if (passedChip) {
-        passedChip.addEventListener('click', () => {
-          selSev.value = 'passed';
-          applyFilter();
+      segmentSelect.addEventListener('change', render);
+      searchInput.addEventListener('input', render);
+      chips.forEach((chip) => {
+        chip.addEventListener('click', () => {
+          chipMode = chip.dataset.vf === 'all' ? 'all' : chip.dataset.vf;
+          severitySelect.value = chipMode;
+          syncChips();
+          render();
         });
-      }
-      const errorChip = chip('errors');
-      if (errorChip) {
-        errorChip.addEventListener('click', () => {
-          selSev.value = 'error';
-          applyFilter();
-        });
-      }
-      const allChip = chip('all');
-      if (allChip) {
-        allChip.addEventListener('click', () => {
-          selSev.value = 'all';
-          applyFilter();
-        });
-      }
-
-      if (reset) {
-        reset.addEventListener('click', () => {
-          selSev.value = 'error';
-          selSeg.value = 'all';
-          txt.value = '';
-          applyFilter();
-        });
-      }
-
-      selSev.value = 'error';
-      applyFilter();
-
-      // Reset filters to defaults (Errors, All segments, empty search)
-      if (reset) reset.addEventListener('click', function(){
-        chipMode     = 'error';
-        selSev.value = 'error';
-        selSeg.value = 'all';
-        txt.value    = '';
-        applyFilter();
       });
+      if (resetButton) {
+        resetButton.addEventListener('click', () => {
+          chipMode = 'error';
+          severitySelect.value = 'error';
+          segmentSelect.value = 'all';
+          searchInput.value = '';
+          syncChips();
+          render();
+        });
+      }
+
+      severitySelect.value = 'error';
+      chipMode = 'error';
+      syncChips();
+      render();
     })(document.currentScript);
   </script>
+
   <textarea id="validated-message" hidden>{{ _validated_message }}</textarea>
   <script>
     window.PipelineContext = window.PipelineContext || { message: '' };
