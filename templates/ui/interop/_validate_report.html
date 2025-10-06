@@ -8,10 +8,12 @@
     </div>
   </header>
 
-  <p class="text-small" style="margin-top:0.5rem">
-    Found {{ r.counts.errors | default(0) }} error{{ 's' if (r.counts.errors | default(0)) != 1 else '' }}
-    and {{ r.counts.ok | default(0) }} successful validation{{ 's' if (r.counts.ok | default(0)) != 1 else '' }}.
-  </p>
+  {% if r.counts.errors | default(0) or r.counts.ok | default(0) or r.counts.warnings | default(0) %}
+    <p class="text-small" style="margin-top:0.5rem">
+      Found {{ r.counts.errors | default(0) }} error{{ 's' if (r.counts.errors | default(0)) != 1 else '' }}
+      and {{ r.counts.ok | default(0) }} successful validation{{ 's' if (r.counts.ok | default(0)) != 1 else '' }}.
+    </p>
+  {% endif %}
 
   {% set _total_msgs = r.msg_total or r.total_messages or r.total or r.message_count or 1 %}
 
@@ -34,7 +36,6 @@
     </label>
     <span class="muted small">Across {{ _total_msgs }} message{{ '' if _total_msgs == 1 else 's' }}. Unique rows are de-duplicated by rule.</span>
   </div>
-
   <div class="scrollbox" style="margin-top:0.75rem">
     <table class="validate-report__table" id="val-summary-table" style="width:100%;border-collapse:collapse;font-size:0.875rem">
       <thead>
@@ -168,7 +169,6 @@
       const selSeg = document.getElementById('val-filter-seg');
       const txt = document.getElementById('val-filter-text');
       let chipMode = 'error';
-
       function applyFilter() {
         const wantSev = selSev.value;
         const wantSeg = selSeg.value;
@@ -195,7 +195,6 @@
       chip('passed').addEventListener('click', () => { chipMode = 'passed'; applyFilter(); });
       chip('errors').addEventListener('click', () => { chipMode = 'error'; applyFilter(); });
       chip('all').addEventListener('click', () => { chipMode = 'all'; applyFilter(); });
-
       selSev.value = 'error';
       applyFilter();
     })();
