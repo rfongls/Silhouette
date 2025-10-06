@@ -44,6 +44,7 @@
     <label class="small" style="flex:1 1 240px">Search
       <input id="val-filter-text" class="input" placeholder="Filter by rule, message, or value…" />
     </label>
+    <button type="button" id="val-reset" class="btn btn-xs" style="margin-left:auto">Reset filters</button>
     <span class="muted small">Across {{ _total_msgs }} message{{ '' if _total_msgs == 1 else 's' }}. Unique rows are de-duplicated by rule.</span>
   </div>
 
@@ -184,6 +185,7 @@
       const selSev = root.querySelector('#val-filter-sev');
       const selSeg = root.querySelector('#val-filter-seg');
       const txt    = root.querySelector('#val-filter-text');
+      const reset  = root.querySelector('#val-reset');
       let chipMode = 'error';
       function applyFilter() {
         const wantSev = selSev.value;
@@ -214,6 +216,15 @@
 
       selSev.value = 'error';
       applyFilter();
+
+      // Reset filters to defaults (Errors, All segments, empty search)
+      if (reset) reset.addEventListener('click', function(){
+        chipMode     = 'error';
+        selSev.value = 'error';
+        selSeg.value = 'all';
+        txt.value    = '';
+        applyFilter();
+      });
     })(document.currentScript);
   </script>
   <textarea id="validated-message" hidden>{{ _validated_message }}</textarea>

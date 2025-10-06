@@ -28,6 +28,7 @@
         <label class="small" style="flex:1 1 320px">Value
           <input class="input" id="deid-filter-value" placeholder="Find parameter (e.g., date, name, mask…)" />
         </label>
+        <button type="button" id="deid-reset" class="btn btn-xs" style="margin-left:auto">Reset filters</button>
         <span class="muted small">Across {{ _total }} message{{ '' if _total == 1 else 's' }}.</span>
       </div>
 
@@ -67,6 +68,7 @@
     const actSel   = root.querySelector('#deid-filter-action');
     const valInp   = root.querySelector('#deid-filter-value');
     const tbody    = root.querySelector('#deid-tbody');
+    const resetBtn = root.querySelector('#deid-reset');
 
     // Build option sets
     const segSet  = new Set();
@@ -136,6 +138,16 @@
       render();
     }));
     render();
+
+    // Reset filters to defaults
+    if (resetBtn) resetBtn.addEventListener('click', function(){
+      segSel.value = 'all';
+      populateFields();
+      fieldSel.value = 'all';
+      actSel.value = 'all';
+      valInp.value = '';
+      render();
+    });
   })(document.currentScript);
   </script>
 </section>
