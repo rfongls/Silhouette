@@ -26,11 +26,12 @@
               {% if (rule.segment == r.segment)
                     and (rule.field == r.field)
                     and ((rule.component or none) == (r.component or none))
-                    and ((rule.subcomponent or none) == (r.subcomponent or none)) %}
-                {% set _logic = (rule.action | upper) ~ (': ' ~ rule.param if rule.param else '') %}
-                {% break %}
+                    and ((rule.subcomponent or none) == (r.subcomponent or none))
+                    and not logic_ns.text %}
+                {% set logic_ns.text = (rule.action | upper) ~ (': ' ~ rule.param if rule.param else '') %}
               {% endif %}
             {% endfor %}
+            {% set _logic = logic_ns.text %}
           {% endif %}
           <tr style="border-bottom:1px solid var(--color-border,#1b2436)">
             <td style="padding:.5rem"><code class="mono">{{ r.segment }}</code></td>

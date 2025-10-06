@@ -87,14 +87,14 @@
           'field': fld,
           'component': cmp,
           'subcomponent': sub,
-          'values': [],
+          'value_list': [],
           'message': it.message or '',
           'count': 0
         } %}
       {% endif %}
       {% if it.value is not none %}
         {% set val = (it.value|string) %}
-        {% if val not in group.values %}{% set _ = group.values.append(val) %}{% endif %}
+        {% if val not in group.value_list %}{% set _ = group.value_list.append(val) %}{% endif %}
       {% endif %}
       {% set _ = group.update({'count': group.count + 1, 'message': group.message or (it.message or '')}) %}
       {% set _ = ns.groups.update({key: group}) %}
@@ -128,7 +128,7 @@
             <td style="padding:0.5rem"><code class="mono">{{ group.field or '—' }}</code></td>
             <td style="padding:0.5rem"><code class="mono">{{ group.component or '—' }}</code></td>
             <td style="padding:0.5rem"><code class="mono">{{ group.subcomponent or '—' }}</code></td>
-            <td style="padding:0.5rem">{{ group.values | join(', ') if group.values else '—' }}</td>
+            <td style="padding:0.5rem">{{ group.value_list | join(', ') if group.value_list else '—' }}</td>
             <td style="padding:0.5rem">{{ group.message or '—' }}</td>
             <td style="padding:0.5rem">{{ group.count }}</td>
             <td style="padding:0.5rem">{{ group.count }}/{{ _total_msgs }}</td>
