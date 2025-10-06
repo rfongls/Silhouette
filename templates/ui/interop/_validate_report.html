@@ -1,17 +1,10 @@
-<section class="validate-report" data-val-report>
+<section id="validate-report" class="validate-report" data-val-report hx-swap-oob="outerHTML">
   {% set _r = r if r is defined else None %}
   {% set _issues = (_r.issues if _r is not none else (issues if issues is defined else [])) %}
   {% set _issues = _issues or [] %}
   {% set _counts = (_r.counts if _r is not none else (counts if counts is defined else {})) %}
   {% set _counts = _counts or {} %}
-  {% set _total_msgs = (
-        (_r.msg_total | default(None) if _r is not none else None)
-        or (_r.total_messages | default(None) if _r is not none else None)
-        or (_r.total | default(None) if _r is not none else None)
-        or (_r.message_count | default(None) if _r is not none else None)
-        or (total_messages if total_messages is defined else None)
-        or 1
-      ) %}
+  {% set _total_msgs = r.msg_total or r.total_messages or r.total or r.message_count or 1 %}
   {% set _total_msgs = _total_msgs | int %}
   {% set _raw_candidate = (_r.raw | default(None) if _r is not none else None) %}
   {% set _raw = _raw_candidate if _raw_candidate is not none else (raw if raw is defined else {}) %}
@@ -54,25 +47,6 @@
     <span class="muted small">Across {{ _total_msgs }} message{{ '' if _total_msgs == 1 else 's' }}. Unique rows are de-duplicated by rule.</span>
   </div>
 
-  <div class="card mt" style="padding:.5rem;display:flex;gap:.5rem;flex-wrap:wrap;align-items:center">
-    <label class="small">Severity
-      <select id="val-filter-sev" class="input" style="min-width:8rem">
-        <option value="all">All</option>
-        <option value="passed">Passed</option>
-        <option value="error" selected>Error</option>
-        <option value="warning">Warning</option>
-      </select>
-    </label>
-    <label class="small">Segment
-      <select id="val-filter-seg" class="input" style="min-width:8rem">
-        <option value="all">All</option>
-      </select>
-    </label>
-    <label class="small" style="flex:1 1 240px">Search
-      <input id="val-filter-text" class="input" placeholder="Filter by rule, message, or value…" />
-    </label>
-    <span class="muted small">Across {{ _total_msgs }} message{{ '' if _total_msgs == 1 else 's' }}. Unique rows are de-duplicated by rule.</span>
-  </div>
   <div class="scrollbox" style="margin-top:0.75rem">
     <table class="validate-report__table" id="val-summary-table" style="width:100%;border-collapse:collapse;font-size:0.875rem">
       <thead>
@@ -99,10 +73,12 @@
     <pre class="codepane mono" style="margin-top:0.5rem">{{ _raw | tojson(indent=2) }}</pre>
   </details>
 
-  <script type="application/json" id="val-issues-json" data-total="{{ _total_msgs }}">{{ _issues | tojson }}</script>
+  <script type="application/json" data-role="val-issues" data-total="{{ _total_msgs }}">{{ _issues | tojson }}</script>
+
   <script>
-    (function(){
-      const dataEl = document.getElementById('val-issues-json');
+    (function(s){
+      const root   = s.closest('#validate-report');
+      const dataEl = root.querySelector('script[data-role="val-issues"]');
       let issues = [];
       try { issues = JSON.parse(dataEl.textContent || '[]') || []; } catch (err) { issues = []; }
       const TOTAL = parseInt(dataEl.dataset.total || '1', 10) || 1;
@@ -148,7 +124,7 @@
         }
       }
 
-      const body = document.getElementById('val-summary-body');
+      const body = root.querySelector('#val-summary-body');
       body.innerHTML = '';
 
       const toPct = (n) => {
@@ -196,7 +172,7 @@
         tr.innerHTML = `<td colspan="11" class="muted" style="padding:.75rem">No issues to display.</td>`;
         body.appendChild(tr);
       }
-      const segSelect = document.getElementById('val-filter-seg');
+      const segSelect = root.querySelector('#val-filter-seg');
       Array.from(segments).sort().forEach((segment) => {
         const option = document.createElement('option');
         option.value = segment;
@@ -204,10 +180,10 @@
         segSelect.appendChild(option);
       });
 
-      const chip = (name) => document.querySelector(`.chip[data-vf="${name}"]`);
-      const selSev = document.getElementById('val-filter-sev');
-      const selSeg = document.getElementById('val-filter-seg');
-      const txt = document.getElementById('val-filter-text');
+      const chip = (name) => root.querySelector(`.chip[data-vf="${name}"]`);
+      const selSev = root.querySelector('#val-filter-sev');
+      const selSeg = root.querySelector('#val-filter-seg');
+      const txt    = root.querySelector('#val-filter-text');
       let chipMode = 'error';
       function applyFilter() {
         const wantSev = selSev.value;
@@ -224,7 +200,7 @@
           if (query) show = show && text.includes(query);
           tr.style.display = show ? '' : 'none';
         }
-        for (const btn of document.querySelectorAll('.validate-report__counts .chip')) {
+        for (const btn of root.querySelectorAll('.validate-report__counts .chip')) {
           const active = (chipMode === 'all' && btn.dataset.vf === 'all') || btn.dataset.vf === chipMode;
           btn.style.outline = active ? '2px solid var(--color-border, #94a3b8)' : 'none';
           btn.setAttribute('aria-pressed', active ? 'true' : 'false');
@@ -235,9 +211,10 @@
       chip('passed').addEventListener('click', () => { chipMode = 'passed'; applyFilter(); });
       chip('errors').addEventListener('click', () => { chipMode = 'error'; applyFilter(); });
       chip('all').addEventListener('click', () => { chipMode = 'all'; applyFilter(); });
+
       selSev.value = 'error';
       applyFilter();
-    })();
+    })(document.currentScript);
   </script>
   <textarea id="validated-message" hidden>{{ _validated_message }}</textarea>
   <script>
