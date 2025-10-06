@@ -171,10 +171,18 @@
           applyFilter();
         });
       }
-
       selSev.value = 'error';
       applyFilter();
-    })();
+
+      // Reset filters to defaults (Errors, All segments, empty search)
+      if (reset) reset.addEventListener('click', function(){
+        chipMode     = 'error';
+        selSev.value = 'error';
+        selSeg.value = 'all';
+        txt.value    = '';
+        applyFilter();
+      });
+    })(document.currentScript);
   </script>
   <textarea id="validated-message" hidden>{{ _validated_message }}</textarea>
   <script>
