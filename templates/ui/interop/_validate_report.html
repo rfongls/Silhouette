@@ -134,7 +134,20 @@
       const selSeg = root.querySelector('[data-val-seg]');
       const txt    = root.querySelector('[data-val-q]');
       const reset  = root.querySelector('[data-val-reset]');
-      let chipMode = 'error';
+
+      if (!selSev || !selSeg || !txt) {
+        return;
+      }
+
+      function updateChipStyles() {
+        const current = selSev.value;
+        for (const btn of root.querySelectorAll('.validate-report__counts .chip')) {
+          const active = btn.dataset.vf === current;
+          btn.style.outline = active ? '2px solid var(--color-border, #94a3b8)' : 'none';
+          btn.setAttribute('aria-pressed', active ? 'true' : 'false');
+        }
+      }
+
       function applyFilter() {
         const wantSev = selSev.value;
         const wantSeg = selSeg.value;
@@ -144,33 +157,51 @@
           const seg = tr.getAttribute('data-segment');
           const text = tr.getAttribute('data-text') || '';
           let show = true;
-          if (chipMode !== 'all') show = show && (sev === chipMode);
           if (wantSev !== 'all') show = show && (sev === wantSev);
           if (wantSeg !== 'all') show = show && (seg === wantSeg);
           if (query) show = show && text.includes(query);
           tr.style.display = show ? '' : 'none';
         }
-        for (const btn of root.querySelectorAll('.validate-report__counts .chip')) {
-          const active = (chipMode === 'all' && btn.dataset.vf === 'all') || btn.dataset.vf === chipMode;
-          btn.style.outline = active ? '2px solid var(--color-border, #94a3b8)' : 'none';
-          btn.setAttribute('aria-pressed', active ? 'true' : 'false');
-        }
+        updateChipStyles();
       }
 
-      [selSev, selSeg, txt].forEach((el) => el.addEventListener('input', applyFilter));
-      chip('passed').addEventListener('click', () => { chipMode = 'passed'; applyFilter(); });
-      chip('errors').addEventListener('click', () => { chipMode = 'error'; applyFilter(); });
-      chip('all').addEventListener('click', () => { chipMode = 'all'; applyFilter(); });
+      if (selSev) selSev.addEventListener('change', () => {
+        applyFilter();
+      });
+      if (selSeg) selSeg.addEventListener('change', applyFilter);
+      if (txt) txt.addEventListener('input', applyFilter);
+
+      const passedChip = chip('passed');
+      if (passedChip) {
+        passedChip.addEventListener('click', () => {
+          selSev.value = 'passed';
+          applyFilter();
+        });
+      }
+      const errorChip = chip('errors');
+      if (errorChip) {
+        errorChip.addEventListener('click', () => {
+          selSev.value = 'error';
+          applyFilter();
+        });
+      }
+      const allChip = chip('all');
+      if (allChip) {
+        allChip.addEventListener('click', () => {
+          selSev.value = 'all';
+          applyFilter();
+        });
+      }
 
       if (reset) {
         reset.addEventListener('click', () => {
-          chipMode = 'error';
           selSev.value = 'error';
           selSeg.value = 'all';
           txt.value = '';
           applyFilter();
         });
       }
+
       selSev.value = 'error';
       applyFilter();
 

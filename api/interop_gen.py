@@ -2465,6 +2465,10 @@ async def api_deidentify_summary(request: Request):
     keyset.update(logic_map.keys())
 
     rows: list[dict[str, Any]] = []
+    segment_options: set[str] = set()
+    action_options: set[str] = set()
+    fields_by_segment: dict[str, set[str]] = defaultdict(set)
+    all_fields: set[str] = set()
     denominator = total_messages if total_messages else 1
     for seg, field_no, comp_no, sub_no in sorted(
         keyset, key=lambda item: (item[0], item[1], item[2], item[3])
@@ -2491,18 +2495,46 @@ async def api_deidentify_summary(request: Request):
                 "pct": pct,
             }
         )
+        if seg:
+            segment_options.add(seg)
+            if field_no:
+                text_field = str(field_no)
+                fields_by_segment[seg].add(text_field)
+                all_fields.add(text_field)
+        if action_label:
+            action_options.add(action_label)
+
+    def _sorted_fields(values: set[str]) -> list[str]:
+        def _field_key(text: str) -> tuple[int, str]:
+            try:
+                return (int(text), text)
+            except (TypeError, ValueError):
+                return (1_000_000, text)
+
+        return [value for value in sorted(values, key=_field_key)]
+
+    fields_payload = {seg: _sorted_fields(values) for seg, values in fields_by_segment.items()}
+    if all_fields:
+        fields_payload["__all__"] = _sorted_fields(all_fields)
+    else:
+        fields_payload["__all__"] = []
+
+    payload = {
+        "rows": rows,
+        "total_messages": total_messages,
+        "segment_options": sorted(segment_options),
+        "action_options": sorted(action_options),
+        "fields_by_segment": fields_payload,
+    }
 
     accept = (request.headers.get("accept") or "").lower()
     if "text/html" in accept:
         return templates.TemplateResponse(
             "ui/interop/_deid_coverage.html",
-            {"request": request, "r": {"rows": rows, "total_messages": total_messages}},
+            {"request": request, "r": payload},
         )
     return JSONResponse(
-        {
-            "total_messages": total_messages,
-            "rows": rows,
-        }
+        payload
     )
 
 

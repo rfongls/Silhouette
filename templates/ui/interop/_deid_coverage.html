@@ -8,16 +8,26 @@
         <label class="small">Segment
           <select class="input" data-deid-seg style="min-width:8rem">
             <option value="all">All</option>
+            {% for seg in (r.segment_options or []) %}
+              <option value="{{ seg | e }}">{{ seg }}</option>
+            {% endfor %}
           </select>
         </label>
         <label class="small">Field
           <select class="input" data-deid-field style="min-width:8rem">
             <option value="all">All</option>
+            {% set _field_all = (r.fields_by_segment.get('__all__') if r.fields_by_segment is defined else []) %}
+            {% for field in _field_all %}
+              <option value="{{ field | e }}">{{ field }}</option>
+            {% endfor %}
           </select>
         </label>
         <label class="small">Action
           <select class="input" data-deid-action style="min-width:10rem">
             <option value="all">All</option>
+            {% for action in (r.action_options or []) %}
+              <option value="{{ action | e }}">{{ action }}</option>
+            {% endfor %}
           </select>
         </label>
         <label class="small" style="flex:1 1 320px">Value
@@ -65,7 +75,7 @@
           </tbody>
         </table>
       </div>
-
+      <script type="application/json" data-deid-field-map>{{ (r.fields_by_segment or {}) | tojson }}</script>
       <script>
         (function(){
           const root = document.currentScript.closest('[data-deid-root]');
@@ -75,6 +85,15 @@
           const queryInput = root.querySelector('[data-deid-query]');
           const resetBtn = root.querySelector('[data-deid-reset]');
           const body = root.querySelector('[data-deid-body]');
+          const fieldMapEl = root.querySelector('[data-deid-field-map]');
+          let fieldMap = {};
+          if (fieldMapEl) {
+            try {
+              fieldMap = JSON.parse(fieldMapEl.textContent || '{}') || {};
+            } catch (err) {
+              fieldMap = {};
+            }
+          }
           const rows = Array.from(body.querySelectorAll('tr')).map((tr) => ({
             el: tr,
             segment: tr.getAttribute('data-segment') || '',
@@ -83,28 +102,12 @@
             text: (tr.getAttribute('data-text') || '').toLowerCase(),
           }));
 
-          const segSet = new Set();
-          const actSet = new Set();
-          const fieldsBySeg = new Map();
-          for (const row of rows) {
-            if (row.segment) segSet.add(row.segment);
-            if (row.action) actSet.add(row.action);
-            const key = row.segment || '';
-            const bucket = fieldsBySeg.get(key) || new Set();
-            if (row.field !== '') bucket.add(String(row.field));
-            fieldsBySeg.set(key, bucket);
-          }
-
-          for (const seg of [...segSet].sort()) {
-            segSel.add(new Option(seg, seg));
-          }
-
           function populateFields() {
             const current = fieldSel.value;
             fieldSel.innerHTML = '<option value="all">All</option>';
-            const seg = segSel.value === 'all' ? '' : segSel.value;
-            const options = fieldsBySeg.get(seg) || new Set();
-            for (const field of [...options].sort((a, b) => Number(a) - Number(b))) {
+            const seg = segSel.value === 'all' ? '__all__' : segSel.value;
+            const options = fieldMap[seg] || [];
+            for (const field of options) {
               fieldSel.add(new Option(field, field));
             }
             if ([...fieldSel.options].some((opt) => opt.value === current)) {
@@ -113,10 +116,6 @@
           }
 
           populateFields();
-
-          for (const action of [...actSet].sort()) {
-            actSel.add(new Option(action, action));
-          }
 
           function render() {
             const wantSeg = segSel.value;
