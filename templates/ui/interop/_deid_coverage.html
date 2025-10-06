@@ -1,0 +1,35 @@
+{# expects: rows=[{segment,field,component,subcomponent,logic,applied,total,total_messages,pct?}], total #}
+<details class="mini-report" data-autoclose open>
+  <summary>De‑identification report</summary>
+  {% if not rows or rows|length == 0 %}
+    <div class="muted small">No coverage recorded for this run.</div>
+  {% else %}
+    <p class="small muted" style="margin:.25rem 0 .5rem 0">Coverage across {{ total }} message{{ 's' if total != 1 else '' }}.</p>
+    <div class="scrollbox">
+      <table style="width:100%;border-collapse:collapse;font-size:.95rem">
+        <thead>
+          <tr style="text-align:left;border-bottom:1px solid var(--color-border,#253247)">
+            <th style="padding:.5rem">Segment</th>
+            <th style="padding:.5rem">Field</th>
+            <th style="padding:.5rem">Comp</th>
+            <th style="padding:.5rem">Subcomp</th>
+            <th style="padding:.5rem">Logic</th>
+            <th style="padding:.5rem;text-align:right">Total Messages</th>
+          </tr>
+        </thead>
+        <tbody>
+        {% for r in rows %}
+          <tr style="border-bottom:1px solid var(--color-border,#1b2436)">
+            <td style="padding:.5rem"><code class="mono">{{ r.segment }}</code></td>
+            <td style="padding:.5rem">{{ r.field }}</td>
+            <td style="padding:.5rem">{{ r.component if r.component is not none else '—' }}</td>
+            <td style="padding:.5rem">{{ r.subcomponent if r.subcomponent is not none else '—' }}</td>
+            <td style="padding:.5rem">{{ r.logic or '—' }}</td>
+            <td style="padding:.5rem;text-align:right"><code class="mono">{{ r.applied }}/{{ r.total or total }}</code></td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% endif %}
+</details>

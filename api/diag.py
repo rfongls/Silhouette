@@ -214,6 +214,35 @@ def _badge_template_response(request: Request, enabled: bool, target_id: str):
     )
 
 
+def _log_widget_template_response(
+    request: Request,
+    *,
+    enabled: bool,
+    target_id: str,
+    limit: int,
+    include_selector: str | None,
+):
+    hx_url = request.url_for("get_debug_logs")
+    query = f"format=html&limit={limit}&target={quote_plus(target_id)}"
+    widget_url = request.url_for("api_diag_debug_log_widget")
+    widget_query = ["format=html", f"target={quote_plus(target_id)}", f"limit={limit}"]
+    if include_selector:
+        widget_query.append(f"include={quote_plus(include_selector)}")
+    context = {
+        "request": request,
+        "enabled": enabled,
+        "target_id": target_id,
+        "hx_url": f"{hx_url}?{query}",
+        "include_selector": include_selector,
+        "widget_url": f"{widget_url}?{'&'.join(widget_query)}",
+    }
+    return templates.TemplateResponse(
+        "diag/_debug_widget.html",
+        context,
+        headers={"Cache-Control": "no-store"},
+    )
+
+
 async def _debug_state_response(
     request: Request,
     enabled: bool,
@@ -257,6 +286,41 @@ async def api_diag_debug_disable(request: Request, format: str | None = None):
     set_debug_enabled(False)
     enabled = is_debug_enabled()
     return await _debug_state_response(request, enabled, format, action="disable")
+
+
+@router.get("/api/diag/debug/log-widget", name="api_diag_debug_log_widget")
+async def api_diag_debug_log_widget(
+    request: Request,
+    format: str | None = None,
+    limit: int = 200,
+    target: str | None = None,
+    include: str | None = None,
+):
+    fmt = _choose_format(format, request)
+    try:
+        limit_value = int(limit or 200)
+    except (TypeError, ValueError):
+        limit_value = 200
+    limit_value = max(1, min(2000, limit_value))
+    target_id = _normalize_target(target)
+    include_selector = (include or "").strip() or None
+    enabled = is_debug_enabled()
+    if fmt in {"html", "htm"}:
+        return _log_widget_template_response(
+            request,
+            enabled=enabled,
+            target_id=target_id,
+            limit=limit_value,
+            include_selector=include_selector,
+        )
+    payload: Dict[str, Any] = {
+        "enabled": enabled,
+        "limit": limit_value,
+        "target": target_id,
+    }
+    if include_selector:
+        payload["include"] = include_selector
+    return JSONResponse(payload, headers={"Cache-Control": "no-store"})
 
 
 @router.post("/api/diag/debug/event")

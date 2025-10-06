@@ -14,7 +14,7 @@ _MAX_BUFFER = 2000
 
 _buffer: deque[str] = deque(maxlen=_MAX_BUFFER)
 _lock = Lock()
-_enabled: bool = True
+_enabled: bool = False
 
 
 def is_debug_enabled() -> bool:

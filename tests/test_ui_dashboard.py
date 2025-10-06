@@ -105,6 +105,34 @@ def test_diag_debug_state_html_chip(monkeypatch, tmp_path):
     debug_log.set_debug_enabled(True)
 
 
+def test_diag_debug_log_widget(monkeypatch, tmp_path):
+    _prime_debug_log(monkeypatch, tmp_path)
+    debug_log.set_debug_enabled(False)
+    resp = client.get(
+        "/api/diag/debug/log-widget",
+        params={"format": "html", "target": "interop-debug-log"},
+    )
+    assert resp.status_code == 200
+    assert "Debug is OFF" in resp.text
+    assert "data-debug-widget-url" not in resp.text
+    assert "hx-trigger" not in resp.text
+
+    debug_log.set_debug_enabled(True)
+    resp = client.get(
+        "/api/diag/debug/log-widget",
+        params={
+            "format": "html",
+            "target": "interop-debug-log",
+            "limit": "150",
+            "include": "#debug-log-settings",
+        },
+    )
+    assert resp.status_code == 200
+    assert "hx-trigger=\"load, every 8s\"" in resp.text
+    assert "limit=150" in resp.text
+    assert "hx-include=\"#debug-log-settings\"" in resp.text
+
+
 def test_diag_debug_state_toggle_returns_html_when_requested(monkeypatch, tmp_path):
     _prime_debug_log(monkeypatch, tmp_path)
     resp = client.post(
