@@ -4,16 +4,52 @@
     <div class="validate-report__counts" style="display:flex;flex-wrap:wrap;gap:0.5rem">
       <span class="chip" style="background:#10b981;color:#0b1e15">Passed: {{ r.counts.ok | default(0) }}</span>
       <span class="chip" style="background:#ef4444;color:#250101">Errors: {{ r.counts.errors | default(0) }}</span>
-      <button class="btn btn-xs" type="button" onclick="(function(btn){const root=btn.closest('section.validate-report');if(!root)return;root.querySelectorAll('.row-ok,.row-error,.row-warning').forEach((row)=>{row.hidden=false;});})(this)">Show all</button>
+      <span class="chip" style="background:#475569;color:#e5e7eb">Show all</span>
     </div>
   </header>
 
-  <p class="text-small" style="margin-top:0.5rem">
-    Found {{ r.counts.errors | default(0) }} error{{ 's' if (r.counts.errors | default(0)) != 1 else '' }}
-    and {{ r.counts.ok | default(0) }} successful validation{{ 's' if (r.counts.ok | default(0)) != 1 else '' }}.
-  </p>
+  {% if r.counts.errors | default(0) or r.counts.ok | default(0) or r.counts.warnings | default(0) %}
+    <p class="text-small" style="margin-top:0.5rem">
+      Found {{ r.counts.errors | default(0) }} error{{ 's' if (r.counts.errors | default(0)) != 1 else '' }}
+      and {{ r.counts.ok | default(0) }} successful validation{{ 's' if (r.counts.ok | default(0)) != 1 else '' }}.
+    </p>
+  {% endif %}
 
-  {% include 'ui/interop/_validate_summary.html' %}
+  {% set _total_msgs = r.msg_total or r.total_messages or r.total or r.message_count or 1 %}
+
+  {# Build aggregated rows server-side so HTMX swaps render correctly #}
+  {% set ns = namespace(groups={}) %}
+  {% for it in r.issues %}
+    {% set sev = (it.severity | default('error')) | lower %}
+    {% set sev = 'passed' if sev == 'ok' else sev %}
+    {% set code = it.code or it.rule or '' %}
+    {% set seg = it.segment or '' %}
+    {% set fld = (it.field is not none and it.field) or '' %}
+    {% set cmp = (it.component is not none and it.component) or '' %}
+    {% set sub = (it.subcomponent is not none and it.subcomponent) or '' %}
+    {% set ord = 0 if sev == 'error' else (1 if sev == 'warning' else 2) %}
+    {% set key = (ord|string) ~ '|' ~ sev ~ '|' ~ code ~ '|' ~ seg ~ '|' ~ fld ~ '|' ~ cmp ~ '|' ~ sub %}
+    {% set group = ns.groups.get(key) %}
+    {% if not group %}
+      {% set group = {
+        'severity': sev,
+        'code': code,
+        'segment': seg,
+        'field': fld,
+        'component': cmp,
+        'subcomponent': sub,
+        'values': [],
+        'message': it.message or '',
+        'count': 0
+      } %}
+    {% endif %}
+    {% if it.value is not none %}
+      {% set val = (it.value|string) %}
+      {% if val not in group.values %}{% set _ = group.values.append(val) %}{% endif %}
+    {% endif %}
+    {% set _ = group.update({'count': group.count + 1, 'message': group.message or (it.message or '')}) %}
+    {% set _ = ns.groups.update({key: group}) %}
+  {% endfor %}
 
   <div class="scrollbox" style="margin-top:0.75rem">
     <table class="validate-report__table" style="width:100%;border-collapse:collapse;font-size:0.875rem">
@@ -27,28 +63,32 @@
           <th style="padding:0.5rem">Subcomp</th>
           <th style="padding:0.5rem">Value</th>
           <th style="padding:0.5rem">Message</th>
+          <th style="padding:0.5rem">Count</th>
           <th style="padding:0.5rem">Total</th>
+          <th style="padding:0.5rem">%</th>
         </tr>
       </thead>
       <tbody>
-      {% for it in r.issues %}
-        {% set severity = (it.severity | default('error')) | lower %}
-        <tr class="row-{{ severity }}" style="border-bottom:1px solid var(--color-border, #e5e7eb)">
-          <td style="padding:0.5rem">{{ 'Passed' if severity == 'ok' else (severity | capitalize) }}</td>
-          <td style="padding:0.5rem"><code class="mono">{{ it.code or it.rule or '—' }}</code></td>
-          <td style="padding:0.5rem"><code class="mono">{{ it.segment or '—' }}</code></td>
-          <td style="padding:0.5rem"><code class="mono">{{ it.field if it.field is not none else '—' }}</code></td>
-          <td style="padding:0.5rem"><code class="mono">{{ it.component if it.component is not none else '—' }}</code></td>
-          <td style="padding:0.5rem"><code class="mono">{{ it.subcomponent if it.subcomponent is not none else '—' }}</code></td>
-          <td style="padding:0.5rem"><code class="mono">{{ it.value if it.value is not none else '—' }}</code></td>
-          <td style="padding:0.5rem">{{ it.message or '—' }}</td>
-          <td style="padding:0.5rem">{{ r.total_messages | default(1) }}</td>
-        </tr>
-      {% else %}
-        <tr>
-          <td colspan="9" style="padding:0.75rem" class="muted">No issues to display.</td>
-        </tr>
-      {% endfor %}
+        {% for key, group in ns.groups | dictsort %}
+          {% set pct = ((100 * group.count) / _total_msgs) | round(0, 'common') | int %}
+          <tr class="row-{{ group.severity }}" style="border-bottom:1px solid var(--color-border, #e5e7eb)">
+            <td style="padding:0.5rem">{{ 'Passed' if group.severity == 'passed' else (group.severity | capitalize) }}</td>
+            <td style="padding:0.5rem"><code class="mono">{{ group.code or '—' }}</code></td>
+            <td style="padding:0.5rem"><code class="mono">{{ group.segment or '—' }}</code></td>
+            <td style="padding:0.5rem"><code class="mono">{{ group.field or '—' }}</code></td>
+            <td style="padding:0.5rem"><code class="mono">{{ group.component or '—' }}</code></td>
+            <td style="padding:0.5rem"><code class="mono">{{ group.subcomponent or '—' }}</code></td>
+            <td style="padding:0.5rem">{{ group.values | join(', ') if group.values else '—' }}</td>
+            <td style="padding:0.5rem">{{ group.message or '—' }}</td>
+            <td style="padding:0.5rem">{{ group.count }}</td>
+            <td style="padding:0.5rem">{{ group.count }}/{{ _total_msgs }}</td>
+            <td style="padding:0.5rem">{{ pct }}%</td>
+          </tr>
+        {% else %}
+          <tr>
+            <td colspan="11" class="muted" style="padding:0.75rem">No issues to display.</td>
+          </tr>
+        {% endfor %}
       </tbody>
     </table>
   </div>
