@@ -39,35 +39,59 @@
               <th style="padding:.5rem">Logic</th>
               <th style="padding:.5rem">Total Messages</th>
             </tr>
-          </thead
-          <tbody data-deid-body></tbody>
+          </thead>
+          <tbody data-deid-body>
+            {% for it in _rows %}
+              {% set _seg = it.segment or '' %}
+              {% set _field_val = it.field if it.field is not none else '' %}
+              {% set _action = it.action or '' %}
+              {% set _logic = it.logic or '' %}
+              <tr
+                style="border-bottom:1px solid var(--color-border, #2b3345)"
+                data-segment="{{ _seg | e }}"
+                data-field="{{ _field_val | e }}"
+                data-action="{{ _action | e }}"
+                data-text="{{ (_action ~ ' ' ~ _logic)|lower | e }}"
+              >
+                <td style="padding:.5rem"><code class="mono">{{ it.segment or '—' }}</code></td>
+                <td style="padding:.5rem"><code class="mono">{{ it.field if it.field is not none else '—' }}</code></td>
+                <td style="padding:.5rem"><code class="mono">{{ it.component if it.component is not none else '—' }}</code></td>
+                <td style="padding:.5rem"><code class="mono">{{ it.subcomponent if it.subcomponent is not none else '—' }}</code></td>
+                <td style="padding:.5rem">{{ it.action or '—' }}</td>
+                <td style="padding:.5rem">{{ it.logic or '—' }}</td>
+                <td style="padding:.5rem">{{ it.applied | default(0) }}/{{ _total }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
         </table>
       </div>
 
-      <script type="application/json" data-deid-json data-total="{{ _total }}">{{ _rows | tojson }}</script>
       <script>
         (function(){
           const root = document.currentScript.closest('[data-deid-root]');
-          const dataEl = root.querySelector('[data-deid-json]');
-          let rows = [];
-          try { rows = JSON.parse(dataEl.textContent || '[]') || []; } catch (err) { rows = []; }
-          const TOTAL = parseInt(dataEl.dataset.total || '0', 10) || 0;
           const segSel = root.querySelector('[data-deid-seg]');
           const fieldSel = root.querySelector('[data-deid-field]');
           const actSel = root.querySelector('[data-deid-action]');
           const queryInput = root.querySelector('[data-deid-query]');
           const resetBtn = root.querySelector('[data-deid-reset]');
           const body = root.querySelector('[data-deid-body]');
+          const rows = Array.from(body.querySelectorAll('tr')).map((tr) => ({
+            el: tr,
+            segment: tr.getAttribute('data-segment') || '',
+            field: tr.getAttribute('data-field') || '',
+            action: tr.getAttribute('data-action') || '',
+            text: (tr.getAttribute('data-text') || '').toLowerCase(),
+          }));
 
           const segSet = new Set();
           const actSet = new Set();
           const fieldsBySeg = new Map();
-          for (const r of rows) {
-            if (r.segment) segSet.add(r.segment);
-            if (r.action) actSet.add(r.action);
-            const key = r.segment || '';
+          for (const row of rows) {
+            if (row.segment) segSet.add(row.segment);
+            if (row.action) actSet.add(row.action);
+            const key = row.segment || '';
             const bucket = fieldsBySeg.get(key) || new Set();
-            if (r.field != null) bucket.add(String(r.field));
+            if (row.field !== '') bucket.add(String(row.field));
             fieldsBySeg.set(key, bucket);
           }
 
@@ -94,37 +118,19 @@
             actSel.add(new Option(action, action));
           }
 
-          function includesLike(haystack, needle) {
-            if (!needle) return true;
-            const normalizedHaystack = (haystack || '').toString().toLowerCase();
-            const normalizedNeedle = needle.toString().toLowerCase().trim();
-            return normalizedHaystack.includes(normalizedNeedle);
-          }
-
           function render() {
             const wantSeg = segSel.value;
             const wantField = fieldSel.value;
             const wantAction = actSel.value;
             const query = queryInput.value || '';
-            body.innerHTML = '';
+            const needle = query.toLowerCase().trim();
             for (const row of rows) {
-              if (wantSeg !== 'all' && row.segment !== wantSeg) continue;
-              if (wantField !== 'all' && String(row.field) !== wantField) continue;
-              if (wantAction !== 'all' && (row.action || '') !== wantAction) continue;
-              if (!includesLike(row.logic, query) && !includesLike(row.action, query)) continue;
-
-              const tr = document.createElement('tr');
-              tr.style.borderBottom = '1px solid var(--color-border, #2b3345)';
-              tr.innerHTML = `
-                <td style="padding:.5rem"><code class="mono">${row.segment || '—'}</code></td>
-                <td style="padding:.5rem"><code class="mono">${row.field ?? '—'}</code></td>
-                <td style="padding:.5rem"><code class="mono">${row.component ?? '—'}</code></td>
-                <td style="padding:.5rem"><code class="mono">${row.subcomponent ?? '—'}</code></td>
-                <td style="padding:.5rem">${row.action || '—'}</td>
-                <td style="padding:.5rem">${row.logic || '—'}</td>
-                <td style="padding:.5rem">${(row.applied || 0)}/${TOTAL}</td>
-              `;
-              body.appendChild(tr);
+              let show = true;
+              if (wantSeg !== 'all' && row.segment !== wantSeg) show = false;
+              if (wantField !== 'all' && String(row.field) !== wantField) show = false;
+              if (wantAction !== 'all' && row.action !== wantAction) show = false;
+              if (needle && !row.text.includes(needle)) show = false;
+              row.el.style.display = show ? '' : 'none';
             }
           }
 
