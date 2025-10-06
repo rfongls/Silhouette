@@ -2407,6 +2407,55 @@ async def api_deidentify_summary(request: Request):
     )
 
 
+@router.post("/api/interop/validate/view")
+async def interop_validate_view(request: Request):
+    form = await request.form()
+    rows_json = form.get("rows") or "[]"
+    total_raw = form.get("total") or "1"
+    sev = (form.get("sev") or "all").strip().lower()
+    seg = (form.get("seg") or "all").strip()
+    q = (form.get("q") or "").strip()
+    validated_message = form.get("validated_message") or ""
+
+    try:
+        issues = json.loads(rows_json)
+        if not isinstance(issues, list):
+            issues = []
+    except Exception:
+        issues = []
+
+    def _sev(row):
+        return (row.get("severity") or "").lower()
+
+    counts = {
+        "ok": sum(1 for row in issues if _sev(row) in {"ok", "passed"}),
+        "errors": sum(1 for row in issues if _sev(row) == "error"),
+        "warnings": sum(1 for row in issues if _sev(row) == "warning"),
+    }
+
+    try:
+        total_messages = int(total_raw)
+    except (TypeError, ValueError):
+        total_messages = 1
+    if total_messages <= 0:
+        total_messages = 1
+
+    model = {
+        "issues": issues,
+        "counts": counts,
+        "total_messages": total_messages,
+        "raw": {"issues": issues},
+        "validated_message": validated_message,
+    }
+
+    vf = {"sev": sev or "all", "seg": seg or "all", "q": q}
+
+    return templates.TemplateResponse(
+        "ui/interop/_validate_report.html",
+        {"request": request, "r": model, "vf": vf},
+    )
+
+
 @router.post("/api/interop/validate")
 async def api_validate(request: Request):
     """Validate HL7; accept JSON, form, multipart, or query."""

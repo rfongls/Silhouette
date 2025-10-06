@@ -54,6 +54,25 @@
     <span class="muted small">Across {{ _total_msgs }} message{{ '' if _total_msgs == 1 else 's' }}. Unique rows are de-duplicated by rule.</span>
   </div>
 
+  <div class="card mt" style="padding:.5rem;display:flex;gap:.5rem;flex-wrap:wrap;align-items:center">
+    <label class="small">Severity
+      <select id="val-filter-sev" class="input" style="min-width:8rem">
+        <option value="all">All</option>
+        <option value="passed">Passed</option>
+        <option value="error" selected>Error</option>
+        <option value="warning">Warning</option>
+      </select>
+    </label>
+    <label class="small">Segment
+      <select id="val-filter-seg" class="input" style="min-width:8rem">
+        <option value="all">All</option>
+      </select>
+    </label>
+    <label class="small" style="flex:1 1 240px">Search
+      <input id="val-filter-text" class="input" placeholder="Filter by rule, message, or value…" />
+    </label>
+    <span class="muted small">Across {{ _total_msgs }} message{{ '' if _total_msgs == 1 else 's' }}. Unique rows are de-duplicated by rule.</span>
+  </div>
   <div class="scrollbox" style="margin-top:0.75rem">
     <table class="validate-report__table" id="val-summary-table" style="width:100%;border-collapse:collapse;font-size:0.875rem">
       <thead>
@@ -81,7 +100,6 @@
   </details>
 
   <script type="application/json" id="val-issues-json" data-total="{{ _total_msgs }}">{{ _issues | tojson }}</script>
-
   <script>
     (function(){
       const dataEl = document.getElementById('val-issues-json');
@@ -173,13 +191,11 @@
         `;
         body.appendChild(tr);
       }
-
       if (!list.length) {
         const tr = document.createElement('tr');
         tr.innerHTML = `<td colspan="11" class="muted" style="padding:.75rem">No issues to display.</td>`;
         body.appendChild(tr);
       }
-
       const segSelect = document.getElementById('val-filter-seg');
       Array.from(segments).sort().forEach((segment) => {
         const option = document.createElement('option');
@@ -193,7 +209,6 @@
       const selSeg = document.getElementById('val-filter-seg');
       const txt = document.getElementById('val-filter-text');
       let chipMode = 'error';
-
       function applyFilter() {
         const wantSev = selSev.value;
         const wantSeg = selSeg.value;
@@ -220,12 +235,10 @@
       chip('passed').addEventListener('click', () => { chipMode = 'passed'; applyFilter(); });
       chip('errors').addEventListener('click', () => { chipMode = 'error'; applyFilter(); });
       chip('all').addEventListener('click', () => { chipMode = 'all'; applyFilter(); });
-
       selSev.value = 'error';
       applyFilter();
     })();
   </script>
-
   <textarea id="validated-message" hidden>{{ _validated_message }}</textarea>
   <script>
     window.PipelineContext = window.PipelineContext || { message: '' };

@@ -32,7 +32,6 @@
         <span class="muted small">Across {{ _total }} message{{ '' if _total == 1 else 's' }}.</span>
       </div>
       <div id="deid-filter-note" class="muted small" style="margin:.5rem 0 .25rem; display:none;"></div>
-
       <div class="scrollbox">
         <table id="deid-table" style="width:100%;border-collapse:collapse;font-size:.9rem">
           <thead>
@@ -73,6 +72,7 @@
         (function(){
           const rowsEl = document.getElementById('deid-rows-json');
           let rows = [];
+
           try { rows = JSON.parse(rowsEl.textContent || '[]') || []; } catch (e) { rows = []; }
           const segSel = document.getElementById('deid-filter-seg');
           const fldSel = document.getElementById('deid-filter-field');
@@ -80,7 +80,6 @@
           const valInp = document.getElementById('deid-filter-value');
           const noteEl = document.getElementById('deid-filter-note');
           const body = document.getElementById('deid-body');
-
           const bySeg = new Map();
           const bySegField = new Map();
           const segSet = new Set();
@@ -245,7 +244,6 @@
               }
               inScope.push(tr);
             }
-
             const hits = [];
             if (q) {
               for (const tr of inScope) {
@@ -269,7 +267,6 @@
               body.appendChild(frag);
               return;
             }
-
             if (q && hits.length === 0) {
               noteEl.textContent = 'No parameter match; showing available actions/parameters for the current selection.';
               noteEl.style.display = '';
@@ -281,7 +278,6 @@
               tr.style.display = inScope.includes(tr) ? '' : 'none';
             }
           }
-
           apply();
         })();
       </script>
