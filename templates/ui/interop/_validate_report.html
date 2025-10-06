@@ -75,7 +75,6 @@
   </details>
 
   <script type="application/json" data-val-issues data-total="{{ _total_msgs }}">{{ _issues | tojson }}</script>
-
   <script>
     (function(){
       const root   = document.currentScript.closest('[data-val-root]');
@@ -173,6 +172,7 @@
         tr.innerHTML = `<td colspan="11" class="muted" style="padding:.75rem">No issues to display.</td>`;
         body.appendChild(tr);
       }
+      
       const segSelect = root.querySelector('[data-val-seg]');
       Array.from(segments).sort().forEach((segment) => {
         const option = document.createElement('option');
@@ -223,10 +223,18 @@
           applyFilter();
         });
       }
-
       selSev.value = 'error';
       applyFilter();
-    })();
+
+      // Reset filters to defaults (Errors, All segments, empty search)
+      if (reset) reset.addEventListener('click', function(){
+        chipMode     = 'error';
+        selSev.value = 'error';
+        selSeg.value = 'all';
+        txt.value    = '';
+        applyFilter();
+      });
+    })(document.currentScript);
   </script>
   <textarea id="validated-message" hidden>{{ _validated_message }}</textarea>
   <script>
