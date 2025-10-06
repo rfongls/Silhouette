@@ -8,16 +8,26 @@
         <label class="small">Segment
           <select class="input" data-role="deid-filter-seg" style="min-width:8rem">
             <option value="all">All</option>
+            {% for seg in (r.segment_options or []) %}
+              <option value="{{ seg | e }}">{{ seg }}</option>
+            {% endfor %}
           </select>
         </label>
         <label class="small">Field
           <select class="input" data-role="deid-filter-field" style="min-width:6rem">
             <option value="all">All</option>
+            {% set _field_all = (r.fields_by_segment.get('__all__') if r.fields_by_segment is defined else []) %}
+            {% for field in _field_all %}
+              <option value="{{ field | e }}">{{ field }}</option>
+            {% endfor %}
           </select>
         </label>
         <label class="small">Action
           <select class="input" data-role="deid-filter-action" style="min-width:10rem">
             <option value="all">All</option>
+            {% for action in (r.action_options or []) %}
+              <option value="{{ action | e }}">{{ action }}</option>
+            {% endfor %}
           </select>
         </label>
         <label class="small" style="flex:1 1 320px">Value
