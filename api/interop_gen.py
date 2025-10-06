@@ -2314,6 +2314,7 @@ async def api_deidentify_summary(request: Request):
                 "subcomponent": sub_no or None,
                 "logic": logic_lookup.get((seg, field_no, comp_no, sub_no), "—"),
                 "applied": applied,
+                "total": total_messages,
                 "pct": pct,
             }
         )
