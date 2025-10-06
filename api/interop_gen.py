@@ -2070,6 +2070,49 @@ def _extract_deid_targets_from_template(template: Any) -> list[dict[str, Any]]:
     return targets
 
 
+def _deid_action_and_logic(rule: dict[str, Any]) -> tuple[str, str]:
+    """Return (action, logic) labels for a de-identification rule."""
+    if not isinstance(rule, dict):
+        return ("—", "—")
+
+    action_raw = (
+        rule.get("action")
+        or rule.get("type")
+        or rule.get("op")
+        or rule.get("name")
+        or "—"
+    )
+    action = str(action_raw).strip().upper().replace("_", " ") or "—"
+
+    logic_value: str | None = None
+    for key in (
+        "with",
+        "value",
+        "pattern",
+        "format",
+        "mask",
+        "digits",
+        "salt",
+        "days",
+        "offset",
+        "min",
+        "max",
+        "prefix",
+        "suffix",
+        "param",
+        "arg",
+        "argument",
+    ):
+        if key in rule and rule[key] not in (None, "", []):
+            value = rule[key]
+            if isinstance(value, (list, tuple, set)):
+                value = ", ".join(str(item) for item in value)
+            logic_value = f"{key}: {value}"
+            break
+
+    return (action, logic_value or "—")
+
+
 def _compute_deid_coverage(before: str, after: str) -> tuple[dict[tuple[str, int, int, int], set[int]], int]:
     coverage: dict[tuple[str, int, int, int], set[int]] = {}
     before_messages = _split_hl7_messages(before)
@@ -2287,6 +2330,31 @@ async def api_deidentify_summary(request: Request):
         ): target.get("logic") or "—"
         for target in template_targets
     }
+
+    rule_index: dict[tuple[str, int, int, int], dict[str, Any]] = {}
+    if isinstance(template, dict):
+        for bucket in ("rules", "targets", "items"):
+            maybe_rules = template.get(bucket)
+            if not isinstance(maybe_rules, list):
+                continue
+            for rule in maybe_rules:
+                if not isinstance(rule, dict):
+                    continue
+                seg = str(rule.get("segment") or rule.get("seg") or "").strip().upper()
+                if not seg:
+                    continue
+                field_no = _normalize_index(
+                    rule.get("field") or rule.get("field_no") or rule.get("field_index")
+                )
+                if field_no <= 0:
+                    continue
+                comp_no = _normalize_index(
+                    rule.get("component") or rule.get("component_index")
+                )
+                sub_no = _normalize_index(
+                    rule.get("subcomponent") or rule.get("subcomponent_index")
+                )
+                rule_index[(seg, field_no, comp_no, sub_no)] = rule
     logic_map = _build_logic_map(raw_changes)
     for key, value in logic_map.items():
         if value:
@@ -2306,13 +2374,19 @@ async def api_deidentify_summary(request: Request):
             continue
         applied = len(coverage_map.get((seg, field_no, comp_no, sub_no), set()))
         pct = round(100.0 * applied / denominator) if denominator else 0
+        rule = rule_index.get((seg, field_no, comp_no, sub_no))
+        action_label, rule_logic = _deid_action_and_logic(rule)
+        logic_text = logic_lookup.get((seg, field_no, comp_no, sub_no), "—")
+        if not logic_text or logic_text == "—":
+            logic_text = rule_logic
         rows.append(
             {
                 "segment": seg,
                 "field": field_no,
                 "component": comp_no or None,
                 "subcomponent": sub_no or None,
-                "logic": logic_lookup.get((seg, field_no, comp_no, sub_no), "—"),
+                "action": action_label,
+                "logic": logic_text or "—",
                 "applied": applied,
                 "total": total_messages,
                 "pct": pct,
@@ -2323,7 +2397,7 @@ async def api_deidentify_summary(request: Request):
     if "text/html" in accept:
         return templates.TemplateResponse(
             "ui/interop/_deid_coverage.html",
-            {"request": request, "rows": rows, "total": total_messages},
+            {"request": request, "r": {"rows": rows, "total_messages": total_messages}},
         )
     return JSONResponse(
         {

@@ -1,49 +1,43 @@
-{# expects: rows=[{segment,field,component,subcomponent,logic,applied,total,total_messages,pct?}], total #}
-<details class="mini-report" data-autoclose open>
-  <summary>De‑identification report</summary>
-  {% if not rows or rows|length == 0 %}
-    <div class="muted small">No coverage recorded for this run.</div>
-  {% else %}
-    <p class="small muted" style="margin:.25rem 0 .5rem 0">Coverage across {{ total }} message{{ 's' if total != 1 else '' }}.</p>
-    <div class="scrollbox">
-      <table style="width:100%;border-collapse:collapse;font-size:.95rem">
-        <thead>
-          <tr style="text-align:left;border-bottom:1px solid var(--color-border,#253247)">
-            <th style="padding:.5rem">Segment</th>
-            <th style="padding:.5rem">Field</th>
-            <th style="padding:.5rem">Comp</th>
-            <th style="padding:.5rem">Subcomp</th>
-            <th style="padding:.5rem">Logic</th>
-            <th style="padding:.5rem;text-align:right">Total Messages</th>
-          </tr>
-        </thead>
-        <tbody>
-        {% for r in rows %}
-          {% set _logic = r.logic or r.logic_text %}
-          {% if not _logic %}
-            {% set _rules = deid.rules or deid.rulebook or r.rules or [] %}
-            {% for rule in _rules %}
-              {% if (rule.segment == r.segment)
-                    and (rule.field == r.field)
-                    and ((rule.component or none) == (r.component or none))
-                    and ((rule.subcomponent or none) == (r.subcomponent or none))
-                    and not logic_ns.text %}
-                {% set logic_ns.text = (rule.action | upper) ~ (': ' ~ rule.param if rule.param else '') %}
-              {% endif %}
+<section class="deid-coverage">
+  <details open class="card" style="padding:0.75rem">
+    <summary class="text-h4" style="cursor:pointer">
+      De-identification report
+    </summary>
+    {% set _rows = (r.rows or r.data or []) %}
+    {% set _total = r.total_messages or r.msg_total or r.total or 0 %}
+    {% if _rows and _rows|length > 0 %}
+      <p class="text-small muted" style="margin:.5rem 0 .75rem">
+        Coverage across {{ _total }} message{{ '' if _total == 1 else 's' }}.
+      </p>
+      <div class="scrollbox">
+        <table style="width:100%;border-collapse:collapse;font-size:.9rem">
+          <thead>
+            <tr style="text-align:left;border-bottom:1px solid var(--color-border, #2b3345)">
+              <th style="padding:.5rem">Segment</th>
+              <th style="padding:.5rem">Field</th>
+              <th style="padding:.5rem">Comp</th>
+              <th style="padding:.5rem">Subcomp</th>
+              <th style="padding:.5rem">Action</th>
+              <th style="padding:.5rem">Logic</th>
+              <th style="padding:.5rem">Total Messages</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for it in _rows %}
+              <tr style="border-bottom:1px solid var(--color-border, #2b3345)">
+                <td style="padding:.5rem"><code class="mono">{{ it.segment or '—' }}</code></td>
+                <td style="padding:.5rem"><code class="mono">{{ it.field if it.field is not none else '—' }}</code></td>
+                <td style="padding:.5rem"><code class="mono">{{ it.component if it.component is not none else '—' }}</code></td>
+                <td style="padding:.5rem"><code class="mono">{{ it.subcomponent if it.subcomponent is not none else '—' }}</code></td>
+                <td style="padding:.5rem">{{ it.action or '—' }}</td>
+                <td style="padding:.5rem">{{ it.logic or '—' }}</td>
+                <td style="padding:.5rem">{{ it.applied | default(0) }}/{{ _total }}</td>
+              </tr>
             {% endfor %}
-            {% set _logic = logic_ns.text %}
-          {% endif %}
-          <tr style="border-bottom:1px solid var(--color-border,#1b2436)">
-            <td style="padding:.5rem"><code class="mono">{{ r.segment }}</code></td>
-            <td style="padding:.5rem">{{ r.field }}</td>
-            <td style="padding:.5rem">{{ r.component if r.component is not none else '—' }}</td>
-            <td style="padding:.5rem">{{ r.subcomponent if r.subcomponent is not none else '—' }}</td>
-            <td style="padding:.5rem">{{ _logic or '—' }}</td>
-            <td style="padding:.5rem;text-align:right"><code class="mono">{{ r.applied }}/{{ r.total or total }}</code></td>
-          </tr>
-        {% endfor %}
-        </tbody>
-      </table>
-    </div>
-  {% endif %}
-</details>
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <p class="muted" style="margin-top:.75rem">Run de-identify to see coverage by rule.</p>
+    {% endif %}
+  </details>
