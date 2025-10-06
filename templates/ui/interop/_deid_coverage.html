@@ -22,7 +22,6 @@
           {% set _logic = r.logic or r.logic_text %}
           {% if not _logic %}
             {% set _rules = deid.rules or deid.rulebook or r.rules or [] %}
-            {% set logic_ns = namespace(text='') %}
             {% for rule in _rules %}
               {% if (rule.segment == r.segment)
                     and (rule.field == r.field)
