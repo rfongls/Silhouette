@@ -1,39 +1,38 @@
-<section class="deid-coverage">
+<section id="deid-coverage" class="deid-coverage" hx-swap-oob="outerHTML">
   <details open class="card" style="padding:0.75rem">
     <summary class="text-h4" style="cursor:pointer">
       De-identification report
     </summary>
-    {% set _rows = (r.rows or r.data or []) %}
-    {% set _total = r.total_messages or r.msg_total or r.total or 0 %}
+    {% set _rows  = (r.rows or r.data or []) %}
+    {% set _total =  r.total_messages or r.msg_total or r.total or 0 %}
     {% if _rows and _rows|length > 0 %}
-      <p class="text-small muted" style="margin:.5rem 0 .75rem">
-        Coverage across {{ _total }} message{{ '' if _total == 1 else 's' }}.
-      </p>
-      <!-- Filter row: Segment → Field (scoped) → Action (scoped) + parameter Value -->
-      <div class="card mt" style="padding:.5rem;display:flex;gap:.5rem;flex-wrap:wrap;align-items:center">
+      <p class="text-small muted" style="margin:.5rem 0 .75rem">Coverage across {{ _total }} message{{ '' if _total == 1 else 's' }}.</p>
+
+      <!-- Filter bar -->
+      <div class="card" style="padding:.5rem;display:flex;gap:.5rem;flex-wrap:wrap;align-items:center;margin-bottom:.5rem">
         <label class="small">Segment
-          <select id="deid-filter-seg" class="input" style="min-width:8rem">
+          <select class="input" id="deid-filter-seg" style="min-width:8rem">
             <option value="all">All</option>
           </select>
         </label>
         <label class="small">Field
-          <select id="deid-filter-field" class="input" style="min-width:6rem">
+          <select class="input" id="deid-filter-field" style="min-width:8rem">
             <option value="all">All</option>
           </select>
         </label>
         <label class="small">Action
-          <select id="deid-filter-action" class="input" style="min-width:10rem">
+          <select class="input" id="deid-filter-action" style="min-width:10rem">
             <option value="all">All</option>
           </select>
         </label>
         <label class="small" style="flex:1 1 320px">Value
-          <input id="deid-filter-value" class="input" placeholder="Parameter (LIKE match)…"/>
+          <input class="input" id="deid-filter-value" placeholder="Find parameter (e.g., date, name, mask…)" />
         </label>
         <span class="muted small">Across {{ _total }} message{{ '' if _total == 1 else 's' }}.</span>
       </div>
-      <div id="deid-filter-note" class="muted small" style="margin:.5rem 0 .25rem; display:none;"></div>
+
       <div class="scrollbox">
-        <table id="deid-table" style="width:100%;border-collapse:collapse;font-size:.9rem">
+        <table style="width:100%;border-collapse:collapse;font-size:.9rem">
           <thead>
             <tr style="text-align:left;border-bottom:1px solid var(--color-border, #2b3345)">
               <th style="padding:.5rem">Segment</th>
@@ -45,244 +44,98 @@
               <th style="padding:.5rem">Total Messages</th>
             </tr>
           </thead>
-          <tbody id="deid-body">
-            {% for it in _rows %}
-              <tr
-                data-segment="{{ it.segment or '' }}"
-                data-field="{{ it.field if it.field is not none else '' }}"
-                data-action="{{ (it.action or '') | upper }}"
-                data-logic="{{ (it.logic or '') | lower }}"
-                style="border-bottom:1px solid var(--color-border, #2b3345)"
-              >
-                <td style="padding:.5rem"><code class="mono">{{ it.segment or '—' }}</code></td>
-                <td style="padding:.5rem"><code class="mono">{{ it.field if it.field is not none else '—' }}</code></td>
-                <td style="padding:.5rem"><code class="mono">{{ it.component if it.component is not none else '—' }}</code></td>
-                <td style="padding:.5rem"><code class="mono">{{ it.subcomponent if it.subcomponent is not none else '—' }}</code></td>
-                <td style="padding:.5rem">{{ it.action or '—' }}</td>
-                <td style="padding:.5rem">{{ it.logic or '—' }}</td>
-                <td style="padding:.5rem">{{ it.applied | default(0) }}/{{ _total }}</td>
-              </tr>
-            {% endfor %}
-          </tbody>
+          <tbody id="deid-tbody"></tbody>
         </table>
       </div>
-      <!-- JSON payload for client-side filtering; no extra network calls -->
-      <script type="application/json" id="deid-rows-json">{{ _rows | tojson }}</script>
-      <script>
-        (function(){
-          const rowsEl = document.getElementById('deid-rows-json');
-          let rows = [];
-
-          try { rows = JSON.parse(rowsEl.textContent || '[]') || []; } catch (e) { rows = []; }
-          const segSel = document.getElementById('deid-filter-seg');
-          const fldSel = document.getElementById('deid-filter-field');
-          const actSel = document.getElementById('deid-filter-action');
-          const valInp = document.getElementById('deid-filter-value');
-          const noteEl = document.getElementById('deid-filter-note');
-          const body = document.getElementById('deid-body');
-          const bySeg = new Map();
-          const bySegField = new Map();
-          const segSet = new Set();
-          for (const r of rows) {
-            if (!r) continue;
-            const seg = String(r.segment || '');
-            const field = String(r.field ?? '');
-            const action = String((r.action || '')).toUpperCase();
-            if (seg) segSet.add(seg);
-            if (seg) {
-              if (!bySeg.has(seg)) bySeg.set(seg, new Set());
-              if (field) bySeg.get(seg).add(field);
-            }
-            if (seg && field) {
-              const key = seg + '|' + field;
-              if (!bySegField.has(key)) bySegField.set(key, new Set());
-              if (action) bySegField.get(key).add(action);
-            }
-          }
-
-          Array.from(segSet).sort().forEach(seg => {
-            const option = document.createElement('option');
-            option.value = seg;
-            option.textContent = seg;
-            segSel.appendChild(option);
-          });
-
-          function populateFields(segValue) {
-            fldSel.innerHTML = '<option value="all">All</option>';
-            actSel.innerHTML = '<option value="all">All</option>';
-            if (segValue === 'all') {
-              const allFields = new Set();
-              for (const set of bySeg.values()) {
-                for (const f of set) allFields.add(f);
-              }
-              Array.from(allFields).sort((a, b) => parseInt(a, 10) - parseInt(b, 10)).forEach(field => {
-                const option = document.createElement('option');
-                option.value = field;
-                option.textContent = field;
-                fldSel.appendChild(option);
-              });
-              const allActions = new Set(rows.map(r => String((r.action || '')).toUpperCase()).filter(Boolean));
-              Array.from(allActions).sort().forEach(action => {
-                const option = document.createElement('option');
-                option.value = action;
-                option.textContent = action;
-                actSel.appendChild(option);
-              });
-              return;
-            }
-            const fields = bySeg.get(segValue) || new Set();
-            Array.from(fields).sort((a, b) => parseInt(a, 10) - parseInt(b, 10)).forEach(field => {
-              const option = document.createElement('option');
-              option.value = field;
-              option.textContent = field;
-              fldSel.appendChild(option);
-            });
-            const actions = new Set();
-            for (const field of fields) {
-              const key = segValue + '|' + field;
-              const set = bySegField.get(key) || new Set();
-              for (const action of set) actions.add(action);
-            }
-            Array.from(actions).sort().forEach(action => {
-              const option = document.createElement('option');
-              option.value = action;
-              option.textContent = action;
-              actSel.appendChild(option);
-            });
-          }
-
-          function populateActions(segValue, fieldValue) {
-            actSel.innerHTML = '<option value="all">All</option>';
-            if (segValue === 'all' || fieldValue === 'all') {
-              const actions = new Set();
-              for (const r of rows) {
-                if (segValue !== 'all' && String(r.segment || '') !== segValue) continue;
-                if (fieldValue !== 'all' && String(r.field ?? '') !== fieldValue) continue;
-                const action = String((r.action || '')).toUpperCase();
-                if (action) actions.add(action);
-              }
-              Array.from(actions).sort().forEach(action => {
-                const option = document.createElement('option');
-                option.value = action;
-                option.textContent = action;
-                actSel.appendChild(option);
-              });
-              return;
-            }
-            const set = bySegField.get(segValue + '|' + fieldValue) || new Set();
-            Array.from(set).sort().forEach(action => {
-              const option = document.createElement('option');
-              option.value = action;
-              option.textContent = action;
-              actSel.appendChild(option);
-            });
-          }
-
-          populateFields('all');
-
-          segSel.addEventListener('change', () => {
-            populateFields(segSel.value);
-            apply();
-          });
-          fldSel.addEventListener('change', () => {
-            populateActions(segSel.value, fldSel.value);
-            apply();
-          });
-          actSel.addEventListener('change', apply);
-          valInp.addEventListener('input', apply);
-
-          function diceSimilarity(a, b) {
-            a = (a || '').toLowerCase();
-            b = (b || '').toLowerCase();
-            if (!a && !b) return 1;
-            if (!a || !b) return 0;
-            if (b.includes(a)) return 1.0;
-            const bigrams = s => {
-              const out = [];
-              for (let i = 0; i < s.length - 1; i++) out.push(s.slice(i, i + 2));
-              return out;
-            };
-            const A = bigrams(a);
-            const B = bigrams(b);
-            if (A.length === 0 || B.length === 0) return 0;
-            const setB = new Map();
-            for (const g of B) setB.set(g, (setB.get(g) || 0) + 1);
-            let inter = 0;
-            for (const g of A) {
-              const c = setB.get(g) || 0;
-              if (c > 0) {
-                inter++;
-                setB.set(g, c - 1);
-              }
-            }
-            return (2 * inter) / (A.length + B.length);
-          }
-
-          function apply() {
-            const wantSeg = segSel.value;
-            const wantField = fldSel.value;
-            const wantAction = actSel.value;
-            const q = (valInp.value || '').trim().toLowerCase();
-
-            const rowsInDom = Array.from(body.querySelectorAll('tr'));
-            const inScope = [];
-            for (const tr of rowsInDom) {
-              const seg = tr.getAttribute('data-segment') || '';
-              const fld = tr.getAttribute('data-field') || '';
-              const act = tr.getAttribute('data-action') || '';
-              if (wantSeg !== 'all' && seg !== wantSeg) {
-                tr.style.display = 'none';
-                continue;
-              }
-              if (wantField !== 'all' && fld !== wantField) {
-                tr.style.display = 'none';
-                continue;
-              }
-              if (wantAction !== 'all' && act !== wantAction) {
-                tr.style.display = 'none';
-                continue;
-              }
-              inScope.push(tr);
-            }
-            const hits = [];
-            if (q) {
-              for (const tr of inScope) {
-                const logic = tr.getAttribute('data-logic') || '';
-                if (logic.includes(q)) {
-                  const score = 1 + diceSimilarity(q, logic);
-                  hits.push({ tr, score });
-                }
-              }
-            }
-
-            if (q && hits.length > 0) {
-              noteEl.style.display = 'none';
-              hits.sort((a, b) => b.score - a.score);
-              for (const tr of rowsInDom) tr.style.display = 'none';
-              const frag = document.createDocumentFragment();
-              for (const { tr } of hits) {
-                tr.style.display = '';
-                frag.appendChild(tr);
-              }
-              body.appendChild(frag);
-              return;
-            }
-            if (q && hits.length === 0) {
-              noteEl.textContent = 'No parameter match; showing available actions/parameters for the current selection.';
-              noteEl.style.display = '';
-            } else {
-              noteEl.style.display = 'none';
-            }
-
-            for (const tr of rowsInDom) {
-              tr.style.display = inScope.includes(tr) ? '' : 'none';
-            }
-          }
-          apply();
-        })();
-      </script>
     {% else %}
       <p class="muted" style="margin-top:.75rem">Run de-identify to see coverage by rule.</p>
     {% endif %}
   </details>
+
+  <!-- JSON payload for the client-side renderer (scoped to this section) -->
+  <script type="application/json" data-role="deid-rows" data-total="{{ _total }}">{{ _rows | tojson }}</script>
+
+  <script>
+  (function(s){
+    const root   = s.closest('#deid-coverage');
+    const dataEl = root.querySelector('script[data-role="deid-rows"]');
+    const rows   = JSON.parse(dataEl.textContent || '[]');
+    const TOTAL  = parseInt(dataEl.dataset.total || '0', 10) || 0;
+
+    const segSel   = root.querySelector('#deid-filter-seg');
+    const fieldSel = root.querySelector('#deid-filter-field');
+    const actSel   = root.querySelector('#deid-filter-action');
+    const valInp   = root.querySelector('#deid-filter-value');
+    const tbody    = root.querySelector('#deid-tbody');
+
+    // Build option sets
+    const segSet  = new Set();
+    const actSet  = new Set();
+    const fieldsBySeg = new Map(); // SEG -> Set(fields)
+    for (const r of rows) {
+      if (r.segment) segSet.add(r.segment);
+      if (r.action)  actSet.add(r.action);
+      const key = r.segment || '';
+      const fset = fieldsBySeg.get(key) || new Set();
+      if (r.field != null) fset.add(String(r.field));
+      fieldsBySeg.set(key, fset);
+    }
+    // Populate selects
+    for (const seg of Array.from(segSet).sort()) {
+      const o = document.createElement('option'); o.value = seg; o.textContent = seg; segSel.appendChild(o);
+    }
+    function populateFields() {
+      const current = fieldSel.value;
+      fieldSel.innerHTML = '<option value="all">All</option>';
+      const seg = segSel.value === 'all' ? '' : segSel.value;
+      const fset = fieldsBySeg.get(seg) || new Set();
+      for (const f of Array.from(fset).sort((a,b)=>parseInt(a)-parseInt(b))) {
+        const o = document.createElement('option'); o.value = f; o.textContent = f; fieldSel.appendChild(o);
+      }
+      if ([...fieldSel.options].some(o => o.value === current)) fieldSel.value = current;
+    }
+    populateFields();
+    for (const a of Array.from(actSet).sort()) {
+      const o = document.createElement('option'); o.value = a; o.textContent = a; actSel.appendChild(o);
+    }
+
+    function like(hay, needle){
+      if (!needle) return true;
+      hay = (hay || '').toString().toLowerCase();
+      needle = needle.toString().toLowerCase().trim();
+      return hay.includes(needle);
+    }
+
+    function render(){
+      const wantSeg   = segSel.value;
+      const wantField = fieldSel.value;
+      const wantAct   = actSel.value;
+      const q         = valInp.value || '';
+      tbody.innerHTML = '';
+      for (const r of rows) {
+        if (wantSeg   !== 'all' && r.segment !== wantSeg) continue;
+        if (wantField !== 'all' && String(r.field) !== wantField) continue;
+        if (wantAct   !== 'all' && (r.action || '') !== wantAct) continue;
+        // Value textbox matches action or logic (parameter)
+        if (!like(r.logic, q) && !like(r.action, q)) continue;
+        const tr = document.createElement('tr');
+        tr.style.borderBottom = '1px solid var(--color-border, #2b3345)';
+        tr.innerHTML = `
+          <td style="padding:.5rem"><code class="mono">${r.segment || '—'}</code></td>
+          <td style="padding:.5rem"><code class="mono">${r.field ?? '—'}</code></td>
+          <td style="padding:.5rem"><code class="mono">${r.component ?? '—'}</code></td>
+          <td style="padding:.5rem"><code class="mono">${r.subcomponent ?? '—'}</code></td>
+          <td style="padding:.5rem">${r.action || '—'}</td>
+          <td style="padding:.5rem">${r.logic || '—'}</td>
+          <td style="padding:.5rem">${(r.applied||0)}/${TOTAL}</td>`;
+        tbody.appendChild(tr);
+      }
+    }
+    [segSel, fieldSel, actSel, valInp].forEach(el => el.addEventListener('input', function(){
+      if (el === segSel) populateFields();
+      render();
+    }));
+    render();
+  })(document.currentScript);
+  </script>
 </section>
