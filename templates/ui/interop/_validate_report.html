@@ -1,22 +1,61 @@
 <section class="validate-report" data-val-report>
+  {% set _r = r if r is defined else None %}
+  {% set _issues = (_r.issues if _r is not none else (issues if issues is defined else [])) %}
+  {% set _issues = _issues or [] %}
+  {% set _counts = (_r.counts if _r is not none else (counts if counts is defined else {})) %}
+  {% set _counts = _counts or {} %}
+  {% set _total_msgs = (
+        (_r.msg_total | default(None) if _r is not none else None)
+        or (_r.total_messages | default(None) if _r is not none else None)
+        or (_r.total | default(None) if _r is not none else None)
+        or (_r.message_count | default(None) if _r is not none else None)
+        or (total_messages if total_messages is defined else None)
+        or 1
+      ) %}
+  {% set _total_msgs = _total_msgs | int %}
+  {% set _raw_candidate = (_r.raw | default(None) if _r is not none else None) %}
+  {% set _raw = _raw_candidate if _raw_candidate is not none else (raw if raw is defined else {}) %}
+  {% set _validated_candidate = (_r.validated_message | default(None) if _r is not none else None) %}
+  {% set _validated_message = _validated_candidate if _validated_candidate is not none else (validated_message if validated_message is defined else '') %}
+
   <header class="validate-report__header" style="display:flex;align-items:center;justify-content:space-between;gap:0.75rem">
     <h4 class="text-h3" style="margin:0">Validation report</h4>
     <div class="validate-report__counts" style="display:flex;flex-wrap:wrap;gap:0.5rem">
-      <span class="chip" style="background:#10b981;color:#0b1e15">Passed: {{ r.counts.ok | default(0) }}</span>
-      <span class="chip" style="background:#ef4444;color:#250101">Errors: {{ r.counts.errors | default(0) }}</span>
-      <button class="btn btn-xs" type="button" onclick="(function(btn){const root=btn.closest('section.validate-report');if(!root)return;root.querySelectorAll('.row-ok,.row-error,.row-warning').forEach((row)=>{row.hidden=false;});})(this)">Show all</button>
+      <button type="button" class="chip" data-vf="passed" style="background:#10b981;color:#0b1e15">Passed: {{ _counts.ok | default(0) }}</button>
+      <button type="button" class="chip" data-vf="errors" style="background:#ef4444;color:#250101">Errors: {{ _counts.errors | default(0) }}</button>
+      <button type="button" class="chip" data-vf="all" style="background:#475569;color:#e5e7eb">Show all</button>
     </div>
   </header>
 
-  <p class="text-small" style="margin-top:0.5rem">
-    Found {{ r.counts.errors | default(0) }} error{{ 's' if (r.counts.errors | default(0)) != 1 else '' }}
-    and {{ r.counts.ok | default(0) }} successful validation{{ 's' if (r.counts.ok | default(0)) != 1 else '' }}.
-  </p>
+  {% if (_counts.errors | default(0)) or (_counts.ok | default(0)) or (_counts.warnings | default(0)) %}
+    <p class="text-small" style="margin-top:0.5rem">
+      Found {{ _counts.errors | default(0) }} error{{ 's' if (_counts.errors | default(0)) != 1 else '' }}
+      and {{ _counts.ok | default(0) }} successful validation{{ 's' if (_counts.ok | default(0)) != 1 else '' }}.
+    </p>
+  {% endif %}
 
-  {% include 'ui/interop/_validate_summary.html' %}
+  <div class="card mt" style="padding:.5rem;display:flex;gap:.5rem;flex-wrap:wrap;align-items:center">
+    <label class="small">Severity
+      <select id="val-filter-sev" class="input" style="min-width:8rem">
+        <option value="all">All</option>
+        <option value="passed">Passed</option>
+        <option value="error" selected>Error</option>
+        <option value="warning">Warning</option>
+      </select>
+    </label>
+    <label class="small">Segment
+      <select id="val-filter-seg" class="input" style="min-width:8rem">
+        <option value="all">All</option>
+      </select>
+    </label>
+    <label class="small" style="flex:1 1 240px">Search
+      <input id="val-filter-text" class="input" placeholder="Filter by rule, message, or value…" />
+    </label>
+    <span class="muted small">Across {{ _total_msgs }} message{{ '' if _total_msgs == 1 else 's' }}. Unique rows are de-duplicated by rule.</span>
+  </div>
 
   <div class="scrollbox" style="margin-top:0.75rem">
-    <table class="validate-report__table" style="width:100%;border-collapse:collapse;font-size:0.875rem">
+    <table class="validate-report__table" id="val-summary-table" style="width:100%;border-collapse:collapse;font-size:0.875rem">
       <thead>
         <tr style="text-align:left;border-bottom:1px solid var(--color-border, #d1d5db)">
           <th style="padding:0.5rem">Severity</th>
@@ -27,38 +66,167 @@
           <th style="padding:0.5rem">Subcomp</th>
           <th style="padding:0.5rem">Value</th>
           <th style="padding:0.5rem">Message</th>
+          <th style="padding:0.5rem">Count</th>
           <th style="padding:0.5rem">Total</th>
+          <th style="padding:0.5rem">%</th>
         </tr>
       </thead>
-      <tbody>
-      {% for it in r.issues %}
-        {% set severity = (it.severity | default('error')) | lower %}
-        <tr class="row-{{ severity }}" style="border-bottom:1px solid var(--color-border, #e5e7eb)">
-          <td style="padding:0.5rem">{{ 'Passed' if severity == 'ok' else (severity | capitalize) }}</td>
-          <td style="padding:0.5rem"><code class="mono">{{ it.code or it.rule or '—' }}</code></td>
-          <td style="padding:0.5rem"><code class="mono">{{ it.segment or '—' }}</code></td>
-          <td style="padding:0.5rem"><code class="mono">{{ it.field if it.field is not none else '—' }}</code></td>
-          <td style="padding:0.5rem"><code class="mono">{{ it.component if it.component is not none else '—' }}</code></td>
-          <td style="padding:0.5rem"><code class="mono">{{ it.subcomponent if it.subcomponent is not none else '—' }}</code></td>
-          <td style="padding:0.5rem"><code class="mono">{{ it.value if it.value is not none else '—' }}</code></td>
-          <td style="padding:0.5rem">{{ it.message or '—' }}</td>
-          <td style="padding:0.5rem">{{ r.total_messages | default(1) }}</td>
-        </tr>
-      {% else %}
-        <tr>
-          <td colspan="9" style="padding:0.75rem" class="muted">No issues to display.</td>
-        </tr>
-      {% endfor %}
-      </tbody>
+      <tbody id="val-summary-body"></tbody>
     </table>
   </div>
 
   <details class="mt" style="margin-top:0.75rem">
     <summary class="text-small">Show raw JSON</summary>
-    <pre class="codepane mono" style="margin-top:0.5rem">{{ r.raw | tojson(indent=2) }}</pre>
+    <pre class="codepane mono" style="margin-top:0.5rem">{{ _raw | tojson(indent=2) }}</pre>
   </details>
 
-  <textarea id="validated-message" hidden>{{ r.validated_message }}</textarea>
+  <script type="application/json" id="val-issues-json" data-total="{{ _total_msgs }}">{{ _issues | tojson }}</script>
+
+  <script>
+    (function(){
+      const dataEl = document.getElementById('val-issues-json');
+      let issues = [];
+      try { issues = JSON.parse(dataEl.textContent || '[]') || []; } catch (err) { issues = []; }
+      const TOTAL = parseInt(dataEl.dataset.total || '1', 10) || 1;
+
+      const norm = (item) => ({
+        severity: (item.severity || '').toString().toLowerCase(),
+        code: (item.code || item.rule || '').toString(),
+        segment: (item.segment || '').toString(),
+        field: (item.field ?? '').toString(),
+        component: (item.component ?? '').toString(),
+        subcomponent: (item.subcomponent ?? '').toString(),
+        value: (item.value ?? '').toString(),
+        message: (item.message ?? '').toString()
+      });
+
+      const rows = new Map();
+      const segments = new Set();
+
+      for (const raw of issues) {
+        const item = norm(raw);
+        const severity = item.severity === 'ok' ? 'passed' : (item.severity || 'error');
+        const key = [severity, item.code, item.segment, item.field, item.component, item.subcomponent, item.message].join('|');
+        let row = rows.get(key);
+        if (!row) {
+          row = {
+            severity,
+            code: item.code,
+            segment: item.segment,
+            field: item.field,
+            component: item.component,
+            subcomponent: item.subcomponent,
+            valuesSet: new Set(),
+            message: item.message,
+            count: 0
+          };
+          rows.set(key, row);
+        }
+        if (item.segment) segments.add(item.segment);
+        if (item.value) row.valuesSet.add(item.value);
+        row.count += 1;
+        if (!row.message && item.message) {
+          row.message = item.message;
+        }
+      }
+
+      const body = document.getElementById('val-summary-body');
+      body.innerHTML = '';
+
+      const toPct = (n) => {
+        if (!TOTAL) return '0%';
+        return Math.round((n / TOTAL) * 100) + '%';
+      };
+
+      const cap = 8;
+      const list = Array.from(rows.values()).sort((a, b) => {
+        const order = (x) => x.severity === 'error' ? 0 : (x.severity === 'warning' ? 1 : 2);
+        return order(a) - order(b)
+          || (a.segment || '').localeCompare(b.segment || '')
+          || (parseInt(a.field || '0', 10) - parseInt(b.field || '0', 10))
+          || (a.code || '').localeCompare(b.code || '');
+      });
+
+      for (const row of list) {
+        const values = Array.from(row.valuesSet);
+        const shown = values.slice(0, cap).join(', ');
+        const more = values.length > cap ? `  (+${values.length - cap} more)` : '';
+        const severityLabel = row.severity === 'passed' ? 'Passed' : (row.severity === 'warning' ? 'Warning' : 'Error');
+
+        const tr = document.createElement('tr');
+        tr.className = row.severity;
+        tr.setAttribute('data-severity', row.severity);
+        tr.setAttribute('data-segment', row.segment || '');
+        tr.setAttribute('data-text', [row.code, row.segment, row.field, row.component, row.subcomponent, shown, row.message].join(' ').toLowerCase());
+        tr.innerHTML = `
+          <td style="padding:0.5rem">${severityLabel}</td>
+          <td style="padding:0.5rem"><code class="mono">${row.code || '—'}</code></td>
+          <td style="padding:0.5rem"><code class="mono">${row.segment || '—'}</code></td>
+          <td style="padding:0.5rem"><code class="mono">${row.field || '—'}</code></td>
+          <td style="padding:0.5rem"><code class="mono">${row.component || '—'}</code></td>
+          <td style="padding:0.5rem"><code class="mono">${row.subcomponent || '—'}</code></td>
+          <td style="padding:0.5rem">${shown || '—'}${more}</td>
+          <td style="padding:0.5rem">${row.message || '—'}</td>
+          <td style="padding:0.5rem">${row.count}</td>
+          <td style="padding:0.5rem">${row.count}/${TOTAL}</td>
+          <td style="padding:0.5rem">${toPct(row.count)}</td>
+        `;
+        body.appendChild(tr);
+      }
+
+      if (!list.length) {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td colspan="11" class="muted" style="padding:.75rem">No issues to display.</td>`;
+        body.appendChild(tr);
+      }
+
+      const segSelect = document.getElementById('val-filter-seg');
+      Array.from(segments).sort().forEach((segment) => {
+        const option = document.createElement('option');
+        option.value = segment;
+        option.textContent = segment;
+        segSelect.appendChild(option);
+      });
+
+      const chip = (name) => document.querySelector(`.chip[data-vf="${name}"]`);
+      const selSev = document.getElementById('val-filter-sev');
+      const selSeg = document.getElementById('val-filter-seg');
+      const txt = document.getElementById('val-filter-text');
+      let chipMode = 'error';
+
+      function applyFilter() {
+        const wantSev = selSev.value;
+        const wantSeg = selSeg.value;
+        const query = (txt.value || '').trim().toLowerCase();
+        for (const tr of body.querySelectorAll('tr')) {
+          const sev = tr.getAttribute('data-severity');
+          const seg = tr.getAttribute('data-segment');
+          const text = tr.getAttribute('data-text') || '';
+          let show = true;
+          if (chipMode !== 'all') show = show && (sev === chipMode);
+          if (wantSev !== 'all') show = show && (sev === wantSev);
+          if (wantSeg !== 'all') show = show && (seg === wantSeg);
+          if (query) show = show && text.includes(query);
+          tr.style.display = show ? '' : 'none';
+        }
+        for (const btn of document.querySelectorAll('.validate-report__counts .chip')) {
+          const active = (chipMode === 'all' && btn.dataset.vf === 'all') || btn.dataset.vf === chipMode;
+          btn.style.outline = active ? '2px solid var(--color-border, #94a3b8)' : 'none';
+          btn.setAttribute('aria-pressed', active ? 'true' : 'false');
+        }
+      }
+
+      [selSev, selSeg, txt].forEach((el) => el.addEventListener('input', applyFilter));
+      chip('passed').addEventListener('click', () => { chipMode = 'passed'; applyFilter(); });
+      chip('errors').addEventListener('click', () => { chipMode = 'error'; applyFilter(); });
+      chip('all').addEventListener('click', () => { chipMode = 'all'; applyFilter(); });
+
+      selSev.value = 'error';
+      applyFilter();
+    })();
+  </script>
+
+  <textarea id="validated-message" hidden>{{ _validated_message }}</textarea>
   <script>
     window.PipelineContext = window.PipelineContext || { message: '' };
     window.PipelineContext.setMessage = function(msg) {
