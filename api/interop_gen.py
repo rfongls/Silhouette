@@ -2070,6 +2070,49 @@ def _extract_deid_targets_from_template(template: Any) -> list[dict[str, Any]]:
     return targets
 
 
+def _deid_action_and_logic(rule: dict[str, Any]) -> tuple[str, str]:
+    """Return (action, logic) labels for a de-identification rule."""
+    if not isinstance(rule, dict):
+        return ("—", "—")
+
+    action_raw = (
+        rule.get("action")
+        or rule.get("type")
+        or rule.get("op")
+        or rule.get("name")
+        or "—"
+    )
+    action = str(action_raw).strip().upper().replace("_", " ") or "—"
+
+    logic_value: str | None = None
+    for key in (
+        "with",
+        "value",
+        "pattern",
+        "format",
+        "mask",
+        "digits",
+        "salt",
+        "days",
+        "offset",
+        "min",
+        "max",
+        "prefix",
+        "suffix",
+        "param",
+        "arg",
+        "argument",
+    ):
+        if key in rule and rule[key] not in (None, "", []):
+            value = rule[key]
+            if isinstance(value, (list, tuple, set)):
+                value = ", ".join(str(item) for item in value)
+            logic_value = f"{key}: {value}"
+            break
+
+    return (action, logic_value or "—")
+
+
 def _compute_deid_coverage(before: str, after: str) -> tuple[dict[tuple[str, int, int, int], set[int]], int]:
     coverage: dict[tuple[str, int, int, int], set[int]] = {}
     before_messages = _split_hl7_messages(before)
@@ -2287,6 +2330,31 @@ async def api_deidentify_summary(request: Request):
         ): target.get("logic") or "—"
         for target in template_targets
     }
+
+    rule_index: dict[tuple[str, int, int, int], dict[str, Any]] = {}
+    if isinstance(template, dict):
+        for bucket in ("rules", "targets", "items"):
+            maybe_rules = template.get(bucket)
+            if not isinstance(maybe_rules, list):
+                continue
+            for rule in maybe_rules:
+                if not isinstance(rule, dict):
+                    continue
+                seg = str(rule.get("segment") or rule.get("seg") or "").strip().upper()
+                if not seg:
+                    continue
+                field_no = _normalize_index(
+                    rule.get("field") or rule.get("field_no") or rule.get("field_index")
+                )
+                if field_no <= 0:
+                    continue
+                comp_no = _normalize_index(
+                    rule.get("component") or rule.get("component_index")
+                )
+                sub_no = _normalize_index(
+                    rule.get("subcomponent") or rule.get("subcomponent_index")
+                )
+                rule_index[(seg, field_no, comp_no, sub_no)] = rule
     logic_map = _build_logic_map(raw_changes)
     for key, value in logic_map.items():
         if value:
@@ -2306,13 +2374,19 @@ async def api_deidentify_summary(request: Request):
             continue
         applied = len(coverage_map.get((seg, field_no, comp_no, sub_no), set()))
         pct = round(100.0 * applied / denominator) if denominator else 0
+        rule = rule_index.get((seg, field_no, comp_no, sub_no))
+        action_label, rule_logic = _deid_action_and_logic(rule)
+        logic_text = logic_lookup.get((seg, field_no, comp_no, sub_no), "—")
+        if not logic_text or logic_text == "—":
+            logic_text = rule_logic
         rows.append(
             {
                 "segment": seg,
                 "field": field_no,
                 "component": comp_no or None,
                 "subcomponent": sub_no or None,
-                "logic": logic_lookup.get((seg, field_no, comp_no, sub_no), "—"),
+                "action": action_label,
+                "logic": logic_text or "—",
                 "applied": applied,
                 "total": total_messages,
                 "pct": pct,
@@ -2323,7 +2397,7 @@ async def api_deidentify_summary(request: Request):
     if "text/html" in accept:
         return templates.TemplateResponse(
             "ui/interop/_deid_coverage.html",
-            {"request": request, "rows": rows, "total": total_messages},
+            {"request": request, "r": {"rows": rows, "total_messages": total_messages}},
         )
     return JSONResponse(
         {
@@ -2382,11 +2456,68 @@ async def api_validate(request: Request):
     model["show"] = show
 
     if _wants_validation_html(request, format_hint=format_hint):
+        issues_payload = model.get("issues") or []
+        total_payload = (
+            model.get("total_messages")
+            or model.get("msg_total")
+            or model.get("total")
+            or model.get("message_count")
+            or 1
+        )
+        def _to_int(value: Any) -> int:
+            try:
+                return int(value)
+            except (TypeError, ValueError):
+                return 0
+
+        counts_payload = model.get("counts") or {}
+        if not counts_payload:
+            counts_payload = {
+                "errors": sum(1 for row in issues_payload if (row.get("severity") or "").lower() == "error"),
+                "ok": sum(1 for row in issues_payload if (row.get("severity") or "").lower() in ("ok", "passed")),
+                "warnings": sum(1 for row in issues_payload if (row.get("severity") or "").lower() == "warning"),
+            }
+        else:
+            counts_payload = {
+                "errors": _to_int(
+                    counts_payload.get("errors")
+                    or counts_payload.get("error")
+                    or counts_payload.get("fail")
+                    or 0
+                ),
+                "ok": _to_int(
+                    counts_payload.get("ok")
+                    or counts_payload.get("pass")
+                    or counts_payload.get("passed")
+                    or 0
+                ),
+                "warnings": _to_int(
+                    counts_payload.get("warnings")
+                    or counts_payload.get("warning")
+                    or 0
+                ),
+            }
+        if not isinstance(counts_payload.get("errors"), int):
+            counts_payload["errors"] = _to_int(counts_payload.get("errors"))
+        if not isinstance(counts_payload.get("ok"), int):
+            counts_payload["ok"] = _to_int(counts_payload.get("ok"))
+        if not isinstance(counts_payload.get("warnings"), int):
+            counts_payload["warnings"] = _to_int(counts_payload.get("warnings"))
+        payload = dict(model)
+        payload.update(
+            {
+                "issues": issues_payload,
+                "counts": counts_payload,
+                "total_messages": max(int(total_payload), 1),
+                "raw": model.get("raw") or model,
+                "validated_message": model.get("validated_message") or text,
+            }
+        )
         return templates.TemplateResponse(
             "ui/interop/_validate_report.html",
             {
                 "request": request,
-                "r": model,
+                "r": payload,
                 "validate_api": str(request.url_for("api_validate")),
             },
         )
