@@ -2,9 +2,9 @@
   <header class="validate-report__header" style="display:flex;align-items:center;justify-content:space-between;gap:0.75rem">
     <h4 class="text-h3" style="margin:0">Validation report</h4>
     <div class="validate-report__counts" style="display:flex;flex-wrap:wrap;gap:0.5rem">
-      <button type="button" class="chip" data-vf="passed" style="background:#10b981;color:#0b1e15">Passed: {{ r.counts.ok | default(0) }}</button>
-      <button type="button" class="chip" data-vf="errors" style="background:#ef4444;color:#250101">Errors: {{ r.counts.errors | default(0) }}</button>
-      <button type="button" class="chip" data-vf="all" style="background:#475569;color:#e5e7eb">Show all</button>
+      <span class="chip" style="background:#10b981;color:#0b1e15">Passed: {{ r.counts.ok | default(0) }}</span>
+      <span class="chip" style="background:#ef4444;color:#250101">Errors: {{ r.counts.errors | default(0) }}</span>
+      <span class="chip" style="background:#475569;color:#e5e7eb">Show all</span>
     </div>
   </header>
 
@@ -17,25 +17,39 @@
 
   {% set _total_msgs = r.msg_total or r.total_messages or r.total or r.message_count or 1 %}
 
-  <div class="card mt" style="padding:.5rem;display:flex;gap:.5rem;flex-wrap:wrap;align-items:center">
-    <label class="small">Severity
-      <select id="val-filter-sev" class="input" style="min-width:8rem">
-        <option value="all">All</option>
-        <option value="passed">Passed</option>
-        <option value="error">Error</option>
-        <option value="warning">Warning</option>
-      </select>
-    </label>
-    <label class="small">Segment
-      <select id="val-filter-seg" class="input" style="min-width:8rem">
-        <option value="all">All</option>
-      </select>
-    </label>
-    <label class="small" style="flex:1 1 240px">Search
-      <input id="val-filter-text" class="input" placeholder="Filter by rule, message, or value…" />
-    </label>
-    <span class="muted small">Across {{ _total_msgs }} message{{ '' if _total_msgs == 1 else 's' }}. Rows are de-duplicated by rule.</span>
-  </div>
+  {# Build aggregated rows server-side so HTMX swaps render correctly #}
+  {% set ns = namespace(groups={}) %}
+  {% for it in r.issues %}
+    {% set sev = (it.severity | default('error')) | lower %}
+    {% set sev = 'passed' if sev == 'ok' else sev %}
+    {% set code = it.code or it.rule or '' %}
+    {% set seg = it.segment or '' %}
+    {% set fld = (it.field is not none and it.field) or '' %}
+    {% set cmp = (it.component is not none and it.component) or '' %}
+    {% set sub = (it.subcomponent is not none and it.subcomponent) or '' %}
+    {% set ord = 0 if sev == 'error' else (1 if sev == 'warning' else 2) %}
+    {% set key = (ord|string) ~ '|' ~ sev ~ '|' ~ code ~ '|' ~ seg ~ '|' ~ fld ~ '|' ~ cmp ~ '|' ~ sub %}
+    {% set group = ns.groups.get(key) %}
+    {% if not group %}
+      {% set group = {
+        'severity': sev,
+        'code': code,
+        'segment': seg,
+        'field': fld,
+        'component': cmp,
+        'subcomponent': sub,
+        'values': [],
+        'message': it.message or '',
+        'count': 0
+      } %}
+    {% endif %}
+    {% if it.value is not none %}
+      {% set val = (it.value|string) %}
+      {% if val not in group.values %}{% set _ = group.values.append(val) %}{% endif %}
+    {% endif %}
+    {% set _ = group.update({'count': group.count + 1, 'message': group.message or (it.message or '')}) %}
+    {% set _ = ns.groups.update({key: group}) %}
+  {% endfor %}
 
   <div class="scrollbox" style="margin-top:0.75rem">
     <table class="validate-report__table" id="val-summary-table" style="width:100%;border-collapse:collapse;font-size:0.875rem">
@@ -54,7 +68,28 @@
           <th style="padding:0.5rem">%</th>
         </tr>
       </thead>
-      <tbody id="val-summary-body"></tbody>
+      <tbody>
+        {% for key, group in ns.groups | dictsort %}
+          {% set pct = ((100 * group.count) / _total_msgs) | round(0, 'common') | int %}
+          <tr class="row-{{ group.severity }}" style="border-bottom:1px solid var(--color-border, #e5e7eb)">
+            <td style="padding:0.5rem">{{ 'Passed' if group.severity == 'passed' else (group.severity | capitalize) }}</td>
+            <td style="padding:0.5rem"><code class="mono">{{ group.code or '—' }}</code></td>
+            <td style="padding:0.5rem"><code class="mono">{{ group.segment or '—' }}</code></td>
+            <td style="padding:0.5rem"><code class="mono">{{ group.field or '—' }}</code></td>
+            <td style="padding:0.5rem"><code class="mono">{{ group.component or '—' }}</code></td>
+            <td style="padding:0.5rem"><code class="mono">{{ group.subcomponent or '—' }}</code></td>
+            <td style="padding:0.5rem">{{ group.values | join(', ') if group.values else '—' }}</td>
+            <td style="padding:0.5rem">{{ group.message or '—' }}</td>
+            <td style="padding:0.5rem">{{ group.count }}</td>
+            <td style="padding:0.5rem">{{ group.count }}/{{ _total_msgs }}</td>
+            <td style="padding:0.5rem">{{ pct }}%</td>
+          </tr>
+        {% else %}
+          <tr>
+            <td colspan="11" class="muted" style="padding:0.75rem">No issues to display.</td>
+          </tr>
+        {% endfor %}
+      </tbody>
     </table>
   </div>
 
