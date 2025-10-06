@@ -1,0 +1,80 @@
+{#
+  De‑identify coverage summary (compact).
+  Expected context:
+    r OR result (be liberal in what we accept)
+    └── total/message_count, by_segment/segments/summary { SEG -> [items] }
+    item: field, component, subcomponent, logic|rule|reason, pct?|count?|total?
+#}
+{% set r = r or result or {} %}
+<section class="deid-summary">
+  <header class="row wrap" style="align-items:center;justify-content:space-between;gap:.75rem;margin-bottom:.5rem">
+    <h4 class="text-h3" style="margin:0">De‑identification report</h4>
+    <div class="row gap">
+      <label for="deid-logic-filter" class="sr-only">Filter by logic</label>
+      <input id="deid-logic-filter" data-deid-filter
+             class="input" type="search"
+             placeholder="Filter by logic (e.g., NAME, PHONE, ADDRESS)" />
+    </div>
+  </header>
+  {% set segmap = r.by_segment or r.segments or r.summary or {} %}
+  {% set grand_total = r.total or r.message_count or 0 %}
+  {% if segmap %}
+    {% for seg, items in segmap.items() %}
+      <details class="mt" open>
+        <summary class="text-h4" style="margin:0 0 .5rem 0">
+          {{ seg }} <span class="muted small">({{ items|length }})</span>
+        </summary>
+        <div class="scrollbox">
+          <table class="validate-report__table" style="width:100%;border-collapse:collapse;font-size:0.9rem">
+            <thead>
+              <tr style="text-align:left;border-bottom:1px solid var(--color-border,#e5e7eb)">
+                <th style="padding:.5rem">Field</th>
+                <th style="padding:.5rem">Comp</th>
+                <th style="padding:.5rem">Subcomp</th>
+                <th style="padding:.5rem">Logic</th>
+                <th style="padding:.5rem;text-align:right">%</th>
+              </tr>
+            </thead>
+            <tbody>
+            {% for it in items %}
+              {# Determine total and pct robustly #}
+              {% set it_total = (it.total if it.total is defined else grand_total) %}
+              {% if it_total == 0 %}{% set it_total = (it.count if it.count is defined else 1) %}{% endif %}
+              {% set computed_pct = (it.pct if it.pct is defined else (((it.count|default(it_total)) / (it_total|default(1))) * 100)) %}
+              {% set pct = computed_pct|round(1) %}
+              <tr data-logic="{{ (it.logic or it.rule or it.reason or '') | lower }}"
+                  style="border-bottom:1px solid var(--color-border,#eef2f7)">
+                <td style="padding:.5rem"><code class="mono">{{ it.field if it.field is not none else '—' }}</code></td>
+                <td style="padding:.5rem"><code class="mono">{{ it.component if it.component is not none else '—' }}</code></td>
+                <td style="padding:.5rem"><code class="mono">{{ it.subcomponent if it.subcomponent is not none else '—' }}</code></td>
+                <td style="padding:.5rem" class="small mono">
+                  {{ it.logic or it.rule or it.reason or '—' }}
+                </td>
+                <td style="padding:.5rem;text-align:right">{{ pct }}%</td>
+              </tr>
+            {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </details>
+    {% endfor %}
+  {% else %}
+    <div class="muted small">No coverage computed for this run.</div>
+  {% endif %}
+
+  <script>
+    (function(){
+      var root = (document.currentScript && document.currentScript.closest('#deid-report')) || document;
+      if (!root) return;
+      var input = root.querySelector('input[data-deid-filter]');
+      if (!input) return;
+      input.addEventListener('input', function(e){
+        var q = (e.target.value || '').toLowerCase().trim();
+        root.querySelectorAll('table tbody tr').forEach(function(tr){
+          var logic = (tr.getAttribute('data-logic') || '').toLowerCase();
+          tr.style.display = (!q || logic.indexOf(q) !== -1) ? '' : 'none';
+        });
+      });
+    })();
+  </script>
+</section>
