@@ -2185,6 +2185,105 @@ def _aggregate_validation_rows(
     return {"total": total, "rows": rows}
 
 
+def _summarize_validation_for_table(
+    issues: List[Dict[str, Any]] | None, total_messages: int
+) -> tuple[list[dict[str, Any]], list[str]]:
+    total = max(int(total_messages or 1), 1)
+    buckets: dict[tuple[Any, ...], dict[str, Any]] = {}
+    segments: set[str] = set()
+
+    for entry in issues or []:
+        raw_sev = (entry.get("severity") or "error").lower() or "error"
+        if raw_sev in {"ok", "info", "passed"}:
+            severity = "passed"
+        elif raw_sev == "warning":
+            severity = "warning"
+        else:
+            severity = "error"
+        code = (entry.get("code") or entry.get("rule") or "").strip()
+        segment = (entry.get("segment") or "").strip()
+        field = entry.get("field")
+        component = entry.get("component")
+        subcomponent = entry.get("subcomponent")
+        message = (entry.get("message") or "").strip()
+        key = (severity, code, segment, field, component, subcomponent, message)
+
+        bucket = buckets.get(key)
+        if not bucket:
+            bucket = {
+                "severity": severity,
+                "code": code,
+                "segment": segment,
+                "field": field,
+                "component": component,
+                "subcomponent": subcomponent,
+                "message": message,
+                "count": 0,
+                "values": set(),
+            }
+            buckets[key] = bucket
+
+        value = entry.get("value")
+        if value not in (None, ""):
+            bucket["values"].add(str(value))
+        bucket["count"] += 1
+        if segment:
+            segments.add(segment)
+        if not bucket["message"] and message:
+            bucket["message"] = message
+
+    cap = 8
+    rows: list[dict[str, Any]] = []
+    for bucket in buckets.values():
+        values = sorted(bucket["values"])
+        shown = ", ".join(values[:cap])
+        extra = max(len(values) - cap, 0)
+        pct = int(round((bucket["count"] / total) * 100.0)) if total else 0
+        search_bits = [
+            bucket.get("code") or "",
+            bucket.get("segment") or "",
+            str(bucket.get("field") or ""),
+            str(bucket.get("component") or ""),
+            str(bucket.get("subcomponent") or ""),
+            shown,
+            bucket.get("message") or "",
+        ]
+        rows.append(
+            {
+                "severity": bucket["severity"],
+                "code": bucket.get("code") or "",
+                "segment": bucket.get("segment") or "",
+                "field": bucket.get("field"),
+                "component": bucket.get("component"),
+                "subcomponent": bucket.get("subcomponent"),
+                "message": bucket.get("message") or "",
+                "count": bucket["count"],
+                "total": total,
+                "pct": pct,
+                "shown_values": shown,
+                "extra_values": extra,
+                "search_text": " ".join(search_bits).strip().lower(),
+            }
+        )
+
+    def _sort_key(row: dict[str, Any]) -> tuple[Any, ...]:
+        sev_order = 0
+        if row["severity"] == "warning":
+            sev_order = 1
+        elif row["severity"] == "passed":
+            sev_order = 2
+        return (
+            sev_order,
+            row.get("segment") or "",
+            int(row.get("field") or 0),
+            row.get("code") or "",
+            row.get("message") or "",
+        )
+
+    rows.sort(key=_sort_key)
+    return rows, sorted(segments)
+
+
 def _build_logic_map(raw_changes: Any) -> dict[tuple[str, int, int, int], str]:
     mapping: dict[tuple[str, int, int, int], str] = {}
     if not isinstance(raw_changes, list):
@@ -2447,6 +2546,9 @@ async def interop_validate_view(request: Request):
         "raw": {"issues": issues},
         "validated_message": validated_message,
     }
+    summary_rows, segment_options = _summarize_validation_for_table(issues, total_messages)
+    model["summary_rows"] = summary_rows
+    model["segment_options"] = segment_options
 
     vf = {"sev": sev or "all", "seg": seg or "all", "q": q}
 
@@ -2562,6 +2664,11 @@ async def api_validate(request: Request):
                 "validated_message": model.get("validated_message") or text,
             }
         )
+        summary_rows, segment_options = _summarize_validation_for_table(
+            issues_payload, payload["total_messages"]
+        )
+        payload["summary_rows"] = summary_rows
+        payload["segment_options"] = segment_options
         return templates.TemplateResponse(
             "ui/interop/_validate_report.html",
             {
