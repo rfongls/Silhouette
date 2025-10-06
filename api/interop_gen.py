@@ -2505,12 +2505,68 @@ async def api_validate(request: Request):
     model["show"] = show
 
     if _wants_validation_html(request, format_hint=format_hint):
+        issues_payload = model.get("issues") or []
+        total_payload = (
+            model.get("total_messages")
+            or model.get("msg_total")
+            or model.get("total")
+            or model.get("message_count")
+            or 1
+        )
+        def _to_int(value: Any) -> int:
+            try:
+                return int(value)
+            except (TypeError, ValueError):
+                return 0
+
+        counts_payload = model.get("counts") or {}
+        if not counts_payload:
+            counts_payload = {
+                "errors": sum(1 for row in issues_payload if (row.get("severity") or "").lower() == "error"),
+                "ok": sum(1 for row in issues_payload if (row.get("severity") or "").lower() in ("ok", "passed")),
+                "warnings": sum(1 for row in issues_payload if (row.get("severity") or "").lower() == "warning"),
+            }
+        else:
+            counts_payload = {
+                "errors": _to_int(
+                    counts_payload.get("errors")
+                    or counts_payload.get("error")
+                    or counts_payload.get("fail")
+                    or 0
+                ),
+                "ok": _to_int(
+                    counts_payload.get("ok")
+                    or counts_payload.get("pass")
+                    or counts_payload.get("passed")
+                    or 0
+                ),
+                "warnings": _to_int(
+                    counts_payload.get("warnings")
+                    or counts_payload.get("warning")
+                    or 0
+                ),
+            }
+        if not isinstance(counts_payload.get("errors"), int):
+            counts_payload["errors"] = _to_int(counts_payload.get("errors"))
+        if not isinstance(counts_payload.get("ok"), int):
+            counts_payload["ok"] = _to_int(counts_payload.get("ok"))
+        if not isinstance(counts_payload.get("warnings"), int):
+            counts_payload["warnings"] = _to_int(counts_payload.get("warnings"))
+        payload = dict(model)
+        payload.update(
+            {
+                "issues": issues_payload,
+                "counts": counts_payload,
+                "total_messages": max(int(total_payload), 1),
+                "raw": model.get("raw") or model,
+                "validated_message": model.get("validated_message") or text,
+            }
+        )
         return templates.TemplateResponse(
             "ui/interop/_validate_report.html",
             {
                 "request": request,
-                "r": model,
-                "vf": {"sev": "all", "seg": "all", "q": ""},
+                "r": payload,
                 "validate_api": str(request.url_for("api_validate")),
             },
         )

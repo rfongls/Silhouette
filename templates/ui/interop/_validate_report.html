@@ -1,21 +1,58 @@
 <section class="validate-report" data-val-report>
+  {% set _r = r if r is defined else None %}
+  {% set _issues = (_r.issues if _r is not none else (issues if issues is defined else [])) %}
+  {% set _issues = _issues or [] %}
+  {% set _counts = (_r.counts if _r is not none else (counts if counts is defined else {})) %}
+  {% set _counts = _counts or {} %}
+  {% set _total_msgs = (
+        (_r.msg_total | default(None) if _r is not none else None)
+        or (_r.total_messages | default(None) if _r is not none else None)
+        or (_r.total | default(None) if _r is not none else None)
+        or (_r.message_count | default(None) if _r is not none else None)
+        or (total_messages if total_messages is defined else None)
+        or 1
+      ) %}
+  {% set _total_msgs = _total_msgs | int %}
+  {% set _raw_candidate = (_r.raw | default(None) if _r is not none else None) %}
+  {% set _raw = _raw_candidate if _raw_candidate is not none else (raw if raw is defined else {}) %}
+  {% set _validated_candidate = (_r.validated_message | default(None) if _r is not none else None) %}
+  {% set _validated_message = _validated_candidate if _validated_candidate is not none else (validated_message if validated_message is defined else '') %}
+
   <header class="validate-report__header" style="display:flex;align-items:center;justify-content:space-between;gap:0.75rem">
     <h4 class="text-h3" style="margin:0">Validation report</h4>
     <div class="validate-report__counts" style="display:flex;flex-wrap:wrap;gap:0.5rem">
-      <button type="button" class="chip" data-vf="passed" style="background:#10b981;color:#0b1e15">Passed: {{ r.counts.ok | default(0) }}</button>
-      <button type="button" class="chip" data-vf="errors" style="background:#ef4444;color:#250101">Errors: {{ r.counts.errors | default(0) }}</button>
+      <button type="button" class="chip" data-vf="passed" style="background:#10b981;color:#0b1e15">Passed: {{ _counts.ok | default(0) }}</button>
+      <button type="button" class="chip" data-vf="errors" style="background:#ef4444;color:#250101">Errors: {{ _counts.errors | default(0) }}</button>
       <button type="button" class="chip" data-vf="all" style="background:#475569;color:#e5e7eb">Show all</button>
     </div>
   </header>
 
-  {% if r.counts.errors | default(0) or r.counts.ok | default(0) or r.counts.warnings | default(0) %}
+  {% if (_counts.errors | default(0)) or (_counts.ok | default(0)) or (_counts.warnings | default(0)) %}
     <p class="text-small" style="margin-top:0.5rem">
-      Found {{ r.counts.errors | default(0) }} error{{ 's' if (r.counts.errors | default(0)) != 1 else '' }}
-      and {{ r.counts.ok | default(0) }} successful validation{{ 's' if (r.counts.ok | default(0)) != 1 else '' }}.
+      Found {{ _counts.errors | default(0) }} error{{ 's' if (_counts.errors | default(0)) != 1 else '' }}
+      and {{ _counts.ok | default(0) }} successful validation{{ 's' if (_counts.ok | default(0)) != 1 else '' }}.
     </p>
   {% endif %}
 
-  {% set _total_msgs = r.msg_total or r.total_messages or r.total or r.message_count or 1 %}
+  <div class="card mt" style="padding:.5rem;display:flex;gap:.5rem;flex-wrap:wrap;align-items:center">
+    <label class="small">Severity
+      <select id="val-filter-sev" class="input" style="min-width:8rem">
+        <option value="all">All</option>
+        <option value="passed">Passed</option>
+        <option value="error" selected>Error</option>
+        <option value="warning">Warning</option>
+      </select>
+    </label>
+    <label class="small">Segment
+      <select id="val-filter-seg" class="input" style="min-width:8rem">
+        <option value="all">All</option>
+      </select>
+    </label>
+    <label class="small" style="flex:1 1 240px">Search
+      <input id="val-filter-text" class="input" placeholder="Filter by rule, message, or value…" />
+    </label>
+    <span class="muted small">Across {{ _total_msgs }} message{{ '' if _total_msgs == 1 else 's' }}. Unique rows are de-duplicated by rule.</span>
+  </div>
 
   <div class="card mt" style="padding:.5rem;display:flex;gap:.5rem;flex-wrap:wrap;align-items:center">
     <label class="small">Severity
@@ -59,11 +96,10 @@
 
   <details class="mt" style="margin-top:0.75rem">
     <summary class="text-small">Show raw JSON</summary>
-    <pre class="codepane mono" style="margin-top:0.5rem">{{ r.raw | tojson(indent=2) }}</pre>
+    <pre class="codepane mono" style="margin-top:0.5rem">{{ _raw | tojson(indent=2) }}</pre>
   </details>
 
-  <script type="application/json" id="val-issues-json" data-total="{{ _total_msgs }}">{{ r.issues | tojson }}</script>
-
+  <script type="application/json" id="val-issues-json" data-total="{{ _total_msgs }}">{{ _issues | tojson }}</script>
   <script>
     (function(){
       const dataEl = document.getElementById('val-issues-json');
@@ -155,7 +191,12 @@
         `;
         body.appendChild(tr);
       }
-
+      
+      if (!list.length) {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td colspan="11" class="muted" style="padding:.75rem">No issues to display.</td>`;
+        body.appendChild(tr);
+      }
       const segSelect = document.getElementById('val-filter-seg');
       Array.from(segments).sort().forEach((segment) => {
         const option = document.createElement('option');
@@ -199,8 +240,7 @@
       applyFilter();
     })();
   </script>
-
-  <textarea id="validated-message" hidden>{{ r.validated_message }}</textarea>
+  <textarea id="validated-message" hidden>{{ _validated_message }}</textarea>
   <script>
     window.PipelineContext = window.PipelineContext || { message: '' };
     window.PipelineContext.setMessage = function(msg) {
