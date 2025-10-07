@@ -388,6 +388,9 @@
 
     for (const root of scopes) {
       if (!root || root.dataset.valInit === '1') continue;
+      // How many values to show before collapsing behind a [+] toggle.
+      // Override per page with data-values-max-collapsed on the [data-val-root] element.
+      const MAX_VALUES_COLLAPSED = parseInt(root.dataset.valuesMaxCollapsed || '8', 10) || 8;
       const dataEl = $1(root, '[data-role="val-issues"]');
       const body = $1(root, '[data-role="val-summary-body"]');
       const emptyRow = $1(root, '[data-role="val-empty"]');
@@ -493,6 +496,17 @@
           messageForRow = bucket.message || '—';
         }
 
+        const isTruncated = values.length > MAX_VALUES_COLLAPSED;
+        const shownValues = isTruncated ? values.slice(0, MAX_VALUES_COLLAPSED) : values;
+        const extraValues = isTruncated ? values.slice(MAX_VALUES_COLLAPSED) : [];
+        const valuesCellHtml = isTruncated
+          ? [
+              `<span data-role="values-main">${shownValues.join(', ')}</span>`,
+              `<span data-role="values-extra" style="display:none">, ${extraValues.join(', ')}</span>`,
+              `<button type="button" data-role="values-toggle" aria-expanded="false" title="Show all values" class="val-values-toggle" style="margin-left:.25rem">+</button>`
+            ].join('')
+          : allValuesText;
+
         const tr = document.createElement('tr');
         tr.dataset.role = 'val-row';
         tr.dataset.severity = bucket.severity;
@@ -505,13 +519,28 @@
           `<td style="padding:0.5rem"><code class="mono">${bucket.field || '—'}</code></td>`,
           `<td style="padding:0.5rem"><code class="mono">${bucket.component || '—'}</code></td>`,
           `<td style="padding:0.5rem"><code class="mono">${bucket.subcomponent || '—'}</code></td>`,
-          `<td style="padding:0.5rem">${allValuesText}</td>`,
+          `<td style="padding:0.5rem">${valuesCellHtml}</td>`,
           `<td style="padding:0.5rem">${messageForRow}</td>`,
           `<td style="padding:0.5rem">${bucket.count}</td>`,
           `<td style="padding:0.5rem">${TOTAL}</td>`,
           `<td style="padding:0.5rem">${Math.round((bucket.count / TOTAL) * 100)}%</td>`
         ].join('');
         body.appendChild(tr);
+
+        if (isTruncated) {
+          const toggleBtn = tr.querySelector('[data-role="values-toggle"]');
+          const extraSpan = tr.querySelector('[data-role="values-extra"]');
+          if (toggleBtn && extraSpan) {
+            toggleBtn.addEventListener('click', () => {
+              const expanded = toggleBtn.getAttribute('aria-expanded') === 'true';
+              const nextState = !expanded;
+              toggleBtn.setAttribute('aria-expanded', String(nextState));
+              toggleBtn.textContent = nextState ? '−' : '+';
+              toggleBtn.title = nextState ? 'Hide extra values' : 'Show all values';
+              extraSpan.style.display = nextState ? 'inline' : 'none';
+            });
+          }
+        }
         return tr;
       });
 
