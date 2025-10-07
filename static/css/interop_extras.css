@@ -1,5 +1,55 @@
 /* Extra styles for the interoperability skill */
 
+/* ──────────────────────────────────────────────────────────────────────────
+   Interop: Validation & De‑ID filter bars – alignment & overflow fixes
+   These selectors are scoped to the report roots so they won’t affect other cards.
+   ────────────────────────────────────────────────────────────────────────── */
+
+/* Let the filter-card containers allow children to shrink instead of overflowing */
+[data-val-root] .card.mt,
+[data-deid-root] .card {
+  min-width: 0;
+}
+
+/* Same for each direct child in the filter rows */
+[data-val-root] .card.mt > *,
+[data-deid-root] .card > * {
+  min-width: 0;
+}
+
+/* Inputs fill the width of their label (the label is the flex item) */
+[data-val-root] .card.mt label.small input,
+[data-deid-root] .card label.small input {
+  width: 100%;
+}
+
+/* Make the trailing Search / Value label flexible so it grows & shrinks nicely */
+[data-val-root] .card.mt label.small:last-of-type {
+  flex: 1 1 280px;
+}
+[data-deid-root] .card label.small:last-of-type {
+  flex: 1 1 280px;
+}
+
+/* Keep Reset aligned vertically with the select/input row */
+[data-val-root] .card.mt [data-role="val-filter-reset"],
+[data-deid-root] .card [data-role="deid-filter-reset"] {
+  align-self: center;
+}
+
+/* Push the “Across N messages” note to its own line so it never fights the button */
+[data-val-root] .card.mt [data-role="val-filter-reset"] + .muted.small,
+[data-deid-root] .card [data-role="deid-filter-reset"] + .muted.small {
+  flex-basis: 100%;
+  order: 10;
+}
+
+/* Optional: small spacing polish for compact buttons in these rows */
+[data-val-root] .card.mt .btn.btn-xs,
+[data-deid-root] .card .btn.btn-xs {
+  line-height: 1;
+}
+
 .row.gap { display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap; }
 .row.gap.mt { margin-top: 1rem; }
 .input { padding: 0.55rem 0.75rem; border: 1px solid var(--border); border-radius: 8px; background: var(--card); color: var(--text); min-width: 10rem; }
