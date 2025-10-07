@@ -86,7 +86,50 @@
         </tr>
       </thead>
       <tbody data-role="val-summary-body">
-        <tr data-role="val-empty" style="display:none">
+        {% set _has_rows = _summary_rows | length > 0 %}
+        {% for row in _summary_rows %}
+          {% set _sev = (row.severity or 'error') | lower %}
+          {% if _sev in ['ok', 'info'] %}
+            {% set _sev = 'passed' %}
+          {% endif %}
+          {% set _segment = (row.segment or '') | trim %}
+          {% set _segment_lower = _segment | lower %}
+          {% set _field = row.field %}
+          {% set _component = row.component %}
+          {% set _subcomponent = row.subcomponent %}
+          {% set _count = row.count or 0 %}
+          {% set _total = row.total or _total_msgs %}
+          {% set _pct = row.pct or 0 %}
+          {% set _values = row.shown_values or '' %}
+          {% set _extra = row.extra_values or 0 %}
+          {% set _message = row.message or '' %}
+          {% set _search = row.search_text or '' %}
+          <tr
+            data-role="val-row"
+            data-severity="{{ _sev }}"
+            data-segment="{{ _segment_lower | e }}"
+            data-segment-raw="{{ _segment | e }}"
+            data-text="{{ _search | e }}"
+          >
+            <td style="padding:0.5rem">
+              {% if _sev == 'passed' %}Passed{% elif _sev == 'warning' %}Warning{% else %}Error{% endif %}
+            </td>
+            <td style="padding:0.5rem"><code class="mono">{{ row.code or '—' }}</code></td>
+            <td style="padding:0.5rem"><code class="mono">{{ _segment or '—' }}</code></td>
+            <td style="padding:0.5rem"><code class="mono">{{ _field if _field is not none and _field != '' else '—' }}</code></td>
+            <td style="padding:0.5rem"><code class="mono">{{ _component if _component is not none and _component != '' else '—' }}</code></td>
+            <td style="padding:0.5rem"><code class="mono">{{ _subcomponent if _subcomponent is not none and _subcomponent != '' else '—' }}</code></td>
+            <td style="padding:0.5rem">
+              {% if _values %}{{ _values }}{% else %}—{% endif %}
+              {% if _extra and _extra > 0 %} (+{{ _extra }} more){% endif %}
+            </td>
+            <td style="padding:0.5rem">{{ _message or '—' }}</td>
+            <td style="padding:0.5rem">{{ _count }}</td>
+            <td style="padding:0.5rem">{{ _count }}/{{ _total }}</td>
+            <td style="padding:0.5rem">{{ _pct }}%</td>
+          </tr>
+        {% endfor %}
+        <tr data-role="val-empty" {% if _has_rows %}style="display:none"{% endif %}>
           <td colspan="11" class="muted" style="padding:.75rem">No issues to display.</td>
         </tr>
       </tbody>
@@ -157,82 +200,67 @@
         };
       };
 
-      const rowsMap = new Map();
       const segments = new Set();
+      let builtRows = Array.from(body.querySelectorAll('[data-role="val-row"]'));
 
-      issues.forEach((raw) => {
-        const row = normalize(raw);
-        const key = [
-          row.severity,
-          row.code,
-          row.segment,
-          row.field,
-          row.component,
-          row.subcomponent,
-          row.message,
-        ].join('|');
-        if (!rowsMap.has(key)) {
-          rowsMap.set(key, {
-            severity: row.severity,
-            code: row.code,
-            segment: row.segment,
-            field: row.field,
-            component: row.component,
-            subcomponent: row.subcomponent,
-            message: row.message,
-            values: new Set(),
-            count: 0,
-          });
-        }
-        const bucket = rowsMap.get(key);
-        if (row.value) bucket.values.add(row.value);
-        bucket.count += 1;
-        if (row.segment) segments.add(row.segment);
-      });
+      if (!builtRows.length) {
+        const rowsMap = new Map();
 
-      body.innerHTML = '';
-      const builtRows = [];
+        issues.forEach((raw) => {
+          const row = normalize(raw);
+          const key = [
+            row.severity,
+            row.code,
+            row.segment,
+            row.field,
+            row.component,
+            row.subcomponent,
+            row.message,
+          ].join('|');
+          if (!rowsMap.has(key)) {
+            rowsMap.set(key, {
+              severity: row.severity,
+              code: row.code,
+              segment: row.segment,
+              field: row.field,
+              component: row.component,
+              subcomponent: row.subcomponent,
+              message: row.message,
+              values: new Set(),
+              count: 0,
+            });
+          }
+          const bucket = rowsMap.get(key);
+          if (row.value) bucket.values.add(row.value);
+          bucket.count += 1;
+        });
 
-      const sortedBuckets = Array.from(rowsMap.values()).sort((a, b) => {
-        const order = (sev) => (sev === 'error' ? 0 : sev === 'warning' ? 1 : 2);
-        return order(a.severity) - order(b.severity)
-          || (a.segment || '').localeCompare(b.segment || '')
-          || (parseInt(a.field || '0', 10) - parseInt(b.field || '0', 10))
-          || (a.code || '').localeCompare(b.code || '');
-      });
+        body.innerHTML = '';
 
-      const rows = sortedBuckets.map((bucket) => {
-        const values = Array.from(bucket.values);
-        const shown = values.slice(0, 8);
-        const extraCount = values.length - shown.length;
-        const extra = extraCount > 0 ? ` (+${extraCount} more)` : '';
-        const severityLabel = bucket.severity === 'passed'
-          ? 'Passed'
-          : bucket.severity === 'warning'
-            ? 'Warning'
-            : 'Error';
-        return {
-          severity: bucket.severity,
-          severityLabel,
-          code: bucket.code || '—',
-          rawCode: bucket.code || '',
-          segment: bucket.segment || '—',
-          rawSegment: bucket.segment || '',
-          field: bucket.field || '—',
-          rawField: bucket.field || '',
-          component: bucket.component || '—',
-          rawComponent: bucket.component || '',
-          subcomponent: bucket.subcomponent || '—',
-          rawSubcomponent: bucket.subcomponent || '',
-          message: bucket.message || '—',
-          rawMessage: bucket.message || '',
-          values,
-          shown,
-          extra,
-          count: bucket.count,
-          total: TOTAL,
-          percent: TOTAL ? Math.round((bucket.count / TOTAL) * 100) : 0,
-          searchText: [
+        const sortedBuckets = Array.from(rowsMap.values()).sort((a, b) => {
+          const order = (sev) => (sev === 'error' ? 0 : sev === 'warning' ? 1 : 2);
+          return order(a.severity) - order(b.severity)
+            || (a.segment || '').localeCompare(b.segment || '')
+            || (parseInt(a.field || '0', 10) - parseInt(b.field || '0', 10))
+            || (a.code || '').localeCompare(b.code || '');
+        });
+
+        builtRows = sortedBuckets.map((bucket) => {
+          const values = Array.from(bucket.values);
+          const shown = values.slice(0, 8);
+          const extraCount = values.length - shown.length;
+          const extra = extraCount > 0 ? ` (+${extraCount} more)` : '';
+          const severityLabel = bucket.severity === 'passed'
+            ? 'Passed'
+            : bucket.severity === 'warning'
+              ? 'Warning'
+              : 'Error';
+          const tr = document.createElement('tr');
+          tr.dataset.role = 'val-row';
+          tr.dataset.severity = bucket.severity;
+          tr.dataset.segment = (bucket.segment || '').trim().toLowerCase();
+          tr.dataset.segmentRaw = bucket.segment || '';
+          tr.dataset.text = [
             bucket.code,
             bucket.segment,
             bucket.field,
@@ -242,39 +270,39 @@
             bucket.message,
           ]
             .join(' ')
-            .toLowerCase(),
-        };
-      });
+            .toLowerCase();
+          tr.innerHTML = `
+            <td style="padding:0.5rem">${severityLabel}</td>
+            <td style="padding:0.5rem"><code class="mono">${bucket.code || '—'}</code></td>
+            <td style="padding:0.5rem"><code class="mono">${bucket.segment || '—'}</code></td>
+            <td style="padding:0.5rem"><code class="mono">${bucket.field || '—'}</code></td>
+            <td style="padding:0.5rem"><code class="mono">${bucket.component || '—'}</code></td>
+            <td style="padding:0.5rem"><code class="mono">${bucket.subcomponent || '—'}</code></td>
+            <td style="padding:0.5rem">${shown.length ? shown.join(', ') : '—'}${extra}</td>
+            <td style="padding:0.5rem">${bucket.message || '—'}</td>
+            <td style="padding:0.5rem">${bucket.count}</td>
+            <td style="padding:0.5rem">${bucket.count}/${TOTAL}</td>
+            <td style="padding:0.5rem">${TOTAL ? Math.round((bucket.count / TOTAL) * 100) : 0}%</td>
+          `;
+          body.appendChild(tr);
+          return tr;
+        });
 
-      rows.forEach((row) => {
-        const tr = document.createElement('tr');
-        tr.dataset.severity = row.severity;
-        tr.dataset.segment = row.rawSegment.trim();
-        tr.dataset.text = row.searchText;
-        tr.innerHTML = `
-          <td style="padding:0.5rem">${row.severityLabel}</td>
-          <td style="padding:0.5rem"><code class="mono">${row.code}</code></td>
-          <td style="padding:0.5rem"><code class="mono">${row.segment}</code></td>
-          <td style="padding:0.5rem"><code class="mono">${row.field}</code></td>
-          <td style="padding:0.5rem"><code class="mono">${row.component}</code></td>
-          <td style="padding:0.5rem"><code class="mono">${row.subcomponent}</code></td>
-          <td style="padding:0.5rem">${row.shown.length ? row.shown.join(', ') : '—'}${row.extra}</td>
-          <td style="padding:0.5rem">${row.message}</td>
-          <td style="padding:0.5rem">${row.count}</td>
-          <td style="padding:0.5rem">${row.count}/${row.total}</td>
-          <td style="padding:0.5rem">${row.percent}%</td>
-        `;
-        body.appendChild(tr);
-        builtRows.push(tr);
-      });
-
-      if (emptyRow) {
-        body.appendChild(emptyRow);
+        if (!builtRows.length && emptyRow) {
+          emptyRow.style.display = '';
+          body.appendChild(emptyRow);
+        } else if (emptyRow) {
+          emptyRow.style.display = 'none';
+          body.appendChild(emptyRow);
+        }
       }
 
-      if (!builtRows.length && emptyRow) {
-        emptyRow.style.display = '';
-      } else if (emptyRow) {
+      builtRows.forEach((tr) => {
+        const segRaw = tr.dataset.segmentRaw || '';
+        if (segRaw) segments.add(segRaw);
+      });
+
+      if (emptyRow && builtRows.length) {
         emptyRow.style.display = 'none';
       }
 
