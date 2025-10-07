@@ -1,10 +1,10 @@
-<section id="deid-coverage" class="deid-coverage" hx-swap-oob="outerHTML">
+<section id="deid-coverage" class="deid-coverage" data-deid-root hx-swap-oob="outerHTML">
   <details open class="card" style="padding:0.75rem">
     <summary class="text-h4" style="cursor:pointer">De-identification report</summary>
     {% set _rows = (r.rows or r.data or []) %}
     {% set _total = r.total_messages or r.msg_total or r.total or 0 %}
     {% if _rows and _rows|length > 0 %}
-      <div class="card" style="padding:.5rem;display:flex;gap:.5rem;flex-wrap:wrap;align-items:center;margin:.5rem 0 .75rem">
+      <div class="card" style="padding:.5rem;display:flex;gap:.5rem;flex-wrap:wrap;align-items:center;margin:.5rem 0 .5rem">
         <label class="small">Segment
           <select class="input" data-role="deid-filter-seg" style="min-width:8rem">
             <option value="all">All</option>
@@ -36,6 +36,7 @@
         <button type="button" class="btn btn-xs" data-role="deid-filter-reset" style="margin-left:auto">Reset filters</button>
         <span class="muted small">Across {{ _total }} message{{ '' if _total == 1 else 's' }}.</span>
       </div>
+      <div class="muted small" data-role="deid-note" style="margin:.5rem 0 .25rem;display:none;">No matching rules for the current filters.</div>
 
       <div class="scrollbox">
         <table style="width:100%;border-collapse:collapse;font-size:.9rem">
@@ -50,172 +51,194 @@
               <th style="padding:.5rem">Total Messages</th>
             </tr>
           </thead>
-          <tbody data-role="deid-tbody"></tbody>
+          <tbody data-role="deid-tbody">
+            {% for it in _rows %}
+              <tr
+                data-role="deid-row"
+                data-segment="{{ it.segment or '' }}"
+                data-field="{{ it.field if it.field is not none else '' }}"
+                data-action="{{ it.action or '' }}"
+                data-logic="{{ (it.logic or '') | lower }}"
+                style="border-bottom:1px solid var(--color-border, #2b3345)"
+              >
+                <td style="padding:.5rem"><code class="mono">{{ it.segment or '—' }}</code></td>
+                <td style="padding:.5rem"><code class="mono">{{ it.field if it.field is not none else '—' }}</code></td>
+                <td style="padding:.5rem"><code class="mono">{{ it.component if it.component is not none else '—' }}</code></td>
+                <td style="padding:.5rem"><code class="mono">{{ it.subcomponent if it.subcomponent is not none else '—' }}</code></td>
+                <td style="padding:.5rem">{{ it.action or '—' }}</td>
+                <td style="padding:.5rem">{{ it.logic or '—' }}</td>
+                <td style="padding:.5rem">{{ it.applied | default(0) }}/{{ _total }}</td>
+              </tr>
+            {% endfor %}
+            <tr data-role="deid-empty" style="display:none">
+              <td colspan="7" class="muted" style="padding:.75rem">No matching rules.</td>
+            </tr>
+          </tbody>
         </table>
       </div>
 
-      <script type="application/json" data-role="deid-rows" data-total="{{ _total }}">{{ _rows | tojson }}</script>
       <script>
-      (function(script){
-        const root = script.closest('#deid-coverage');
-        if (!root) return;
-        const dataEl = root.querySelector('[data-role="deid-rows"]');
-        if (!dataEl) return;
-        let rows = [];
-        try {
-          rows = JSON.parse(dataEl.textContent || '[]') || [];
-        } catch (err) {
-          rows = [];
-        }
-        const TOTAL = parseInt(dataEl.dataset.total || '0', 10) || 0;
-        const segSel = root.querySelector('[data-role="deid-filter-seg"]');
-        const fieldSel = root.querySelector('[data-role="deid-filter-field"]');
-        const actionSel = root.querySelector('[data-role="deid-filter-action"]');
-        const valueInput = root.querySelector('[data-role="deid-filter-value"]');
-        const resetBtn = root.querySelector('[data-role="deid-filter-reset"]');
-        const tbody = root.querySelector('[data-role="deid-tbody"]');
-        if (!segSel || !fieldSel || !actionSel || !valueInput || !tbody) return;
+        (function (script) {
+          const root = script.closest('[data-deid-root]');
+          if (!root) return;
+          const segSel = root.querySelector('[data-role="deid-filter-seg"]');
+          const fieldSel = root.querySelector('[data-role="deid-filter-field"]');
+          const actionSel = root.querySelector('[data-role="deid-filter-action"]');
+          const valueInput = root.querySelector('[data-role="deid-filter-value"]');
+          const resetBtn = root.querySelector('[data-role="deid-filter-reset"]');
+          const noteEl = root.querySelector('[data-role="deid-note"]');
+          const tbody = root.querySelector('[data-role="deid-tbody"]');
+          const emptyRow = root.querySelector('[data-role="deid-empty"]');
+          if (!segSel || !fieldSel || !actionSel || !valueInput || !tbody) return;
 
-        const fieldsBySeg = new Map();
-        const allFields = new Set();
-        const segments = new Set();
-        rows.forEach((row) => {
-          if (!row) return;
-          const seg = (row.segment || '').toString();
-          const field = row.field == null ? '' : String(row.field);
-          const action = (row.action || '').toString();
-          if (seg) {
-            segments.add(seg);
-            if (!fieldsBySeg.has(seg)) fieldsBySeg.set(seg, new Set());
-            if (field) fieldsBySeg.get(seg).add(field);
+          const rowEls = Array.from(root.querySelectorAll('[data-role="deid-row"]'));
+          const segments = new Set();
+          const fields = new Map(); // seg -> Set(fields)
+
+          rowEls.forEach((tr) => {
+            const seg = tr.dataset.segment || '';
+            const field = tr.dataset.field || '';
+            if (seg) {
+              segments.add(seg);
+              if (!fields.has(seg)) fields.set(seg, new Set());
+              if (field) fields.get(seg).add(field);
+            }
+          });
+
+          function populateSegments() {
+            const current = segSel.value;
+            segSel.innerHTML = '<option value="all">All</option>';
+            Array.from(segments)
+              .sort((a, b) => a.localeCompare(b))
+              .forEach((seg) => {
+                const opt = document.createElement('option');
+                opt.value = seg;
+                opt.textContent = seg;
+                segSel.appendChild(opt);
+              });
+            if (segments.has(current)) {
+              segSel.value = current;
+            }
           }
           if (field) allFields.add(field);
         });
 
-        Array.from(segments).sort().forEach((seg) => {
-          const opt = document.createElement('option');
-          opt.value = seg;
-          opt.textContent = seg;
-          segSel.appendChild(opt);
-        });
-
-        function collectActions(segValue, fieldValue) {
-          const set = new Set();
-          rows.forEach((row) => {
-            const seg = (row.segment || '').toString();
-            const field = row.field == null ? '' : String(row.field);
-            const action = (row.action || '').toString();
-            if (segValue !== 'all' && seg !== segValue) return;
-            if (fieldValue !== 'all' && field !== fieldValue) return;
-            if (action) set.add(action);
-          });
-          return Array.from(set).sort((a, b) => a.localeCompare(b));
-        }
-
-        function populateFields() {
-          const current = fieldSel.value;
-          fieldSel.innerHTML = '<option value="all">All</option>';
-          let values;
-          if (segSel.value === 'all') {
-            values = Array.from(allFields);
-          } else {
-            values = Array.from(fieldsBySeg.get(segSel.value) || []);
+          function collectFields(segValue) {
+            const set = new Set();
+            if (segValue === 'all') {
+              fields.forEach((values) => {
+                values.forEach((value) => set.add(value));
+              });
+            } else {
+              const scoped = fields.get(segValue);
+              if (scoped) scoped.forEach((value) => set.add(value));
+            }
+            return Array.from(set).sort((a, b) => {
+              const ai = parseInt(a, 10);
+              const bi = parseInt(b, 10);
+              if (!Number.isNaN(ai) && !Number.isNaN(bi)) return ai - bi;
+              if (!Number.isNaN(ai)) return -1;
+              if (!Number.isNaN(bi)) return 1;
+              return a.localeCompare(b);
+            });
           }
-          values.sort((a, b) => (parseInt(a, 10) || 0) - (parseInt(b, 10) || 0));
-          values.forEach((field) => {
-            const opt = document.createElement('option');
-            opt.value = field;
-            opt.textContent = field;
-            fieldSel.appendChild(opt);
-          });
-          if (values.includes(current)) {
-            fieldSel.value = current;
+
+          function populateFields() {
+            const current = fieldSel.value;
+            const segValue = segSel.value;
+            fieldSel.innerHTML = '<option value="all">All</option>';
+            collectFields(segValue).forEach((field) => {
+              const opt = document.createElement('option');
+              opt.value = field;
+              opt.textContent = field;
+              fieldSel.appendChild(opt);
+            });
+            if (Array.from(fieldSel.options).some((opt) => opt.value === current)) {
+              fieldSel.value = current;
+            }
           }
-        }
 
-        function populateActions() {
-          const current = actionSel.value;
-          actionSel.innerHTML = '<option value="all">All</option>';
-          collectActions(segSel.value, fieldSel.value).forEach((action) => {
-            const opt = document.createElement('option');
-            opt.value = action;
-            opt.textContent = action;
-            actionSel.appendChild(opt);
-          });
-          if (Array.from(actionSel.options).some((opt) => opt.value === current)) {
-            actionSel.value = current;
-          }
-        }
-
-        function like(text, needle) {
-          if (!needle) return true;
-          return (text || '').toString().toLowerCase().includes(needle);
-        }
-
-        function render() {
-          const wantSeg = segSel.value;
-          const wantField = fieldSel.value;
-          const wantAction = actionSel.value;
-          const query = (valueInput.value || '').trim().toLowerCase();
-          tbody.innerHTML = '';
-          let shown = 0;
-          rows.forEach((row) => {
-            if (!row) return;
-            const seg = (row.segment || '').toString();
-            const field = row.field == null ? '' : String(row.field);
-            const action = (row.action || '').toString();
-            if (wantSeg !== 'all' && seg !== wantSeg) return;
-            if (wantField !== 'all' && field !== wantField) return;
-            if (wantAction !== 'all' && action !== wantAction) return;
-            if (query && !like(row.logic, query) && !like(row.action, query)) return;
-            const tr = document.createElement('tr');
-            tr.style.borderBottom = '1px solid var(--color-border, #2b3345)';
-            tr.innerHTML = `
-              <td style="padding:.5rem"><code class="mono">${seg || '—'}</code></td>
-              <td style="padding:.5rem"><code class="mono">${field || '—'}</code></td>
-              <td style="padding:.5rem"><code class="mono">${row.component ?? '—'}</code></td>
-              <td style="padding:.5rem"><code class="mono">${row.subcomponent ?? '—'}</code></td>
-              <td style="padding:.5rem">${action || '—'}</td>
-              <td style="padding:.5rem">${row.logic || '—'}</td>
-              <td style="padding:.5rem">${(row.applied || 0)}/${TOTAL}</td>
-            `;
-            tbody.appendChild(tr);
-            shown += 1;
-          });
-          if (!shown) {
-            const tr = document.createElement('tr');
-            tr.innerHTML = '<td colspan="7" class="muted" style="padding:.75rem">No matching rules.</td>';
-            tbody.appendChild(tr);
+          function populateActions() {
+            const current = actionSel.value;
+            const segValue = segSel.value;
+            const fieldValue = fieldSel.value;
+            const actions = new Set();
+            rowEls.forEach((tr) => {
+              const seg = tr.dataset.segment || '';
+              const field = tr.dataset.field || '';
+              const action = tr.dataset.action || '';
+              if (segValue !== 'all' && seg !== segValue) return;
+              if (fieldValue !== 'all' && field !== fieldValue) return;
+              if (action) actions.add(action);
+            });
+            actionSel.innerHTML = '<option value="all">All</option>';
+            Array.from(actions)
+              .sort((a, b) => a.localeCompare(b))
+              .forEach((action) => {
+                const opt = document.createElement('option');
+                opt.value = action;
+                opt.textContent = action;
+                actionSel.appendChild(opt);
+              });
+            if (Array.from(actionSel.options).some((opt) => opt.value === current)) {
+              actionSel.value = current;
+            }
           }
         }
 
-        segSel.addEventListener('change', () => {
+          function applyFilters() {
+            const wantSeg = segSel.value;
+            const wantField = fieldSel.value;
+            const wantAction = actionSel.value;
+            const query = (valueInput.value || '').trim().toLowerCase();
+            let visible = 0;
+            rowEls.forEach((tr) => {
+              const seg = tr.dataset.segment || '';
+              const field = tr.dataset.field || '';
+              const action = tr.dataset.action || '';
+              const actionSearch = action.toLowerCase();
+              const logic = (tr.dataset.logic || '').toLowerCase();
+              let show = true;
+              if (wantSeg !== 'all' && seg !== wantSeg) show = false;
+              if (show && wantField !== 'all' && field !== wantField) show = false;
+              if (show && wantAction !== 'all' && action !== wantAction) show = false;
+              if (show && query && !logic.includes(query) && !actionSearch.includes(query)) show = false;
+              tr.style.display = show ? '' : 'none';
+              if (show) visible += 1;
+            });
+            if (emptyRow) emptyRow.style.display = visible ? 'none' : '';
+            if (noteEl) noteEl.style.display = query && !visible ? '' : 'none';
+          }
+
+          segSel.addEventListener('change', () => {
+            populateFields();
+            populateActions();
+            applyFilters();
+          });
+          fieldSel.addEventListener('change', () => {
+            populateActions();
+            applyFilters();
+          });
+          actionSel.addEventListener('change', applyFilters);
+          valueInput.addEventListener('input', applyFilters);
+          if (resetBtn) {
+            resetBtn.addEventListener('click', () => {
+              segSel.value = 'all';
+              populateFields();
+              fieldSel.value = 'all';
+              populateActions();
+              actionSel.value = 'all';
+              valueInput.value = '';
+              applyFilters();
+            });
+          }
+        }
+
+          populateSegments();
           populateFields();
           populateActions();
-          render();
-        });
-        fieldSel.addEventListener('change', () => {
-          populateActions();
-          render();
-        });
-        actionSel.addEventListener('change', render);
-        valueInput.addEventListener('input', render);
-        if (resetBtn) {
-          resetBtn.addEventListener('click', () => {
-            segSel.value = 'all';
-            populateFields();
-            fieldSel.value = 'all';
-            populateActions();
-            actionSel.value = 'all';
-            valueInput.value = '';
-            render();
-          });
-        }
-
-        populateFields();
-        populateActions();
-        render();
-      })(document.currentScript);
+          applyFilters();
+        })(document.currentScript);
       </script>
     {% else %}
       <p class="muted" style="margin-top:.75rem">Run de-identify to see coverage by rule.</p>

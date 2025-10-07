@@ -1,4 +1,4 @@
-<section id="validate-report" class="validate-report" data-val-report hx-swap-oob="outerHTML">
+<section id="validate-report" class="validate-report" data-val-root hx-swap-oob="outerHTML">
   {% set _r = r if r is defined else None %}
   {% set _issues = (_r.issues if _r is not none else (issues if issues is defined else [])) %}
   {% set _issues = _issues or [] %}
@@ -14,6 +14,19 @@
   {% set _raw = _raw_candidate if _raw_candidate is not none else (raw if raw is defined else {}) %}
   {% set _validated_candidate = (_r.validated_message | default(None) if _r is not none else None) %}
   {% set _validated_message = _validated_candidate if _validated_candidate is not none else (validated_message if validated_message is defined else '') %}
+  {% set _vf = vf if vf is defined else {} %}
+  {% set _vf_sev = (_vf.sev or _vf.severity or 'error') | lower %}
+  {% if _vf_sev in ['errors', 'error', 'err'] %}
+    {% set _vf_sev = 'error' %}
+  {% elif _vf_sev in ['warnings', 'warn'] %}
+    {% set _vf_sev = 'warning' %}
+  {% elif _vf_sev in ['passes', 'ok', 'info', 'passed'] %}
+    {% set _vf_sev = 'passed' %}
+  {% elif _vf_sev not in ['error', 'warning', 'passed', 'all'] %}
+    {% set _vf_sev = 'all' %}
+  {% endif %}
+  {% set _vf_seg = (_vf.seg or 'all') %}
+  {% set _vf_q = _vf.q or '' %}
 
   <header class="validate-report__header" style="display:flex;align-items:center;justify-content:space-between;gap:0.75rem">
     <h4 class="text-h3" style="margin:0">Validation report</h4>
@@ -33,7 +46,7 @@
 
   <div class="card mt" style="padding:.5rem;display:flex;gap:.5rem;flex-wrap:wrap;align-items:center">
     <label class="small">Severity
-      <select class="input" data-role="val-filter-sev" style="min-width:8rem">
+      <select class="input" data-role="val-filter-sev" data-initial="{{ _vf_sev }}" style="min-width:8rem">
         <option value="all">All</option>
         <option value="passed">Passed</option>
         <option value="error" selected>Error</option>
@@ -41,7 +54,7 @@
       </select>
     </label>
     <label class="small">Segment
-      <select class="input" data-role="val-filter-seg" style="min-width:8rem">
+      <select class="input" data-role="val-filter-seg" data-initial="{{ _vf_seg }}" style="min-width:8rem">
         <option value="all">All</option>
         {% for seg in _seg_opts %}
           <option value="{{ seg | e }}">{{ seg }}</option>
@@ -49,7 +62,7 @@
       </select>
     </label>
     <label class="small" style="flex:1 1 240px">Search
-      <input class="input" data-role="val-filter-text" placeholder="Filter by rule, message, or value…" />
+      <input class="input" data-role="val-filter-text" data-initial="{{ _vf_q }}" value="{{ _vf_q }}" placeholder="Filter by rule, message, or value…" />
     </label>
     <button type="button" class="btn btn-xs" data-role="val-filter-reset" style="margin-left:auto">Reset filters</button>
     <span class="muted small">Across {{ _total_msgs }} message{{ '' if _total_msgs == 1 else 's' }}. Unique rows are de-duplicated by rule.</span>
@@ -72,7 +85,11 @@
           <th style="padding:0.5rem">%</th>
         </tr>
       </thead>
-      <tbody data-role="val-summary-body"></tbody>
+      <tbody data-role="val-summary-body">
+        <tr data-role="val-empty" style="display:none">
+          <td colspan="11" class="muted" style="padding:.75rem">No issues to display.</td>
+        </tr>
+      </tbody>
     </table>
   </div>
 
@@ -80,13 +97,18 @@
     <summary class="text-small">Show raw JSON</summary>
     <pre class="codepane mono" style="margin-top:0.5rem">{{ _raw | tojson(indent=2) }}</pre>
   </details>
+
   <script type="application/json" data-role="val-issues" data-total="{{ _total_msgs }}">{{ _issues | tojson }}</script>
+
   <script>
-    (function(script){
-      const root = script.closest('#validate-report');
+    (function (script) {
+      const root = script.closest('[data-val-root]');
       if (!root) return;
       const dataEl = root.querySelector('[data-role="val-issues"]');
-      if (!dataEl) return;
+      const body = root.querySelector('[data-role="val-summary-body"]');
+      const emptyRow = root.querySelector('[data-role="val-empty"]');
+      if (!dataEl || !body) return;
+
       let issues = [];
       try {
         issues = JSON.parse(dataEl.textContent || '[]') || [];
@@ -99,41 +121,32 @@
       const segmentSelect = root.querySelector('[data-role="val-filter-seg"]');
       const searchInput = root.querySelector('[data-role="val-filter-text"]');
       const resetButton = root.querySelector('[data-role="val-filter-reset"]');
-      const body = root.querySelector('[data-role="val-summary-body"]');
-      if (!severitySelect || !segmentSelect || !searchInput || !body) return;
-
-      const chips = Array.from(root.querySelectorAll('.chip[data-vf]'));
-      const segments = new Set();
-      const aggregate = new Map();
+      const chips = Array.from(root.querySelectorAll('.validate-report__counts .chip[data-vf]'));
+      if (!severitySelect || !segmentSelect || !searchInput) return;
 
       const normalize = (item) => {
         if (!item || typeof item !== 'object') return {};
         const severity = String(item.severity || item.status || 'error').toLowerCase();
-        let normalizedSeverity = 'error';
-        if (severity.includes('warn')) {
-          normalizedSeverity = 'warning';
-        } else if (severity.includes('ok') || severity.includes('pass') || severity.includes('info')) {
-          normalizedSeverity = 'passed';
-        }
-        const code = String(item.code || item.rule || item.id || '').trim();
-        const segment = String(item.segment || '').trim();
-        const field = item.field === 0 ? '0' : String(item.field ?? '').trim();
-        const component = item.component === 0 ? '0' : String(item.component ?? '').trim();
-        const subcomponent = item.subcomponent === 0 ? '0' : String(item.subcomponent ?? '').trim();
-        const message = String(item.message || '').trim();
-        const value = String(item.value || item.actual || item.expected || '').trim();
-        if (segment) segments.add(segment);
+        const normalizedSeverity = severity.includes('warn')
+          ? 'warning'
+          : (severity.includes('ok') || severity.includes('pass') || severity.includes('info'))
+            ? 'passed'
+            : 'error';
         return {
           severity: normalizedSeverity,
-          code,
-          segment,
-          field,
-          component,
-          subcomponent,
-          message,
-          value,
+          code: String(item.code || item.rule || item.id || '') || '',
+          segment: String(item.segment || '') || '',
+          field: item.field === 0 ? '0' : String(item.field ?? '') || '',
+          component: item.component === 0 ? '0' : String(item.component ?? '') || '',
+          subcomponent: item.subcomponent === 0 ? '0' : String(item.subcomponent ?? '') || '',
+          value: String(item.value || item.actual || item.expected || item.received || '') || '',
+          message: String(item.message || '') || '',
         };
       };
+
+      const rowsMap = new Map();
+      const segments = new Set();
+      const aggregate = new Map();
 
       issues.forEach((raw) => {
         const row = normalize(raw);
@@ -146,8 +159,8 @@
           row.subcomponent,
           row.message,
         ].join('|');
-        if (!aggregate.has(key)) {
-          aggregate.set(key, {
+        if (!rowsMap.has(key)) {
+          rowsMap.set(key, {
             severity: row.severity,
             code: row.code,
             segment: row.segment,
@@ -159,20 +172,17 @@
             count: 0,
           });
         }
-        const slot = aggregate.get(key);
-        if (row.value) slot.values.add(row.value);
-        slot.count += 1;
+        const bucket = rowsMap.get(key);
+        if (row.value) bucket.values.add(row.value);
+        bucket.count += 1;
+        if (row.segment) segments.add(row.segment);
       });
 
-      const bySeverity = (severity) => {
-        if (severity === 'error') return 0;
-        if (severity === 'warning') return 1;
-        if (severity === 'passed') return 2;
-        return 3;
-      };
-
-      const rows = Array.from(aggregate.values()).sort((a, b) => {
-        return bySeverity(a.severity) - bySeverity(b.severity)
+      body.innerHTML = '';
+      const builtRows = [];
+      const list = Array.from(rowsMap.values()).sort((a, b) => {
+        const order = (sev) => (sev === 'error' ? 0 : sev === 'warning' ? 1 : 2);
+        return order(a.severity) - order(b.severity)
           || (a.segment || '').localeCompare(b.segment || '')
           || (parseInt(a.field || '0', 10) - parseInt(b.field || '0', 10))
           || (a.code || '').localeCompare(b.code || '');
@@ -200,15 +210,72 @@
         };
       });
 
-      const segmentOptions = Array.from(segments).sort();
-      segmentOptions.forEach((segment) => {
-        const opt = document.createElement('option');
-        opt.value = segment;
-        opt.textContent = segment;
-        segmentSelect.appendChild(opt);
+      list.forEach((row) => {
+        const values = Array.from(row.values);
+        const shown = values.slice(0, 8);
+        const extra = values.length > 8 ? ` (+${values.length - 8} more)` : '';
+        const severityLabel = row.severity === 'passed' ? 'Passed' : (row.severity === 'warning' ? 'Warning' : 'Error');
+        const tr = document.createElement('tr');
+        tr.dataset.severity = row.severity;
+        tr.dataset.segment = row.segment || '';
+        tr.dataset.text = [
+          row.code,
+          row.segment,
+          row.field,
+          row.component,
+          row.subcomponent,
+          shown.join(', '),
+          row.message,
+        ].join(' ').toLowerCase();
+        tr.innerHTML = `
+          <td style="padding:0.5rem">${severityLabel}</td>
+          <td style="padding:0.5rem"><code class="mono">${row.code || '—'}</code></td>
+          <td style="padding:0.5rem"><code class="mono">${row.segment || '—'}</code></td>
+          <td style="padding:0.5rem"><code class="mono">${row.field || '—'}</code></td>
+          <td style="padding:0.5rem"><code class="mono">${row.component || '—'}</code></td>
+          <td style="padding:0.5rem"><code class="mono">${row.subcomponent || '—'}</code></td>
+          <td style="padding:0.5rem">${shown.length ? shown.join(', ') : '—'}${extra}</td>
+          <td style="padding:0.5rem">${row.message || '—'}</td>
+          <td style="padding:0.5rem">${row.count}</td>
+          <td style="padding:0.5rem">${row.count}/${TOTAL}</td>
+          <td style="padding:0.5rem">${TOTAL ? Math.round((row.count / TOTAL) * 100) : 0}%</td>
+        `;
+        body.appendChild(tr);
+        builtRows.push(tr);
       });
 
-      let chipMode = 'error';
+      if (emptyRow) {
+        body.appendChild(emptyRow);
+      }
+
+      if (!builtRows.length && emptyRow) {
+        emptyRow.style.display = '';
+      } else if (emptyRow) {
+        emptyRow.style.display = 'none';
+      }
+
+      const segmentInitial = segmentSelect.dataset.initial || 'all';
+      const severityInitial = severitySelect.dataset.initial || 'error';
+      const searchInitial = searchInput.dataset.initial || '';
+
+      Array.from(segments)
+        .sort((a, b) => a.localeCompare(b))
+        .forEach((segment) => {
+          const opt = document.createElement('option');
+          opt.value = segment;
+          opt.textContent = segment;
+          segmentSelect.appendChild(opt);
+        });
+
+      if (Array.from(segmentSelect.options).some((opt) => opt.value === segmentInitial)) {
+        segmentSelect.value = segmentInitial;
+      }
+      if (Array.from(severitySelect.options).some((opt) => opt.value === severityInitial)) {
+        severitySelect.value = severityInitial;
+      }
+      searchInput.value = searchInitial;
+
+      let chipMode = severityInitial === 'all' ? 'all' : severityInitial || 'error';
 
       function syncChips() {
         chips.forEach((btn) => {
@@ -218,56 +285,38 @@
         });
       }
 
-      function render() {
+      function applyFilter() {
         const wantSev = severitySelect.value;
         const wantSeg = segmentSelect.value;
         const query = (searchInput.value || '').trim().toLowerCase();
-        body.innerHTML = '';
         let visible = 0;
-        rows.forEach((row) => {
-          if (chipMode !== 'all' && row.severity !== chipMode) return;
-          if (wantSev !== 'all' && row.severity !== wantSev) return;
-          if (wantSeg !== 'all' && row.segment !== wantSeg) return;
-          if (query && !row.searchText.includes(query)) return;
-          const tr = document.createElement('tr');
-          tr.setAttribute('data-severity', row.severity);
-          tr.setAttribute('data-segment', row.segment);
-          tr.innerHTML = `
-            <td style="padding:0.5rem">${row.severityLabel}</td>
-            <td style="padding:0.5rem"><code class="mono">${row.code}</code></td>
-            <td style="padding:0.5rem"><code class="mono">${row.segment}</code></td>
-            <td style="padding:0.5rem"><code class="mono">${row.field}</code></td>
-            <td style="padding:0.5rem"><code class="mono">${row.component}</code></td>
-            <td style="padding:0.5rem"><code class="mono">${row.subcomponent}</code></td>
-            <td style="padding:0.5rem">${row.valuesText}${row.valuesExtra}</td>
-            <td style="padding:0.5rem">${row.message}</td>
-            <td style="padding:0.5rem">${row.count}</td>
-            <td style="padding:0.5rem">${row.count}/${row.total}</td>
-            <td style="padding:0.5rem">${row.percent}%</td>
-          `;
-          body.appendChild(tr);
-          visible += 1;
+        builtRows.forEach((tr) => {
+          const sev = tr.dataset.severity || '';
+          const seg = tr.dataset.segment || '';
+          const text = tr.dataset.text || '';
+          let show = true;
+          if (chipMode !== 'all') show = show && sev === chipMode;
+          if (wantSev !== 'all') show = show && sev === wantSev;
+          if (wantSeg !== 'all') show = show && seg === wantSeg;
+          if (query) show = show && text.includes(query);
+          tr.style.display = show ? '' : 'none';
+          if (show) visible += 1;
         });
-        if (!visible) {
-          const tr = document.createElement('tr');
-          tr.innerHTML = '<td colspan="11" class="muted" style="padding:.75rem">No issues to display.</td>';
-          body.appendChild(tr);
-        }
+        if (emptyRow) emptyRow.style.display = visible ? 'none' : '';
+        syncChips();
       }
 
       severitySelect.addEventListener('change', () => {
         chipMode = severitySelect.value === 'all' ? 'all' : severitySelect.value;
-        syncChips();
-        render();
+        applyFilter();
       });
-      segmentSelect.addEventListener('change', render);
-      searchInput.addEventListener('input', render);
+      segmentSelect.addEventListener('change', applyFilter);
+      searchInput.addEventListener('input', applyFilter);
       chips.forEach((chip) => {
         chip.addEventListener('click', () => {
           chipMode = chip.dataset.vf === 'all' ? 'all' : chip.dataset.vf;
           severitySelect.value = chipMode;
-          syncChips();
-          render();
+          applyFilter();
         });
       });
       if (resetButton) {
@@ -276,15 +325,12 @@
           severitySelect.value = 'error';
           segmentSelect.value = 'all';
           searchInput.value = '';
-          syncChips();
-          render();
+          applyFilter();
         });
       }
 
-      severitySelect.value = 'error';
-      chipMode = 'error';
-      syncChips();
-      render();
+      chipMode = chipMode || 'error';
+      applyFilter();
     })(document.currentScript);
   </script>
 
