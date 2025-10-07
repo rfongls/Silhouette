@@ -685,6 +685,32 @@
 
   });
 
+  
+
+  // Ensure dynamic sections (oob swaps) are initialized
+  function _primeDynamicReports(target) {
+    try {
+      initDeidCoverage(target || document);
+    } catch {}
+    try {
+      initValidateReport(target || document);
+    } catch {}
+  }
+
+  document.addEventListener('DOMContentLoaded', function(){ _primeDynamicReports(document); });
+  window.addEventListener('load', function(){ _primeDynamicReports(document); });
+
+  if (document && document.body) {
+    document.body.addEventListener('htmx:afterSwap', function(e){
+      _primeDynamicReports(e && e.target ? e.target : document);
+    });
+    document.body.addEventListener('htmx:afterSettle', function(e){
+      _primeDynamicReports(e && e.target ? e.target : document);
+    });
+    document.body.addEventListener('htmx:oobAfterSwap', function(e){
+      _primeDynamicReports(document);
+    });
+  }
   window.InteropUI = Object.assign(window.InteropUI || {}, {
     syncTyped,
     fillDatalist,
@@ -718,3 +744,358 @@
     onMllpComplete,
   });
 })();
+
+
+// --- De-identification report (filters) -------------------------------------
+function initDeidCoverage(root) {
+  try {
+    root = root && root.querySelector ? root : document;
+    const host = root.querySelector('section.deid-coverage[data-deid-root]') || root.closest && root.closest('section.deid-coverage[data-deid-root]');
+    const container = host || root.querySelector('section.deid-coverage[data-deid-root]');
+    if (!container || container.dataset.deidJsInit === '1') return;
+    container.dataset.deidJsInit = '1';
+
+    const segSel = container.querySelector('[data-role="deid-filter-seg"]');
+    const fieldSel = container.querySelector('[data-role="deid-filter-field"]');
+    const actionSel = container.querySelector('[data-role="deid-filter-action"]');
+    const valueInput = container.querySelector('[data-role="deid-filter-value"]');
+    const resetBtn = container.querySelector('[data-role="deid-filter-reset"]');
+    const noteEl = container.querySelector('[data-role="deid-note"]');
+    const emptyRow = container.querySelector('[data-role="deid-empty"]');
+
+    if (!segSel || !fieldSel || !actionSel || !valueInput) return;
+
+    const rowState = Array.from(container.querySelectorAll('[data-role="deid-row"]')).map((tr) => {
+      const segment = (tr.dataset.segment || '').trim();
+      const field = (tr.dataset.field || '').trim();
+      const action = (tr.dataset.action || '').trim();
+      const logic = (tr.dataset.logic || '').toLowerCase();
+      const search = [segment, field, action, logic].join(' ').toLowerCase();
+      return {
+        el: tr,
+        segment,
+        segmentNorm: segment.toLowerCase(),
+        field,
+        fieldNorm: field.toLowerCase(),
+        action,
+        actionNorm: action.toLowerCase(),
+        logic,
+        search,
+      };
+    });
+
+    function collectFields(segValue) {
+      const segNorm = segValue === 'all' ? '' : (segValue || '').trim().toLowerCase();
+      const fields = new Map();
+      rowState.forEach((row) => {
+        if (segNorm && row.segmentNorm !== segNorm) return;
+        if (!row.field) return;
+        fields.set(row.field, true);
+      });
+      return Array.from(fields.keys());
+    }
+    function sortFields(fields) {
+      return fields.sort((a, b) => {
+        const ta = parseInt(a || '0', 10);
+        const tb = parseInt(b || '0', 10);
+        if (!Number.isNaN(ta) && !Number.isNaN(tb) && ta !== tb) return ta - tb;
+        return String(a || '').localeCompare(String(b || ''));
+      });
+    }
+    function populateSegments() {
+      const current = segSel.value;
+      const segs = new Map();
+      rowState.forEach((row) => {
+        if (row.segment) segs.set(row.segment, true);
+      });
+      segSel.innerHTML = '<option value="all">All</option>';
+      Array.from(segs.keys()).sort().forEach((seg) => {
+        const opt = document.createElement('option');
+        opt.value = seg;
+        opt.textContent = seg;
+        segSel.appendChild(opt);
+      });
+      if (Array.from(segSel.options).some((o) => o.value === current)) segSel.value = current;
+    }
+    function populateFields() {
+      const current = fieldSel.value;
+      const segValue = segSel.value;
+      fieldSel.innerHTML = '<option value="all">All</option>';
+      sortFields(collectFields(segValue)).forEach((field) => {
+        const opt = document.createElement('option');
+        opt.value = field;
+        opt.textContent = field;
+        fieldSel.appendChild(opt);
+      });
+      if (Array.from(fieldSel.options).some((opt) => opt.value === current)) {
+        fieldSel.value = current;
+      } else {
+        fieldSel.value = 'all';
+      }
+    }
+    function populateActions() {
+      const current = actionSel.value;
+      const segNorm = segSel.value === 'all' ? '' : (segSel.value || '').trim().toLowerCase();
+      const fieldNorm = fieldSel.value === 'all' ? '' : (fieldSel.value || '').trim().toLowerCase();
+      const actions = new Map();
+      rowState.forEach((row) => {
+        if (segNorm && row.segmentNorm !== segNorm) return;
+        if (fieldNorm && row.fieldNorm !== fieldNorm) return;
+        if (!row.action) return;
+        actions.set(row.action, true);
+      });
+      actionSel.innerHTML = '<option value="all">All</option>';
+      Array.from(actions.keys()).sort().forEach((action) => {
+        const opt = document.createElement('option');
+        opt.value = action;
+        opt.textContent = action;
+        actionSel.appendChild(opt);
+      });
+      if (Array.from(actionSel.options).some((o) => o.value === current)) {
+        actionSel.value = current;
+      } else {
+        actionSel.value = 'all';
+      }
+    }
+    function applyFilters() {
+      const wantSeg = segSel.value;
+      const wantSegNorm = wantSeg === 'all' ? '' : (wantSeg || '').trim().toLowerCase();
+      const wantField = fieldSel.value;
+      const wantFieldNorm = wantField === 'all' ? '' : (wantField || '').trim().toLowerCase();
+      const wantAction = actionSel.value;
+      const wantActionNorm = wantAction === 'all' ? '' : (wantAction || '').trim().toLowerCase();
+      const query = (valueInput.value || '').trim().toLowerCase();
+      let visible = 0;
+      rowState.forEach((row) => {
+        let show = true;
+        if (wantSegNorm && row.segmentNorm !== wantSegNorm) show = false;
+        if (show && wantFieldNorm && row.fieldNorm !== wantFieldNorm) show = false;
+        if (show && wantActionNorm && row.actionNorm !== wantActionNorm) show = false;
+        if (show && query && !row.search.includes(query)) show = false;
+        row.el.style.display = show ? '' : 'none';
+        if (show) visible += 1;
+      });
+      if (emptyRow) emptyRow.style.display = visible ? 'none' : '';
+      if (noteEl) noteEl.style.display = visible ? 'none' : '';
+    }
+    segSel.addEventListener('change', () => {
+      populateFields();
+      populateActions();
+      applyFilters();
+    });
+    fieldSel.addEventListener('change', () => {
+      populateActions();
+      applyFilters();
+    });
+    actionSel.addEventListener('change', applyFilters);
+    valueInput.addEventListener('input', applyFilters);
+    if (resetBtn) {
+      resetBtn.addEventListener('click', () => {
+        segSel.value = 'all';
+        populateFields();
+        fieldSel.value = 'all';
+        populateActions();
+        actionSel.value = 'all';
+        valueInput.value = '';
+        applyFilters();
+      });
+    }
+    populateSegments();
+    populateFields();
+    populateActions();
+    applyFilters();
+  } catch (e) {
+    console.warn('initDeidCoverage error', e);
+  }
+}
+
+// --- Validation report (buckets + filters) ----------------------------------
+function initValidateReport(root) {
+  try {
+    root = root && root.querySelector ? root : document;
+    const container = root.querySelector('section.validate-report[data-val-root]') || root.getElementById && root.getElementById('validate-report');
+    if (!container || container.dataset.valJsInit === '1') return;
+    container.dataset.valJsInit = '1';
+
+    const dataEl = container.querySelector('[data-role="val-issues"]');
+    const body = container.querySelector('[data-role="val-summary-body"]');
+    const emptyRow = container.querySelector('[data-role="val-empty"]');
+    if (!dataEl || !body) return;
+
+    let issues = [];
+    try { issues = JSON.parse(dataEl.textContent || '[]') || []; } catch { issues = []; }
+    const TOTAL = parseInt(dataEl.dataset.total || '1', 10) || 1;
+
+    const severitySelect = container.querySelector('[data-role="val-filter-sev"]');
+    const segmentSelect = container.querySelector('[data-role="val-filter-seg"]');
+    const searchInput = container.querySelector('[data-role="val-filter-text"]');
+    const resetButton = container.querySelector('[data-role="val-filter-reset"]');
+    const chips = Array.from(container.querySelectorAll('.validate-report__counts .chip[data-vf]'));
+    if (!severitySelect || !segmentSelect || !searchInput) return;
+
+    const clean = (v) => (v === null || v === undefined ? '' : String(v).trim());
+    const cleanZeroable = (value) => (value === 0 ? '0' : clean(value));
+    const normalize = (item) => {
+      if (!item || typeof item !== 'object') {
+        return { severity: 'error', code: '', segment: '', field: '', component: '', subcomponent: '', value: '', message: '' };
+      }
+      const severity = clean(item.severity || item.status || 'error').toLowerCase();
+      const normalizedSeverity = severity.includes('warn') ? 'warning' : (severity.includes('ok') || severity.includes('pass')) ? 'passed' : 'error';
+      return {
+        severity: normalizedSeverity,
+        code: clean(item.code || item.rule || ''),
+        segment: clean(item.segment || item.seg || ''),
+        field: cleanZeroable(item.field),
+        component: cleanZeroable(item.comp || item.component),
+        subcomponent: cleanZeroable(item.subcomp || item.subcomponent),
+        value: clean(item.value || item.bad_value || ''),
+        message: clean(item.message || item.msg || ''),
+      };
+    };
+
+    const normIssues = (Array.isArray(issues) ? issues : []).map(normalize);
+    const rowsMap = new Map();
+    normIssues.forEach((it) => {
+      const key = [
+        it.severity,
+        it.segment.toLowerCase(),
+        it.field,
+        it.component,
+        it.subcomponent,
+        it.code,
+        it.message,
+      ].join('|');
+      let bucket = rowsMap.get(key);
+      if (!bucket) {
+        bucket = {
+          severity: it.severity || 'error',
+          code: it.code || '',
+          segment: it.segment || '',
+          field: it.field || '',
+          component: it.component || '',
+          subcomponent: it.subcomponent || '',
+          message: it.message || '',
+          values: new Set(),
+          count: 0,
+        };
+        rowsMap.set(key, bucket);
+      }
+      const v = it.value || '';
+      if (v) bucket.values.add(v);
+      bucket.count += 1;
+    });
+
+    body.innerHTML = '';
+    const sortedBuckets = Array.from(rowsMap.values()).sort((a, b) => {
+      const order = (sev) => (sev === 'error' ? 0 : sev === 'warning' ? 1 : 2);
+      return order(a.severity) - order(b.severity)
+        || (a.segment || '').localeCompare(b.segment || '')
+        || (parseInt(a.field || '0', 10) - parseInt(b.field || '0', 10))
+        || (a.code || '').localeCompare(b.code || '');
+    });
+
+    const builtRows = sortedBuckets.map((bucket) => {
+      const values = Array.from(bucket.values);
+      const shown = values.slice(0, 8);
+      const extraCount = values.length - shown.length;
+      const extra = extraCount > 0 ? ` (+${extraCount} more)` : '';
+      const severityLabel = bucket.severity === 'passed' ? 'Passed' : bucket.severity === 'warning' ? 'Warning' : 'Error';
+      const tr = document.createElement('tr');
+      tr.dataset.role = 'val-row';
+      tr.dataset.severity = bucket.severity;
+      tr.dataset.segment = (bucket.segment || '').trim().toLowerCase();
+      tr.dataset.segmentRaw = bucket.segment || '';
+      tr.dataset.text = [
+        bucket.code,
+        bucket.segment,
+        bucket.field,
+        bucket.component,
+        bucket.subcomponent,
+        values.join(', '),
+        bucket.message,
+      ].join(' ').toLowerCase();
+
+      tr.innerHTML = [
+        `<td style="padding:0.5rem">${severityLabel}</td>`,
+        `<td style="padding:0.5rem"><code class="mono">${bucket.code || ''}</code></td>`,
+        `<td style="padding:0.5rem"><code class="mono">${bucket.segment || ''}</code></td>`,
+        `<td style="padding:0.5rem"><code class="mono">${bucket.field || ''}</code></td>`,
+        `<td style="padding:0.5rem"><code class="mono">${bucket.component || ''}</code></td>`,
+        `<td style="padding:0.5rem"><code class="mono">${bucket.subcomponent || ''}</code></td>`,
+        `<td style="padding:0.5rem"><code class="mono">${shown.join(', ')}${extra}</code></td>`,
+        `<td style="padding:0.5rem">${bucket.message || ''}</td>`,
+        `<td style="padding:0.5rem">${bucket.count}</td>`,
+        `<td style="padding:0.5rem">${TOTAL}</td>`,
+        `<td style="padding:0.5rem">${((bucket.count / TOTAL) * 100).toFixed(0)}%</td>`,
+      ].join('');
+      body.appendChild(tr);
+      return tr;
+    });
+
+    const normalizeMode = (value) => {
+      const v = String(value || '').toLowerCase();
+      if (v.includes('pass') || v === 'ok' || v === 'info') return 'passed';
+      if (v.includes('warn')) return 'warning';
+      if (v.includes('error') || v === 'err') return 'error';
+      if (v === 'all' || !v) return 'all';
+      return 'error';
+    };
+    const syncChips = () => {
+      const mode = normalizeMode(severitySelect.value || 'error');
+      chips.forEach((chip) => {
+        const vf = normalizeMode(chip.dataset.vf);
+        chip.style.opacity = vf === mode ? '1' : '.7';
+        chip.style.transform = vf === mode ? 'scale(1.0)' : 'scale(.98)';
+      });
+    };
+
+    let chipMode = normalizeMode('error');
+    function applyFilter() {
+      const wantSev = normalizeMode(severitySelect.value);
+      const wantSeg = (segmentSelect.value || '').trim().toLowerCase();
+      const query = (searchInput.value || '').trim().toLowerCase();
+      let visible = 0;
+      builtRows.forEach((tr) => {
+        const sev = (tr.dataset.severity || '').trim().toLowerCase();
+        const seg = (tr.dataset.segment || '').trim().toLowerCase();
+        const text = (tr.dataset.text || '').toLowerCase();
+        let show = true;
+        if (chipMode !== 'all') show = show && sev === chipMode;
+        if (wantSev && wantSev !== 'all') show = show && sev === wantSev;
+        if (wantSeg && wantSeg !== 'all') show = show && seg === wantSeg;
+        if (query) show = show && text.includes(query);
+        tr.style.display = show ? '' : 'none';
+        if (show) visible += 1;
+      });
+      if (emptyRow) emptyRow.style.display = visible ? 'none' : '';
+      syncChips();
+    }
+
+    severitySelect.addEventListener('change', () => {
+      chipMode = normalizeMode(severitySelect.value);
+      applyFilter();
+    });
+    segmentSelect.addEventListener('change', applyFilter);
+    searchInput.addEventListener('input', applyFilter);
+    chips.forEach((chip) => {
+      chip.addEventListener('click', () => {
+        chipMode = normalizeMode(chip.dataset.vf);
+        severitySelect.value = chipMode === 'all' ? 'all' : chipMode;
+        applyFilter();
+      });
+    });
+    if (resetButton) {
+      resetButton.addEventListener('click', () => {
+        chipMode = normalizeMode('error');
+        severitySelect.value = 'error';
+        segmentSelect.value = 'all';
+        searchInput.value = '';
+        applyFilter();
+      });
+    }
+    chipMode = normalizeMode(chipMode || 'error');
+    applyFilter();
+  } catch (e) {
+    console.warn('initValidateReport error', e);
+  }
+}
