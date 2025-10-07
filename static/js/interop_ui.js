@@ -497,7 +497,7 @@
         tr.dataset.role = 'val-row';
         tr.dataset.severity = bucket.severity;
         tr.dataset.segment = (bucket.segment || '').trim().toLowerCase();
-        tr.dataset.text = [bucket.code, bucket.segment, bucket.field, bucket.component, bucket.subcomponent, values.join(' '), messageForRow].join(' ').toLowerCase();
+        tr.dataset.text = [bucket.code, bucket.segment, bucket.field, bucket.component, bucket.subcomponent, allValuesText, messageForRow].join(' ').toLowerCase();
         tr.innerHTML = [
           `<td style="padding:0.5rem">${bucket.severity === 'passed' ? 'Passed' : bucket.severity === 'warning' ? 'Warning' : 'Error'}</td>`,
           `<td style="padding:0.5rem"><code class="mono">${bucket.code || '—'}</code></td>`,
@@ -561,6 +561,7 @@
       if (Array.from(segmentSelect.options).some(opt => opt.value === segInitial)) segmentSelect.value = segInitial;
       const sevInitial = severitySelect.dataset.initial || 'error';
       severitySelect.value = sevInitial;
+      chipMode = normalizeMode(sevInitial);
       const searchInitial = searchInput.dataset.initial || '';
       searchInput.value = searchInitial;
 
