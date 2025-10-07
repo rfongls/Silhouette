@@ -91,7 +91,6 @@
             const noteEl = root.querySelector('[data-role="deid-note"]');
             const emptyRow = root.querySelector('[data-role="deid-empty"]');
             if (!segSel || !fieldSel || !actionSel || !valueInput) return;
-
             const rowState = Array.from(root.querySelectorAll('[data-role="deid-row"]')).map((tr) => {
               const segment = (tr.dataset.segment || '').trim();
               const field = (tr.dataset.field || '').trim();
