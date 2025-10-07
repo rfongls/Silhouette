@@ -16,6 +16,16 @@
   const $$ = (root, sel) => Array.from((root || document).querySelectorAll(sel));
   const $1 = (root, sel) => (root || document).querySelector(sel);
 
+  // Remove any single-quoted value fragments from a message so we can append
+  // a full list cleanly (e.g., "Value 'FF' not allowed" -> "Value not allowed").
+  function stripQuotedValue(message){
+    try {
+      return String(message || '').replace(/'[^']*'/g, '').replace(/\s{2,}/g, ' ').trim();
+    } catch (_) {
+      return String(message || '');
+    }
+  }
+
   // Resolve the application root prefix once; used for fetch/beacon calls.
   function rootPath(path){
     const doc = typeof document !== 'undefined' ? document : null;
@@ -468,13 +478,26 @@
 
       const rows = buckets.map(bucket => {
         const values = Array.from(bucket.values);
-        const shown = values.slice(0, 8);
-        const extra = values.length > shown.length ? ` (+${values.length - shown.length} more)` : '';
+        const allValuesText = values.length ? values.join(', ') : '—';
+
+        const isValueNotAllowed =
+          (bucket.code || '').toUpperCase() === 'VALUE_NOT_ALLOWED' ||
+          /not\s+allowed/i.test(bucket.message || '');
+        let messageForRow;
+        if (values.length > 1 && isValueNotAllowed) {
+          messageForRow = `Values: ${allValuesText} not allowed.`;
+        } else if (values.length > 1) {
+          const baseMessage = stripQuotedValue(bucket.message || '');
+          messageForRow = baseMessage ? `${baseMessage} — Values: ${allValuesText}` : `Values: ${allValuesText}`;
+        } else {
+          messageForRow = bucket.message || '—';
+        }
+
         const tr = document.createElement('tr');
         tr.dataset.role = 'val-row';
         tr.dataset.severity = bucket.severity;
         tr.dataset.segment = (bucket.segment || '').trim().toLowerCase();
-        tr.dataset.text = [bucket.code, bucket.segment, bucket.field, bucket.component, bucket.subcomponent, values.join(' '), bucket.message].join(' ').toLowerCase();
+        tr.dataset.text = [bucket.code, bucket.segment, bucket.field, bucket.component, bucket.subcomponent, values.join(' '), messageForRow].join(' ').toLowerCase();
         tr.innerHTML = [
           `<td style="padding:0.5rem">${bucket.severity === 'passed' ? 'Passed' : bucket.severity === 'warning' ? 'Warning' : 'Error'}</td>`,
           `<td style="padding:0.5rem"><code class="mono">${bucket.code || '—'}</code></td>`,
@@ -482,8 +505,8 @@
           `<td style="padding:0.5rem"><code class="mono">${bucket.field || '—'}</code></td>`,
           `<td style="padding:0.5rem"><code class="mono">${bucket.component || '—'}</code></td>`,
           `<td style="padding:0.5rem"><code class="mono">${bucket.subcomponent || '—'}</code></td>`,
-          `<td style="padding:0.5rem">${shown.length ? shown.join(', ') : '—'}${extra}</td>`,
-          `<td style="padding:0.5rem">${bucket.message || '—'}</td>`,
+          `<td style="padding:0.5rem">${allValuesText}</td>`,
+          `<td style="padding:0.5rem">${messageForRow}</td>`,
           `<td style="padding:0.5rem">${bucket.count}</td>`,
           `<td style="padding:0.5rem">${TOTAL}</td>`,
           `<td style="padding:0.5rem">${Math.round((bucket.count / TOTAL) * 100)}%</td>`
