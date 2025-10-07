@@ -91,29 +91,52 @@
             const noteEl = root.querySelector('[data-role="deid-note"]');
             const emptyRow = root.querySelector('[data-role="deid-empty"]');
             if (!segSel || !fieldSel || !actionSel || !valueInput) return;
+            const rowState = Array.from(root.querySelectorAll('[data-role="deid-row"]')).map((tr) => {
+              const segment = (tr.dataset.segment || '').trim();
+              const field = (tr.dataset.field || '').trim();
+              const action = (tr.dataset.action || '').trim();
+              const logic = (tr.dataset.logic || '').toLowerCase();
+              const search = [segment, field, action, logic].join(' ').toLowerCase();
+              return {
+                el: tr,
+                segment,
+                segmentNorm: segment.toLowerCase(),
+                field,
+                fieldNorm: field.toLowerCase(),
+                action,
+                actionNorm: action.toLowerCase(),
+                logic,
+                search,
+              };
+            });
 
-            const rowEls = Array.from(root.querySelectorAll('[data-role="deid-row"]'));
-            const segments = new Set();
+            const segments = new Map();
             const fieldsBySegment = new Map();
-            const allFields = new Set();
 
-            rowEls.forEach((tr) => {
-              const seg = tr.dataset.segment || '';
-              const field = tr.dataset.field || '';
-              if (seg) {
-                segments.add(seg);
-                if (!fieldsBySegment.has(seg)) fieldsBySegment.set(seg, new Set());
-                if (field) fieldsBySegment.get(seg).add(field);
+            const ensureFieldBucket = (segKey) => {
+              if (!fieldsBySegment.has(segKey)) {
+                fieldsBySegment.set(segKey, new Map());
               }
-              if (field) allFields.add(field);
+              return fieldsBySegment.get(segKey);
+            };
+
+            rowState.forEach((row) => {
+              if (row.segment) {
+                const segKey = row.segmentNorm;
+                if (!segments.has(segKey)) segments.set(segKey, row.segment);
+                const segFields = ensureFieldBucket(segKey);
+                if (row.field) segFields.set(row.fieldNorm, row.field);
+              }
+              if (row.field) {
+                const allFields = ensureFieldBucket('__all__');
+                allFields.set(row.fieldNorm, row.field);
+              }
             });
 
             function collectFields(segValue) {
-              if (segValue === 'all') {
-                return Array.from(allFields);
-              }
-              const scoped = fieldsBySegment.get(segValue);
-              return scoped ? Array.from(scoped) : [];
+              const segKey = segValue === 'all' ? '__all__' : (segValue || '').trim().toLowerCase();
+              const scoped = fieldsBySegment.get(segKey);
+              return scoped ? Array.from(scoped.values()) : [];
             }
 
             function sortFields(fields) {
@@ -131,8 +154,9 @@
 
             function populateSegments() {
               const current = segSel.value;
+              const currentNorm = (current || '').trim().toLowerCase();
               segSel.innerHTML = '<option value="all">All</option>';
-              Array.from(segments)
+              Array.from(segments.values())
                 .sort((a, b) => a.localeCompare(b))
                 .forEach((seg) => {
                   const opt = document.createElement('option');
@@ -140,7 +164,9 @@
                   opt.textContent = seg;
                   segSel.appendChild(opt);
                 });
-              if (segments.has(current)) {
+              if (segments.has(currentNorm)) {
+                segSel.value = segments.get(currentNorm);
+              } else if (Array.from(segSel.options).some((opt) => opt.value === current)) {
                 segSel.value = current;
               } else {
                 segSel.value = 'all';
@@ -166,19 +192,17 @@
 
             function populateActions() {
               const current = actionSel.value;
-              const segValue = segSel.value;
-              const fieldValue = fieldSel.value;
-              const actions = new Set();
-              rowEls.forEach((tr) => {
-                const seg = tr.dataset.segment || '';
-                const field = tr.dataset.field || '';
-                const action = tr.dataset.action || '';
-                if (segValue !== 'all' && seg !== segValue) return;
-                if (fieldValue !== 'all' && field !== fieldValue) return;
-                if (action) actions.add(action);
+              const segNorm = segSel.value === 'all' ? '' : (segSel.value || '').trim().toLowerCase();
+              const fieldNorm = fieldSel.value === 'all' ? '' : (fieldSel.value || '').trim().toLowerCase();
+              const actions = new Map();
+              rowState.forEach((row) => {
+                if (segNorm && row.segmentNorm !== segNorm) return;
+                if (fieldNorm && row.fieldNorm !== fieldNorm) return;
+                if (!row.action) return;
+                if (!actions.has(row.actionNorm)) actions.set(row.actionNorm, row.action);
               });
               actionSel.innerHTML = '<option value="all">All</option>';
-              Array.from(actions)
+              Array.from(actions.values())
                 .sort((a, b) => a.localeCompare(b))
                 .forEach((action) => {
                   const opt = document.createElement('option');
@@ -195,24 +219,20 @@
 
             function applyFilters() {
               const wantSeg = segSel.value;
+              const wantSegNorm = wantSeg === 'all' ? '' : (wantSeg || '').trim().toLowerCase();
               const wantField = fieldSel.value;
+              const wantFieldNorm = wantField === 'all' ? '' : (wantField || '').trim().toLowerCase();
               const wantAction = actionSel.value;
+              const wantActionNorm = wantAction === 'all' ? '' : (wantAction || '').trim().toLowerCase();
               const query = (valueInput.value || '').trim().toLowerCase();
               let visible = 0;
-              rowEls.forEach((tr) => {
-                const seg = tr.dataset.segment || '';
-                const field = tr.dataset.field || '';
-                const action = tr.dataset.action || '';
-                const logic = (tr.dataset.logic || '').toLowerCase();
+              rowState.forEach((row) => {
                 let show = true;
-                if (wantSeg !== 'all' && seg !== wantSeg) show = false;
-                if (show && wantField !== 'all' && field !== wantField) show = false;
-                if (show && wantAction !== 'all' && action !== wantAction) show = false;
-                if (show && query) {
-                  const haystacks = [seg.toLowerCase(), field.toLowerCase(), action.toLowerCase(), logic];
-                  show = haystacks.some((part) => part.includes(query));
-                }
-                tr.style.display = show ? '' : 'none';
+                if (wantSegNorm && row.segmentNorm !== wantSegNorm) show = false;
+                if (show && wantFieldNorm && row.fieldNorm !== wantFieldNorm) show = false;
+                if (show && wantActionNorm && row.actionNorm !== wantActionNorm) show = false;
+                if (show && query && !row.search.includes(query)) show = false;
+                row.el.style.display = show ? '' : 'none';
                 if (show) visible += 1;
               });
               if (emptyRow) emptyRow.style.display = visible ? 'none' : '';

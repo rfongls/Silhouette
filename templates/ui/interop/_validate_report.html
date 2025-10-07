@@ -125,8 +125,21 @@
       if (!severitySelect || !segmentSelect || !searchInput) return;
 
       const normalize = (item) => {
-        if (!item || typeof item !== 'object') return {};
-        const severity = String(item.severity || item.status || 'error').toLowerCase();
+        const clean = (value) => (value === null || value === undefined ? '' : String(value).trim());
+        const cleanZeroable = (value) => (value === 0 ? '0' : clean(value));
+        if (!item || typeof item !== 'object') {
+          return {
+            severity: 'error',
+            code: '',
+            segment: '',
+            field: '',
+            component: '',
+            subcomponent: '',
+            value: '',
+            message: '',
+          };
+        }
+        const severity = clean(item.severity || item.status || 'error').toLowerCase();
         const normalizedSeverity = severity.includes('warn')
           ? 'warning'
           : (severity.includes('ok') || severity.includes('pass') || severity.includes('info'))
@@ -134,13 +147,13 @@
             : 'error';
         return {
           severity: normalizedSeverity,
-          code: String(item.code || item.rule || item.id || '') || '',
-          segment: String(item.segment || '') || '',
-          field: item.field === 0 ? '0' : String(item.field ?? '') || '',
-          component: item.component === 0 ? '0' : String(item.component ?? '') || '',
-          subcomponent: item.subcomponent === 0 ? '0' : String(item.subcomponent ?? '') || '',
-          value: String(item.value || item.actual || item.expected || item.received || '') || '',
-          message: String(item.message || '') || '',
+          code: clean(item.code || item.rule || item.id || ''),
+          segment: clean(item.segment || ''),
+          field: cleanZeroable(item.field ?? ''),
+          component: cleanZeroable(item.component ?? ''),
+          subcomponent: cleanZeroable(item.subcomponent ?? ''),
+          value: clean(item.value || item.actual || item.expected || item.received || ''),
+          message: clean(item.message || ''),
         };
       };
 
@@ -236,7 +249,7 @@
       rows.forEach((row) => {
         const tr = document.createElement('tr');
         tr.dataset.severity = row.severity;
-        tr.dataset.segment = row.rawSegment;
+        tr.dataset.segment = row.rawSegment.trim();
         tr.dataset.text = row.searchText;
         tr.innerHTML = `
           <td style="padding:0.5rem">${row.severityLabel}</td>
@@ -288,7 +301,15 @@
       }
       searchInput.value = searchInitial;
 
-      let chipMode = severityInitial === 'all' ? 'all' : severityInitial || 'error';
+      const normalizeMode = (value) => {
+        const raw = (value || '').trim().toLowerCase();
+        if (raw === 'all') return 'all';
+        if (raw === 'warning' || raw === 'passed' || raw === 'error') return raw;
+        return 'error';
+      };
+
+      let chipMode = severityInitial === 'all' ? 'all' : (severityInitial || 'error');
+      chipMode = normalizeMode(chipMode);
 
       function syncChips() {
         chips.forEach((btn) => {
@@ -299,18 +320,18 @@
       }
 
       function applyFilter() {
-        const wantSev = severitySelect.value;
-        const wantSeg = segmentSelect.value;
+        const wantSev = (severitySelect.value || '').trim().toLowerCase();
+        const wantSeg = (segmentSelect.value || '').trim().toLowerCase();
         const query = (searchInput.value || '').trim().toLowerCase();
         let visible = 0;
         builtRows.forEach((tr) => {
-          const sev = tr.dataset.severity || '';
-          const seg = tr.dataset.segment || '';
-          const text = tr.dataset.text || '';
+          const sev = (tr.dataset.severity || '').trim().toLowerCase();
+          const seg = (tr.dataset.segment || '').trim().toLowerCase();
+          const text = (tr.dataset.text || '').toLowerCase();
           let show = true;
           if (chipMode !== 'all') show = show && sev === chipMode;
-          if (wantSev !== 'all') show = show && sev === wantSev;
-          if (wantSeg !== 'all') show = show && seg === wantSeg;
+          if (wantSev && wantSev !== 'all') show = show && sev === wantSev;
+          if (wantSeg && wantSeg !== 'all') show = show && seg === wantSeg;
           if (query) show = show && text.includes(query);
           tr.style.display = show ? '' : 'none';
           if (show) visible += 1;
@@ -320,21 +341,21 @@
       }
 
       severitySelect.addEventListener('change', () => {
-        chipMode = severitySelect.value === 'all' ? 'all' : severitySelect.value;
+        chipMode = normalizeMode(severitySelect.value);
         applyFilter();
       });
       segmentSelect.addEventListener('change', applyFilter);
       searchInput.addEventListener('input', applyFilter);
       chips.forEach((chip) => {
         chip.addEventListener('click', () => {
-          chipMode = chip.dataset.vf === 'all' ? 'all' : chip.dataset.vf;
-          severitySelect.value = chipMode;
+          chipMode = normalizeMode(chip.dataset.vf);
+          severitySelect.value = chipMode === 'all' ? 'all' : chipMode;
           applyFilter();
         });
       });
       if (resetButton) {
         resetButton.addEventListener('click', () => {
-          chipMode = 'error';
+          chipMode = normalizeMode('error');
           severitySelect.value = 'error';
           segmentSelect.value = 'all';
           searchInput.value = '';
@@ -342,7 +363,7 @@
         });
       }
 
-      chipMode = chipMode || 'error';
+      chipMode = normalizeMode(chipMode || 'error');
       applyFilter();
     })(document.currentScript);
   </script>
