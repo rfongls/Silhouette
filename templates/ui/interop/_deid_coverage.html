@@ -81,29 +81,52 @@
         (function (script) {
           const root = script.closest('[data-deid-root]');
           if (!root) return;
+
           const segSel = root.querySelector('[data-role="deid-filter-seg"]');
           const fieldSel = root.querySelector('[data-role="deid-filter-field"]');
           const actionSel = root.querySelector('[data-role="deid-filter-action"]');
           const valueInput = root.querySelector('[data-role="deid-filter-value"]');
           const resetBtn = root.querySelector('[data-role="deid-filter-reset"]');
           const noteEl = root.querySelector('[data-role="deid-note"]');
-          const tbody = root.querySelector('[data-role="deid-tbody"]');
           const emptyRow = root.querySelector('[data-role="deid-empty"]');
-          if (!segSel || !fieldSel || !actionSel || !valueInput || !tbody) return;
+          if (!segSel || !fieldSel || !actionSel || !valueInput) return;
 
           const rowEls = Array.from(root.querySelectorAll('[data-role="deid-row"]'));
           const segments = new Set();
-          const fields = new Map(); // seg -> Set(fields)
+          const fieldsBySegment = new Map();
+          const allFields = new Set();
 
           rowEls.forEach((tr) => {
             const seg = tr.dataset.segment || '';
             const field = tr.dataset.field || '';
             if (seg) {
               segments.add(seg);
-              if (!fields.has(seg)) fields.set(seg, new Set());
-              if (field) fields.get(seg).add(field);
+              if (!fieldsBySegment.has(seg)) fieldsBySegment.set(seg, new Set());
+              if (field) fieldsBySegment.get(seg).add(field);
             }
+            if (field) allFields.add(field);
           });
+
+          function collectFields(segValue) {
+            if (segValue === 'all') {
+              return Array.from(allFields);
+            }
+            const scoped = fieldsBySegment.get(segValue);
+            return scoped ? Array.from(scoped) : [];
+          }
+
+          function sortFields(fields) {
+            return fields.sort((a, b) => {
+              const ai = parseInt(a, 10);
+              const bi = parseInt(b, 10);
+              const aIsNum = !Number.isNaN(ai);
+              const bIsNum = !Number.isNaN(bi);
+              if (aIsNum && bIsNum) return ai - bi;
+              if (aIsNum) return -1;
+              if (bIsNum) return 1;
+              return a.localeCompare(b);
+            });
+          }
 
           function populateSegments() {
             const current = segSel.value;
@@ -118,36 +141,16 @@
               });
             if (segments.has(current)) {
               segSel.value = current;
-            }
-          }
-          if (field) allFields.add(field);
-        });
-
-          function collectFields(segValue) {
-            const set = new Set();
-            if (segValue === 'all') {
-              fields.forEach((values) => {
-                values.forEach((value) => set.add(value));
-              });
             } else {
-              const scoped = fields.get(segValue);
-              if (scoped) scoped.forEach((value) => set.add(value));
+              segSel.value = 'all';
             }
-            return Array.from(set).sort((a, b) => {
-              const ai = parseInt(a, 10);
-              const bi = parseInt(b, 10);
-              if (!Number.isNaN(ai) && !Number.isNaN(bi)) return ai - bi;
-              if (!Number.isNaN(ai)) return -1;
-              if (!Number.isNaN(bi)) return 1;
-              return a.localeCompare(b);
-            });
           }
 
           function populateFields() {
             const current = fieldSel.value;
             const segValue = segSel.value;
             fieldSel.innerHTML = '<option value="all">All</option>';
-            collectFields(segValue).forEach((field) => {
+            sortFields(collectFields(segValue)).forEach((field) => {
               const opt = document.createElement('option');
               opt.value = field;
               opt.textContent = field;
@@ -155,6 +158,8 @@
             });
             if (Array.from(fieldSel.options).some((opt) => opt.value === current)) {
               fieldSel.value = current;
+            } else {
+              fieldSel.value = 'all';
             }
           }
 
@@ -182,9 +187,10 @@
               });
             if (Array.from(actionSel.options).some((opt) => opt.value === current)) {
               actionSel.value = current;
+            } else {
+              actionSel.value = 'all';
             }
           }
-        }
 
           function applyFilters() {
             const wantSeg = segSel.value;
@@ -196,18 +202,20 @@
               const seg = tr.dataset.segment || '';
               const field = tr.dataset.field || '';
               const action = tr.dataset.action || '';
-              const actionSearch = action.toLowerCase();
               const logic = (tr.dataset.logic || '').toLowerCase();
               let show = true;
               if (wantSeg !== 'all' && seg !== wantSeg) show = false;
               if (show && wantField !== 'all' && field !== wantField) show = false;
               if (show && wantAction !== 'all' && action !== wantAction) show = false;
-              if (show && query && !logic.includes(query) && !actionSearch.includes(query)) show = false;
+              if (show && query) {
+                const actionText = action.toLowerCase();
+                show = logic.includes(query) || actionText.includes(query);
+              }
               tr.style.display = show ? '' : 'none';
               if (show) visible += 1;
             });
             if (emptyRow) emptyRow.style.display = visible ? 'none' : '';
-            if (noteEl) noteEl.style.display = query && !visible ? '' : 'none';
+            if (noteEl) noteEl.style.display = visible ? 'none' : '';
           }
 
           segSel.addEventListener('change', () => {
@@ -221,6 +229,7 @@
           });
           actionSel.addEventListener('change', applyFilters);
           valueInput.addEventListener('input', applyFilters);
+
           if (resetBtn) {
             resetBtn.addEventListener('click', () => {
               segSel.value = 'all';
@@ -232,7 +241,6 @@
               applyFilters();
             });
           }
-        }
 
           populateSegments();
           populateFields();
