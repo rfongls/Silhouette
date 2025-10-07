@@ -4,14 +4,11 @@
   {% set _issues = _issues or [] %}
   {% set _counts = (_r.counts if _r is not none else (counts if counts is defined else {})) %}
   {% set _counts = _counts or {} %}
-  {% set _total_msgs = (
-        (_r.msg_total | default(None) if _r is not none else None)
-        or (_r.total_messages | default(None) if _r is not none else None)
-        or (_r.total | default(None) if _r is not none else None)
-        or (_r.message_count | default(None) if _r is not none else None)
-        or (total_messages if total_messages is defined else None)
-        or 1
-      ) %}
+  {% set _summary_rows = (_r.summary_rows if _r is not none else (summary_rows if summary_rows is defined else [])) %}
+  {% set _summary_rows = _summary_rows or [] %}
+  {% set _seg_opts = (_r.segment_options if _r is not none else (segment_options if segment_options is defined else [])) %}
+  {% set _seg_opts = _seg_opts or [] %}
+  {% set _total_msgs = r.msg_total or r.total_messages or r.total or r.message_count or 1 %}
   {% set _total_msgs = _total_msgs | int %}
   {% set _raw_candidate = (_r.raw | default(None) if _r is not none else None) %}
   {% set _raw = _raw_candidate if _raw_candidate is not none else (raw if raw is defined else {}) %}
@@ -59,6 +56,9 @@
     <label class="small">Segment
       <select class="input" data-role="val-filter-seg" data-initial="{{ _vf_seg }}" style="min-width:8rem">
         <option value="all">All</option>
+        {% for seg in _seg_opts %}
+          <option value="{{ seg | e }}">{{ seg }}</option>
+        {% endfor %}
       </select>
     </label>
     <label class="small" style="flex:1 1 240px">Search
@@ -146,6 +146,7 @@
 
       const rowsMap = new Map();
       const segments = new Set();
+      const aggregate = new Map();
 
       issues.forEach((raw) => {
         const row = normalize(raw);
@@ -185,6 +186,28 @@
           || (a.segment || '').localeCompare(b.segment || '')
           || (parseInt(a.field || '0', 10) - parseInt(b.field || '0', 10))
           || (a.code || '').localeCompare(b.code || '');
+      }).map((row) => {
+        const values = Array.from(row.values);
+        const shown = values.slice(0, 8);
+        const extra = values.length > 8 ? ` (+${values.length - 8} more)` : '';
+        return {
+          severity: row.severity,
+          severityLabel: row.severity === 'passed' ? 'Passed' : (row.severity === 'warning' ? 'Warning' : 'Error'),
+          code: row.code || '—',
+          segment: row.segment || '—',
+          field: row.field || '—',
+          component: row.component || '—',
+          subcomponent: row.subcomponent || '—',
+          message: row.message || '—',
+          valuesText: shown.length ? shown.join(', ') : '—',
+          valuesExtra: extra,
+          count: row.count,
+          percent: TOTAL ? Math.round((row.count / TOTAL) * 100) : 0,
+          total: TOTAL,
+          searchText: [row.code, row.segment, row.field, row.component, row.subcomponent, values.join(' '), row.message]
+            .join(' ')
+            .toLowerCase(),
+        };
       });
 
       list.forEach((row) => {
