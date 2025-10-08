@@ -68,6 +68,7 @@ def validate_pipeline(payload: PipelineValidateRequest) -> PipelineValidateRespo
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     return PipelineValidateResponse(spec=dump_pipeline_spec(spec))
 
+
 @router.post(
     "/api/engine/pipelines/run",
     response_model=PipelineRunResponse,

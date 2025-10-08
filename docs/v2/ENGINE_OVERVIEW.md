@@ -35,6 +35,10 @@ Use `POST /api/engine/pipelines/validate` to normalize incoming YAML and ensure 
 
 To execute a pipeline on demand, call `POST /api/engine/pipelines/run`. The endpoint accepts the YAML spec, optional `max_messages`, and a `persist` flag. When persistence is enabled the runtime creates a run record, writes each `Result` to the insights store, and returns the normalized spec, counts by severity, and run identifier.
 
+## Diagnostics
+
+* `GET /api/engine/registry` – returns the adapters, operators, and sinks currently registered with the runtime. Use this to confirm built-ins (and any locally developed components) are available once the app starts.
+
 ## Insights Flow
 
 Pipelines (or seed scripts) record `Result` objects into the insights store. Each run captures the pipeline name, messages processed, and emitted issues grouped by severity. The UI consumes `GET /api/insights/summary` to render run totals and top findings. The Engine (Beta) page now includes a **Run demo pipeline** action that posts the minimal example spec to the run endpoint and refreshes the summary table so you can see the persistence loop end-to-end.

@@ -16,6 +16,9 @@ python -m insights.store seed
 # Launch the app with the Engine feature enabled
 make engine-dev
 
+# Verify registered components
+curl http://localhost:8000/api/engine/registry | jq '.'
+
 # Trigger the demo pipeline (optionally from another terminal)
 curl -X POST \
   -H 'Content-Type: application/json' \
