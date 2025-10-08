@@ -1,6 +1,7 @@
 """Engine V2 API endpoints."""
 
 from __future__ import annotations
+
 import engine.plugins  # noqa: F401  # ensure component registration
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
@@ -67,6 +68,21 @@ def validate_pipeline(payload: PipelineValidateRequest) -> PipelineValidateRespo
         spec = load_pipeline_spec(payload.yaml)
     except Exception as exc:  # pragma: no cover - FastAPI handles conversion
         raise HTTPException(status_code=400, detail=str(exc)) from exc
+    registry = dump_registry()
+    missing: list[str] = []
+    if spec.adapter.type not in registry.get("adapters", {}):
+        missing.append(f"adapter:{spec.adapter.type}")
+    for operator in spec.operators:
+        if operator.type not in registry.get("operators", {}):
+            missing.append(f"operator:{operator.type}")
+    for sink in spec.sinks:
+        if sink.type not in registry.get("sinks", {}):
+            missing.append(f"sink:{sink.type}")
+    if missing:
+        raise HTTPException(
+            status_code=400,
+            detail="Unknown components: " + ", ".join(sorted(missing)),
+        )
     return PipelineValidateResponse(spec=dump_pipeline_spec(spec))
 
 

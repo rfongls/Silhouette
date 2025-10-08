@@ -58,14 +58,22 @@ def test_engine_registry_endpoint(tmp_path):
 def test_pipeline_validate_example(tmp_path):
     client, _ = _create_client(tmp_path)
     try:
-        payload = Path("examples/engine/minimal.pipeline.yaml").read_text(encoding="utf-8")
+        payload = Path("examples/engine/minimal.pipeline.yaml").read_text(
+            encoding="utf-8"
+        )
         resp = client.post("/api/engine/pipelines/validate", json={"yaml": payload})
+        bad_payload = payload.replace("sequence", "unknown-adapter")
+        bad_resp = client.post(
+            "/api/engine/pipelines/validate", json={"yaml": bad_payload}
+        )
     finally:
         client.close()
     assert resp.status_code == 200
     spec = resp.json()["spec"]
     assert spec["adapter"]["type"] == "sequence"
     assert spec["sinks"][0]["type"] == "memory"
+    assert bad_resp.status_code == 400
+    assert "adapter:unknown-adapter" in bad_resp.json()["detail"]
 
 
 def test_insights_summary_after_seed(tmp_path):

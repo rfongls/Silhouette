@@ -14,6 +14,7 @@
   - `POST /api/engine/pipelines/validate` — normalize/validate YAML specs
   - `POST /api/engine/pipelines/run` — run a spec, optionally persist results
   - `GET /api/insights/summary` — aggregate counts consumed by UI
+  - Validation now returns `400` when adapters/operators/sinks are missing from the registry
 - New examples:
   - `static/examples/engine/minimal.pipeline.yaml`
 - Docs:

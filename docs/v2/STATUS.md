@@ -20,6 +20,7 @@ This document is updated **with each PR** that changes the Engine V2 code or UI.
 **Notes:**
 - Registry is guaranteed via `engine.plugins` side-effect import.
 - Minimal built-ins: `sequence` adapter, `echo` operator, `memory` sink.
+- Validation rejects unknown adapters/operators/sinks with a 400 response to match docs.
 
 ---
 
