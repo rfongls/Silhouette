@@ -28,8 +28,9 @@ dependencies = [
 
 [project.optional-dependencies]
 runtime = [
-  "fastapi>=0.111",
-  "uvicorn>=0.30",
+  "fastapi>=0.95,<0.100",
+  "starlette>=0.27,<0.28",
+  "uvicorn>=0.23,<0.24",
 ]
 ml = [
   "transformers>=4.43",
@@ -60,8 +61,9 @@ fhir = [
   "fhir.resources>=7.0",
 ]
 all = [
-  "fastapi>=0.111",
-  "uvicorn>=0.30",
+  "fastapi>=0.95,<0.100",
+  "starlette>=0.27,<0.28",
+  "uvicorn>=0.23,<0.24",
   "transformers>=4.43",
   "accelerate>=0.33",
   "torch>=2.3; platform_machine!='arm64' or sys_platform!='darwin'",

@@ -12,7 +12,7 @@
 - `/api/engine/health` exposes the current phase string so operators can confirm demo-run support is present.
 - Added a compatibility note in `docs/v2/ENGINE_OVERVIEW.md` clarifying that spec models must remain Pydantic v1-friendly until the stack migrates.
 
-## 2025-10-08 — Phase 0 & Phase 0.5
+## 2025-10-06 — Phase 0 & Phase 0.5
 
 **Highlights**
 - Phase 0 Skeleton + Insights + UI entry + Registry endpoint

@@ -2,7 +2,7 @@
 
 The Engine runtime is a companion to the Interop tooling, enabling configurable pipelines composed of adapters, operators, an optional router, and sinks. Phase 0 delivers the skeleton necessary to validate specs and persist operator results for UI insights.
 
-**Last updated:** 2025-10-08 (UTC)
+**Last updated:** 2025-10-06 (UTC)
 
 ## Runtime
 

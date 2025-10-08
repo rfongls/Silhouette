@@ -40,7 +40,7 @@ PY
   http://localhost:8000/api/engine/pipelines/run
 ```
 
-**Last verified (commands above):** 2025-10-08 (UTC)
+**Last verified (commands above):** 2025-10-06 (UTC)
 — If you update examples or endpoints, please bump the date above as part of your PR.
 
 ## Reference

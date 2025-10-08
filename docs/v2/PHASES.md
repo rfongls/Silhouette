@@ -1,15 +1,15 @@
 # Engine V2 Phases
 
-> **Last updated:** 2025-10-08 (UTC)
+> **Last updated:** 2025-10-06 (UTC)
 
-## Phase 0 – Skeleton (✅ Completed 2025-10-08)
+## Phase 0 – Skeleton (✅ Completed 2025-10-06)
 
 * Contracts for adapters, operators, router, and sinks.
 * Pipeline spec validation and registry bootstrap.
 * Insights database + API summary endpoint.
 * Feature-flagged UI entry (Engine Beta) with stubbed pipeline and insights sections.
 
-## Phase 0.5 – Demo runs (✅ Completed 2025-10-08)
+## Phase 0.5 – Demo runs (✅ Completed 2025-10-06)
 
 * `POST /api/engine/pipelines/run` executes a YAML spec with optional persistence.
 * Engine (Beta) page exposes a **Run demo pipeline** button wired to the run endpoint.

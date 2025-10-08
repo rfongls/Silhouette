@@ -9,7 +9,7 @@ This document is updated **with each PR** that changes the Engine V2 code or UI.
 ## Phase 0 — Skeleton
 
 **Status:** ✅ Completed  
-**Implemented:** 2025-10-08T00:00:00Z  
+**Implemented:** 2025-10-06T00:00:00Z
 **Scope:**
 - Contracts for adapters, operators, router, and sinks
 - Pipeline spec validation (`/api/engine/pipelines/validate`)
@@ -27,7 +27,7 @@ This document is updated **with each PR** that changes the Engine V2 code or UI.
 ## Phase 0.5 — Demo Runs
 
 **Status:** ✅ Completed  
-**Implemented:** 2025-10-08T00:00:00Z  
+**Implemented:** 2025-10-06T00:00:00Z
 **Scope:**
 - Execute a pipeline on demand (`POST /api/engine/pipelines/run`)
 - Optional persistence into insights store
