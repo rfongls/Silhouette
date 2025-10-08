@@ -1,0 +1,27 @@
+name: docs-check
+
+on:
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'engine/**'
+      - 'insights/**'
+      - 'docs/v2/**'
+      - '.github/**'
+      - 'scripts/check_docs.sh'
+      # Ensure workflow runs when Engine V2 API/UI assets change as well
+      - 'api/engine.py'
+      - 'api/insights.py'
+      - 'api/ui_engine.py'
+      - 'templates/ui/engine/**'
+      - 'static/examples/engine/**'
+
+jobs:
+  docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Verify docs are updated with engine/insights changes
+        run: bash scripts/check_docs.sh

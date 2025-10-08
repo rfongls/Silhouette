@@ -1,9 +1,29 @@
 # 🌑 Silhouette Core
 
-**Silhouette Core** is a survivable, modular, and scalable AI agent framework.  
+**Silhouette Core** is a survivable, modular, and scalable AI agent framework.
 It is purpose-aligned, hardware-flexible, and built to be **carried, revived, and evolved** across any environment — even when modern infrastructure is unavailable.
 
 > **Docs Index:** See [docs/README.md](docs/README.md) for the full table of contents.
+
+---
+
+## Engine V2 (Beta) — Current Status
+
+The Engine V2 runtime (adapters/operators/router/sinks) is being delivered in phases.
+
+- **Current completed phases:** Phase 0 (Skeleton), Phase 0.5 (Demo run + registry)
+- **Next phase:** Phase 1 (Adapters & Operators: wire V1 validations and de-identify)
+- **Docs:** Single source of truth: **[docs/v2/PHASES.md](docs/v2/PHASES.md)**  
+  (See also: [STATUS.md](docs/v2/STATUS.md) and [CHANGELOG.md](docs/v2/CHANGELOG.md))
+
+Quickstart for Engine V2 (Beta):
+
+```bash
+(cd insights/migrations && alembic upgrade head)
+python -m insights.store seed
+make engine-dev
+```
+
 ---
 
 ## UI & Dashboards

@@ -1,0 +1,23 @@
+version: 1
+name: demo-sequence
+adapter:
+  type: sequence
+  config:
+    messages:
+      - id: demo-1
+        text: "Vitals inbound"
+        preview: "ADT^A01"
+      - id: demo-2
+        text: "ADT update"
+operators:
+  - type: echo
+    config:
+      note: "Phase 0 demo operator"
+router:
+  strategy: broadcast
+sinks:
+  - type: memory
+    config:
+      label: "dev-memory"
+metadata:
+  owner: "interoperability"
