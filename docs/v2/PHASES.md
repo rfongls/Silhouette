@@ -6,6 +6,12 @@
 * Pipeline spec validation and registry bootstrap.
 * Insights database + API summary endpoint.
 * Feature-flagged UI entry (Engine Beta) with stubbed pipeline and insights sections.
+* Run endpoint + demo UI action to execute the example pipeline and persist insights (Phase 0.5).
+
+## Phase 0.5 – Demo runs (current)
+
+* `POST /api/engine/pipelines/run` executes a YAML spec with optional persistence.
+* Engine (Beta) page exposes a **Run demo pipeline** button wired to the run endpoint.
 
 ## Phase 1 – Adapters & Operators
 

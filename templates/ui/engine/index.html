@@ -15,6 +15,7 @@
       <div class="empty-state">
         <p class="text-body">No pipelines registered yet. Use the YAML spec to validate configs via the API.</p>
         <a class="btn btn-secondary btn-sm" href="{{ root }}/static/examples/engine/minimal.pipeline.yaml" download>Download example spec</a>
+        <button class="btn btn-primary btn-sm" id="run-demo-btn" style="margin-left:.5rem">Run demo pipeline</button>
       </div>
     </section>
 
@@ -87,6 +88,30 @@
       target.innerHTML = '<tr><td colspan="6">Summary unavailable.</td></tr>';
     }
   }
-  window.addEventListener('load', loadInsightsSummary);
+  async function runDemoPipeline() {
+    const root = document.body?.dataset?.root || '';
+    try {
+      const yaml = await fetch(root + '/static/examples/engine/minimal.pipeline.yaml').then((resp) => resp.text());
+      const response = await fetch(root + '/api/engine/pipelines/run', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ yaml, max_messages: 2, persist: true }),
+      });
+      if (!response.ok) {
+        throw new Error(await response.text());
+      }
+      await loadInsightsSummary();
+    } catch (err) {
+      console.error('Run failed', err);
+      alert('Pipeline run failed. Check console for details.');
+    }
+  }
+  window.addEventListener('load', () => {
+    loadInsightsSummary();
+    const btn = document.getElementById('run-demo-btn');
+    if (btn) {
+      btn.addEventListener('click', runDemoPipeline);
+    }
+  });
 </script>
 {% endblock %}

@@ -15,6 +15,17 @@ python -m insights.store seed
 
 # Launch the app with the Engine feature enabled
 make engine-dev
+
+# Trigger the demo pipeline (optionally from another terminal)
+curl -X POST \
+  -H 'Content-Type: application/json' \
+  -d "$(python - <<'PY'
+import json, pathlib
+yaml = pathlib.Path('examples/engine/minimal.pipeline.yaml').read_text()
+print(json.dumps({"yaml": yaml, "max_messages": 2, "persist": True}))
+PY
+)" \
+  http://localhost:8000/api/engine/pipelines/run
 ```
 
 ## Reference

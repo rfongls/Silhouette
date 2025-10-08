@@ -47,7 +47,11 @@ def test_engine_registry_endpoint(tmp_path):
     assert resp.status_code == 200
     data = resp.json()
     assert "sequence" in data["adapters"]
+    assert "file" in data["adapters"]
+    assert "mllp" in data["adapters"]
     assert "echo" in data["operators"]
+    assert "validate-hl7" in data["operators"]
+    assert "deidentify" in data["operators"]
     assert "memory" in data["sinks"]
 
 
@@ -87,3 +91,21 @@ def test_engine_nav_visible(tmp_path):
     html = resp.text
     assert "Engine (Beta)" in html
     assert "/api/insights/summary" in html
+
+
+def test_pipeline_run_persists(tmp_path):
+    client, _ = _create_client(tmp_path, seed=False, db_name="run.db")
+    try:
+        yaml = Path("examples/engine/minimal.pipeline.yaml").read_text(encoding="utf-8")
+        run = client.post(
+            "/api/engine/pipelines/run",
+            json={"yaml": yaml, "max_messages": 2, "persist": True},
+        )
+        assert run.status_code == 200, run.text
+        summary = client.get("/api/insights/summary")
+    finally:
+        client.close()
+    assert summary.status_code == 200
+    payload = summary.json()
+    assert payload["totals"]["runs"] >= 1
+    assert payload["totals"]["messages"] >= 2
