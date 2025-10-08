@@ -20,6 +20,9 @@ engine-dev:
 engine-dev:
 	./scripts/dev_engine.sh
 
+engine-dev:
+	./scripts/dev_engine.sh
+
 install:
         pip install .
 
@@ -43,6 +46,9 @@ test:
 
 eval:
 	python -m eval.eval --suite eval/suites/basics.yaml
+
+check-docs:
+	bash scripts/check_docs.sh
 
 lint:
 	ruff check silhouette_core cli eval training scripts engine insights

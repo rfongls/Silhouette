@@ -2,6 +2,12 @@
 
 Phase 0 introduces a minimal runtime, insights persistence, and a feature-flagged UI entry point. Use the documents in this folder for implementation details and the roadmap.
 
+> **Status & Log**
+>
+> - See **[STATUS.md](STATUS.md)** for phase-by-phase implementation stamps.
+> - See **[CHANGELOG.md](CHANGELOG.md)** for user-facing notes per PR.
+> - See **[PHASES.md](PHASES.md)** for the roadmap and current status labels.
+
 ## Quickstart
 
 Validated commands:
@@ -20,6 +26,9 @@ make engine-dev
 curl http://localhost:8000/api/engine/registry | jq '.'
 
 # Trigger the demo pipeline (optionally from another terminal)
+# Tip: update max_messages to control how many demo messages flow.
+# Persist must be true to see Insights update.
+
 curl -X POST \
   -H 'Content-Type: application/json' \
   -d "$(python - <<'PY'
@@ -30,6 +39,9 @@ PY
 )" \
   http://localhost:8000/api/engine/pipelines/run
 ```
+
+**Last verified (commands above):** 2025-10-08 (UTC)
+— If you update examples or endpoints, please bump the date above as part of your PR.
 
 ## Reference
 
