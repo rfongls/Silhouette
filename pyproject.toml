@@ -96,3 +96,6 @@ silhouette_core = [
   "../CUSTOMER_LICENSE_TEMPLATE.md",
   "../COMPLIANCE.md"
 ]
+insights = [
+  "migrations/**/*"
+]
