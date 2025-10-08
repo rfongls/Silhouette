@@ -9,6 +9,12 @@ on:
       - 'docs/v2/**'
       - '.github/**'
       - 'scripts/check_docs.sh'
+      # Ensure workflow runs when Engine V2 API/UI assets change as well
+      - 'api/engine.py'
+      - 'api/insights.py'
+      - 'api/ui_engine.py'
+      - 'templates/ui/engine/**'
+      - 'static/examples/engine/**'
 
 jobs:
   docs:

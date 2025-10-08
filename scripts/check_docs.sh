@@ -12,7 +12,9 @@ if [ -z "${CHANGED}" ]; then
 fi
 
 needs_docs=""
-if echo "${CHANGED}" | grep -E '^(engine/|insights/)' >/dev/null 2>&1; then
+if echo "${CHANGED}" | grep -E \
+  '^(engine/|insights/|api/engine\.py|api/insights\.py|api/ui_engine\.py|templates/ui/engine/|static/examples/engine/)' \
+  >/dev/null 2>&1; then
   needs_docs="yes"
 fi
 
