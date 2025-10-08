@@ -1,5 +1,6 @@
 import json
 import logging
+import os
 import sys
 from pathlib import Path
 import silhouette_core.compat.forwardref_shim  # noqa: F401  # ensure ForwardRef shim loads before FastAPI imports
@@ -11,7 +12,7 @@ from starlette.responses import RedirectResponse, Response as StarletteResponse
 from api.interop import router as interop_router
 from api.interop_gen import router as interop_gen_router, try_generate_on_validation_error
 from api.security import router as security_router
-from api.ui import router as ui_router
+from api.ui import router as ui_router, templates as ui_templates
 from api.ui_interop import router as ui_interop_router
 from api.ui_settings import router as ui_settings_router
 from api.ui_security import router as ui_security_router
@@ -37,6 +38,18 @@ app = FastAPI(
     docs_url=None,
     redoc_url=None,
 )
+
+
+def _is_truthy(value: str | None) -> bool:
+    if value is None:
+        return False
+    return value.lower() not in {"", "0", "false", "off"}
+
+
+_ENGINE_V2_ENABLED = _is_truthy(os.getenv("ENGINE_V2"))
+app.state.engine_v2_enabled = _ENGINE_V2_ENABLED
+ui_templates.env.globals["engine_v2_enabled"] = _ENGINE_V2_ENABLED
+
 app.include_router(ui_home_router)
 for r in (
     ui_router,
@@ -51,6 +64,13 @@ for r in (
     ui_pages_router,
 ):
     app.include_router(r)
+if _ENGINE_V2_ENABLED:
+    from api.engine import router as engine_router
+    from api.insights import router as insights_router
+    from api.ui_engine import router as ui_engine_router
+
+    for feature_router in (engine_router, insights_router, ui_engine_router):
+        app.include_router(feature_router)
 app.mount("/static", StaticFiles(directory=_STATIC_DIR), name="static")
 # Keep the registration near the bottom so it is easy to toggle during local
 # investigations. The middleware ensures the log directory exists and degrades

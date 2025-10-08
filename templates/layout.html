@@ -10,11 +10,14 @@
 {% set interop_url = link_for(req, 'interop_skills', '/ui/interop/skills') %}
 {% set reports_url = link_for(req, 'ui_reports', '/reports') %}
 {% set settings_url = link_for(req, 'ui_settings_index', '/ui/settings') %}
+{% set engine_url = link_for(req, 'ui_engine_index', '/ui/engine') %}
 {% set home_path = root ~ '/ui/home' %}
 {% set skills_path = root ~ '/ui/skills' %}
 {% set interop_path = root ~ '/ui/interop' %}
 {% set reports_path = root ~ '/reports' %}
 {% set settings_path = root ~ '/ui/settings' %}
+{% set engine_path = root ~ '/ui/engine' %}
+{% set engine_enabled = engine_v2_enabled if engine_v2_enabled is defined else False %}
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -60,6 +63,12 @@
     .grid.two > label { display: flex; flex-direction: column; gap: .35rem; min-width: 0; }
     .table { width: 100%; border-collapse: collapse; }
     .table th, .table td { border-bottom: 1px solid rgba(148, 163, 184, .2); padding: .5rem .6rem; }
+    .table th:first-child, .table td:first-child {
+      max-width: 18rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
     .button.small { padding: .25rem .5rem; font-size: .9rem; }
     .button.danger { background: #7f1d1d; color: #fff; }
 
@@ -170,6 +179,9 @@
         <a href="{{ home_url }}" class="nav-link {% if current_path.startswith(home_path) %}active{% endif %}">Home</a>
         <a href="{{ skills_url }}" class="nav-link {% if current_path.startswith(skills_path) %}active{% endif %}">Skills</a>
         <a href="{{ interop_url }}" class="nav-link {% if current_path.startswith(interop_path) %}active{% endif %}">Interoperability</a>
+        {% if engine_enabled %}
+        <a href="{{ engine_url }}" class="nav-link {% if current_path.startswith(engine_path) %}active{% endif %}">Engine (Beta)</a>
+        {% endif %}
         <a href="{{ reports_url }}" class="nav-link {% if current_path.startswith(reports_path) %}active{% endif %}">Reports</a>
         <a class="nav-link {% if current_path.startswith(settings_path) %}active{% endif %}" href="{{ settings_url }}">Settings</a>
       </nav>
