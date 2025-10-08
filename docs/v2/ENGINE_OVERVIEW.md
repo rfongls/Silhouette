@@ -13,6 +13,12 @@ The Engine runtime is a companion to the Interop tooling, enabling configurable 
 
 ## Pipeline Specification
 
+> **Compatibility note (Pydantic v1):**
+> The repository pins **Pydantic 1.x** for compatibility with the existing Interop and FHIR stacks.
+> Spec models (`engine/spec.py`) therefore stick to v1 APIs such as `validator` and `parse_obj`, with
+> light shims so the same code can run under Pydantic v2 in the future (`model_validate`, `model_dump`).
+> Please avoid introducing v2-only features here until we migrate the broader application.
+
 `engine/spec.py` uses Pydantic to validate YAML specs. A pipeline contains:
 
 ```yaml

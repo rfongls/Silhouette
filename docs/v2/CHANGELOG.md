@@ -2,6 +2,16 @@
 
 > User-facing notes per PR. Keep this lean and helpful (what changed, why it matters, and any action required).
 
+## 2025-10-08 — Phase 0.5 follow-up
+
+**Highlights**
+- Engine health endpoint now advertises `phase0.5`.
+- Documented the Pydantic v1 compatibility contract for spec models.
+
+**Details**
+- `/api/engine/health` exposes the current phase string so operators can confirm demo-run support is present.
+- Added a compatibility note in `docs/v2/ENGINE_OVERVIEW.md` clarifying that spec models must remain Pydantic v1-friendly until the stack migrates.
+
 ## 2025-10-08 — Phase 0 & Phase 0.5
 
 **Highlights**

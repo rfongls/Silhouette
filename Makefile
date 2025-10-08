@@ -26,6 +26,9 @@ engine-dev:
 engine-dev:
 	./scripts/dev_engine.sh
 
+engine-dev:
+	./scripts/dev_engine.sh
+
 install:
         pip install .
 

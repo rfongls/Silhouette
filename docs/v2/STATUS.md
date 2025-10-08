@@ -35,6 +35,7 @@ This document is updated **with each PR** that changes the Engine V2 code or UI.
 
 **Notes:**
 - Keeps run history visible in Insights without background workers.
+- `/api/engine/health` now reports version `phase0.5` to align with the demo run capability.
 
 ---
 
