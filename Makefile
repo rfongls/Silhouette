@@ -8,6 +8,9 @@ dev:
 engine-dev:
 	./scripts/dev_engine.sh
 
+engine-dev:
+	./scripts/dev_engine.sh
+
 install:
         pip install .
 
@@ -33,8 +36,8 @@ eval:
 	python -m eval.eval --suite eval/suites/basics.yaml
 
 lint:
-	ruff check silhouette_core cli eval training scripts
-	black --check silhouette_core cli eval training scripts
+	ruff check silhouette_core cli eval training scripts engine insights
+	black --check silhouette_core cli eval training scripts engine insights
 	npx eslint .
 
 fmt:

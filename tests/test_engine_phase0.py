@@ -38,6 +38,19 @@ def test_engine_health_endpoint(tmp_path):
     assert data["feature"] == "engine-v2"
 
 
+def test_engine_registry_endpoint(tmp_path):
+    client, _ = _create_client(tmp_path)
+    try:
+        resp = client.get("/api/engine/registry")
+    finally:
+        client.close()
+    assert resp.status_code == 200
+    data = resp.json()
+    assert "sequence" in data["adapters"]
+    assert "echo" in data["operators"]
+    assert "memory" in data["sinks"]
+
+
 def test_pipeline_validate_example(tmp_path):
     client, _ = _create_client(tmp_path)
     try:

@@ -1,10 +1,9 @@
 """Engine V2 API endpoints."""
 
 from __future__ import annotations
-
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
-
+from engine.registry import dump_registry
 from engine.spec import dump_pipeline_spec, load_pipeline_spec
 
 router = APIRouter()
@@ -23,6 +22,13 @@ class PipelineValidateResponse(BaseModel):
 @router.get("/api/engine/health", tags=["engine"], name="engine_health")
 def engine_health() -> dict[str, object]:
     return {"ok": True, "version": _ENGINE_VERSION, "feature": "engine-v2"}
+
+
+@router.get("/api/engine/registry", tags=["engine"], name="engine_registry")
+def engine_registry() -> dict[str, dict[str, str]]:
+    """Expose registered engine components for diagnostics."""
+
+    return dump_registry()
 
 
 @router.post(
