@@ -1,11 +1,9 @@
 """Engine V2 API endpoints."""
 
 from __future__ import annotations
-
 import engine.plugins  # noqa: F401  # ensure component registration
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
-
 from engine.contracts import Result
 from engine.runtime import EngineRuntime
 from engine.registry import dump_registry
@@ -69,7 +67,6 @@ def validate_pipeline(payload: PipelineValidateRequest) -> PipelineValidateRespo
     except Exception as exc:  # pragma: no cover - FastAPI handles conversion
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     return PipelineValidateResponse(spec=dump_pipeline_spec(spec))
-
 
 @router.post(
     "/api/engine/pipelines/run",

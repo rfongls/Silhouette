@@ -1,11 +1,9 @@
 """Execution helpers for Engine V2 pipelines."""
 
 from __future__ import annotations
-
 import asyncio
 from collections.abc import AsyncIterator, Awaitable, Callable
 from typing import Any, Iterable
-
 from . import plugins  # noqa: F401  # ensure built-ins and stubs registered
 from .contracts import Adapter, Issue, Message, Operator, Result, Sink
 from .registry import create_adapter, create_operator, create_sink
