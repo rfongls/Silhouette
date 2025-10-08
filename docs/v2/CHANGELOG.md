@@ -5,12 +5,12 @@
 ## 2025-10-08 — Phase 0.5 follow-up
 
 **Highlights**
-- Engine health endpoint now advertises `phase0.5`.
-- Documented the Pydantic v1 compatibility contract for spec models.
+- `/api/engine/health` now reports version `phase0.5` for demo-run capable builds.
+- Consolidated Engine V2 documentation into `PHASES.md` with inline spec/schema and updated Pydantic v1 compatibility guidance.
 
 **Details**
-- `/api/engine/health` exposes the current phase string so operators can confirm demo-run support is present.
-- Added a compatibility note in `docs/v2/ENGINE_OVERVIEW.md` clarifying that spec models must remain Pydantic v1-friendly until the stack migrates.
+- Health endpoint exposes the current phase string so operators can confirm demo-run support is present.
+- Engine documentation now lives in a single source (`docs/v2/PHASES.md`), and spec models are explicitly documented as Pydantic v1-compatible until the stack upgrades.
 
 ## 2025-10-06 — Phase 0 & Phase 0.5
 
@@ -21,16 +21,17 @@
 **Details**
 - New endpoints:
   - `GET /api/engine/registry` — list registered adapters/operators/sinks
-  - `POST /api/engine/pipelines/validate` — normalize/validate YAML specs
+  - `POST /api/engine/pipelines/validate` — normalize/validate YAML specs (now rejects unknown components)
   - `POST /api/engine/pipelines/run` — run a spec, optionally persist results
   - `GET /api/insights/summary` — aggregate counts consumed by UI
-  - Validation now returns `400` when adapters/operators/sinks are missing from the registry
 - New examples:
   - `static/examples/engine/minimal.pipeline.yaml`
-- Docs:
-  - `docs/v2/STATUS.md` & PR template require status+changelog updates per PR
+- Docs & process:
+  - Status log (`docs/v2/STATUS.md`) and changelog require updates with each Engine/Insights change
+  - PR template + docs check enforce keeping the single-source docs in sync
 
 **Action required for developers**
 - When changing anything under `engine/` or `insights/`, update:
   - `docs/v2/STATUS.md` with a new timestamped entry
+  - `docs/v2/PHASES.md` with spec/process changes
   - `docs/v2/CHANGELOG.md` with a brief user-facing note

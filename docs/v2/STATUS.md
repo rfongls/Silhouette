@@ -8,8 +8,8 @@ This document is updated **with each PR** that changes the Engine V2 code or UI.
 
 ## Phase 0 — Skeleton
 
-**Status:** ✅ Completed  
-**Implemented:** 2025-10-06T00:00:00Z
+**Status:** ✅ Completed
+**Implemented:** 2025-10-08T00:00:00Z
 **Scope:**
 - Contracts for adapters, operators, router, and sinks
 - Pipeline spec validation (`/api/engine/pipelines/validate`)
@@ -26,8 +26,8 @@ This document is updated **with each PR** that changes the Engine V2 code or UI.
 
 ## Phase 0.5 — Demo Runs
 
-**Status:** ✅ Completed  
-**Implemented:** 2025-10-06T00:00:00Z
+**Status:** ✅ Completed
+**Implemented:** 2025-10-08T00:00:00Z
 **Scope:**
 - Execute a pipeline on demand (`POST /api/engine/pipelines/run`)
 - Optional persistence into insights store
@@ -35,14 +35,14 @@ This document is updated **with each PR** that changes the Engine V2 code or UI.
 
 **Notes:**
 - Keeps run history visible in Insights without background workers.
-- `/api/engine/health` now reports version `phase0.5` to align with the demo run capability.
+- `/api/engine/health` reports version `phase0.5` to align with the demo run capability.
 
 ---
 
 ## Phase 1 — Adapters & Operators (In Progress)
 
-**Status:** 🚧 Planned / In progress  
-**Target:** Wire V1 validations/de-identify as operators; add file/MLLP adapters  
+**Status:** 🚧 Planned / In progress
+**Target:** Wire V1 validations/de-identify as operators; add file/MLLP adapters
 **PR checklist:** Update this file on merge with:
 1. What shipped (operators/adapters/fields)
 2. Any config names that mirror V1 (to ensure uniformity)

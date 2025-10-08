@@ -17,6 +17,10 @@ if echo "${CHANGED}" | grep -E '^(engine/|insights/)' >/dev/null 2>&1; then
 fi
 
 if [ -n "${needs_docs}" ]; then
+  if ! echo "${CHANGED}" | grep -E '^docs/v2/PHASES.md$' >/dev/null 2>&1; then
+    echo "::error ::Engine/Insights changed but docs/v2/PHASES.md not updated (single source of truth)."
+    exit 1
+  fi
   if ! echo "${CHANGED}" | grep -E '^docs/v2/STATUS.md$' >/dev/null 2>&1; then
     echo "::error ::Engine/Insights changed but docs/v2/STATUS.md not updated."
     exit 1

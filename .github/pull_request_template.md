@@ -6,14 +6,15 @@
   - [ ] What was implemented
   - [ ] ISO-8601 UTC date/time of implementation
 - [ ] Added a **docs/v2/CHANGELOG.md** entry (user-facing note)
-- [ ] If scope changed, updated **docs/v2/PHASES.md**
-- [ ] If Quickstart changed, bumped date in **docs/v2/README.md**
+- [ ] Updated **docs/v2/PHASES.md** (single source of truth: spec, APIs, phases, Quickstart, acceptance criteria)
 
 ## Verification
 - [ ] `pytest -q` passes
 - [ ] Dev server boot (`make engine-dev`)
 - [ ] `/api/engine/registry` shows expected components
 - [ ] (if applicable) `/api/engine/pipelines/run` happy path tested
+- [ ] (if Phase 1+) acceptance tests described in **PHASES.md** present & passing
+- [ ] (if spec changes) the **Pipeline Spec** and embedded **JSON Schema** in **PHASES.md** were updated
 
 ## Screenshots / UI
 <!-- If UI changed, include a screenshot or brief clip. -->

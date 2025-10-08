@@ -13,10 +13,8 @@ The Engine V2 runtime (adapters/operators/router/sinks) is being delivered in ph
 
 - **Current completed phases:** Phase 0 (Skeleton), Phase 0.5 (Demo run + registry)
 - **Next phase:** Phase 1 (Adapters & Operators: wire V1 validations and de-identify)
-- **Docs:** See [docs/v2](docs/v2) — especially:
-  - [STATUS.md](docs/v2/STATUS.md) (what shipped + when)
-  - [PHASES.md](docs/v2/PHASES.md) (roadmap & state)
-  - [CHANGELOG.md](docs/v2/CHANGELOG.md) (user-facing notes per PR)
+- **Docs:** Single source of truth: **[docs/v2/PHASES.md](docs/v2/PHASES.md)**  
+  (See also: [STATUS.md](docs/v2/STATUS.md) and [CHANGELOG.md](docs/v2/CHANGELOG.md))
 
 Quickstart for Engine V2 (Beta):
 
