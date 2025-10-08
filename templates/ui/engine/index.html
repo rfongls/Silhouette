@@ -1,0 +1,117 @@
+{% extends "layout.html" %}
+{% block content %}
+{% set req = request if request is defined else none %}
+{% set root = req.scope.get('root_path', '') if req else '' %}
+<section class="dashboard">
+  <div class="dashboard-container">
+    <header class="dashboard-header">
+      <h1 class="text-h1">Engine (Beta)</h1>
+      <p class="text-body">Preview the new runtime for adapters, operators, routers, and sinks.</p>
+    </header>
+
+    <section class="card mb">
+      <h2 class="text-h2">Pipelines</h2>
+      <p class="text-body muted">Phase 0 exposes the runtime skeleton. Pipeline authoring arrives in Phase 1.</p>
+      <div class="empty-state">
+        <p class="text-body">No pipelines registered yet. Use the YAML spec to validate configs via the API.</p>
+        <a class="btn btn-secondary btn-sm" href="{{ root }}/static/examples/engine/minimal.pipeline.yaml" download>Download example spec</a>
+        <button class="btn btn-primary btn-sm" id="run-demo-btn" style="margin-left:.5rem">Run demo pipeline</button>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2 class="text-h2">Insights</h2>
+      <p class="text-body muted">Seed the store then review run-level summaries below.</p>
+      <div class="insights-summary" id="insights-summary">
+        <div class="row small">
+          <div class="badge muted" id="insights-totals">Loading…</div>
+        </div>
+        <div class="table-wrapper">
+          <table class="table" id="insights-table">
+            <thead>
+              <tr>
+                <th>Run</th>
+                <th>Messages</th>
+                <th>Errors</th>
+                <th>Warnings</th>
+                <th>Passed</th>
+                <th>Started</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td colspan="6">Loading…</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="mt" id="insights-rules"></div>
+      </div>
+    </section>
+  </div>
+</section>
+<script>
+  async function loadInsightsSummary() {
+    const root = document.body?.dataset?.root || '';
+    const target = document.getElementById('insights-table')?.querySelector('tbody');
+    const badge = document.getElementById('insights-totals');
+    const rules = document.getElementById('insights-rules');
+    if (!target || !badge || !rules) return;
+    target.innerHTML = '<tr><td colspan="6">Loading…</td></tr>';
+    try {
+      const response = await fetch(root + '/api/insights/summary');
+      if (!response.ok) {
+        throw new Error('Request failed');
+      }
+      const summary = await response.json();
+      badge.textContent = `Runs: ${summary.totals.runs} • Messages: ${summary.totals.messages} • Issues: ${summary.totals.issues}`;
+      const rows = summary.by_run.map((run) => (
+        `<tr>
+          <td><span class="badge mono">#${run.run_id}</span> ${run.pipeline}</td>
+          <td>${run.messages}</td>
+          <td>${run.issues.error}</td>
+          <td>${run.issues.warning}</td>
+          <td>${run.issues.passed}</td>
+          <td>${run.started_at}</td>
+        </tr>`
+      )).join('');
+      target.innerHTML = rows || '<tr><td colspan="6">No runs recorded. Execute the seed script to populate demo data.</td></tr>';
+      if (summary.by_rule.length) {
+        const ruleList = summary.by_rule.slice(0, 6).map((item) => (
+          `<span class="badge">${item.code} (${item.severity} · ${item.count})</span>`
+        )).join(' ');
+        rules.innerHTML = `<div class="row wrap small"><strong>Top findings:</strong> ${ruleList}</div>`;
+      } else {
+        rules.textContent = 'No findings yet. Operators will populate issues when pipelines run.';
+      }
+    } catch (err) {
+      console.error('Failed to load insights summary', err);
+      badge.textContent = 'Unable to load insights summary. Ensure the API is running.';
+      target.innerHTML = '<tr><td colspan="6">Summary unavailable.</td></tr>';
+    }
+  }
+  async function runDemoPipeline() {
+    const root = document.body?.dataset?.root || '';
+    try {
+      const yaml = await fetch(root + '/static/examples/engine/minimal.pipeline.yaml').then((resp) => resp.text());
+      const response = await fetch(root + '/api/engine/pipelines/run', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ yaml, max_messages: 2, persist: true }),
+      });
+      if (!response.ok) {
+        throw new Error(await response.text());
+      }
+      await loadInsightsSummary();
+    } catch (err) {
+      console.error('Run failed', err);
+      alert('Pipeline run failed. Check console for details.');
+    }
+  }
+  window.addEventListener('load', () => {
+    loadInsightsSummary();
+    const btn = document.getElementById('run-demo-btn');
+    if (btn) {
+      btn.addEventListener('click', runDemoPipeline);
+    }
+  });
+</script>
+{% endblock %}
