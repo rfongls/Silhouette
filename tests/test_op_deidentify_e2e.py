@@ -1,11 +1,15 @@
 import asyncio
-
+import importlib.util
+import pytest
 import yaml
-
 from engine.contracts import Message
 from engine.operators.deidentify import DeidentifyOperator
 from engine.runtime import EngineRuntime
 from engine.spec import load_pipeline_spec
+
+
+if importlib.util.find_spec("silhouette_core") is None:
+    pytest.skip("legacy validators/deid not installed", allow_module_level=True)
 
 
 SAMPLE_MESSAGE = (
