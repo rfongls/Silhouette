@@ -14,8 +14,20 @@
       <p class="text-body muted">Phase 0 exposes the runtime skeleton. Pipeline authoring arrives in Phase 1.</p>
       <div class="empty-state">
         <p class="text-body">No pipelines registered yet. Use the YAML spec to validate configs via the API.</p>
-        <a class="btn btn-secondary btn-sm" href="{{ root }}/static/examples/engine/minimal.pipeline.yaml" download>Download example spec</a>
-        <button class="btn btn-primary btn-sm" id="run-demo-btn" style="margin-left:.5rem">Run demo pipeline</button>
+        <div class="row wrap small" style="gap:.5rem; margin-bottom:.5rem">
+          <a class="btn btn-secondary btn-sm" href="{{ root }}/static/examples/engine/minimal.pipeline.yaml" download>Download Phase 0 demo</a>
+          <a class="btn btn-secondary btn-sm" href="{{ root }}/static/examples/engine/phase1.file.yaml" download>Download Phase 1 (file)</a>
+          <a class="btn btn-secondary btn-sm" href="{{ root }}/static/examples/engine/phase1.mllp.yaml" download>Download Phase 1 (MLLP)</a>
+        </div>
+        <label class="text-body" for="run-demo-select">Select a demo pipeline to run:</label>
+        <div class="row small" style="gap:.5rem; align-items:center; margin-top:.25rem">
+          <select id="run-demo-select" class="input">
+            <option value="minimal">Phase 0 — Minimal sequence</option>
+            <option value="phase1.file">Phase 1 — File adapter with validation + de-identification</option>
+            <option value="phase1.mllp" disabled>Phase 1 — MLLP (requires external HL7 source)</option>
+          </select>
+          <button class="btn btn-primary btn-sm" id="run-demo-btn">Run selected pipeline</button>
+        </div>
       </div>
     </section>
 
@@ -88,10 +100,18 @@
       target.innerHTML = '<tr><td colspan="6">Summary unavailable.</td></tr>';
     }
   }
+  const PIPELINE_URLS = {
+    'minimal': '/static/examples/engine/minimal.pipeline.yaml',
+    'phase1.file': '/static/examples/engine/phase1.file.yaml',
+  };
+
   async function runDemoPipeline() {
     const root = document.body?.dataset?.root || '';
+    const select = document.getElementById('run-demo-select');
+    const choice = select?.value || 'minimal';
+    const path = PIPELINE_URLS[choice] || PIPELINE_URLS.minimal;
     try {
-      const yaml = await fetch(root + '/static/examples/engine/minimal.pipeline.yaml').then((resp) => resp.text());
+      const yaml = await fetch(root + path).then((resp) => resp.text());
       const response = await fetch(root + '/api/engine/pipelines/run', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

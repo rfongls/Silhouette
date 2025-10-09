@@ -7,7 +7,10 @@ from collections.abc import Mapping
 from dataclasses import dataclass, field
 from typing import Any
 
-from silhouette_core.interop.deid import apply_single_rule
+try:  # pragma: no cover - optional dependency in minimal builds
+    from silhouette_core.interop.deid import apply_single_rule as _apply_single_rule
+except Exception:  # pragma: no cover - optional dependency in minimal builds
+    _apply_single_rule = None  # type: ignore[assignment]
 
 from ..contracts import Issue, Message, Operator, Result
 from ..registry import register_operator
@@ -72,6 +75,27 @@ class DeidentifyOperator(Operator):
         issues: list[Issue] = []
         applied = 0
 
+        if _apply_single_rule is None:
+            meta = dict(msg.meta or {})
+            meta["deidentified"] = False
+            if self.actions:
+                meta["actions"] = dict(self.actions)
+            meta["deidentify_mode"] = self.mode
+
+            issue = Issue(
+                severity="warning",
+                code="deidentify.unavailable",
+                message="De-identification engine not available in this build",
+            )
+
+            if self.mode == "inplace":
+                msg.meta = meta
+                result_msg = msg
+            else:
+                result_msg = Message(id=msg.id, raw=msg.raw, meta=meta)
+
+            return Result(message=result_msg, issues=[issue])
+
         for selector, action_value in self.actions.items():
             try:
                 segment, field, component, subcomponent = _parse_selector(str(selector))
@@ -111,7 +135,7 @@ class DeidentifyOperator(Operator):
                 "param": param,
             }
 
-            result = await asyncio.to_thread(apply_single_rule, updated_text, rule)
+            result = await asyncio.to_thread(_apply_single_rule, updated_text, rule)
             updated_text = result.get("message_after", updated_text)
             if result.get("changed"):
                 applied += 1
@@ -140,15 +164,16 @@ class DeidentifyOperator(Operator):
                     )
                 )
 
-        summary = Issue(
-            severity="passed",
-            code="deidentify.applied",
-            message=f"Applied {applied} action(s)",
+        issues.append(
+            Issue(
+                severity="passed",
+                code="deidentify.summary",
+                message=f"Applied {applied} action(s)",
+            )
         )
-        issues.append(summary)
 
         meta = dict(msg.meta or {})
-        meta["deidentified"] = True
+        meta["deidentified"] = applied > 0 or not self.actions
         if self.actions:
             meta["actions"] = dict(self.actions)
         meta["deidentify_mode"] = self.mode

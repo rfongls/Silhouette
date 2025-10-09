@@ -4,11 +4,16 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from dataclasses import dataclass, field
+from typing import Any, Optional
 
-from silhouette_core.validators.hl7 import (
-    HL7Validator,
-    validate_hl7_structural,
-)
+try:  # pragma: no cover - import is validated via integration tests
+    from silhouette_core.validators.hl7 import (
+        HL7Validator as _LegacyHL7Validator,
+        validate_hl7_structural as _legacy_validate_structural,
+    )
+except Exception:  # pragma: no cover - optional dependency in some builds
+    _LegacyHL7Validator = None  # type: ignore[assignment]
+    _legacy_validate_structural = None  # type: ignore[assignment]
 
 from ..contracts import Issue, Message, Operator, Result
 from ..registry import register_operator
@@ -34,6 +39,12 @@ def _guess_segment(detail: str) -> str | None:
     return None
 
 
+def _create_validator() -> Optional[Any]:
+    if _LegacyHL7Validator is None:
+        return None
+    return _LegacyHL7Validator()
+
+
 @dataclass
 class ValidateHL7Operator(Operator):
     """Bridge the legacy HL7 validator into the Engine V2 runtime."""
@@ -41,11 +52,24 @@ class ValidateHL7Operator(Operator):
     name: str
     profile: str | None = None
     strict: bool = False
-    _validator: HL7Validator = field(default_factory=HL7Validator, init=False, repr=False)
+    _validator: Any = field(default=None, init=False, repr=False)
+
+    def __post_init__(self) -> None:
+        self._validator = _create_validator()
 
     async def process(self, msg: Message) -> Result:
         text = msg.raw.decode("utf-8", errors="replace")
         issues: list[Issue] = []
+
+        if self._validator is None:
+            issues.append(
+                Issue(
+                    severity="warning",
+                    code="validate.unavailable",
+                    message="HL7 validator not available in this build",
+                )
+            )
+            return Result(message=msg, issues=issues)
 
         try:
             self._validator.validate(text, profile=self.profile or _DEFAULT_PROFILE)
@@ -80,8 +104,14 @@ class ValidateHL7Operator(Operator):
         return Result(message=msg, issues=issues)
 
     def _run_structural_validation(self, text: str) -> Issue | None:
+        if _legacy_validate_structural is None:
+            return Issue(
+                severity="warning",
+                code="validate.structural.unavailable",
+                message="Structural validation unavailable: legacy validator not bundled",
+            )
         try:
-            validate_hl7_structural(text)
+            _legacy_validate_structural(text)
         except ModuleNotFoundError as exc:  # pragma: no cover - optional dependency
             return Issue(
                 severity="warning",
