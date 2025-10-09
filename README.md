@@ -9,6 +9,9 @@ It is purpose-aligned, hardware-flexible, and built to be **carried, revived, an
 
 ## Engine V2 (Beta) — Current Status
 
+> Looking for the original V1 delivery plan? See the repository-root [PHASES.md](PHASES.md)
+> (labeled **Legacy**) for historical context. All current Engine work lives under `docs/v2/`.
+
 The Engine V2 runtime (adapters/operators/router/sinks) is being delivered in phases.
 
 - **Current completed phases:** Phase 0 (Skeleton), Phase 0.5 (Demo run + registry)
