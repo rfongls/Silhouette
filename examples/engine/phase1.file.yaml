@@ -1,0 +1,24 @@
+version: 1
+name: phase1-file-pipeline
+adapter:
+  type: file
+  config:
+    paths:
+      - data/hl7/demo.hl7
+    encoding: utf-8
+    delimiter: "\n\n"
+operators:
+  - type: validate-hl7
+    config:
+      profile: ADT_A01
+      strict: true
+  - type: deidentify
+    config:
+      actions:
+        "PID-5.1": "remove"
+        "PID-13": "mask"
+      mode: inplace
+sinks:
+  - type: memory
+    config:
+      label: phase1-memory
