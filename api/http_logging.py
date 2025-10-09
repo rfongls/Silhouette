@@ -5,6 +5,7 @@ import json
 import logging
 from logging.handlers import RotatingFileHandler
 import time
+from datetime import datetime
 from pathlib import Path
 from typing import Any, Tuple
 
@@ -12,7 +13,14 @@ from fastapi import FastAPI, Request
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import Response as StarletteResponse
 
-from api.debug_log import is_debug_enabled
+from api.debug_log import (
+    is_debug_enabled,
+    last_debug_toggle_enabled,
+    last_enabled_version,
+    consume_http_force_token,
+    register_http_force_token,
+    unregister_http_force_token,
+)
 
 __all__ = ["HttpLoggerMiddleware", "install_http_logging"]
 
@@ -141,7 +149,12 @@ def _log_safe(
 ) -> None:
     try:
         getattr(logger, level)(message, *args, **kwargs)
-    except Exception:
+        for handler in logger.handlers:
+            flush = getattr(handler, "flush", None)
+            if callable(flush):
+                flush()
+    except Exception as exc:
+        print("log error", exc, flush=True)
         # Logging must never interrupt the request lifecycle.
         pass
 
@@ -166,6 +179,13 @@ class HttpLoggerMiddleware(BaseHTTPMiddleware):
         super().__init__(app)
         self._raw_log_path = Path(log_path) if log_path is not None else None
         self.logger, self.file_logging_enabled = _ensure_logger(self._raw_log_path)
+        self._seen_enabled_version = last_enabled_version()
+        self._http_token_id = register_http_force_token()
+        if hasattr(app, "add_event_handler"):
+            try:
+                app.add_event_handler("shutdown", self._unregister_token)
+            except Exception:
+                pass
         display_path = str(self._raw_log_path) if self._raw_log_path is not None else "<disabled>"
         _log_safe(
             self.logger,
@@ -173,18 +193,47 @@ class HttpLoggerMiddleware(BaseHTTPMiddleware):
             "HTTP logging middleware installed; log_path=%s",
             display_path,
         )
+        self._write_fallback_log("HTTP logging middleware installed; log_path=%s", display_path)
+
+    def _write_fallback_log(self, message: str, *args: Any) -> None:
+        if self._raw_log_path is None:
+            return
+        try:
+            path = self._raw_log_path
+            formatted = message % args if args else message
+        except Exception:
+            formatted = message
+        try:
+            path = self._raw_log_path
+            path.parent.mkdir(parents=True, exist_ok=True)
+            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S,%f")[:-3]
+            line = f"{timestamp} silhouette.http INFO {formatted}\n"
+            with path.open("a", encoding="utf-8") as fh:
+                fh.write(line)
+        except Exception:
+            pass
+
+    def _unregister_token(self) -> None:
+        token_id = getattr(self, "_http_token_id", None)
+        if token_id is None:
+            return
+        unregister_http_force_token(token_id)
+        self._http_token_id = None
+
+    def __del__(self) -> None:
+        try:
+            self._unregister_token()
+        except Exception:
+            pass
 
     async def dispatch(self, request: Request, call_next):  # type: ignore[override]
-        if not is_debug_enabled():
-            return await call_next(request)
-
-        start = time.time()
         raw_body = await request.body()
 
         async def receive() -> dict[str, Any]:
             return {"type": "http.request", "body": raw_body, "more_body": False}
 
         replayable_request = Request(request.scope, receive)
+        start = time.time()
         action = f"{request.method} {request.url.path}"
         vars_preview = {
             "query": dict(request.query_params),
@@ -192,14 +241,44 @@ class HttpLoggerMiddleware(BaseHTTPMiddleware):
             "raw_len": len(raw_body or b""),
             "body_preview": _safe_json_preview(raw_body),
         }
-        _log_safe(self.logger, "info", "Action=%s Vars=%s", action, vars_preview)
+        enabled_at_start = is_debug_enabled()
+        toggle_state = last_debug_toggle_enabled()
+        log_request = enabled_at_start or toggle_state
+        enabled_version = last_enabled_version()
+        token_id = getattr(self, "_http_token_id", None)
+        if token_id is not None and consume_http_force_token(token_id):
+            log_request = True
+            self._seen_enabled_version = last_enabled_version()
+        if enabled_version > self._seen_enabled_version:
+            log_request = True
+            self._seen_enabled_version = enabled_version
+        if log_request:
+            _log_safe(self.logger, "info", "Action=%s Vars=%s", action, vars_preview)
+            self._write_fallback_log("Action=%s Vars=%s", action, vars_preview)
 
         try:
             response = await call_next(replayable_request)
         except Exception:
-            elapsed_ms = int(1000 * (time.time() - start))
-            _log_safe(self.logger, "exception", "Action=%s Response=<exception> ms=%s", action, elapsed_ms)
+            if enabled_at_start or is_debug_enabled():
+                elapsed_ms = int(1000 * (time.time() - start))
+                _log_safe(
+                    self.logger,
+                    "exception",
+                    "Action=%s Response=<exception> ms=%s",
+                    action,
+                    elapsed_ms,
+                )
             raise
+
+        enabled_after = is_debug_enabled()
+        if not log_request and not enabled_after:
+            return response
+
+        if not log_request and enabled_after:
+            log_request = True
+            _log_safe(self.logger, "info", "Action=%s Vars=%s", action, vars_preview)
+            self._write_fallback_log("Action=%s Vars=%s", action, vars_preview)
+            self._seen_enabled_version = last_enabled_version()
 
         content_type = ""
         if hasattr(response, "headers") and response.headers is not None:
@@ -210,6 +289,13 @@ class HttpLoggerMiddleware(BaseHTTPMiddleware):
             _log_safe(
                 self.logger,
                 "info",
+                "Action=%s Response={status:%s, ms:%s, preview:<skipped %s>}",
+                action,
+                response.status_code,
+                elapsed_ms,
+                skip_reason,
+            )
+            self._write_fallback_log(
                 "Action=%s Response={status:%s, ms:%s, preview:<skipped %s>}",
                 action,
                 response.status_code,
@@ -241,6 +327,13 @@ class HttpLoggerMiddleware(BaseHTTPMiddleware):
         _log_safe(
             self.logger,
             "info",
+            "Action=%s Response={status:%s, ms:%s, preview:%s}",
+            action,
+            response.status_code,
+            elapsed_ms,
+            _clip_bytes(body),
+        )
+        self._write_fallback_log(
             "Action=%s Response={status:%s, ms:%s, preview:%s}",
             action,
             response.status_code,
