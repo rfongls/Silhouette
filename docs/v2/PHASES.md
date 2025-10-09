@@ -285,6 +285,8 @@ Behaviour:
 - `mode: copy` returns a new `Message` instance (original untouched); `mode: inplace` mutates the original payload/meta in place.
 - Always set `meta.deidentified = true`, copy `actions` into metadata, and set `meta.deidentify_mode`.
 - Emit at least one `passed` issue (`deidentify.applied`) plus rule-level warnings for invalid selectors, unsupported actions, or unmatched fields.
+- If a rule raises, record `deidentify.rule.error` and continue processing.
+- HTTP middleware now redacts secret keys inside JSON request body previews (parity with header/query redaction).
 
 **Adapter: `mllp`**
 ```yaml

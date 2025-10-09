@@ -50,6 +50,28 @@ _REDACT_KEYS = {
 }
 
 
+def _safe_json_preview(data: bytes | None, limit: int = 2000) -> str:
+    """Return a short JSON preview with secret keys redacted."""
+
+    if not data:
+        return ""
+    try:
+        obj = json.loads(data.decode("utf-8", errors="replace"))
+    except Exception:
+        return _clip_bytes(data, limit=limit)
+    try:
+        redacted = _redact_secrets(obj)
+    except Exception:
+        redacted = obj
+    try:
+        text = json.dumps(redacted, ensure_ascii=False)
+    except Exception:
+        return _clip_bytes(data, limit=limit)
+    if len(text) <= limit:
+        return text
+    return text[:limit] + f"…(+{len(text) - limit})"
+
+
 def _clip_bytes(data: bytes, limit: int = 2000) -> str:
     if not data:
         return ""
@@ -71,20 +93,6 @@ def _redact_secrets(value: Any) -> Any:
     if isinstance(value, list):
         return [_redact_secrets(v) for v in value]
     return value
-
-
-def _safe_json_preview(data: bytes) -> str:
-    if not data:
-        return ""
-    try:
-        parsed = json.loads(data.decode("utf-8"))
-    except Exception:
-        return _clip_bytes(data)
-    parsed = _redact_secrets(parsed)
-    try:
-        return json.dumps(parsed)[:2000]
-    except Exception:
-        return _clip_bytes(data)
 
 
 def _should_skip_logging(path: str, content_type: str | None) -> str | None:

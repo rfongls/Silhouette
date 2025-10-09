@@ -188,7 +188,6 @@ __all__ = [
     "register_http_force_token",
     "unregister_http_force_token",
     "consume_http_force_token",
-    "log_debug_event",
     "log_debug_message",
     "record_debug_line",
     "tail_debug_lines",

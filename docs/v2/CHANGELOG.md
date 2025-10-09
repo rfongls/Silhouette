@@ -7,6 +7,8 @@
 **Highlights**
 - Engine V2 pipelines can validate and de-identify HL7 messages using the legacy rule engines.
 - Added an MLLP client adapter for live TCP feeds plus file/memory demo pipelines.
+- Hardened de-identification: per-rule exceptions no longer break the run; they emit `deidentify.rule.error`.
+- HTTP logs: JSON bodies are parsed and redacted (same key set as headers/query).
 
 **Details**
 - `validate-hl7` emits structured `Issue`s (`validate.ok`, `validate.segment.missing`, `validate.structural`) and respects the `strict` flag.

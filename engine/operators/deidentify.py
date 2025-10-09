@@ -146,7 +146,21 @@ class DeidentifyOperator(Operator):
                 "param": param,
             }
 
-            result = await asyncio.to_thread(_apply_single_rule, updated_text, rule)
+            try:
+                result = await asyncio.to_thread(_apply_single_rule, updated_text, rule)
+            except Exception as exc:  # pragma: no cover - surfaced via dedicated test
+                issues.append(
+                    Issue(
+                        severity="error",
+                        code="deidentify.rule.error",
+                        segment=segment,
+                        field=field,
+                        component=component,
+                        subcomponent=subcomponent,
+                        message=f"Rule failed: {exc}",
+                    )
+                )
+                continue
             updated_text = result.get("message_after", updated_text)
             if result.get("changed"):
                 applied += 1
