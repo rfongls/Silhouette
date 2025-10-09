@@ -1,0 +1,24 @@
+version: 1
+name: phase1-mllp-demo
+adapter:
+  type: mllp
+  config:
+    host: 127.0.0.1
+    port: 2575
+    connect_timeout: 3.0
+    role: client
+operators:
+  - type: validate-hl7
+    config:
+      profile: ADT_A01
+      strict: true
+  - type: deidentify
+    config:
+      actions:
+        "PID-5.1": "remove"
+        "PID-13": "mask"
+      mode: inplace
+sinks:
+  - type: memory
+    config:
+      label: phase1-memory
