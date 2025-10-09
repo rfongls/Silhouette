@@ -14,7 +14,7 @@ from insights.store import get_store
 
 router = APIRouter()
 
-_ENGINE_VERSION = "phase0.5"
+_ENGINE_VERSION = "phase1"
 
 
 class PipelineValidateRequest(BaseModel):
