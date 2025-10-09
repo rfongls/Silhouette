@@ -1,5 +1,10 @@
 # Phases
 
+> **Legacy Notice (V1):**
+> This document captures the original V1 application phases and is not the spec for Engine V2.
+> For the current Engine V2 single source of truth, see **docs/v2/PHASES.md**
+> (alongside **docs/v2/STATUS.md** and **docs/v2/CHANGELOG.md**).
+
 **Status: Phase 10 complete**
 
 ## Phase 1 — Core Agent Hardening (PR-1 → PR-3)
