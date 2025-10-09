@@ -188,13 +188,7 @@ class HttpLoggerMiddleware(BaseHTTPMiddleware):
             except Exception:
                 pass
         display_path = str(self._raw_log_path) if self._raw_log_path is not None else "<disabled>"
-        _log_safe(
-            self.logger,
-            "info",
-            "HTTP logging middleware installed; log_path=%s",
-            display_path,
-        )
-        self._write_fallback_log("HTTP logging middleware installed; log_path=%s", display_path)
+        self._log_with_fallback("info", "HTTP logging middleware installed; log_path=%s", display_path)
 
     def _write_fallback_log(self, message: str, *args: Any) -> None:
         if self._raw_log_path is None:
@@ -213,6 +207,23 @@ class HttpLoggerMiddleware(BaseHTTPMiddleware):
                 fh.write(line)
         except Exception:
             pass
+
+    def _current_log_size(self) -> int | None:
+        if self._raw_log_path is None:
+            return None
+        try:
+            return self._raw_log_path.stat().st_size
+        except Exception:
+            return None
+
+    def _log_with_fallback(self, level: str, message: str, *args: Any) -> None:
+        before = self._current_log_size()
+        _log_safe(self.logger, level, message, *args)
+        if self.file_logging_enabled:
+            after = self._current_log_size()
+            if before is not None and after is not None and after != before:
+                return
+        self._write_fallback_log(message, *args)
 
     def _unregister_token(self) -> None:
         token_id = getattr(self, "_http_token_id", None)
@@ -253,22 +264,20 @@ class HttpLoggerMiddleware(BaseHTTPMiddleware):
             replayable_request = Request(request.scope, receive)
 
         vars_preview = {
-            "query": dict(request.query_params),
+            "query": _redact_secrets(dict(request.query_params)),
             "ctype": request.headers.get("content-type"),
             "raw_len": len(raw_body) if raw_body is not None else None,
             "body_preview": _safe_json_preview(raw_body) if raw_body is not None else "<not captured>",
         }
         if log_request:
-            _log_safe(self.logger, "info", "Action=%s Vars=%s", action, vars_preview)
-            self._write_fallback_log("Action=%s Vars=%s", action, vars_preview)
+            self._log_with_fallback("info", "Action=%s Vars=%s", action, vars_preview)
 
         try:
             response = await call_next(replayable_request)
         except Exception:
             if enabled_at_start or is_debug_enabled():
                 elapsed_ms = int(1000 * (time.time() - start))
-                _log_safe(
-                    self.logger,
+                self._log_with_fallback(
                     "exception",
                     "Action=%s Response=<exception> ms=%s",
                     action,
@@ -282,8 +291,7 @@ class HttpLoggerMiddleware(BaseHTTPMiddleware):
 
         if not log_request and enabled_after:
             log_request = True
-            _log_safe(self.logger, "info", "Action=%s Vars=%s", action, vars_preview)
-            self._write_fallback_log("Action=%s Vars=%s", action, vars_preview)
+            self._log_with_fallback("info", "Action=%s Vars=%s", action, vars_preview)
             self._seen_enabled_version = last_enabled_version()
 
         content_type = ""
@@ -292,8 +300,7 @@ class HttpLoggerMiddleware(BaseHTTPMiddleware):
         skip_reason = _should_skip_logging(request.url.path, content_type)
         if skip_reason:
             elapsed_ms = int(1000 * (time.time() - start))
-            _log_safe(
-                self.logger,
+            self._log_with_fallback(
                 "info",
                 "Action=%s Response={status:%s, ms:%s, preview:<skipped %s>}",
                 action,
@@ -330,8 +337,7 @@ class HttpLoggerMiddleware(BaseHTTPMiddleware):
             background=response.background,
         )
         elapsed_ms = int(1000 * (time.time() - start))
-        _log_safe(
-            self.logger,
+        self._log_with_fallback(
             "info",
             "Action=%s Response={status:%s, ms:%s, preview:%s}",
             action,
