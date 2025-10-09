@@ -1,6 +1,6 @@
 # Engine V2 — Phases & Spec (Single Source of Truth)
 
-**Last updated:** 2025-10-08 (UTC)
+**Last updated:** 2025-10-09 (UTC)
 
 This file is the **only** spec/runbook for Engine V2. It includes:
 - Quickstart & verification commands
@@ -178,7 +178,7 @@ metadata:
 ## Engine & Insights API
 
 **Engine**
-- `GET /api/engine/health` → `{ ok: true, version: "phase0.5", feature: "engine-v2" }`
+- `GET /api/engine/health` → `{ ok: true, version: "phase1", feature: "engine-v2" }`
 - `GET /api/engine/registry` → registered adapters/operators/sinks
 - `POST /api/engine/pipelines/validate` → `{ spec }` or **400** (invalid YAML / unknown components)
 - `POST /api/engine/pipelines/run` → `{ run_id?, processed, issues: {error, warning, passed}, spec }`
@@ -247,14 +247,14 @@ Seed data via `python -m insights.store seed`.
 
 ---
 
-## Phase 1 — Adapters & Operators (🚧 In progress)
+## Phase 1 — Adapters & Operators (✅ Completed)
 
-**Core goals**
-1. Wrap V1 HL7 validation → `validate-hl7` operator
-2. Wrap V1 de-identification → `deidentify` operator
-3. Implement `file` and `mllp` adapters with real I/O (mllp: client first)
-4. Maintain config parity with existing V1 modules
-5. Add end-to-end tests proving persistence and issue emission
+**What shipped**
+- `validate-hl7` operator now wraps the V1 validator, emits structured `Issue`s (`validate.ok`, `validate.segment.missing`, `validate.structural`, etc.), and respects the `strict` flag when promoting warnings to errors.
+- `deidentify` operator invokes the V1 HL7 rule engine with selector→action mappings, preserves `mode: copy|inplace` semantics, and annotates metadata (`meta.deidentified`, `meta.actions`, `meta.deidentify_mode`).
+- `mllp` adapter implements a TCP client that frames `<VT>…<FS><CR>` payloads and yields `Message(id="mllp-{n}")` with connection metadata.
+- Phase 1 example pipelines added under `examples/engine/` and `static/examples/engine/` (file + mllp sources).
+- End-to-end tests cover validation, de-identification, and the MLLP adapter loopback.
 
 **Operator: `validate-hl7` (V2 → V1 mapping)**
 ```yaml
@@ -265,12 +265,11 @@ config:
   # retain other V1-compatible flags as-is
 ```
 Behaviour:
-- Input: HL7 text in `Message.raw`
-- Delegate to the V1 validator and convert findings → `Issue`
-  - severity → {"error", "warning", "passed"}
-  - code → stable identifier (reuse V1 codes)
-  - include segment/field/component/subcomponent when present
-- Output: `Result.message` unchanged; `Result.issues` populated
+- Input: HL7 text in `Message.raw` (decoded with UTF-8 + replacement semantics).
+- Delegate to the V1 validator and convert findings → `Issue` (severity, rule code, pointers when available).
+- Missing required segments (e.g., `PV1`) surface as `validate.segment.missing` (warning when `strict=false`, error when `strict=true`).
+- Structural validation errors escalate to `error` when `strict=true`, `warning` otherwise; missing `hl7apy` results in a `validate.structural.unavailable` warning.
+- Output: `Result.message` preserves the original message object.
 
 **Operator: `deidentify` (V2 → V1 mapping)**
 ```yaml
@@ -282,10 +281,12 @@ config:
   mode: "copy"  # or "inplace" (default: copy)
 ```
 Behaviour:
-- Invoke the existing V1 de-identification pipeline
-- `mode: copy` returns a new payload; `mode: inplace` overwrites in-place semantics
-- Always set `meta.deidentified = true`; optionally record `meta.actions`
-- Emit at least one `passed` issue (e.g., `deidentify.applied`) and propagate warnings/errors from V1
+- Invoke the existing V1 de-identification pipeline via `apply_single_rule` per selector.
+- `mode: copy` returns a new `Message` instance (original untouched); `mode: inplace` mutates the original payload/meta in place.
+- Always set `meta.deidentified = true`, copy `actions` into metadata, and set `meta.deidentify_mode`.
+- Emit at least one `passed` issue (`deidentify.applied`) plus rule-level warnings for invalid selectors, unsupported actions, or unmatched fields.
+- If a rule raises, record `deidentify.rule.error` and continue processing.
+- HTTP middleware now redacts secret keys inside JSON request body previews (parity with header/query redaction).
 
 **Adapter: `mllp`**
 ```yaml
@@ -298,7 +299,8 @@ config:
 ```
 Behaviour (client):
 - Connect to remote MLLP endpoint, read <VT>...<FS><CR> frames
-- Yield `Message` per frame; raise exceptions on framing/socket errors
+- Yield `Message(id="mllp-{n}")` with `meta={"adapter": "mllp", "host": …, "port": …}` per frame
+- Raise on connection timeout or truncated frames; close sockets on cancellation
 
 **Example pipeline (Phase 1 demo)**
 ```yaml
@@ -307,7 +309,7 @@ name: phase1-validate-deid-demo
 adapter:
   type: file
   config:
-    paths: ["./samples/phase1/demo.hl7"]
+    paths: ["data/hl7/demo.hl7"]
 operators:
   - type: validate-hl7
     config:
@@ -322,22 +324,14 @@ sinks:
     config: { label: "dev-memory" }
 ```
 
-**Acceptance tests (to add)**
-- `tests/test_op_validate_hl7_e2e.py`
-  - Happy path emits a `passed` issue (e.g., `validate.ok`)
-  - Error mapping surfaces `Issue(severity="error", code="…")` with pointers
-  - `strict` flag toggles counts per V1 expectations
-  - `/api/engine/pipelines/run` executes the pipeline without error
-- `tests/test_op_deidentify_e2e.py`
-  - Actions transform payload (verify PID-5.1 redaction, etc.)
-  - `mode: copy` vs `mode: inplace` behaviour validated
-  - Insights summary increments after run
-- `tests/test_adapter_mllp_basic.py`
-  - Loopback harness proves messages flow through to operators and sinks
+**Acceptance tests (implemented)**
+- `tests/test_op_validate_hl7_e2e.py` – validates happy-path (`validate.ok`) and missing `PV1` severity flip with `strict`.
+- `tests/test_op_deidentify_e2e.py` – asserts PID redaction/masking, metadata annotations, and copy vs. inplace behaviour.
+- `tests/test_adapter_mllp_basic.py` – loopback server sends two frames; adapter yields `mllp-1`, `mllp-2` with raw payloads intact.
 
 **Done criteria**
-- Implementations + tests passing
-- This file updated (spec/config parity/notes), **STATUS.md** stamped, **CHANGELOG.md** updated
+- ✅ Implementations + tests passing (`pytest -q`).
+- ✅ Documentation updated (this file + `STATUS.md` + `CHANGELOG.md`).
 
 ---
 

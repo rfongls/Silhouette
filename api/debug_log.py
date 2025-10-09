@@ -15,6 +15,11 @@ _MAX_BUFFER = 2000
 _buffer: deque[str] = deque(maxlen=_MAX_BUFFER)
 _lock = Lock()
 _enabled: bool = False
+_last_explicit_enabled: bool = False
+_toggle_version: int = 0
+_last_enabled_version: int = -1
+_http_force_tokens: dict[int, int] = {}
+_next_http_token_id: int = 1
 
 
 def is_debug_enabled() -> bool:
@@ -24,10 +29,20 @@ def is_debug_enabled() -> bool:
 
 def set_debug_enabled(enabled: bool) -> bool:
     global _enabled
+    global _last_explicit_enabled
+    global _toggle_version
+    global _last_enabled_version
+    global _http_force_tokens
     enabled = bool(enabled)
     with _lock:
+        _toggle_version += 1
         changed = _enabled != enabled
         _enabled = enabled
+        _last_explicit_enabled = enabled
+        if enabled:
+            _last_enabled_version = _toggle_version
+            for token_id in _http_force_tokens:
+                _http_force_tokens[token_id] += 1
     if changed:
         state = "on" if enabled else "off"
         log_debug_message(f"debug.enabled state={state}", force=True)
@@ -130,12 +145,49 @@ def reset_debug_log(clear_file: bool = False) -> None:
             pass
 
 
+def last_debug_toggle_enabled() -> bool:
+    with _lock:
+        return _last_explicit_enabled
+
+
+def last_enabled_version() -> int:
+    with _lock:
+        return _last_enabled_version
+
+
+def register_http_force_token() -> int:
+    global _next_http_token_id
+    with _lock:
+        token_id = _next_http_token_id
+        _next_http_token_id += 1
+        _http_force_tokens[token_id] = 0
+        return token_id
+
+
+def unregister_http_force_token(token_id: int) -> None:
+    with _lock:
+        _http_force_tokens.pop(token_id, None)
+
+
+def consume_http_force_token(token_id: int) -> bool:
+    with _lock:
+        count = _http_force_tokens.get(token_id, 0)
+        if count <= 0:
+            return False
+        _http_force_tokens[token_id] = count - 1
+        return True
+
+
 __all__ = [
     "LOG_FILE",
     "is_debug_enabled",
     "set_debug_enabled",
     "toggle_debug_enabled",
-    "log_debug_event",
+    "last_debug_toggle_enabled",
+    "last_enabled_version",
+    "register_http_force_token",
+    "unregister_http_force_token",
+    "consume_http_force_token",
     "log_debug_message",
     "record_debug_line",
     "tail_debug_lines",
