@@ -2,7 +2,6 @@ import asyncio
 import importlib.util
 import pytest
 import yaml
-
 from engine.contracts import Message
 from engine.operators.deidentify import DeidentifyOperator
 from engine.runtime import EngineRuntime

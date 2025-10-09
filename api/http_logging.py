@@ -43,6 +43,10 @@ _REDACT_KEYS = {
     "access_token",
     "refresh_token",
     "set-cookie",
+    "cookie",
+    "x-api-key",
+    "x-auth-token",
+    "x-csrf-token",
 }
 
 
@@ -190,7 +194,7 @@ class HttpLoggerMiddleware(BaseHTTPMiddleware):
         display_path = str(self._raw_log_path) if self._raw_log_path is not None else "<disabled>"
         self._log_with_fallback("info", "HTTP logging middleware installed; log_path=%s", display_path)
 
-    def _write_fallback_log(self, message: str, *args: Any) -> None:
+    def _write_fallback_log(self, level: str, message: str, *args: Any) -> None:
         if self._raw_log_path is None:
             return
         try:
@@ -202,7 +206,7 @@ class HttpLoggerMiddleware(BaseHTTPMiddleware):
             path = self._raw_log_path
             path.parent.mkdir(parents=True, exist_ok=True)
             timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S,%f")[:-3]
-            line = f"{timestamp} silhouette.http INFO {formatted}\n"
+            line = f"{timestamp} silhouette.http {level.upper()} {formatted}\n"
             with path.open("a", encoding="utf-8") as fh:
                 fh.write(line)
         except Exception:
@@ -223,7 +227,7 @@ class HttpLoggerMiddleware(BaseHTTPMiddleware):
             after = self._current_log_size()
             if before is not None and after is not None and after != before:
                 return
-        self._write_fallback_log(message, *args)
+        self._write_fallback_log(level, message, *args)
 
     def _unregister_token(self) -> None:
         token_id = getattr(self, "_http_token_id", None)
