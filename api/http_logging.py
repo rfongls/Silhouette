@@ -312,6 +312,13 @@ class HttpLoggerMiddleware(BaseHTTPMiddleware):
                 elapsed_ms,
                 skip_reason,
             )
+            self._write_fallback_log(
+                "Action=%s Response={status:%s, ms:%s, preview:<skipped %s>}",
+                action,
+                response.status_code,
+                elapsed_ms,
+                skip_reason,
+            )
             return response
 
         body = b""
@@ -336,6 +343,13 @@ class HttpLoggerMiddleware(BaseHTTPMiddleware):
         elapsed_ms = int(1000 * (time.time() - start))
         self._log_with_fallback(
             "info",
+            "Action=%s Response={status:%s, ms:%s, preview:%s}",
+            action,
+            response.status_code,
+            elapsed_ms,
+            _clip_bytes(body),
+        )
+        self._write_fallback_log(
             "Action=%s Response={status:%s, ms:%s, preview:%s}",
             action,
             response.status_code,
