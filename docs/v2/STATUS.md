@@ -39,11 +39,17 @@ This document is updated **with each PR** that changes the Engine V2 code or UI.
 
 ---
 
-## Phase 1 — Adapters & Operators (In Progress)
+## Phase 1 — Adapters & Operators
 
-**Status:** 🚧 Planned / In progress
-**Target:** Wire V1 validations/de-identify as operators; add file/MLLP adapters
-**PR checklist:** Update this file on merge with:
-1. What shipped (operators/adapters/fields)
-2. Any config names that mirror V1 (to ensure uniformity)
-3. Implementation timestamp (UTC)
+**Status:** ✅ Completed
+**Implemented:** 2025-10-09T00:00:00Z
+**Scope:**
+- `validate-hl7` now bridges the V1 validator, returning structured `Issue`s (`validate.ok`, `validate.segment.missing`, `validate.structural`, etc.) and respecting `strict` severity promotion.
+- `deidentify` wraps the V1 HL7 rules with selector/action mappings, honours `mode: copy|inplace`, and annotates metadata (`meta.deidentified`, `meta.actions`, `meta.deidentify_mode`).
+- `mllp` adapter implements a TCP client that reads `<VT>…<FS><CR>` frames and emits `Message(id="mllp-{n}")` with connection metadata.
+- Example pipelines added under `examples/engine/phase1.*` and `static/examples/engine/phase1.*`.
+
+**Notes:**
+- Config field names stay aligned with V1 to ease migration (`profile`, `strict`, selector syntax like `PID-5.1`, `mode`).
+- Tests: `tests/test_op_validate_hl7_e2e.py`, `tests/test_op_deidentify_e2e.py`, `tests/test_adapter_mllp_basic.py`.
+- `/api/engine/health` now reports version `phase1` to reflect the completed operator/adapter work.
