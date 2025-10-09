@@ -227,20 +227,8 @@ class HttpLoggerMiddleware(BaseHTTPMiddleware):
             pass
 
     async def dispatch(self, request: Request, call_next):  # type: ignore[override]
-        raw_body = await request.body()
-
-        async def receive() -> dict[str, Any]:
-            return {"type": "http.request", "body": raw_body, "more_body": False}
-
-        replayable_request = Request(request.scope, receive)
         start = time.time()
         action = f"{request.method} {request.url.path}"
-        vars_preview = {
-            "query": dict(request.query_params),
-            "ctype": request.headers.get("content-type"),
-            "raw_len": len(raw_body or b""),
-            "body_preview": _safe_json_preview(raw_body),
-        }
         enabled_at_start = is_debug_enabled()
         toggle_state = last_debug_toggle_enabled()
         log_request = enabled_at_start or toggle_state
@@ -252,6 +240,23 @@ class HttpLoggerMiddleware(BaseHTTPMiddleware):
         if enabled_version > self._seen_enabled_version:
             log_request = True
             self._seen_enabled_version = enabled_version
+
+        raw_body: bytes | None = None
+        replayable_request: Request = request
+        if log_request:
+            raw_body = await request.body()
+
+            async def receive() -> dict[str, Any]:
+                return {"type": "http.request", "body": raw_body or b"", "more_body": False}
+
+            replayable_request = Request(request.scope, receive)
+
+        vars_preview = {
+            "query": dict(request.query_params),
+            "ctype": request.headers.get("content-type"),
+            "raw_len": len(raw_body) if raw_body is not None else None,
+            "body_preview": _safe_json_preview(raw_body) if raw_body is not None else "<not captured>",
+        }
         if log_request:
             _log_safe(self.logger, "info", "Action=%s Vars=%s", action, vars_preview)
             self._write_fallback_log("Action=%s Vars=%s", action, vars_preview)
