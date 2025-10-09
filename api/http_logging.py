@@ -42,6 +42,7 @@ _REDACT_KEYS = {
     "api_key",
     "access_token",
     "refresh_token",
+    "set-cookie",
 }
 
 

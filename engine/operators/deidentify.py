@@ -75,6 +75,15 @@ class DeidentifyOperator(Operator):
         issues: list[Issue] = []
         applied = 0
 
+        if not self.actions:
+            issues.append(
+                Issue(
+                    severity="warning",
+                    code="deidentify.noop",
+                    message="No actions configured",
+                )
+            )
+
         if _apply_single_rule is None:
             meta = dict(msg.meta or {})
             meta["deidentified"] = False
@@ -82,10 +91,12 @@ class DeidentifyOperator(Operator):
                 meta["actions"] = dict(self.actions)
             meta["deidentify_mode"] = self.mode
 
-            issue = Issue(
-                severity="warning",
-                code="deidentify.unavailable",
-                message="De-identification engine not available in this build",
+            issues.append(
+                Issue(
+                    severity="warning",
+                    code="deidentify.unavailable",
+                    message="De-identification engine not available in this build",
+                )
             )
 
             if self.mode == "inplace":
@@ -94,7 +105,7 @@ class DeidentifyOperator(Operator):
             else:
                 result_msg = Message(id=msg.id, raw=msg.raw, meta=meta)
 
-            return Result(message=result_msg, issues=[issue])
+            return Result(message=result_msg, issues=issues)
 
         for selector, action_value in self.actions.items():
             try:
@@ -173,7 +184,7 @@ class DeidentifyOperator(Operator):
         )
 
         meta = dict(msg.meta or {})
-        meta["deidentified"] = applied > 0 or not self.actions
+        meta["deidentified"] = applied > 0
         if self.actions:
             meta["actions"] = dict(self.actions)
         meta["deidentify_mode"] = self.mode
