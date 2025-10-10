@@ -28,6 +28,28 @@ from .models import (
 )
 
 _DEFAULT_DB = Path("data") / "insights.db"
+_GLOBAL_STORE: "InsightsStore" | None = None
+
+
+class QueueFullError(RuntimeError):
+    """Raised when enqueueing a job exceeds configured back-pressure limits."""
+
+
+class DuplicateJobError(RuntimeError):
+    """Raised when a job with the same dedupe key already exists."""
+
+    def __init__(self, job: JobRecord):
+        super().__init__("job with dedupe key already exists")
+        self.job = job
+        self.job_data = _job_as_dict(job)
+
+
+class JobNotFoundError(RuntimeError):
+    """Raised when attempting to mutate a job that cannot be found."""
+
+
+_LEASEABLE_STATUSES = {"queued", "leased"}
+_CANCELABLE_STATUSES = {"queued", "leased", "running"}
 
 
 class QueueFullError(RuntimeError):
@@ -618,15 +640,18 @@ def _demo_message(message_id: str, text: str) -> "Message":
 
     return Message(id=message_id, raw=text.encode("utf-8"))
 
-
-_store: InsightsStore | None = None
-
-
 def get_store(url: str | None = None) -> InsightsStore:
-    global _store
-    if _store is None or url:
-        _store = InsightsStore.from_env(url=url)
-    return _store
+    """Return a process-wide store instance, or construct one for a custom URL."""
+
+    global _GLOBAL_STORE
+    if url is not None:
+        # Tests and utilities can request an isolated store without disturbing the
+        # shared singleton.
+        return InsightsStore.from_env(url=url)
+
+    if _GLOBAL_STORE is None:
+        _GLOBAL_STORE = InsightsStore.from_env()
+    return _GLOBAL_STORE
 
 
 def seed(url: str | None = None) -> dict[str, Any]:
@@ -638,8 +663,8 @@ def seed(url: str | None = None) -> dict[str, Any]:
 def reset_store() -> None:
     """Clear the cached store instance (useful for tests)."""
 
-    global _store
-    _store = None
+    global _GLOBAL_STORE
+    _GLOBAL_STORE = None
 
 
 if __name__ == "__main__":

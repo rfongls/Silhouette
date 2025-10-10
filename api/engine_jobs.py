@@ -25,7 +25,7 @@ router = APIRouter(tags=["engine"])
 
 class JobEnqueueRequest(BaseModel):
     pipeline_id: int = Field(..., ge=1)
-    kind: str = Field("run", regex="^(run|replay)$")
+    kind: str = Field("run", pattern="^(run|replay)$")
     payload: dict[str, Any] | None = None
     priority: int = Field(0, ge=-10, le=10)
     scheduled_at: datetime | None = None
@@ -129,6 +129,22 @@ def jobs_list(
     offset: int = Query(0, ge=0),
 ) -> JobListResponse:
     store = _store()
+    allowed_status = {
+        "queued",
+        "leased",
+        "running",
+        "succeeded",
+        "failed",
+        "canceled",
+        "dead",
+    }
+    if status:
+        invalid = sorted({value for value in status if value not in allowed_status})
+        if invalid:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail={"message": "unknown status", "status": invalid},
+            )
     jobs = store.list_jobs(status=status, pipeline_id=pipeline_id, limit=limit, offset=offset)
     items = [_serialize_job(job) for job in jobs]
     return JobListResponse(items=items)

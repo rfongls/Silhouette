@@ -64,6 +64,7 @@ class EngineRunner:
         self._stopped.set()
 
     async def _execute_job(self, job: JobRecord, sem: asyncio.Semaphore) -> None:
+        started: JobRecord | None = None
         try:
             started = self.store.start_job(job.id, self.worker_id, now=datetime.utcnow())
             if started is None:
@@ -77,6 +78,8 @@ class EngineRunner:
                     "pipeline_id": started.pipeline_id,
                     "kind": started.kind,
                     "attempts": started.attempts,
+                    "priority": started.priority,
+                    "scheduled_at": started.scheduled_at.isoformat(),
                 },
             )
 
@@ -109,7 +112,14 @@ class EngineRunner:
                 },
             )
         except JobNotFoundError as exc:
-            logger.error("job.error", extra={"job_id": job.id, "error": str(exc)})
+            logger.error(
+                "job.error",
+                extra={
+                    "job_id": job.id,
+                    "status": getattr(started, "status", getattr(job, "status", None)),
+                    "error": str(exc),
+                },
+            )
             self.store.fail_job_and_maybe_retry(
                 job_id=job.id,
                 error=str(exc),
@@ -117,7 +127,13 @@ class EngineRunner:
                 backoff_secs=_backoff_secs(job.attempts),
             )
         except Exception as exc:  # pragma: no cover - defensive guard
-            logger.exception("job failure %s", job.id)
+            logger.exception(
+                "job.error",
+                extra={
+                    "job_id": job.id,
+                    "status": getattr(started, "status", getattr(job, "status", None)),
+                },
+            )
             self.store.fail_job_and_maybe_retry(
                 job_id=job.id,
                 error=str(exc),
