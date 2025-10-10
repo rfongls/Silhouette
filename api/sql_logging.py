@@ -19,24 +19,12 @@ from api.debug_log import (
     unregister_http_force_token,
 )
 
+from api.redaction import redact
+
 __all__ = ["install_sql_logging"]
 
 _BASE_DIR = Path(__file__).resolve().parents[1]
 _DEFAULT_SQL_LOG_PATH = _BASE_DIR / "out" / "interop" / "server_sql.log"
-
-_REDACT_KEYS = {
-    "password",
-    "token",
-    "authorization",
-    "api_key",
-    "access_token",
-    "refresh_token",
-    "set-cookie",
-    "cookie",
-    "x-api-key",
-    "x-auth-token",
-    "x-csrf-token",
-}
 
 
 def _clip_text(text: str, limit: int = 2000) -> str:
@@ -49,27 +37,9 @@ def _clip_sql(sql: str, limit: int = 1600) -> str:
     return _clip_text(" ".join(sql.split()), limit=limit)
 
 
-def _redact(value: Any) -> Any:
-    if isinstance(value, dict):
-        out: dict[str, Any] = {}
-        for k, v in value.items():
-            if k and str(k).lower() in _REDACT_KEYS:
-                out[k] = "***REDACTED***"
-            else:
-                out[k] = _redact(v)
-        return out
-    if isinstance(value, (list, tuple)):
-        return [_redact(v) for v in value]
-    if isinstance(value, (bytes, bytearray, memoryview)):
-        return "***REDACTED***"
-    if isinstance(value, str):
-        return "***REDACTED***"
-    return value
-
-
 def _safe_params_preview(params: Any, limit: int = 800) -> str:
     try:
-        red = _redact(params)
+        red = redact(params, redact_strings=True)
         text = json.dumps(red, ensure_ascii=False)
     except Exception:
         try:

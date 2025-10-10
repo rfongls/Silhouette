@@ -14,13 +14,14 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import Response as StarletteResponse
 
 from api.debug_log import (
+    consume_http_force_token,
     is_debug_enabled,
     last_debug_toggle_enabled,
     last_enabled_version,
-    consume_http_force_token,
     register_http_force_token,
     unregister_http_force_token,
 )
+from api.redaction import redact
 
 __all__ = ["HttpLoggerMiddleware", "install_http_logging"]
 
@@ -34,21 +35,6 @@ _TEXTUAL_CONTENT_PREFIXES = (
     "application/javascript",
     "application/problem+json",
 )
-
-_REDACT_KEYS = {
-    "password",
-    "token",
-    "authorization",
-    "api_key",
-    "access_token",
-    "refresh_token",
-    "set-cookie",
-    "cookie",
-    "x-api-key",
-    "x-auth-token",
-    "x-csrf-token",
-}
-
 
 def _safe_json_preview(data: bytes | None, limit: int = 2000) -> str:
     """Return a short JSON preview with secret keys redacted."""
@@ -82,17 +68,7 @@ def _clip_bytes(data: bytes, limit: int = 2000) -> str:
 
 
 def _redact_secrets(value: Any) -> Any:
-    if isinstance(value, dict):
-        redacted: dict[str, Any] = {}
-        for key, inner in value.items():
-            if key and key.lower() in _REDACT_KEYS:
-                redacted[key] = "***REDACTED***"
-            else:
-                redacted[key] = _redact_secrets(inner)
-        return redacted
-    if isinstance(value, list):
-        return [_redact_secrets(v) for v in value]
-    return value
+    return redact(value)
 
 
 def _should_skip_logging(path: str, content_type: str | None) -> str | None:
@@ -109,6 +85,7 @@ def _should_skip_logging(path: str, content_type: str | None) -> str | None:
 
 def _ensure_logger(log_path: Path | str | None) -> Tuple[logging.Logger, bool]:
     logger = logging.getLogger("silhouette.http")
+    logger.propagate = False
     file_logging_enabled = False
 
     if not any(
