@@ -459,6 +459,143 @@ sinks:
       setPipelineStatus(message);
       showToast('error', message);
     }
+
+    ctx.fillStyle = '#c33';
+    ctx.fillRect(width - 140, 8, 10, 10);
+    ctx.fillStyle = '#ddd';
+    ctx.fillText('Errors', width - 124, 16);
+
+    ctx.fillStyle = '#d8a31a';
+    ctx.fillRect(width - 84, 8, 10, 10);
+    ctx.fillStyle = '#ddd';
+    ctx.fillText('Warnings', width - 68, 16);
+
+    ctx.fillStyle = '#2a9d62';
+    ctx.fillRect(width - 44, 8, 10, 10);
+    ctx.fillStyle = '#ddd';
+    ctx.fillText('Passed', width - 28, 16);
+  }
+
+  async function deletePipeline(id) {
+    const root = ROOT_PATH;
+    if (!confirm('Delete this pipeline?')) return;
+    try {
+      const response = await fetch(`${root}/api/engine/pipelines/${id}`, { method: 'DELETE' });
+      if (!response.ok) {
+        throw new Error(await extractError(response));
+      }
+      setPipelineStatus('Pipeline deleted.');
+      showToast('success', 'Pipeline deleted');
+      await loadPipelines();
+    } catch (err) {
+      console.error(err);
+      const message = `Delete failed: ${err.message || err}`;
+      setPipelineStatus(message);
+      showToast('error', message);
+    }
+  }
+
+  function handlePipelineAction(event) {
+    const target = event.target;
+    if (!(target instanceof HTMLButtonElement)) return;
+    const action = target.dataset.action;
+    const id = Number(target.dataset.pipeline);
+    if (!action || Number.isNaN(id)) return;
+    if (action === 'edit') {
+      withBusy(target, () => editPipeline(id));
+    } else if (action === 'delete') {
+      withBusy(target, () => deletePipeline(id));
+    } else if (action === 'run-dry') {
+      withBusy(target, () => runPipeline(id, false));
+    } else if (action === 'run-persist') {
+      withBusy(target, () => runPipeline(id, true));
+    }
+  }
+
+  function renderInsightsChart(summary) {
+    const canvas = document.getElementById('insights-chart');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    const runs = (summary?.by_run || []).slice(-10);
+    const labels = runs.map((run) => `#${run.run_id}`);
+    const dataErrors = runs.map((run) => run.issues.error || 0);
+    const dataWarnings = runs.map((run) => run.issues.warning || 0);
+    const dataPassed = runs.map((run) => run.issues.passed || 0);
+    const width = canvas.width;
+    const height = canvas.height;
+    ctx.clearRect(0, 0, width, height);
+
+    const padL = 48;
+    const padR = 16;
+    const padT = 10;
+    const padB = 30;
+    const plotW = width - padL - padR;
+    const plotH = height - padT - padB;
+    ctx.strokeStyle = '#888';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(padL, padT);
+    ctx.lineTo(padL, padT + plotH);
+    ctx.lineTo(padL + plotW, padT + plotH);
+    ctx.stroke();
+
+    const maxVal = Math.max(1, ...dataErrors, ...dataWarnings, ...dataPassed);
+    const groups = runs.length || 1;
+    const groupW = plotW / groups;
+    const barGap = 4;
+    const barsPerGroup = 3;
+    const barW = Math.max(6, (groupW - (barsPerGroup + 1) * barGap) / barsPerGroup);
+    const toY = (value) => padT + plotH - (value / maxVal) * plotH;
+
+    function drawBars(values, index, fillStyle) {
+      ctx.fillStyle = fillStyle;
+      for (let i = 0; i < groups; i += 1) {
+        const gx = padL + i * groupW;
+        const x = gx + barGap * (index + 1) + barW * index;
+        const y = toY(values[i] || 0);
+        const h = plotH - (y - padT);
+        ctx.fillRect(x, y, barW, h);
+      }
+    }
+
+    drawBars(dataErrors, 0, '#c33');
+    drawBars(dataWarnings, 1, '#d8a31a');
+    drawBars(dataPassed, 2, '#2a9d62');
+
+    ctx.fillStyle = '#bbb';
+    ctx.font = '12px ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial';
+    const ticks = 4;
+    for (let t = 0; t <= ticks; t += 1) {
+      const val = Math.round((t / ticks) * maxVal);
+      const y = toY(val);
+      ctx.fillText(String(val), 6, y + 4);
+      ctx.strokeStyle = '#2a2a2a';
+      ctx.beginPath();
+      ctx.moveTo(padL, y);
+      ctx.lineTo(padL + plotW, y);
+      ctx.stroke();
+    }
+
+    for (let i = 0; i < groups; i += 1) {
+      const gx = padL + i * groupW;
+      ctx.fillText(labels[i] || '', gx + groupW * 0.3, padT + plotH + 18);
+    }
+
+    ctx.fillStyle = '#c33';
+    ctx.fillRect(width - 140, 8, 10, 10);
+    ctx.fillStyle = '#ddd';
+    ctx.fillText('Errors', width - 124, 16);
+
+    ctx.fillStyle = '#d8a31a';
+    ctx.fillRect(width - 84, 8, 10, 10);
+    ctx.fillStyle = '#ddd';
+    ctx.fillText('Warnings', width - 68, 16);
+
+    ctx.fillStyle = '#2a9d62';
+    ctx.fillRect(width - 44, 8, 10, 10);
+    ctx.fillStyle = '#ddd';
+    ctx.fillText('Passed', width - 28, 16);
   }
 
   async function deletePipeline(id) {

@@ -98,7 +98,6 @@ def test_pipeline_name_conflict_and_limits(tmp_path):
     db_url = f"sqlite:///{tmp_path / 'api2b_limits.db'}"
     app, _ = make_app_with_store(db_url)
     client = TestClient(app)
-
     yaml_dup = build_yaml("dup")
     body = {"name": "dup", "yaml": yaml_dup}
     first = client.post("/api/engine/pipelines", json=body)
