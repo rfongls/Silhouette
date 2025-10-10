@@ -14,6 +14,7 @@ from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session, sessionmaker
 
 from engine.contracts import Issue, Result
+from api.sql_logging import install_sql_logging
 
 from .models import Base, IssueRecord, MessageRecord, RunRecord
 
@@ -38,6 +39,7 @@ class InsightsStore:
         if resolved.startswith("sqlite"):
             connect_args["check_same_thread"] = False
         engine = create_engine(resolved, future=True, connect_args=connect_args)
+        install_sql_logging(engine)
         SessionFactory = sessionmaker(bind=engine, future=True, expire_on_commit=False)
         return cls(url=resolved, engine=engine, session_factory=SessionFactory)
 

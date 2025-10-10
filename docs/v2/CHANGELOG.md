@@ -2,6 +2,15 @@
 
 > User-facing notes per PR. Keep this lean and helpful (what changed, why it matters, and any action required).
 
+## 2025-10-10 — SQL framed logging
+
+**Highlights**
+- Insights and engine SQL activity now writes framed entries to `out/interop/server_sql.log` with parameter redaction and timing when debug logging is enabled.
+
+**Details**
+- Added reusable `install_sql_logging(engine)` helper that mirrors the HTTP middleware toggle semantics and survives logger failures via fallback writes.
+- Instrumented `insights.store` so the shared engine automatically emits SQL frames; tests cover redaction and framing.
+
 ## 2025-10-09 — Phase 1 adapters/operators
 
 **Highlights**
