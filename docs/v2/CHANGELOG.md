@@ -2,6 +2,17 @@
 
 > User-facing notes per PR. Keep this lean and helpful (what changed, why it matters, and any action required).
 
+## 2025-10-11 — Phase 2 pipeline CRUD + UI shell
+
+**Highlights**
+- Pipelines can now be saved in the Insights store with name/description/YAML/spec metadata and listed/edited/deleted via API.
+- Engine (Beta) page lists stored pipelines, opens a YAML editor with live validation, and adds dry vs. persisted run buttons that refresh Insights.
+
+**Details**
+- Added `pipelines` table + SQLAlchemy model and CRUD helpers (auto-created for dev/test environments).
+- New endpoints: `GET/POST/DELETE /api/engine/pipelines`, `GET /api/engine/pipelines/{id}`, `POST /api/engine/pipelines/{id}/run`.
+- UI wiring: status badges in table, editor defaults, and Insights summary refresh after persisted runs.
+
 ## 2025-10-10 — SQL framed logging
 
 **Highlights**
