@@ -69,3 +69,19 @@ This document is updated **with each PR** that changes the Engine V2 code or UI.
 **Notes:**
 - Store auto-creates tables in dev/test if Alembic hasn't run; production should still apply migrations.
 - Canvas chart is intentionally lightweight; follow-up will revisit responsiveness and accessibility.
+
+---
+
+## Phase 3 — Background runner & replay
+
+**Status:** 🔜 Planned
+**Implemented:** _TBD_
+**Scope:**
+- Introduce the `engine_jobs` table, SQLAlchemy model, and store helpers for enqueue/lease/heartbeat/complete/fail/cancel/list/get.
+- Ship `engine.runner` background worker with leasing, concurrency control, retries, exponential backoff, and dead-letter handling.
+- Expand the API surface with `/api/engine/jobs` endpoints for enqueue, list/filter, inspect, cancel, and retry.
+- Add replay support (adapter + API wiring) and UI hooks (Run in background button, jobs table) in Phase 3B.
+
+**Notes:**
+- Configuration toggles: `ENGINE_RUNNER_ENABLED`, `ENGINE_RUNNER_CONCURRENCY`, `ENGINE_RUNNER_LEASE_TTL_SECS`, `ENGINE_RUNNER_POLL_INTERVAL_SECS`, `ENGINE_QUEUE_MAX_QUEUED_PER_PIPELINE`.
+- Testing must cover job lifecycle, retry/backoff, lease contention/expiry, cancelation semantics, replay correctness, and API edge cases (dedupe conflicts, missing pipelines).

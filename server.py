@@ -66,10 +66,11 @@ for r in (
     app.include_router(r)
 if _ENGINE_V2_ENABLED:
     from api.engine import router as engine_router
+    from api.engine_jobs import router as engine_jobs_router
     from api.insights import router as insights_router
     from api.ui_engine import router as ui_engine_router
 
-    for feature_router in (engine_router, insights_router, ui_engine_router):
+    for feature_router in (engine_router, engine_jobs_router, insights_router, ui_engine_router):
         app.include_router(feature_router)
 app.mount("/static", StaticFiles(directory=_STATIC_DIR), name="static")
 # Keep the registration near the bottom so it is easy to toggle during local

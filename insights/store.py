@@ -6,19 +6,49 @@ import base64
 import os
 from contextlib import contextmanager
 from dataclasses import dataclass
+from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Any, Dict, Iterable, Iterator
+from typing import Any, Dict, Iterable, Iterator, Sequence
 
-from sqlalchemy import create_engine, func, select
+from sqlalchemy import and_, create_engine, func, or_, select, update
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session, sessionmaker
 
 from engine.contracts import Issue, Result
 from api.sql_logging import install_sql_logging
 
-from .models import Base, IssueRecord, MessageRecord, PipelineRecord, RunRecord
+from .models import (
+    Base,
+    IssueRecord,
+    JobRecord,
+    MessageRecord,
+    PipelineRecord,
+    RunRecord,
+)
 
 _DEFAULT_DB = Path("data") / "insights.db"
+
+
+class QueueFullError(RuntimeError):
+    """Raised when enqueueing a job exceeds configured back-pressure limits."""
+
+
+class DuplicateJobError(RuntimeError):
+    """Raised when a job with the same dedupe key already exists."""
+
+    def __init__(self, job: JobRecord):
+        super().__init__("job with dedupe key already exists")
+        self.job = job
+        self.job_data = _job_as_dict(job)
+
+
+class JobNotFoundError(RuntimeError):
+    """Raised when attempting to mutate a job that cannot be found."""
+
+
+_LEASEABLE_STATUSES = {"queued", "leased"}
+_CANCELABLE_STATUSES = {"queued", "leased", "running"}
 
 
 @dataclass
@@ -209,6 +239,297 @@ class InsightsStore:
             self.record_result(run_id=run.id, result=result)
         return run.id
 
+    # --- Job queue helpers ---------------------------------------------------
+
+    def enqueue_job(
+        self,
+        *,
+        pipeline_id: int,
+        kind: str = "run",
+        payload: dict[str, Any] | None = None,
+        scheduled_at: datetime | None = None,
+        priority: int = 0,
+        max_attempts: int = 3,
+        dedupe_key: str | None = None,
+    ) -> JobRecord:
+        scheduled = scheduled_at or datetime.utcnow()
+        with self.session() as session:
+            pipeline = session.get(PipelineRecord, pipeline_id)
+            if pipeline is None:
+                raise KeyError(f"pipeline {pipeline_id} not found")
+
+            if dedupe_key:
+                existing = (
+                    session.execute(
+                        select(JobRecord).where(JobRecord.dedupe_key == dedupe_key)
+                    )
+                    .scalars()
+                    .first()
+                )
+                if existing is not None:
+                    raise DuplicateJobError(existing)
+
+            max_per_pipeline = _max_queued_per_pipeline()
+            if max_per_pipeline is not None:
+                queued_count = (
+                    session.execute(
+                        select(func.count(JobRecord.id)).where(
+                            JobRecord.pipeline_id == pipeline_id,
+                            JobRecord.status == "queued",
+                        )
+                    )
+                    .scalar_one()
+                )
+                if queued_count >= max_per_pipeline:
+                    raise QueueFullError(
+                        f"pipeline {pipeline_id} has {queued_count} queued jobs"
+                    )
+
+            job = JobRecord(
+                pipeline_id=pipeline_id,
+                kind=kind,
+                payload=payload,
+                status="queued",
+                priority=priority,
+                attempts=0,
+                max_attempts=max(1, max_attempts),
+                scheduled_at=scheduled,
+                dedupe_key=dedupe_key,
+            )
+            session.add(job)
+            try:
+                session.flush()
+            except IntegrityError as exc:
+                if dedupe_key:
+                    existing = (
+                        session.execute(
+                            select(JobRecord).where(JobRecord.dedupe_key == dedupe_key)
+                        )
+                        .scalars()
+                        .first()
+                    )
+                    if existing is not None:
+                        raise DuplicateJobError(existing) from exc
+                raise
+            session.refresh(job)
+            return job
+
+    def lease_jobs(
+        self,
+        *,
+        worker_id: str,
+        now: datetime,
+        lease_ttl_secs: int,
+        limit: int,
+    ) -> list[JobRecord]:
+        if limit <= 0:
+            return []
+
+        deadline = now + timedelta(seconds=lease_ttl_secs)
+        leased: list[JobRecord] = []
+        with self.session() as session:
+            candidate_ids = self._select_candidate_job_ids(session, now, limit)
+
+            for job_id in candidate_ids:
+                updated = (
+                    session.execute(
+                        update(JobRecord)
+                        .where(
+                            JobRecord.id == job_id,
+                            JobRecord.status.in_(_LEASEABLE_STATUSES),
+                            or_(
+                                JobRecord.status == "queued",
+                                JobRecord.lease_expires_at.is_(None),
+                                JobRecord.lease_expires_at <= now,
+                            ),
+                        )
+                        .values(
+                            status="leased",
+                            leased_by=worker_id,
+                            lease_expires_at=deadline,
+                            updated_at=now,
+                        )
+                    )
+                ).rowcount
+                if updated:
+                    job = session.get(JobRecord, job_id)
+                    if job is not None:
+                        leased.append(job)
+                if len(leased) >= limit:
+                    break
+
+            return leased
+
+    def heartbeat_job(
+        self, job_id: int, worker_id: str, now: datetime, lease_ttl_secs: int
+    ) -> bool:
+        deadline = now + timedelta(seconds=lease_ttl_secs)
+        with self.session() as session:
+            updated = (
+                session.execute(
+                    update(JobRecord)
+                    .where(
+                        JobRecord.id == job_id,
+                        JobRecord.leased_by == worker_id,
+                        JobRecord.status.in_({"leased", "running"}),
+                    )
+                    .values(lease_expires_at=deadline, updated_at=now)
+                )
+            ).rowcount
+            return bool(updated)
+
+    def start_job(self, job_id: int, worker_id: str, *, now: datetime) -> JobRecord | None:
+        with self.session() as session:
+            job = (
+                session.execute(
+                    select(JobRecord).where(
+                        JobRecord.id == job_id,
+                        JobRecord.leased_by == worker_id,
+                        JobRecord.status == "leased",
+                    )
+                )
+                .scalars()
+                .first()
+            )
+            if job is None:
+                return None
+            job.status = "running"
+            job.updated_at = now
+            session.add(job)
+            session.flush()
+            session.refresh(job)
+            return job
+
+    def complete_job(self, job_id: int, run_id: int | None) -> None:
+        now = datetime.utcnow()
+        with self.session() as session:
+            job = session.get(JobRecord, job_id)
+            if job is None:
+                raise JobNotFoundError(f"job {job_id} not found")
+            if job.status == "canceled":
+                return
+            job.status = "succeeded"
+            job.run_id = run_id
+            job.leased_by = None
+            job.lease_expires_at = None
+            job.updated_at = now
+            session.add(job)
+
+    def fail_job_and_maybe_retry(
+        self,
+        job_id: int,
+        error: str,
+        now: datetime,
+        backoff_secs: int,
+    ) -> None:
+        with self.session() as session:
+            job = session.get(JobRecord, job_id)
+            if job is None:
+                raise JobNotFoundError(f"job {job_id} not found")
+
+            next_attempt = job.attempts + 1
+            job.attempts = next_attempt
+            job.last_error = error
+            job.leased_by = None
+            job.lease_expires_at = None
+            job.updated_at = now
+
+            if next_attempt < job.max_attempts:
+                job.status = "queued"
+                job.scheduled_at = now + timedelta(seconds=max(backoff_secs, 0))
+            else:
+                job.status = "dead"
+
+            session.add(job)
+
+    def cancel_job(self, job_id: int) -> bool:
+        with self.session() as session:
+            job = session.get(JobRecord, job_id)
+            if job is None:
+                return False
+            if job.status not in _CANCELABLE_STATUSES:
+                return False
+            job.status = "canceled"
+            job.leased_by = None
+            job.lease_expires_at = None
+            job.updated_at = datetime.utcnow()
+            session.add(job)
+            return True
+
+    def retry_job(self, job_id: int, *, now: datetime | None = None) -> bool:
+        with self.session() as session:
+            job = session.get(JobRecord, job_id)
+            if job is None:
+                return False
+            if job.status not in {"dead", "canceled"}:
+                return False
+            job.status = "queued"
+            job.attempts = 0
+            job.leased_by = None
+            job.lease_expires_at = None
+            job.scheduled_at = (now or datetime.utcnow())
+            job.updated_at = datetime.utcnow()
+            session.add(job)
+            return True
+
+    def list_jobs(
+        self,
+        *,
+        status: list[str] | None = None,
+        pipeline_id: int | None = None,
+        limit: int = 50,
+        offset: int = 0,
+    ) -> list[JobRecord]:
+        with self.session() as session:
+            query = session.query(JobRecord)
+            if status:
+                query = query.filter(JobRecord.status.in_(status))
+            if pipeline_id is not None:
+                query = query.filter(JobRecord.pipeline_id == pipeline_id)
+            query = query.order_by(
+                JobRecord.status.asc(),
+                JobRecord.priority.desc(),
+                JobRecord.scheduled_at.asc(),
+                JobRecord.id.asc(),
+            )
+            if offset:
+                query = query.offset(offset)
+            if limit:
+                query = query.limit(limit)
+            return list(query.all())
+
+    def get_job(self, job_id: int) -> JobRecord | None:
+        with self.session() as session:
+            return session.get(JobRecord, job_id)
+
+    def _select_candidate_job_ids(
+        self, session: Session, now: datetime, limit: int
+    ) -> Sequence[int]:
+        return (
+            session.execute(
+                select(JobRecord.id)
+                .where(
+                    JobRecord.scheduled_at <= now,
+                    or_(
+                        JobRecord.status == "queued",
+                        and_(
+                            JobRecord.status == "leased",
+                            JobRecord.lease_expires_at.isnot(None),
+                            JobRecord.lease_expires_at <= now,
+                        ),
+                    ),
+                )
+                .order_by(
+                    JobRecord.priority.desc(),
+                    JobRecord.scheduled_at.asc(),
+                    JobRecord.id.asc(),
+                )
+                .limit(limit * 4)
+            )
+            .scalars()
+            .all()
+        )
+
     # --- Utilities -----------------------------------------------------------
 
     def ensure_schema(self) -> None:
@@ -236,6 +557,38 @@ class InsightsStore:
             ),
         )
         return self.summaries()
+
+
+def _max_queued_per_pipeline() -> int | None:
+    value = os.getenv("ENGINE_QUEUE_MAX_QUEUED_PER_PIPELINE")
+    if value is None or value == "":
+        return None
+    try:
+        parsed = int(value)
+    except ValueError:
+        return None
+    return max(parsed, 0)
+
+
+def _job_as_dict(job: JobRecord) -> dict[str, Any]:
+    return {
+        "id": job.id,
+        "pipeline_id": job.pipeline_id,
+        "kind": job.kind,
+        "payload": job.payload,
+        "status": job.status,
+        "priority": job.priority,
+        "attempts": job.attempts,
+        "max_attempts": job.max_attempts,
+        "scheduled_at": job.scheduled_at,
+        "leased_by": job.leased_by,
+        "lease_expires_at": job.lease_expires_at,
+        "run_id": job.run_id,
+        "dedupe_key": job.dedupe_key,
+        "last_error": job.last_error,
+        "created_at": job.created_at,
+        "updated_at": job.updated_at,
+    }
 
 
 def _encode_payload(raw: bytes) -> str:
