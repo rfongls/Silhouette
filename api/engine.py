@@ -207,6 +207,9 @@ def pipelines_get(pipeline_id: int) -> PipelineGetResponse:
 
 @router.post("/api/engine/pipelines", response_model=PipelineSaveResponse, tags=["engine"])
 def pipelines_save(payload: PipelineSaveRequest) -> PipelineSaveResponse:
+    if len(payload.yaml.encode("utf-8")) > 200 * 1024:
+        raise HTTPException(status_code=413, detail="pipeline yaml too large (limit 200 KB)")
+
     try:
         spec = load_pipeline_spec(payload.yaml)
     except Exception as exc:  # pragma: no cover - FastAPI handles conversion
@@ -225,7 +228,7 @@ def pipelines_save(payload: PipelineSaveRequest) -> PipelineSaveResponse:
     except KeyError as exc:  # pipeline not found during update
         raise HTTPException(status_code=404, detail=str(exc)) from exc
     except IntegrityError as exc:
-        raise HTTPException(status_code=400, detail="pipeline name must be unique") from exc
+        raise HTTPException(status_code=409, detail="pipeline name must be unique") from exc
     except Exception as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
@@ -246,7 +249,9 @@ def pipelines_delete(pipeline_id: int) -> dict[str, bool]:
     response_model=PipelineRunResponse,
     tags=["engine"],
 )
-def pipelines_run_stored(pipeline_id: int, payload: PipelineStoredRunRequest) -> PipelineRunResponse:
+async def pipelines_run_stored(
+    pipeline_id: int, payload: PipelineStoredRunRequest
+) -> PipelineRunResponse:
     store = get_store()
     record = store.get_pipeline(pipeline_id)
     if record is None:
@@ -258,10 +263,7 @@ def pipelines_run_stored(pipeline_id: int, payload: PipelineStoredRunRequest) ->
         raise HTTPException(status_code=400, detail=f"invalid pipeline yaml: {exc}") from exc
 
     runtime = EngineRuntime(spec)
-    # FastAPI sync routes run in a thread pool; safe to block on asyncio.run here.
-    import asyncio
-
-    results = asyncio.run(runtime.run(max_messages=payload.max_messages))
+    results = await runtime.run(max_messages=payload.max_messages)
 
     issue_counts: dict[str, int] = {"error": 0, "warning": 0, "passed": 0}
     for result in results:
