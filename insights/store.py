@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Any, Dict, Iterable, Iterator, Sequence
 
 from sqlalchemy import and_, create_engine, func, or_, select, update
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session, sessionmaker
 
@@ -296,7 +297,20 @@ class InsightsStore:
                 dedupe_key=dedupe_key,
             )
             session.add(job)
-            session.flush()
+            try:
+                session.flush()
+            except IntegrityError as exc:
+                if dedupe_key:
+                    existing = (
+                        session.execute(
+                            select(JobRecord).where(JobRecord.dedupe_key == dedupe_key)
+                        )
+                        .scalars()
+                        .first()
+                    )
+                    if existing is not None:
+                        raise DuplicateJobError(existing) from exc
+                raise
             session.refresh(job)
             return job
 
@@ -392,6 +406,8 @@ class InsightsStore:
             job = session.get(JobRecord, job_id)
             if job is None:
                 raise JobNotFoundError(f"job {job_id} not found")
+            if job.status == "canceled":
+                return
             job.status = "succeeded"
             job.run_id = run_id
             job.leased_by = None
@@ -445,7 +461,7 @@ class InsightsStore:
             job = session.get(JobRecord, job_id)
             if job is None:
                 return False
-            if job.status not in {"failed", "dead", "canceled"}:
+            if job.status not in {"dead", "canceled"}:
                 return False
             job.status = "queued"
             job.attempts = 0

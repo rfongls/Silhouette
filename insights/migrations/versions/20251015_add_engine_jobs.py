@@ -76,8 +76,14 @@ def upgrade() -> None:
         "engine_jobs",
         ["status", "scheduled_at", "priority"],
     )
+    op.create_index(
+        "ix_engine_jobs_pipeline_status",
+        "engine_jobs",
+        ["pipeline_id", "status"],
+    )
 
 
 def downgrade() -> None:
+    op.drop_index("ix_engine_jobs_pipeline_status", table_name="engine_jobs")
     op.drop_index("ix_engine_jobs_status_sched_prio", table_name="engine_jobs")
     op.drop_table("engine_jobs")

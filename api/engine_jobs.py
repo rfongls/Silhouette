@@ -161,7 +161,7 @@ def jobs_retry(job_id: int) -> dict[str, bool]:
     job = store.get_job(job_id)
     if job is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="job not found")
-    if job.status not in {"failed", "dead", "canceled"}:
+    if job.status not in {"dead", "canceled"}:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="job not retryable")
     enqueued = store.retry_job(job_id, now=datetime.utcnow())
     return {"enqueued": enqueued}
