@@ -459,6 +459,26 @@ sinks:
       setPipelineStatus(message);
       showToast('error', message);
     }
+
+    for (let i = 0; i < groups; i += 1) {
+      const gx = padL + i * groupW;
+      ctx.fillText(labels[i] || '', gx + groupW * 0.3, padT + plotH + 18);
+    }
+
+    ctx.fillStyle = '#c33';
+    ctx.fillRect(width - 140, 8, 10, 10);
+    ctx.fillStyle = '#ddd';
+    ctx.fillText('Errors', width - 124, 16);
+
+    ctx.fillStyle = '#d8a31a';
+    ctx.fillRect(width - 84, 8, 10, 10);
+    ctx.fillStyle = '#ddd';
+    ctx.fillText('Warnings', width - 68, 16);
+
+    ctx.fillStyle = '#2a9d62';
+    ctx.fillRect(width - 44, 8, 10, 10);
+    ctx.fillStyle = '#ddd';
+    ctx.fillText('Passed', width - 28, 16);
   }
 
   async function deletePipeline(id) {
