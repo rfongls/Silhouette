@@ -1,6 +1,6 @@
 # Engine V2 — Phases & Spec (Single Source of Truth)
 
-**Last updated:** 2025-10-09 (UTC)
+**Last updated:** 2025-10-10 (UTC)
 
 This file is the **only** spec/runbook for Engine V2. It includes:
 - Quickstart & verification commands
@@ -287,6 +287,7 @@ Behaviour:
 - Emit at least one `passed` issue (`deidentify.applied`) plus rule-level warnings for invalid selectors, unsupported actions, or unmatched fields.
 - If a rule raises, record `deidentify.rule.error` and continue processing.
 - HTTP middleware now redacts secret keys inside JSON request body previews (parity with header/query redaction).
+- SQL logging attaches automatically to the Insights engine and writes framed entries to `out/interop/server_sql.log` (debug toggle + HTTP force tokens mirrored from middleware).
 
 **Adapter: `mllp`**
 ```yaml
