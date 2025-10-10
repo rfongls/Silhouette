@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from engine.contracts import Issue, Message, Result
 from engine.spec import dump_pipeline_spec, load_pipeline_spec
 from insights.store import InsightsStore, reset_store
 
@@ -64,3 +65,26 @@ sinks:
     assert store.delete_pipeline(record.id) is True
     assert store.get_pipeline(record.id) is None
     assert store.delete_pipeline(record.id) is False
+
+
+def test_persist_run_results(tmp_path):
+    db_url = f"sqlite:///{tmp_path / 'runs.db'}"
+    reset_store()
+    store = InsightsStore.from_env(url=db_url)
+    store.ensure_schema()
+
+    results = [
+        Result(
+            message=Message(id="one", raw=b"hello"),
+            issues=[Issue(severity="warning", code="W001")],
+        ),
+        Result(message=Message(id="two", raw=b"world"), issues=[]),
+    ]
+
+    run_id = store.persist_run_results(pipeline_name="demo", results=results)
+
+    summary = store.summaries()
+    assert summary["totals"]["runs"] == 1
+    assert summary["totals"]["messages"] == 2
+    assert summary["by_run"][0]["run_id"] == run_id
+    assert summary["by_run"][0]["issues"]["warning"] == 1

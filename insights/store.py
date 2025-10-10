@@ -7,7 +7,7 @@ import os
 from contextlib import contextmanager
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, Iterator
+from typing import Any, Dict, Iterable, Iterator
 
 from sqlalchemy import create_engine, func, select
 from sqlalchemy.engine import Engine
@@ -197,6 +197,17 @@ class InsightsStore:
                 return False
             session.delete(record)
             return True
+
+    def persist_run_results(
+        self, *, pipeline_name: str, results: Iterable[Result]
+    ) -> int:
+        """Persist a collection of runtime ``results`` as a run record."""
+
+        self.ensure_schema()
+        run = self.start_run(pipeline_name)
+        for result in results:
+            self.record_result(run_id=run.id, result=result)
+        return run.id
 
     # --- Utilities -----------------------------------------------------------
 
