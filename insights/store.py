@@ -16,7 +16,7 @@ from sqlalchemy.orm import Session, sessionmaker
 from engine.contracts import Issue, Result
 from api.sql_logging import install_sql_logging
 
-from .models import Base, IssueRecord, MessageRecord, RunRecord
+from .models import Base, IssueRecord, MessageRecord, PipelineRecord, RunRecord
 
 _DEFAULT_DB = Path("data") / "insights.db"
 
@@ -40,6 +40,13 @@ class InsightsStore:
             connect_args["check_same_thread"] = False
         engine = create_engine(resolved, future=True, connect_args=connect_args)
         install_sql_logging(engine)
+        try:
+            Base.metadata.create_all(engine)
+        except Exception:
+            # In production we rely on Alembic migrations; during local dev/tests this
+            # provides a convenient fallback without failing startup if migrations
+            # haven't run yet.
+            pass
         SessionFactory = sessionmaker(bind=engine, future=True, expire_on_commit=False)
         return cls(url=resolved, engine=engine, session_factory=SessionFactory)
 
@@ -134,6 +141,62 @@ class InsightsStore:
             ]
 
             return {"totals": totals, "by_run": by_run, "by_rule": rules}
+
+    # --- Pipeline CRUD helpers ---------------------------------------------
+
+    def save_pipeline(
+        self,
+        *,
+        name: str,
+        yaml: str,
+        spec: dict[str, Any],
+        description: str | None = None,
+        pipeline_id: int | None = None,
+    ) -> PipelineRecord:
+        with self.session() as session:
+            if pipeline_id is not None:
+                record = session.get(PipelineRecord, pipeline_id)
+                if record is None:
+                    raise KeyError(f"pipeline {pipeline_id} not found")
+                record.name = name
+                record.description = description
+                record.yaml = yaml
+                record.spec = spec
+                session.add(record)
+                session.flush()
+                session.refresh(record)
+                return record
+
+            record = PipelineRecord(
+                name=name,
+                description=description,
+                yaml=yaml,
+                spec=spec,
+            )
+            session.add(record)
+            session.flush()
+            session.refresh(record)
+            return record
+
+    def list_pipelines(self) -> list[PipelineRecord]:
+        with self.session() as session:
+            return (
+                session.query(PipelineRecord)
+                .order_by(PipelineRecord.updated_at.desc())
+                .all()
+            )
+
+    def get_pipeline(self, pipeline_id: int) -> PipelineRecord | None:
+        with self.session() as session:
+            return session.get(PipelineRecord, pipeline_id)
+
+    def delete_pipeline(self, pipeline_id: int) -> bool:
+        with self.session() as session:
+            record = session.get(PipelineRecord, pipeline_id)
+            if record is None:
+                return False
+            session.delete(record)
+            return True
 
     # --- Utilities -----------------------------------------------------------
 
