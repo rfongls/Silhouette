@@ -212,12 +212,14 @@ def pipelines_save(payload: PipelineSaveRequest) -> PipelineSaveResponse:
     except Exception as exc:  # pragma: no cover - FastAPI handles conversion
         raise HTTPException(status_code=400, detail=f"invalid pipeline yaml: {exc}") from exc
 
-    if getattr(spec, "name", None) and payload.name and spec.name != payload.name:
+    yaml_name = (getattr(spec, "name", "") or "").strip()
+    payload_name = (payload.name or "").strip()
+    if yaml_name and payload_name and yaml_name != payload_name:
         raise HTTPException(
             status_code=400,
             detail=(
                 "pipeline name mismatch: payload '"
-                f"{payload.name}' vs YAML '{spec.name}'. "
+                f"{payload_name}' vs YAML '{yaml_name}'. "
                 "Use 'Sync name → YAML' to align before saving."
             ),
         )
@@ -226,7 +228,7 @@ def pipelines_save(payload: PipelineSaveRequest) -> PipelineSaveResponse:
     spec_dict = dump_pipeline_spec(spec)
     try:
         record = store.save_pipeline(
-            name=payload.name,
+            name=payload_name or payload.name,
             description=payload.description,
             yaml=payload.yaml,
             spec=spec_dict,

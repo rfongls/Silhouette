@@ -141,3 +141,17 @@ def test_pipeline_name_mismatch_rejected(tmp_path):
     )
     assert response.status_code == 400
     assert "mismatch" in response.json().get("detail", "")
+
+
+def test_pipeline_name_comparison_trims_whitespace(tmp_path):
+    reset_store()
+    db_url = f"sqlite:///{tmp_path / 'api2b_trim.db'}"
+    app, _ = make_app_with_store(db_url)
+    client = TestClient(app)
+
+    yaml_body = build_yaml("aligned-name")
+    response = client.post(
+        "/api/engine/pipelines",
+        json={"name": "  aligned-name  ", "yaml": yaml_body},
+    )
+    assert response.status_code == 200, response.text
