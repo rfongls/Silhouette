@@ -84,12 +84,22 @@ class PipelineStoredRunRequest(BaseModel):
     persist: bool = Field(True)
 
 
+def _norm_severity(raw: str | None) -> str:
+    """Map arbitrary severities into the canonical buckets used by the UI."""
+
+    if raw == "error":
+        return "error"
+    if raw == "passed":
+        return "passed"
+    return "warning"
+
+
 def _issue_counts(results: list[Result]) -> dict[str, int]:
     counts: dict[str, int] = {"error": 0, "warning": 0, "passed": 0}
     for result in results:
         for issue in result.issues:
-            severity = issue.severity or "warning"
-            counts[severity] = counts.get(severity, 0) + 1
+            severity = _norm_severity(getattr(issue, "severity", None))
+            counts[severity] += 1
     return counts
 
 
@@ -228,7 +238,7 @@ def pipelines_save(payload: PipelineSaveRequest) -> PipelineSaveResponse:
     spec_dict = dump_pipeline_spec(spec)
     try:
         record = store.save_pipeline(
-            name=payload_name or payload.name,
+            name=payload_name,
             description=payload.description,
             yaml=payload.yaml,
             spec=spec_dict,

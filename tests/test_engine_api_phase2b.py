@@ -155,3 +155,26 @@ def test_pipeline_name_comparison_trims_whitespace(tmp_path):
         json={"name": "  aligned-name  ", "yaml": yaml_body},
     )
     assert response.status_code == 200, response.text
+
+
+def test_issue_counts_normalizes_unknown_severity():
+    from types import SimpleNamespace
+
+    import api.engine as engine_module
+
+    fake_results = [
+        SimpleNamespace(
+            issues=[
+                SimpleNamespace(severity="error"),
+                SimpleNamespace(severity="info"),
+                SimpleNamespace(severity=None),
+                SimpleNamespace(severity="passed"),
+            ]
+        )
+    ]
+
+    assert engine_module._issue_counts(fake_results) == {
+        "error": 1,
+        "warning": 2,
+        "passed": 1,
+    }
