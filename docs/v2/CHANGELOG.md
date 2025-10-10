@@ -2,6 +2,18 @@
 
 > User-facing notes per PR. Keep this lean and helpful (what changed, why it matters, and any action required).
 
+## 2025-10-10 — Phase 3 — Background runner, replay, and UI
+
+**Highlights**
+- Shipped the durable `engine_jobs` queue with leasing/retry metadata, store helpers, and the async `engine.runner` worker.
+- Added a replay adapter (`type: replay`) plus API/runner wiring so prior runs can be reprocessed in the background.
+- Engine UI now supports "Run in background" and surfaces a Jobs table with status chips, cancel/retry actions, and error previews.
+
+**Details**
+- `/api/engine/jobs` exposes enqueue/list/get/cancel/retry with dedupe (409) and back-pressure (429) safeguards.
+- Runner logs structured `job.start/success/error` frames, honors cancel-wins semantics, and applies exponential backoff.
+- Replay jobs persist a new run (when requested) and tag messages with `replay` metadata for downstream analysis.
+
 ## 2025-10-12 — Phase 2B UX polish
 
 **Highlights**
