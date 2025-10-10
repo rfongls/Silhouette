@@ -178,7 +178,7 @@ metadata:
 ## Engine & Insights API
 
 **Engine**
-- `GET /api/engine/health` → `{ ok: true, version: "phase1", feature: "engine-v2" }`
+- `GET /api/engine/health` → `{ ok: true, version: "phase2", feature: "engine-v2" }`
 - `GET /api/engine/registry` → registered adapters/operators/sinks
 - `GET /api/engine/pipelines` → list stored pipelines (`{ items: [...] }`)
 - `GET /api/engine/pipelines/{id}` → retrieve full YAML/spec for editing

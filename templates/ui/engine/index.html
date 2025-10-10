@@ -121,7 +121,7 @@
       badge.textContent = `Runs: ${summary.totals.runs} • Messages: ${summary.totals.messages} • Issues: ${summary.totals.issues}`;
       const rows = summary.by_run.map((run) => (
         `<tr>
-          <td><span class="badge mono">#${run.run_id}</span> ${run.pipeline}</td>
+          <td><span class="badge mono">#${run.run_id}</span> ${escapeHtml(run.pipeline)}</td>
           <td>${run.messages}</td>
           <td>${run.issues.error}</td>
           <td>${run.issues.warning}</td>
@@ -132,7 +132,7 @@
       target.innerHTML = rows || '<tr><td colspan="6">No runs recorded. Execute the seed script to populate demo data.</td></tr>';
       if (summary.by_rule.length) {
         const ruleList = summary.by_rule.slice(0, 6).map((item) => (
-          `<span class="badge">${item.code} (${item.severity} · ${item.count})</span>`
+          `<span class="badge">${escapeHtml(item.code)} (${escapeHtml(item.severity)} · ${item.count})</span>`
         )).join(' ');
         rules.innerHTML = `<div class="row wrap small"><strong>Top findings:</strong> ${ruleList}</div>`;
       } else {
