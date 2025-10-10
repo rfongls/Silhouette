@@ -5,6 +5,7 @@ from __future__ import annotations
 import engine.plugins  # noqa: F401  # ensure component registration
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
+from sqlalchemy.exc import IntegrityError
 
 from engine.contracts import Result
 from engine.runtime import EngineRuntime
@@ -14,7 +15,7 @@ from insights.store import get_store
 
 router = APIRouter()
 
-_ENGINE_VERSION = "phase1"
+_ENGINE_VERSION = "phase2"
 
 
 class PipelineValidateRequest(BaseModel):
@@ -44,6 +45,62 @@ class PipelineRunResponse(BaseModel):
         description="Issue counts grouped by severity",
     )
     spec: dict = Field(..., description="Normalized pipeline specification")
+
+
+class PipelineInfo(BaseModel):
+    id: int
+    name: str
+    description: str | None = None
+    updated_at: str
+
+
+class PipelineListResponse(BaseModel):
+    items: list[PipelineInfo]
+
+
+class PipelineSaveRequest(BaseModel):
+    id: int | None = Field(None, description="Pipeline identifier to update")
+    name: str = Field(..., min_length=1, max_length=200)
+    yaml: str = Field(..., description="Pipeline specification in YAML format")
+    description: str | None = Field(None, max_length=500)
+
+
+class PipelineSaveResponse(BaseModel):
+    id: int
+    spec: dict
+
+
+class PipelineGetResponse(BaseModel):
+    id: int
+    name: str
+    description: str | None = None
+    yaml: str
+    spec: dict
+    updated_at: str
+
+
+class PipelineStoredRunRequest(BaseModel):
+    max_messages: int | None = Field(1, ge=0)
+    persist: bool = Field(True)
+
+
+def _norm_severity(raw: str | None) -> str:
+    """Map arbitrary severities into the canonical buckets used by the UI."""
+
+    if raw == "error":
+        return "error"
+    if raw == "passed":
+        return "passed"
+    return "warning"
+
+
+def _issue_counts(results: list[Result]) -> dict[str, int]:
+    counts: dict[str, int] = {"error": 0, "warning": 0, "passed": 0}
+    for result in results:
+        for issue in result.issues:
+            severity = _norm_severity(getattr(issue, "severity", None))
+            counts[severity] += 1
+    return counts
 
 
 @router.get("/api/engine/health", tags=["engine"], name="engine_health")
@@ -99,27 +156,140 @@ async def run_pipeline(payload: PipelineRunRequest) -> PipelineRunResponse:
     except Exception as exc:  # pragma: no cover - FastAPI handles conversion
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
-    store = get_store() if payload.persist else None
-    run_id: int | None = None
-    persist_cb = None
-
-    if store is not None:
-        store.ensure_schema()
-        run = store.start_run(spec.name)
-        run_id = run.id
-
-        async def persist_result(result: Result) -> None:
-            store.record_result(run_id=run_id, result=result)
-
-        persist_cb = persist_result
-
-    runtime = EngineRuntime(spec, persist_result=persist_cb)
+    runtime = EngineRuntime(spec)
     results = await runtime.run(max_messages=payload.max_messages)
 
-    issue_counts: dict[str, int] = {"error": 0, "warning": 0, "passed": 0}
-    for result in results:
-        for issue in result.issues:
-            issue_counts[issue.severity] = issue_counts.get(issue.severity, 0) + 1
+    issue_counts = _issue_counts(results)
+
+    run_id: int | None = None
+    if payload.persist:
+        store = get_store()
+        label = spec.name or "adhoc-pipeline"
+        run_id = store.persist_run_results(pipeline_name=label, results=results)
+
+    return PipelineRunResponse(
+        run_id=run_id,
+        processed=len(results),
+        issues=issue_counts,
+        spec=dump_pipeline_spec(spec),
+    )
+
+
+@router.get("/api/engine/pipelines", response_model=PipelineListResponse, tags=["engine"])
+def pipelines_list() -> PipelineListResponse:
+    store = get_store()
+    items: list[PipelineInfo] = []
+    for record in store.list_pipelines():
+        updated = record.updated_at.isoformat() if record.updated_at else ""
+        items.append(
+            PipelineInfo(
+                id=record.id,
+                name=record.name,
+                description=record.description,
+                updated_at=updated,
+            )
+        )
+    return PipelineListResponse(items=items)
+
+
+@router.get(
+    "/api/engine/pipelines/{pipeline_id}",
+    response_model=PipelineGetResponse,
+    tags=["engine"],
+)
+def pipelines_get(pipeline_id: int) -> PipelineGetResponse:
+    store = get_store()
+    record = store.get_pipeline(pipeline_id)
+    if record is None:
+        raise HTTPException(status_code=404, detail="pipeline not found")
+    updated = record.updated_at.isoformat() if record.updated_at else ""
+    return PipelineGetResponse(
+        id=record.id,
+        name=record.name,
+        description=record.description,
+        yaml=record.yaml,
+        spec=record.spec,
+        updated_at=updated,
+    )
+
+
+@router.post("/api/engine/pipelines", response_model=PipelineSaveResponse, tags=["engine"])
+def pipelines_save(payload: PipelineSaveRequest) -> PipelineSaveResponse:
+    if len(payload.yaml.encode("utf-8")) > 200 * 1024:
+        raise HTTPException(status_code=413, detail="pipeline yaml too large (limit 200 KB)")
+
+    try:
+        spec = load_pipeline_spec(payload.yaml)
+    except Exception as exc:  # pragma: no cover - FastAPI handles conversion
+        raise HTTPException(status_code=400, detail=f"invalid pipeline yaml: {exc}") from exc
+
+    yaml_name = (getattr(spec, "name", "") or "").strip()
+    payload_name = (payload.name or "").strip()
+    if yaml_name and payload_name and yaml_name != payload_name:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                "pipeline name mismatch: payload '"
+                f"{payload_name}' vs YAML '{yaml_name}'. "
+                "Use 'Sync name → YAML' to align before saving."
+            ),
+        )
+
+    store = get_store()
+    spec_dict = dump_pipeline_spec(spec)
+    try:
+        record = store.save_pipeline(
+            name=payload_name,
+            description=payload.description,
+            yaml=payload.yaml,
+            spec=spec_dict,
+            pipeline_id=payload.id,
+        )
+    except KeyError as exc:  # pipeline not found during update
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except IntegrityError as exc:
+        raise HTTPException(status_code=409, detail="pipeline name must be unique") from exc
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    return PipelineSaveResponse(id=record.id, spec=spec_dict)
+
+
+@router.delete("/api/engine/pipelines/{pipeline_id}", tags=["engine"])
+def pipelines_delete(pipeline_id: int) -> dict[str, bool]:
+    store = get_store()
+    deleted = store.delete_pipeline(pipeline_id)
+    if not deleted:
+        raise HTTPException(status_code=404, detail="pipeline not found")
+    return {"ok": True}
+
+
+@router.post(
+    "/api/engine/pipelines/{pipeline_id}/run",
+    response_model=PipelineRunResponse,
+    tags=["engine"],
+)
+async def pipelines_run_stored(
+    pipeline_id: int, payload: PipelineStoredRunRequest
+) -> PipelineRunResponse:
+    store = get_store()
+    record = store.get_pipeline(pipeline_id)
+    if record is None:
+        raise HTTPException(status_code=404, detail="pipeline not found")
+
+    try:
+        spec = load_pipeline_spec(record.yaml)
+    except Exception as exc:  # pragma: no cover - stored specs should already be valid
+        raise HTTPException(status_code=400, detail=f"invalid pipeline yaml: {exc}") from exc
+
+    runtime = EngineRuntime(spec)
+    results = await runtime.run(max_messages=payload.max_messages)
+
+    issue_counts = _issue_counts(results)
+
+    run_id: int | None = None
+    if payload.persist:
+        run_id = store.persist_run_results(pipeline_name=record.name, results=results)
 
     return PipelineRunResponse(
         run_id=run_id,
