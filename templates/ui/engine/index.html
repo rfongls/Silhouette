@@ -4,6 +4,23 @@
 {% set root = req.scope.get('root_path', '') if req else '' %}
 <section class="dashboard">
   <div class="dashboard-container">
+    <!-- Toasts and lightweight styles for Phase 2B additions -->
+    <style>
+      .toasts { position: fixed; top: 1rem; right: 1rem; z-index: 9999; display: flex; flex-direction: column; gap: .5rem; }
+      .toast { background: #222; color: #fff; padding: .5rem .75rem; border-radius: .375rem; box-shadow: 0 2px 8px rgba(0, 0, 0, .2); opacity: .95; display: flex; align-items: center; gap: .5rem; }
+      .toast.success { background: #1b7f4d; }
+      .toast.error { background: #9b1c1c; }
+      .toast.info { background: #1e40af; }
+      .toast .x { background: transparent; border: none; color: inherit; cursor: pointer; padding: 0 .25rem; }
+      pre.diff { background: #0a0a0a; color: #ddd; padding: .75rem; border-radius: .375rem; overflow: auto; max-height: 22rem; }
+      .diff-line { white-space: pre-wrap; }
+      .diff-line.add { background: rgba(16, 185, 129, .12); }
+      .diff-line.rem { background: rgba(239, 68, 68, .14); }
+      .diff-line.neu { opacity: .85; }
+      .chart-wrap { width: 100%; overflow: auto; }
+    </style>
+    <div id="toast-root" class="toasts" aria-live="polite" aria-atomic="true"></div>
+
     <header class="dashboard-header">
       <h1 class="text-h1">Engine (Beta)</h1>
       <p class="text-body">Preview the new runtime for adapters, operators, routers, and sinks.</p>
@@ -11,29 +28,56 @@
 
     <section class="card mb">
       <h2 class="text-h2">Pipelines</h2>
-      <p class="text-body muted">Phase 0 exposes the runtime skeleton. Pipeline authoring arrives in Phase 1.</p>
-      <div class="empty-state">
-        <p class="text-body">No pipelines registered yet. Use the YAML spec to validate configs via the API.</p>
-        <div class="row wrap small" style="gap:.5rem; margin-bottom:.5rem">
-          <a class="btn btn-secondary btn-sm" href="{{ root }}/static/examples/engine/minimal.pipeline.yaml" download>Download Phase 0 demo</a>
-          <a class="btn btn-secondary btn-sm" href="{{ root }}/static/examples/engine/phase1.file.yaml" download>Download Phase 1 (file)</a>
-          <a class="btn btn-secondary btn-sm" href="{{ root }}/static/examples/engine/phase1.mllp.yaml" download>Download Phase 1 (MLLP)</a>
-        </div>
-        <label class="text-body" for="run-demo-select">Select a demo pipeline to run:</label>
-        <div class="row small" style="gap:.5rem; align-items:center; margin-top:.25rem">
-          <select id="run-demo-select" class="input">
-            <option value="minimal">Phase 0 — Minimal sequence</option>
-            <option value="phase1.file">Phase 1 — File adapter with validation + de-identification</option>
-            <option value="phase1.mllp" disabled>Phase 1 — MLLP (requires external HL7 source)</option>
-          </select>
-          <button class="btn btn-primary btn-sm" id="run-demo-btn">Run selected pipeline</button>
-        </div>
+      <div class="row small" style="gap:.5rem; align-items:center; margin-bottom:.5rem">
+        <button class="btn btn-primary btn-sm" id="pl-new-btn">New pipeline</button>
+        <span class="text-body muted" id="pl-status"></span>
       </div>
+      <div class="table-wrapper">
+        <table class="table" id="pl-table">
+          <thead>
+            <tr>
+              <th style="width:36%">Name</th>
+              <th>Description</th>
+              <th style="width:18%">Updated</th>
+              <th style="width:26%">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td colspan="4">Loading…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="card mb" id="pl-editor" style="display:none">
+      <h2 class="text-h2">Pipeline editor</h2>
+      <div class="row small" style="gap:1rem; margin-bottom:.5rem">
+        <input class="input" id="pl-name" placeholder="Name" style="min-width:18rem">
+        <input class="input" id="pl-desc" placeholder="Description" style="min-width:24rem">
+        <button class="btn btn-text btn-sm" id="pl-sync-btn" title="Sync name into YAML">Sync name → YAML</button>
+        <button class="btn btn-text btn-sm" id="pl-diff-btn" title="Show YAML diff">Diff</button>
+      </div>
+      <textarea id="pl-yaml" class="input" style="width:100%; height:18rem; font-family: ui-monospace, Menlo, monospace;"></textarea>
+      <div class="row small" style="gap:.5rem; margin-top:.5rem">
+        <button class="btn btn-secondary btn-sm" id="pl-validate-btn">Validate</button>
+        <button class="btn btn-primary btn-sm" id="pl-save-btn">Save</button>
+        <button class="btn btn-text btn-sm" id="pl-cancel-btn">Cancel</button>
+        <span class="text-body muted" id="pl-editor-status"></span>
+      </div>
+    </section>
+
+    <section class="card mb" id="pl-diff-card" style="display:none">
+      <h2 class="text-h2">YAML diff</h2>
+      <p class="text-body muted">Lines removed in red, added in green. Shows differences between the last loaded/saved version and current edits.</p>
+      <pre id="pl-diff" class="diff"></pre>
     </section>
 
     <section class="card">
       <h2 class="text-h2">Insights</h2>
       <p class="text-body muted">Seed the store then review run-level summaries below.</p>
+      <div class="chart-wrap mb">
+        <canvas id="insights-chart" width="960" height="260" aria-label="Recent run issues chart"></canvas>
+      </div>
       <div class="insights-summary" id="insights-summary">
         <div class="row small">
           <div class="badge muted" id="insights-totals">Loading…</div>
@@ -62,7 +106,7 @@
 </section>
 <script>
   async function loadInsightsSummary() {
-    const root = document.body?.dataset?.root || '';
+    const root = ROOT_PATH;
     const target = document.getElementById('insights-table')?.querySelector('tbody');
     const badge = document.getElementById('insights-totals');
     const rules = document.getElementById('insights-rules');
@@ -77,7 +121,7 @@
       badge.textContent = `Runs: ${summary.totals.runs} • Messages: ${summary.totals.messages} • Issues: ${summary.totals.issues}`;
       const rows = summary.by_run.map((run) => (
         `<tr>
-          <td><span class="badge mono">#${run.run_id}</span> ${run.pipeline}</td>
+          <td><span class="badge mono">#${run.run_id}</span> ${escapeHtml(run.pipeline)}</td>
           <td>${run.messages}</td>
           <td>${run.issues.error}</td>
           <td>${run.issues.warning}</td>
@@ -88,50 +132,485 @@
       target.innerHTML = rows || '<tr><td colspan="6">No runs recorded. Execute the seed script to populate demo data.</td></tr>';
       if (summary.by_rule.length) {
         const ruleList = summary.by_rule.slice(0, 6).map((item) => (
-          `<span class="badge">${item.code} (${item.severity} · ${item.count})</span>`
+          `<span class="badge">${escapeHtml(item.code)} (${escapeHtml(item.severity)} · ${item.count})</span>`
         )).join(' ');
         rules.innerHTML = `<div class="row wrap small"><strong>Top findings:</strong> ${ruleList}</div>`;
       } else {
         rules.textContent = 'No findings yet. Operators will populate issues when pipelines run.';
       }
+      try { renderInsightsChart(summary); } catch (err) { console.warn('Failed to render chart', err); }
     } catch (err) {
       console.error('Failed to load insights summary', err);
       badge.textContent = 'Unable to load insights summary. Ensure the API is running.';
       target.innerHTML = '<tr><td colspan="6">Summary unavailable.</td></tr>';
     }
   }
-  const PIPELINE_URLS = {
-    'minimal': '/static/examples/engine/minimal.pipeline.yaml',
-    'phase1.file': '/static/examples/engine/phase1.file.yaml',
-  };
 
-  async function runDemoPipeline() {
-    const root = document.body?.dataset?.root || '';
-    const select = document.getElementById('run-demo-select');
-    const choice = select?.value || 'minimal';
-    const path = PIPELINE_URLS[choice] || PIPELINE_URLS.minimal;
+  const PLS = { currentId: null, origYaml: '' };
+  const TEMPLATE_ROOT = "{{ root }}";
+  const ROOT_PATH = (document.body?.dataset?.root ?? TEMPLATE_ROOT) || '';
+
+  async function withBusy(button, fn) {
+    if (!button) return fn();
+    if (button.dataset.busy === '1') return undefined;
+    button.dataset.busy = '1';
+    const wasDisabled = button.disabled;
+    button.disabled = true;
     try {
-      const yaml = await fetch(root + path).then((resp) => resp.text());
-      const response = await fetch(root + '/api/engine/pipelines/run', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ yaml, max_messages: 2, persist: true }),
-      });
-      if (!response.ok) {
-        throw new Error(await response.text());
-      }
-      await loadInsightsSummary();
-    } catch (err) {
-      console.error('Run failed', err);
-      alert('Pipeline run failed. Check console for details.');
+      return await fn();
+    } finally {
+      button.dataset.busy = '0';
+      button.disabled = wasDisabled;
     }
   }
+
+  function showToast(kind, message, timeoutMs = 2600) {
+    const root = document.getElementById('toast-root');
+    if (!root) return;
+    const el = document.createElement('div');
+    el.className = `toast ${kind}`;
+    el.innerHTML = `<span>${escapeHtml(message || '')}</span><button class="x" aria-label="Close">✕</button>`;
+    root.appendChild(el);
+    const close = () => {
+      if (el && el.parentNode) {
+        el.parentNode.removeChild(el);
+      }
+    };
+    el.querySelector('.x')?.addEventListener('click', close);
+    setTimeout(close, timeoutMs);
+  }
+
+  function escapeHtml(value) {
+    const span = document.createElement('span');
+    span.textContent = value ?? '';
+    return span.innerHTML;
+  }
+
+  function setPipelineStatus(message) {
+    const target = document.getElementById('pl-status');
+    if (target) target.textContent = message || '';
+  }
+
+  function setEditorStatus(message) {
+    const target = document.getElementById('pl-editor-status');
+    if (target) target.textContent = message || '';
+  }
+
+  async function extractError(response) {
+    const text = await response.text();
+    try {
+      const data = JSON.parse(text);
+      const detail = data?.detail;
+      if (typeof detail === 'string') {
+        return detail;
+      }
+      if (Array.isArray(detail) && detail.length) {
+        const first = detail[0];
+        if (first && typeof first.msg === 'string') return first.msg;
+        return JSON.stringify(detail);
+      }
+      if (detail && typeof detail === 'object' && typeof detail.msg === 'string') {
+        return detail.msg;
+      }
+    } catch (err) {
+      // ignore JSON parse failures; fall back to raw text
+    }
+    return text || response.statusText || 'Request failed';
+  }
+
+  function syncYamlName(yamlText, nameValue) {
+    const name = (nameValue || '').trim();
+    if (!name) return yamlText;
+    const lines = (yamlText || '').split(/\r?\n/);
+    let changed = false;
+    for (let i = 0; i < lines.length; i += 1) {
+      if (/^\s*name\s*:/.test(lines[i])) {
+        lines[i] = `name: ${name}`;
+        changed = true;
+        break;
+      }
+    }
+    if (!changed) {
+      let inserted = false;
+      for (let i = 0; i < lines.length; i += 1) {
+        if (/^\s*version\s*:/.test(lines[i])) {
+          lines.splice(i + 1, 0, `name: ${name}`);
+          inserted = true;
+          break;
+        }
+      }
+      if (!inserted) {
+        lines.unshift(`name: ${name}`);
+      }
+    }
+    return lines.join('\n');
+  }
+
+  function diffLines(a, b) {
+    const A = a.split(/\r?\n/);
+    const B = b.split(/\r?\n/);
+    const m = A.length;
+    const n = B.length;
+    const dp = Array.from({ length: m + 1 }, () => Array(n + 1).fill(0));
+    for (let i = 1; i <= m; i += 1) {
+      for (let j = 1; j <= n; j += 1) {
+        if (A[i - 1] === B[j - 1]) {
+          dp[i][j] = dp[i - 1][j - 1] + 1;
+        } else {
+          dp[i][j] = Math.max(dp[i - 1][j], dp[i][j - 1]);
+        }
+      }
+    }
+    const out = [];
+    let i = m;
+    let j = n;
+    while (i > 0 || j > 0) {
+      if (i > 0 && j > 0 && A[i - 1] === B[j - 1]) {
+        out.push([' ', A[i - 1]]);
+        i -= 1;
+        j -= 1;
+      } else if (j > 0 && (i === 0 || dp[i][j - 1] >= dp[i - 1][j])) {
+        out.push(['+', B[j - 1]]);
+        j -= 1;
+      } else {
+        out.push(['-', A[i - 1]]);
+        i -= 1;
+      }
+    }
+    return out.reverse();
+  }
+
+  function renderYamlDiff() {
+    const before = PLS.origYaml || '';
+    const after = document.getElementById('pl-yaml').value || '';
+    const beforeLines = before.split(/\r?\n/);
+    const afterLines = after.split(/\r?\n/);
+    const card = document.getElementById('pl-diff-card');
+    const pre = document.getElementById('pl-diff');
+    if ((beforeLines.length * afterLines.length) > 200000) {
+      if (pre) {
+        pre.innerHTML = '<span class="muted">Diff too large to render.</span>';
+      }
+      if (card) {
+        card.style.display = '';
+      }
+      return;
+    }
+    const lines = diffLines(before, after);
+    const html = lines.map(([tag, line]) => {
+      const esc = escapeHtml(line);
+      if (tag === '+') return `<div class="diff-line add">+ ${esc}</div>`;
+      if (tag === '-') return `<div class="diff-line rem">- ${esc}</div>`;
+      return `<div class="diff-line neu">  ${esc}</div>`;
+    }).join('');
+    if (pre) {
+      pre.innerHTML = html || '<span class="muted">No differences.</span>';
+    }
+    if (card) {
+      card.style.display = '';
+    }
+  }
+
+  async function loadPipelines() {
+    const root = ROOT_PATH;
+    const tbody = document.querySelector('#pl-table tbody');
+    if (!tbody) return;
+    tbody.innerHTML = '<tr><td colspan="4">Loading…</td></tr>';
+    try {
+      const response = await fetch(root + '/api/engine/pipelines');
+      if (!response.ok) {
+        throw new Error(await extractError(response));
+      }
+      const data = await response.json();
+      const rows = (data.items || []).map((item) => `
+        <tr>
+          <td><strong>${escapeHtml(item.name)}</strong></td>
+          <td class="muted">${escapeHtml(item.description || '')}</td>
+          <td class="mono">${escapeHtml(item.updated_at || '')}</td>
+          <td>
+            <button class="btn btn-secondary btn-xs" data-pipeline="${item.id}" data-action="run-dry">Run (dry)</button>
+            <button class="btn btn-primary btn-xs" data-pipeline="${item.id}" data-action="run-persist">Run (persist)</button>
+            <button class="btn btn-text btn-xs" data-pipeline="${item.id}" data-action="edit">Edit</button>
+            <button class="btn btn-text btn-xs" data-pipeline="${item.id}" data-action="delete">Delete</button>
+          </td>
+        </tr>
+      `).join('');
+      tbody.innerHTML = rows || '<tr><td colspan="4">No pipelines yet. Click "New pipeline" to create one.</td></tr>';
+    } catch (err) {
+      console.error(err);
+      tbody.innerHTML = '<tr><td colspan="4">Failed to load pipelines.</td></tr>';
+      setPipelineStatus('Unable to load pipelines.');
+    }
+  }
+
+  async function fetchPipeline(id) {
+    const root = ROOT_PATH;
+    const response = await fetch(`${root}/api/engine/pipelines/${id}`);
+    if (!response.ok) {
+      throw new Error(await extractError(response));
+    }
+    return response.json();
+  }
+
+  function openEditor(record) {
+    PLS.currentId = record?.id ?? null;
+    PLS.origYaml = record?.yaml ?? '';
+    document.getElementById('pl-name').value = record?.name ?? '';
+    document.getElementById('pl-desc').value = record?.description ?? '';
+    document.getElementById('pl-yaml').value = record?.yaml ?? `version: 1
+name: example
+adapter:
+  type: sequence
+  config:
+    messages:
+      - { id: "m1", text: "hello" }
+operators:
+  - { type: echo }
+sinks:
+  - { type: memory, config: { label: "mem" } }`;
+    setEditorStatus('');
+    document.getElementById('pl-editor').style.display = '';
+    document.getElementById('pl-diff-card').style.display = 'none';
+  }
+
+  async function editPipeline(id) {
+    try {
+      const record = await fetchPipeline(id);
+      openEditor(record);
+    } catch (err) {
+      console.error(err);
+      setPipelineStatus('Failed to open pipeline.');
+      showToast('error', `Failed to open pipeline: ${err.message || err}`);
+    }
+  }
+
+  async function savePipeline() {
+    const root = ROOT_PATH;
+    const payload = {
+      id: PLS.currentId,
+      name: document.getElementById('pl-name').value.trim(),
+      description: document.getElementById('pl-desc').value.trim() || null,
+      yaml: document.getElementById('pl-yaml').value,
+    };
+    try {
+      const response = await fetch(root + '/api/engine/pipelines', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      if (!response.ok) {
+        throw new Error(await extractError(response));
+      }
+      document.getElementById('pl-editor').style.display = 'none';
+      setPipelineStatus('Pipeline saved.');
+      showToast('success', 'Pipeline saved');
+      PLS.origYaml = payload.yaml || '';
+      await loadPipelines();
+    } catch (err) {
+      console.error(err);
+      const message = `Save failed: ${err.message || err}`;
+      setEditorStatus(message);
+      showToast('error', message);
+    }
+  }
+
+  async function validatePipeline() {
+    const root = ROOT_PATH;
+    const yaml = document.getElementById('pl-yaml').value;
+    try {
+      const response = await fetch(root + '/api/engine/pipelines/validate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ yaml }),
+      });
+      if (!response.ok) {
+        throw new Error(await extractError(response));
+      }
+      setEditorStatus('Valid ✓');
+      showToast('success', 'Spec is valid');
+      document.getElementById('pl-diff-card').style.display = 'none';
+    } catch (err) {
+      console.error(err);
+      const message = `Invalid: ${err.message || err}`;
+      setEditorStatus(message);
+      showToast('error', message);
+    }
+  }
+
+  async function runPipeline(id, persist) {
+    const root = ROOT_PATH;
+    try {
+      const response = await fetch(`${root}/api/engine/pipelines/${id}/run`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ persist, max_messages: 2 }),
+      });
+      if (!response.ok) {
+        throw new Error(await extractError(response));
+      }
+      const message = persist ? 'Run persisted.' : 'Dry run completed.';
+      setPipelineStatus(message);
+      showToast('success', message);
+      await loadInsightsSummary();
+      await loadPipelines();
+    } catch (err) {
+      console.error(err);
+      const message = `Run failed: ${err.message || err}`;
+      setPipelineStatus(message);
+      showToast('error', message);
+    }
+  }
+
+  async function deletePipeline(id) {
+    const root = ROOT_PATH;
+    if (!confirm('Delete this pipeline?')) return;
+    try {
+      const response = await fetch(`${root}/api/engine/pipelines/${id}`, { method: 'DELETE' });
+      if (!response.ok) {
+        throw new Error(await extractError(response));
+      }
+      setPipelineStatus('Pipeline deleted.');
+      showToast('success', 'Pipeline deleted');
+      await loadPipelines();
+    } catch (err) {
+      console.error(err);
+      const message = `Delete failed: ${err.message || err}`;
+      setPipelineStatus(message);
+      showToast('error', message);
+    }
+  }
+
+  function handlePipelineAction(event) {
+    const target = event.target;
+    if (!(target instanceof HTMLButtonElement)) return;
+    const action = target.dataset.action;
+    const id = Number(target.dataset.pipeline);
+    if (!action || Number.isNaN(id)) return;
+    if (action === 'edit') {
+      withBusy(target, () => editPipeline(id));
+    } else if (action === 'delete') {
+      withBusy(target, () => deletePipeline(id));
+    } else if (action === 'run-dry') {
+      withBusy(target, () => runPipeline(id, false));
+    } else if (action === 'run-persist') {
+      withBusy(target, () => runPipeline(id, true));
+    }
+  }
+
+  function renderInsightsChart(summary) {
+    const canvas = document.getElementById('insights-chart');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    const runs = (summary?.by_run || []).slice(-10);
+    const labels = runs.map((run) => `#${run.run_id}`);
+    const dataErrors = runs.map((run) => run.issues.error || 0);
+    const dataWarnings = runs.map((run) => run.issues.warning || 0);
+    const dataPassed = runs.map((run) => run.issues.passed || 0);
+    const width = canvas.width;
+    const height = canvas.height;
+    ctx.clearRect(0, 0, width, height);
+
+    const padL = 48;
+    const padR = 16;
+    const padT = 10;
+    const padB = 30;
+    const plotW = width - padL - padR;
+    const plotH = height - padT - padB;
+    ctx.strokeStyle = '#888';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(padL, padT);
+    ctx.lineTo(padL, padT + plotH);
+    ctx.lineTo(padL + plotW, padT + plotH);
+    ctx.stroke();
+
+    const maxVal = Math.max(1, ...dataErrors, ...dataWarnings, ...dataPassed);
+    const groups = runs.length || 1;
+    const groupW = plotW / groups;
+    const barGap = 4;
+    const barsPerGroup = 3;
+    const barW = Math.max(6, (groupW - (barsPerGroup + 1) * barGap) / barsPerGroup);
+    const toY = (value) => padT + plotH - (value / maxVal) * plotH;
+
+    function drawBars(values, index, fillStyle) {
+      ctx.fillStyle = fillStyle;
+      for (let i = 0; i < groups; i += 1) {
+        const gx = padL + i * groupW;
+        const x = gx + barGap * (index + 1) + barW * index;
+        const y = toY(values[i] || 0);
+        const h = plotH - (y - padT);
+        ctx.fillRect(x, y, barW, h);
+      }
+    }
+
+    drawBars(dataErrors, 0, '#c33');
+    drawBars(dataWarnings, 1, '#d8a31a');
+    drawBars(dataPassed, 2, '#2a9d62');
+
+    ctx.fillStyle = '#bbb';
+    ctx.font = '12px ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial';
+    const ticks = 4;
+    for (let t = 0; t <= ticks; t += 1) {
+      const val = Math.round((t / ticks) * maxVal);
+      const y = toY(val);
+      ctx.fillText(String(val), 6, y + 4);
+      ctx.strokeStyle = '#2a2a2a';
+      ctx.beginPath();
+      ctx.moveTo(padL, y);
+      ctx.lineTo(padL + plotW, y);
+      ctx.stroke();
+    }
+
+    for (let i = 0; i < groups; i += 1) {
+      const gx = padL + i * groupW;
+      ctx.fillText(labels[i] || '', gx + groupW * 0.3, padT + plotH + 18);
+    }
+
+    ctx.fillStyle = '#c33';
+    ctx.fillRect(width - 140, 8, 10, 10);
+    ctx.fillStyle = '#ddd';
+    ctx.fillText('Errors', width - 124, 16);
+
+    ctx.fillStyle = '#d8a31a';
+    ctx.fillRect(width - 84, 8, 10, 10);
+    ctx.fillStyle = '#ddd';
+    ctx.fillText('Warnings', width - 68, 16);
+
+    ctx.fillStyle = '#2a9d62';
+    ctx.fillRect(width - 44, 8, 10, 10);
+    ctx.fillStyle = '#ddd';
+    ctx.fillText('Passed', width - 28, 16);
+  }
+
   window.addEventListener('load', () => {
     loadInsightsSummary();
-    const btn = document.getElementById('run-demo-btn');
-    if (btn) {
-      btn.addEventListener('click', runDemoPipeline);
-    }
+    loadPipelines();
+    document.getElementById('pl-new-btn')?.addEventListener('click', () => openEditor(null));
+    document.getElementById('pl-save-btn')?.addEventListener('click', (event) => {
+      const button = event.currentTarget;
+      if (!(button instanceof HTMLButtonElement)) return;
+      withBusy(button, () => savePipeline());
+    });
+    document.getElementById('pl-cancel-btn')?.addEventListener('click', () => {
+      document.getElementById('pl-editor').style.display = 'none';
+      document.getElementById('pl-diff-card').style.display = 'none';
+      PLS.currentId = null;
+    });
+    document.getElementById('pl-validate-btn')?.addEventListener('click', (event) => {
+      const button = event.currentTarget;
+      if (!(button instanceof HTMLButtonElement)) return;
+      withBusy(button, () => validatePipeline());
+    });
+    document.getElementById('pl-table')?.addEventListener('click', handlePipelineAction);
+    document.getElementById('pl-sync-btn')?.addEventListener('click', () => {
+      const name = document.getElementById('pl-name').value;
+      const textarea = document.getElementById('pl-yaml');
+      textarea.value = syncYamlName(textarea.value, name);
+      showToast('info', 'Synced name into YAML');
+      document.getElementById('pl-diff-card').style.display = 'none';
+    });
+    document.getElementById('pl-diff-btn')?.addEventListener('click', renderYamlDiff);
   });
 </script>
 {% endblock %}
