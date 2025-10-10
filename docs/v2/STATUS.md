@@ -59,12 +59,13 @@ This document is updated **with each PR** that changes the Engine V2 code or UI.
 ## Phase 2 — Engine UI
 
 **Status:** 🚧 In progress
-**Implemented:** 2025-10-11T00:00:00Z
+**Implemented:** 2025-10-12T00:00:00Z
 **Scope:**
 - Added `pipelines` table + SQLAlchemy model with CRUD helpers and uniqueness guard on name.
 - API endpoints for list/get/save/delete stored pipelines plus `/pipelines/{id}/run` for dry vs. persisted runs.
 - Engine (Beta) UI lists stored pipelines, provides a YAML editor with live validation, and wires run buttons to Insights refresh.
+- Phase 2B polish: toast notifications, YAML diff preview, sync name helper, and Insights run chart.
 
 **Notes:**
 - Store auto-creates tables in dev/test if Alembic hasn't run; production should still apply migrations.
-- UI status badges use inline alerts for now; follow-up PR will swap to toast notifications.
+- Canvas chart is intentionally lightweight; follow-up will revisit responsiveness and accessibility.

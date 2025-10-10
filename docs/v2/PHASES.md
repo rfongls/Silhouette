@@ -1,6 +1,6 @@
 # Engine V2 — Phases & Spec (Single Source of Truth)
 
-**Last updated:** 2025-10-11 (UTC)
+**Last updated:** 2025-10-12 (UTC)
 
 This file is the **only** spec/runbook for Engine V2. It includes:
 - Quickstart & verification commands
@@ -354,9 +354,16 @@ sinks:
 - Stored pipelines can run in dry or persisted mode from UI, showing status feedback
 - Persisted runs write to Insights immediately and the summary refresh reflects new counts
 
+**Phase 2B (this PR)**
+- Toast notifications for pipeline actions (save, validate, run, delete)
+- YAML diff preview (before vs. current editor state)
+- "Sync name → YAML" helper to keep spec names aligned
+- Insights chart (grouped bars for recent run issues)
+
 **Next**
-- Toast UX polish + YAML diff previews
-- Insights charting for recent pipeline runs
+- Toast UX accessibility polish (focus, stacking limits)
+- Enhanced diff view (side-by-side + copy helpers)
+- Insights filters (per pipeline, timeframe selection)
 
 ## Phase 3 — Background Runner & Replay (🔜 Planned)
 - Supervisor, back-pressure, retry policy, dead-letter queue

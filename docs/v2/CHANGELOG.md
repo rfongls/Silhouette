@@ -2,6 +2,18 @@
 
 > User-facing notes per PR. Keep this lean and helpful (what changed, why it matters, and any action required).
 
+## 2025-10-12 — Phase 2B UX polish
+
+**Highlights**
+- Added toast notifications for pipeline saves, runs, deletes, and validation feedback.
+- YAML diff preview (before vs. current editor state) and a one-click "Sync name → YAML" helper.
+- Insights chart displaying grouped bars (errors, warnings, passed) for the latest runs.
+
+**Details**
+- Diff preview uses a lightweight in-page LCS implementation with no external dependencies.
+- Canvas-based chart renderer mirrors Insights summary data and redraws on demand.
+- Editor diff resets after validation/save to avoid stale comparisons.
+
 ## 2025-10-11 — Phase 2 pipeline CRUD + UI shell
 
 **Highlights**
