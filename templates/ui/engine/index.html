@@ -11,23 +11,39 @@
 
     <section class="card mb">
       <h2 class="text-h2">Pipelines</h2>
-      <p class="text-body muted">Phase 0 exposes the runtime skeleton. Pipeline authoring arrives in Phase 1.</p>
-      <div class="empty-state">
-        <p class="text-body">No pipelines registered yet. Use the YAML spec to validate configs via the API.</p>
-        <div class="row wrap small" style="gap:.5rem; margin-bottom:.5rem">
-          <a class="btn btn-secondary btn-sm" href="{{ root }}/static/examples/engine/minimal.pipeline.yaml" download>Download Phase 0 demo</a>
-          <a class="btn btn-secondary btn-sm" href="{{ root }}/static/examples/engine/phase1.file.yaml" download>Download Phase 1 (file)</a>
-          <a class="btn btn-secondary btn-sm" href="{{ root }}/static/examples/engine/phase1.mllp.yaml" download>Download Phase 1 (MLLP)</a>
-        </div>
-        <label class="text-body" for="run-demo-select">Select a demo pipeline to run:</label>
-        <div class="row small" style="gap:.5rem; align-items:center; margin-top:.25rem">
-          <select id="run-demo-select" class="input">
-            <option value="minimal">Phase 0 — Minimal sequence</option>
-            <option value="phase1.file">Phase 1 — File adapter with validation + de-identification</option>
-            <option value="phase1.mllp" disabled>Phase 1 — MLLP (requires external HL7 source)</option>
-          </select>
-          <button class="btn btn-primary btn-sm" id="run-demo-btn">Run selected pipeline</button>
-        </div>
+      <div class="row small" style="gap:.5rem; align-items:center; margin-bottom:.5rem">
+        <button class="btn btn-primary btn-sm" id="pl-new-btn">New pipeline</button>
+        <span class="text-body muted" id="pl-status"></span>
+      </div>
+      <div class="table-wrapper">
+        <table class="table" id="pl-table">
+          <thead>
+            <tr>
+              <th style="width:36%">Name</th>
+              <th>Description</th>
+              <th style="width:18%">Updated</th>
+              <th style="width:26%">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td colspan="4">Loading…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="card mb" id="pl-editor" style="display:none">
+      <h2 class="text-h2">Pipeline editor</h2>
+      <div class="row small" style="gap:1rem; margin-bottom:.5rem">
+        <input class="input" id="pl-name" placeholder="Name" style="min-width:18rem">
+        <input class="input" id="pl-desc" placeholder="Description" style="min-width:24rem">
+      </div>
+      <textarea id="pl-yaml" class="input" style="width:100%; height:18rem; font-family: ui-monospace, Menlo, monospace;"></textarea>
+      <div class="row small" style="gap:.5rem; margin-top:.5rem">
+        <button class="btn btn-secondary btn-sm" id="pl-validate-btn">Validate</button>
+        <button class="btn btn-primary btn-sm" id="pl-save-btn">Save</button>
+        <button class="btn btn-text btn-sm" id="pl-cancel-btn">Cancel</button>
+        <span class="text-body muted" id="pl-editor-status"></span>
       </div>
     </section>
 
@@ -100,38 +116,217 @@
       target.innerHTML = '<tr><td colspan="6">Summary unavailable.</td></tr>';
     }
   }
-  const PIPELINE_URLS = {
-    'minimal': '/static/examples/engine/minimal.pipeline.yaml',
-    'phase1.file': '/static/examples/engine/phase1.file.yaml',
-  };
 
-  async function runDemoPipeline() {
-    const root = document.body?.dataset?.root || '';
-    const select = document.getElementById('run-demo-select');
-    const choice = select?.value || 'minimal';
-    const path = PIPELINE_URLS[choice] || PIPELINE_URLS.minimal;
+  const PLS = { currentId: null };
+
+  function escapeHtml(value) {
+    const span = document.createElement('span');
+    span.textContent = value ?? '';
+    return span.innerHTML;
+  }
+
+  function setPipelineStatus(message) {
+    const target = document.getElementById('pl-status');
+    if (target) target.textContent = message || '';
+  }
+
+  function setEditorStatus(message) {
+    const target = document.getElementById('pl-editor-status');
+    if (target) target.textContent = message || '';
+  }
+
+  async function extractError(response) {
+    const text = await response.text();
     try {
-      const yaml = await fetch(root + path).then((resp) => resp.text());
-      const response = await fetch(root + '/api/engine/pipelines/run', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ yaml, max_messages: 2, persist: true }),
-      });
-      if (!response.ok) {
-        throw new Error(await response.text());
+      const data = JSON.parse(text);
+      if (data && typeof data.detail === 'string') {
+        return data.detail;
       }
-      await loadInsightsSummary();
     } catch (err) {
-      console.error('Run failed', err);
-      alert('Pipeline run failed. Check console for details.');
+      // ignore JSON parse failures; fall back to raw text
+    }
+    return text || response.statusText || 'Request failed';
+  }
+
+  async function loadPipelines() {
+    const root = document.body?.dataset?.root || '';
+    const tbody = document.querySelector('#pl-table tbody');
+    if (!tbody) return;
+    tbody.innerHTML = '<tr><td colspan="4">Loading…</td></tr>';
+    try {
+      const response = await fetch(root + '/api/engine/pipelines');
+      if (!response.ok) {
+        throw new Error(await extractError(response));
+      }
+      const data = await response.json();
+      const rows = (data.items || []).map((item) => `
+        <tr>
+          <td><strong>${escapeHtml(item.name)}</strong></td>
+          <td class="muted">${escapeHtml(item.description || '')}</td>
+          <td class="mono">${escapeHtml(item.updated_at || '')}</td>
+          <td>
+            <button class="btn btn-secondary btn-xs" data-pipeline="${item.id}" data-action="run-dry">Run (dry)</button>
+            <button class="btn btn-primary btn-xs" data-pipeline="${item.id}" data-action="run-persist">Run (persist)</button>
+            <button class="btn btn-text btn-xs" data-pipeline="${item.id}" data-action="edit">Edit</button>
+            <button class="btn btn-text btn-xs" data-pipeline="${item.id}" data-action="delete">Delete</button>
+          </td>
+        </tr>
+      `).join('');
+      tbody.innerHTML = rows || '<tr><td colspan="4">No pipelines yet. Click "New pipeline" to create one.</td></tr>';
+    } catch (err) {
+      console.error(err);
+      tbody.innerHTML = '<tr><td colspan="4">Failed to load pipelines.</td></tr>';
+      setPipelineStatus('Unable to load pipelines.');
     }
   }
+
+  async function fetchPipeline(id) {
+    const root = document.body?.dataset?.root || '';
+    const response = await fetch(`${root}/api/engine/pipelines/${id}`);
+    if (!response.ok) {
+      throw new Error(await extractError(response));
+    }
+    return response.json();
+  }
+
+  function openEditor(record) {
+    PLS.currentId = record?.id ?? null;
+    document.getElementById('pl-name').value = record?.name ?? '';
+    document.getElementById('pl-desc').value = record?.description ?? '';
+    document.getElementById('pl-yaml').value = record?.yaml ?? `version: 1
+name: example
+adapter:
+  type: sequence
+  config:
+    messages:
+      - { id: "m1", text: "hello" }
+operators:
+  - { type: echo }
+sinks:
+  - { type: memory, config: { label: "mem" } }`;
+    setEditorStatus('');
+    document.getElementById('pl-editor').style.display = '';
+  }
+
+  async function editPipeline(id) {
+    try {
+      const record = await fetchPipeline(id);
+      openEditor(record);
+    } catch (err) {
+      console.error(err);
+      setPipelineStatus('Failed to open pipeline.');
+    }
+  }
+
+  async function savePipeline() {
+    const root = document.body?.dataset?.root || '';
+    const payload = {
+      id: PLS.currentId,
+      name: document.getElementById('pl-name').value.trim(),
+      description: document.getElementById('pl-desc').value.trim() || null,
+      yaml: document.getElementById('pl-yaml').value,
+    };
+    try {
+      const response = await fetch(root + '/api/engine/pipelines', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      if (!response.ok) {
+        throw new Error(await extractError(response));
+      }
+      document.getElementById('pl-editor').style.display = 'none';
+      setPipelineStatus('Pipeline saved.');
+      await loadPipelines();
+    } catch (err) {
+      console.error(err);
+      setEditorStatus(`Save failed: ${err.message || err}`);
+    }
+  }
+
+  async function validatePipeline() {
+    const root = document.body?.dataset?.root || '';
+    const yaml = document.getElementById('pl-yaml').value;
+    try {
+      const response = await fetch(root + '/api/engine/pipelines/validate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ yaml }),
+      });
+      if (!response.ok) {
+        throw new Error(await extractError(response));
+      }
+      setEditorStatus('Valid ✓');
+    } catch (err) {
+      console.error(err);
+      setEditorStatus(`Invalid: ${err.message || err}`);
+    }
+  }
+
+  async function runPipeline(id, persist) {
+    const root = document.body?.dataset?.root || '';
+    try {
+      const response = await fetch(`${root}/api/engine/pipelines/${id}/run`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ persist, max_messages: 2 }),
+      });
+      if (!response.ok) {
+        throw new Error(await extractError(response));
+      }
+      setPipelineStatus(persist ? 'Run persisted.' : 'Dry run completed.');
+      await loadInsightsSummary();
+      await loadPipelines();
+    } catch (err) {
+      console.error(err);
+      setPipelineStatus(`Run failed: ${err.message || err}`);
+    }
+  }
+
+  async function deletePipeline(id) {
+    const root = document.body?.dataset?.root || '';
+    if (!confirm('Delete this pipeline?')) return;
+    try {
+      const response = await fetch(`${root}/api/engine/pipelines/${id}`, { method: 'DELETE' });
+      if (!response.ok) {
+        throw new Error(await extractError(response));
+      }
+      setPipelineStatus('Pipeline deleted.');
+      await loadPipelines();
+    } catch (err) {
+      console.error(err);
+      setPipelineStatus(`Delete failed: ${err.message || err}`);
+    }
+  }
+
+  function handlePipelineAction(event) {
+    const target = event.target;
+    if (!(target instanceof HTMLElement)) return;
+    const action = target.dataset.action;
+    const id = Number(target.dataset.pipeline);
+    if (!action || Number.isNaN(id)) return;
+    if (action === 'edit') {
+      editPipeline(id);
+    } else if (action === 'delete') {
+      deletePipeline(id);
+    } else if (action === 'run-dry') {
+      runPipeline(id, false);
+    } else if (action === 'run-persist') {
+      runPipeline(id, true);
+    }
+  }
+
   window.addEventListener('load', () => {
     loadInsightsSummary();
-    const btn = document.getElementById('run-demo-btn');
-    if (btn) {
-      btn.addEventListener('click', runDemoPipeline);
-    }
+    loadPipelines();
+    document.getElementById('pl-new-btn')?.addEventListener('click', () => openEditor(null));
+    document.getElementById('pl-save-btn')?.addEventListener('click', savePipeline);
+    document.getElementById('pl-cancel-btn')?.addEventListener('click', () => {
+      document.getElementById('pl-editor').style.display = 'none';
+      PLS.currentId = null;
+    });
+    document.getElementById('pl-validate-btn')?.addEventListener('click', validatePipeline);
+    document.getElementById('pl-table')?.addEventListener('click', handlePipelineAction);
   });
 </script>
 {% endblock %}
