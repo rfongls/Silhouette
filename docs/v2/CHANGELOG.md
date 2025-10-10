@@ -2,6 +2,17 @@
 
 > User-facing notes per PR. Keep this lean and helpful (what changed, why it matters, and any action required).
 
+## 2025-10-15 — Phase 3 background runner hand-off
+
+**Highlights**
+- Documented the durable job queue, runner service, replay adapter, and supporting APIs for the upcoming Phase 3 implementation.
+- Captured schema/migration details for `engine_jobs`, store method contracts, runner configuration, and testing expectations.
+
+**Details**
+- Phase 3A covers the core background runner, retries, dead-letter handling, and minimal job API surface.
+- Phase 3B introduces the replay adapter and UI wiring (Run in background button + jobs table) with validation guidance.
+- Added configuration, logging/metrics expectations, and PR documentation requirements to keep the plan executable.
+
 ## 2025-10-12 — Phase 2B UX polish
 
 **Highlights**
