@@ -81,6 +81,7 @@ def _safe_params_preview(params: Any, limit: int = 800) -> str:
 
 def _ensure_logger(log_path: Path | str | None) -> Tuple[logging.Logger, bool]:
     logger = logging.getLogger("silhouette.sql")
+    logger.propagate = False
     file_enabled = False
 
     if not any(
@@ -168,10 +169,14 @@ def install_sql_logging(
 ) -> None:
     """Attach framed SQL logging to a SQLAlchemy Engine. Safe to call multiple times."""
 
-    state = getattr(engine, "_silhouette_sql_state", None)
-    if state is None:
-        state = {}
-        setattr(engine, "_silhouette_sql_state", state)
+    try:
+        info = engine.info  # type: ignore[attr-defined]
+    except AttributeError:
+        info = getattr(engine, "_silhouette_sql_info", None)
+        if info is None:
+            info = {}
+            setattr(engine, "_silhouette_sql_info", info)
+    state = info.setdefault("_silhouette_sql_state", {})
     if state.get("installed"):
         return
 
@@ -253,7 +258,7 @@ def install_sql_logging(
         _log_with_fallback(logger, path, "info", msg)
 
     @event.listens_for(engine, "engine_disposed")
-    def _on_disposed(engine):
+    def _on_disposed(eng):
         token_id = state.get("force_token_id")
         if token_id is not None:
             try:
