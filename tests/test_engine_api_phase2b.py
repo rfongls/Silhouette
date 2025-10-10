@@ -4,6 +4,7 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
 from api.engine import router as engine_router
+from insights.models import RunRecord
 from insights.store import InsightsStore, reset_store
 
 
@@ -42,6 +43,7 @@ def test_pipeline_crud_and_run_endpoints(tmp_path):
     db_url = f"sqlite:///{tmp_path / 'api2b.db'}"
     app, _ = make_app_with_store(db_url)
     client = TestClient(app)
+
     yaml_body = build_yaml("demo")
     response = client.post("/api/engine/pipelines/validate", json={"yaml": yaml_body})
     assert response.status_code == 200, response.text
@@ -178,3 +180,38 @@ def test_issue_counts_normalizes_unknown_severity():
         "warning": 2,
         "passed": 1,
     }
+
+
+def test_adhoc_run_without_name_uses_fallback_label(tmp_path):
+    reset_store()
+    db_url = f"sqlite:///{tmp_path / 'api2b_adhoc.db'}"
+    app, store = make_app_with_store(db_url)
+    client = TestClient(app)
+
+    yaml_body = """
+version: 1
+name: ""
+adapter:
+  type: sequence
+  config:
+    messages:
+      - id: \"m1\"
+        text: hello
+operators:
+  - type: echo
+sinks:
+  - type: memory
+"""
+
+    response = client.post(
+        "/api/engine/pipelines/run",
+        json={"yaml": yaml_body, "persist": True, "max_messages": 1},
+    )
+    assert response.status_code == 200, response.text
+    run_id = response.json()["run_id"]
+    assert isinstance(run_id, int)
+
+    with store.session() as session:
+        record = session.get(RunRecord, run_id)
+        assert record is not None
+        assert record.pipeline_name == "adhoc-pipeline"
