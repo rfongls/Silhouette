@@ -1,6 +1,6 @@
 # Engine V2 — Phases & Spec (Single Source of Truth)
 
-**Last updated:** 2025-10-10 (UTC)
+**Last updated:** 2025-10-12 (UTC)
 
 This file is the **only** spec/runbook for Engine V2. It includes:
 - Quickstart & verification commands
@@ -178,10 +178,15 @@ metadata:
 ## Engine & Insights API
 
 **Engine**
-- `GET /api/engine/health` → `{ ok: true, version: "phase1", feature: "engine-v2" }`
+- `GET /api/engine/health` → `{ ok: true, version: "phase2", feature: "engine-v2" }`
 - `GET /api/engine/registry` → registered adapters/operators/sinks
+- `GET /api/engine/pipelines` → list stored pipelines (`{ items: [...] }`)
+- `GET /api/engine/pipelines/{id}` → retrieve full YAML/spec for editing
 - `POST /api/engine/pipelines/validate` → `{ spec }` or **400** (invalid YAML / unknown components)
+- `POST /api/engine/pipelines` → create/update stored pipelines (normalizes spec)
+- `DELETE /api/engine/pipelines/{id}` → remove stored pipeline
 - `POST /api/engine/pipelines/run` → `{ run_id?, processed, issues: {error, warning, passed}, spec }`
+- `POST /api/engine/pipelines/{id}/run` → run a stored pipeline with `persist` toggle
 
 **Insights**
 - `GET /api/insights/summary` → totals, by_run, by_rule
@@ -214,6 +219,7 @@ Tables:
 - `engine_runs (id, pipeline_name, created_at)`
 - `engine_messages (id, run_id → engine_runs.id, message_id, payload (base64 text), meta (JSON), created_at)`
 - `engine_issues (id, message_id → engine_messages.id, severity, code, segment, field, component, subcomponent, value, message)`
+- `pipelines (id, name UNIQUE, description, yaml TEXT, spec JSON, created_at, updated_at)`
 
 Migrations live under `insights/migrations`.
 Set `INSIGHTS_DB_URL` to override the DSN.
@@ -336,10 +342,28 @@ sinks:
 
 ---
 
-## Phase 2 — Engine UI (🔜 Planned)
-- Pipelines list + detail configuration
-- Front-end run / dry-run controls (no background runner)
-- Insights charts for error/warning/passed trends
+## Phase 2 — Engine UI (🚧 In progress)
+
+**Scope (Phase 2A)**
+- Persisted pipelines table (name/description/YAML/spec) behind CRUD API + SQLAlchemy model
+- UI card with pipeline table (list, edit, delete) and YAML editor with live validation
+- Dry-run vs. persisted run buttons that refresh Insights summary on completion
+
+**Acceptance (current sprint)**
+- Creating, updating, and deleting pipelines succeeds via API/UI
+- Stored pipelines can run in dry or persisted mode from UI, showing status feedback
+- Persisted runs write to Insights immediately and the summary refresh reflects new counts
+
+**Phase 2B (this PR)**
+- Toast notifications for pipeline actions (save, validate, run, delete)
+- YAML diff preview (before vs. current editor state)
+- "Sync name → YAML" helper to keep spec names aligned
+- Insights chart (grouped bars for recent run issues)
+
+**Next**
+- Toast UX accessibility polish (focus, stacking limits)
+- Enhanced diff view (side-by-side + copy helpers)
+- Insights filters (per pipeline, timeframe selection)
 
 ## Phase 3 — Background Runner & Replay (🔜 Planned)
 - Supervisor, back-pressure, retry policy, dead-letter queue
