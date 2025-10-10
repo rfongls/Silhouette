@@ -68,3 +68,43 @@ class PipelineRecord(Base):
     updated_at: Mapped[datetime] = mapped_column(
         DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False
     )
+
+
+class JobRecord(Base):
+    __tablename__ = "engine_jobs"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+
+    pipeline_id: Mapped[int] = mapped_column(
+        ForeignKey("pipelines.id", ondelete="CASCADE"), nullable=False
+    )
+    kind: Mapped[str] = mapped_column(String(16), nullable=False)
+    payload: Mapped[dict[str, Any] | None] = mapped_column(JSON, default=None)
+
+    status: Mapped[str] = mapped_column(String(16), default="queued", nullable=False)
+    priority: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    attempts: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    max_attempts: Mapped[int] = mapped_column(Integer, default=3, nullable=False)
+
+    scheduled_at: Mapped[datetime] = mapped_column(
+        DateTime, default=datetime.utcnow, nullable=False
+    )
+    leased_by: Mapped[str | None] = mapped_column(String(64))
+    lease_expires_at: Mapped[datetime | None] = mapped_column(DateTime)
+
+    run_id: Mapped[int | None] = mapped_column(
+        ForeignKey("engine_runs.id"), nullable=True
+    )
+    dedupe_key: Mapped[str | None] = mapped_column(String(255), unique=True)
+
+    last_error: Mapped[str | None] = mapped_column(Text)
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=datetime.utcnow, nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False
+    )
+
+    pipeline: Mapped["PipelineRecord"] = relationship("PipelineRecord")
+    run: Mapped["RunRecord"] = relationship("RunRecord")
