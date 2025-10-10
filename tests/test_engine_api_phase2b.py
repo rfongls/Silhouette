@@ -20,14 +20,15 @@ def make_app_with_store(db_url: str):
     return app, store
 
 
-MINIMAL_YAML = """
+def build_yaml(name: str = "demo") -> str:
+    return f"""
 version: 1
-name: test-seq
+name: {name}
 adapter:
   type: sequence
   config:
     messages:
-      - id: "m1"
+      - id: \"m1\"
         text: hello
 operators:
   - type: echo
@@ -41,14 +42,14 @@ def test_pipeline_crud_and_run_endpoints(tmp_path):
     db_url = f"sqlite:///{tmp_path / 'api2b.db'}"
     app, _ = make_app_with_store(db_url)
     client = TestClient(app)
-
-    response = client.post("/api/engine/pipelines/validate", json={"yaml": MINIMAL_YAML})
+    yaml_body = build_yaml("demo")
+    response = client.post("/api/engine/pipelines/validate", json={"yaml": yaml_body})
     assert response.status_code == 200, response.text
-    assert response.json()["spec"]["name"] == "test-seq"
+    assert response.json()["spec"]["name"] == "demo"
 
     response = client.post(
         "/api/engine/pipelines",
-        json={"name": "demo", "yaml": MINIMAL_YAML, "description": "phase2b"},
+        json={"name": "demo", "yaml": yaml_body, "description": "phase2b"},
     )
     assert response.status_code == 200, response.text
     pipeline_id = response.json()["id"]
@@ -95,8 +96,8 @@ def test_pipeline_name_conflict_and_limits(tmp_path):
     db_url = f"sqlite:///{tmp_path / 'api2b_limits.db'}"
     app, _ = make_app_with_store(db_url)
     client = TestClient(app)
-
-    body = {"name": "dup", "yaml": MINIMAL_YAML}
+    yaml_dup = build_yaml("dup")
+    body = {"name": "dup", "yaml": yaml_dup}
     first = client.post("/api/engine/pipelines", json=body)
     assert first.status_code == 200
     dup = client.post("/api/engine/pipelines", json=body)
@@ -125,3 +126,18 @@ sinks: []
     response = client.post("/api/engine/pipelines/validate", json={"yaml": bad_yaml})
     assert response.status_code == 400
     assert "Unknown" in response.text
+
+
+def test_pipeline_name_mismatch_rejected(tmp_path):
+    reset_store()
+    db_url = f"sqlite:///{tmp_path / 'api2b_mismatch.db'}"
+    app, _ = make_app_with_store(db_url)
+    client = TestClient(app)
+
+    yaml_body = build_yaml("yaml-name")
+    response = client.post(
+        "/api/engine/pipelines",
+        json={"name": "payload-name", "yaml": yaml_body},
+    )
+    assert response.status_code == 400
+    assert "mismatch" in response.json().get("detail", "")
