@@ -106,7 +106,7 @@
 </section>
 <script>
   async function loadInsightsSummary() {
-    const root = document.body?.dataset?.root || '';
+    const root = ROOT_PATH;
     const target = document.getElementById('insights-table')?.querySelector('tbody');
     const badge = document.getElementById('insights-totals');
     const rules = document.getElementById('insights-rules');
@@ -147,6 +147,22 @@
   }
 
   const PLS = { currentId: null, origYaml: '' };
+  const TEMPLATE_ROOT = "{{ root }}";
+  const ROOT_PATH = (document.body?.dataset?.root ?? TEMPLATE_ROOT) || '';
+
+  async function withBusy(button, fn) {
+    if (!button) return fn();
+    if (button.dataset.busy === '1') return undefined;
+    button.dataset.busy = '1';
+    const wasDisabled = button.disabled;
+    button.disabled = true;
+    try {
+      return await fn();
+    } finally {
+      button.dataset.busy = '0';
+      button.disabled = wasDisabled;
+    }
+  }
 
   function showToast(kind, message, timeoutMs = 2600) {
     const root = document.getElementById('toast-root');
@@ -276,7 +292,7 @@
   }
 
   async function loadPipelines() {
-    const root = document.body?.dataset?.root || '';
+    const root = ROOT_PATH;
     const tbody = document.querySelector('#pl-table tbody');
     if (!tbody) return;
     tbody.innerHTML = '<tr><td colspan="4">Loading…</td></tr>';
@@ -308,7 +324,7 @@
   }
 
   async function fetchPipeline(id) {
-    const root = document.body?.dataset?.root || '';
+    const root = ROOT_PATH;
     const response = await fetch(`${root}/api/engine/pipelines/${id}`);
     if (!response.ok) {
       throw new Error(await extractError(response));
@@ -349,7 +365,7 @@ sinks:
   }
 
   async function savePipeline() {
-    const root = document.body?.dataset?.root || '';
+    const root = ROOT_PATH;
     const payload = {
       id: PLS.currentId,
       name: document.getElementById('pl-name').value.trim(),
@@ -379,7 +395,7 @@ sinks:
   }
 
   async function validatePipeline() {
-    const root = document.body?.dataset?.root || '';
+    const root = ROOT_PATH;
     const yaml = document.getElementById('pl-yaml').value;
     try {
       const response = await fetch(root + '/api/engine/pipelines/validate', {
@@ -402,7 +418,7 @@ sinks:
   }
 
   async function runPipeline(id, persist) {
-    const root = document.body?.dataset?.root || '';
+    const root = ROOT_PATH;
     try {
       const response = await fetch(`${root}/api/engine/pipelines/${id}/run`, {
         method: 'POST',
@@ -426,7 +442,7 @@ sinks:
   }
 
   async function deletePipeline(id) {
-    const root = document.body?.dataset?.root || '';
+    const root = ROOT_PATH;
     if (!confirm('Delete this pipeline?')) return;
     try {
       const response = await fetch(`${root}/api/engine/pipelines/${id}`, { method: 'DELETE' });
@@ -446,18 +462,18 @@ sinks:
 
   function handlePipelineAction(event) {
     const target = event.target;
-    if (!(target instanceof HTMLElement)) return;
+    if (!(target instanceof HTMLButtonElement)) return;
     const action = target.dataset.action;
     const id = Number(target.dataset.pipeline);
     if (!action || Number.isNaN(id)) return;
     if (action === 'edit') {
-      editPipeline(id);
+      withBusy(target, () => editPipeline(id));
     } else if (action === 'delete') {
-      deletePipeline(id);
+      withBusy(target, () => deletePipeline(id));
     } else if (action === 'run-dry') {
-      runPipeline(id, false);
+      withBusy(target, () => runPipeline(id, false));
     } else if (action === 'run-persist') {
-      runPipeline(id, true);
+      withBusy(target, () => runPipeline(id, true));
     }
   }
 
@@ -551,13 +567,21 @@ sinks:
     loadInsightsSummary();
     loadPipelines();
     document.getElementById('pl-new-btn')?.addEventListener('click', () => openEditor(null));
-    document.getElementById('pl-save-btn')?.addEventListener('click', savePipeline);
+    document.getElementById('pl-save-btn')?.addEventListener('click', (event) => {
+      const button = event.currentTarget;
+      if (!(button instanceof HTMLButtonElement)) return;
+      withBusy(button, () => savePipeline());
+    });
     document.getElementById('pl-cancel-btn')?.addEventListener('click', () => {
       document.getElementById('pl-editor').style.display = 'none';
       document.getElementById('pl-diff-card').style.display = 'none';
       PLS.currentId = null;
     });
-    document.getElementById('pl-validate-btn')?.addEventListener('click', validatePipeline);
+    document.getElementById('pl-validate-btn')?.addEventListener('click', (event) => {
+      const button = event.currentTarget;
+      if (!(button instanceof HTMLButtonElement)) return;
+      withBusy(button, () => validatePipeline());
+    });
     document.getElementById('pl-table')?.addEventListener('click', handlePipelineAction);
     document.getElementById('pl-sync-btn')?.addEventListener('click', () => {
       const name = document.getElementById('pl-name').value;

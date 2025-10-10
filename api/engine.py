@@ -278,7 +278,7 @@ async def pipelines_run_stored(
 
     run_id: int | None = None
     if payload.persist:
-        run_id = store.persist_run_results(pipeline_name=spec.name, results=results)
+        run_id = store.persist_run_results(pipeline_name=record.name, results=results)
 
     return PipelineRunResponse(
         run_id=run_id,
