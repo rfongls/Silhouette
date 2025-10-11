@@ -7,7 +7,6 @@ import asyncio
 import re
 from dataclasses import dataclass
 from typing import Any, Dict, List
-
 from insights.store import InsightsStore
 from engine.net.endpoints import get_manager
 
