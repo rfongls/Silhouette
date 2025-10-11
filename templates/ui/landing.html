@@ -72,6 +72,8 @@
   function set(el, text){ if (el) el.textContent = text; }
   const activityBox = $('#activity');
   const seenActionIds = new Set();
+  const seenActionOrder = [];
+  const MAX_SEEN_IDS = 500;
 
   function renderAction(data) {
     if (!data || !activityBox || seenActionIds.has(data.id)) return;
@@ -79,6 +81,13 @@
       activityBox.innerHTML = '';
     }
     seenActionIds.add(data.id);
+    seenActionOrder.push(data.id);
+    if (seenActionOrder.length > MAX_SEEN_IDS) {
+      const expired = seenActionOrder.shift();
+      if (expired !== undefined) {
+        seenActionIds.delete(expired);
+      }
+    }
     const line = document.createElement('div');
     const when = esc(new Date(data.ts).toLocaleTimeString());
     const id = esc(data.id);
