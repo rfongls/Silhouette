@@ -8,6 +8,7 @@ import base64
 import re
 from dataclasses import dataclass
 from datetime import datetime
+import os
 from typing import Any, Dict, List, Optional
 
 from insights.store import InsightsStore
@@ -200,6 +201,12 @@ async def execute(
             try:
                 if step.action == "create_endpoint":
                     name = step.args["name"]
+                    config = dict(step.args.get("config") or {})
+                    host = str(config.get("host") or "").strip()
+                    if host in {"0.0.0.0", "::"} and os.getenv("ENGINE_NET_BIND_ANY") not in {"1", "true", "TRUE", "True"}:
+                        raise ValueError(
+                            "Binding to 0.0.0.0 is blocked by policy; set ENGINE_NET_BIND_ANY=1 to allow wildcard binds."
+                        )
                     exists = store.get_endpoint_by_name(name)
                     if exists:
                         s["note"] = "exists"
@@ -333,6 +340,7 @@ async def execute(
 
                     ok = 0
                     failed = 0
+                    failures: List[str] = []
                     for hl7_path in walk_hl7_files(src_root):
                         try:
                             payload = hl7_path.read_bytes()
@@ -353,8 +361,11 @@ async def execute(
                             ok += 1
                         except Exception:  # noqa: PERF203 - fine-grained logging optional
                             failed += 1
+                            if len(failures) < 5:
+                                failures.append(str(hl7_path))
                     s["ok"] = ok
                     s["failed"] = failed
+                    s["failures"] = failures
                     s["in_folder"] = str(src_root)
                     s["out_folder"] = str(dst_root)
                     summary.update(
@@ -363,6 +374,7 @@ async def execute(
                             "failed": failed,
                             "out_folder": str(dst_root),
                             "in_folder": str(src_root),
+                            "failures": failures,
                         }
                     )
 

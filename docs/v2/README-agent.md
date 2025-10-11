@@ -59,11 +59,14 @@ The orchestrator enforces confinement to this root.
 
 ## Phase 6C additions
 
-- **Quick actions**
-  Activity Timeline entries now expose Start/Stop/Delete endpoint buttons and Cancel job, all routed through `POST /api/agent/execute` so confirmations stay inline.
+- **Quick actions & deep links**
+  Activity Timeline entries now expose Start/Stop/Delete endpoint buttons and Cancel job, all routed through `POST /api/agent/execute` so confirmations stay inline, with direct links into `/ui/engine?focus=…` for fast pivots.
 
 - **Assist preview**
   `assist preview 3 lookback 14` computes allowlist/severity suggestions locally and reports note counts + the draft YAML block in the result payload.
 
 - **Cancel job**
   Use natural chat (`cancel job 123`) or the inline button on timeline rows; both invoke the same guardrailed executor path.
+
+- **De-identify details**
+  Timeline summaries report counts and collapsed failure lists (up to five filenames) so operators can expand and triage without leaving the page.

@@ -3,14 +3,15 @@
 ## 2025-10-22 — Phase 6C — Advanced UX (partial)
 
 **Highlights**
-- Activity Timeline entries now expose quick actions (Start/Stop/Delete endpoint, Cancel job) that confirm in-page without navigation.
-- `assist_preview` intent executes locally, summarizing suggested allowlist/severity changes and embedding the draft YAML in results.
-- Operators can cancel jobs via natural chat commands or quick-action buttons, both routed through the orchestrator.
+- Activity Timeline entries expose quick actions (Start/Stop/Delete endpoint, Cancel job) that confirm in-page without navigation and now deep-link into Engine detail views.
+- `assist_preview` executes locally, summarizing suggested allowlist/severity changes, embedding the draft YAML in results, and streaming those summaries to the timeline.
+- De-identify runs surface collapsed failure lists, and wildcard bind attempts prompt a friendly guardrail reminder before any side effects occur.
 
 **Details**
-- Interpreter adds `cancel job <id>`; executor wires to `store.cancel_job` and aggregates summaries for SSE clients.
-- Landing page script renders inline buttons per endpoint/job and reuses `/api/agent/execute` for consistent activity logging.
-- Timeline summaries now include assist note counts, allowlist entries, and cancellation confirmations.
+- Interpreter adds `cancel job <id>`; executor wires to `store.cancel_job`, aggregates summaries (including per-file failures), and shares them with SSE consumers.
+- Landing page script renders inline buttons per endpoint/job, deep links into `/ui/engine`, and reuses `/api/agent/execute` for consistent activity logging.
+- Timeline summaries now include assist note counts, allowlist entries, cancellation confirmations, and failure counts with toggleable file lists.
+- Endpoint creation guards block `0.0.0.0` binds unless `ENGINE_NET_BIND_ANY=1`, returning a clear policy hint to Chat users.
 
 ## 2025-10-21 — Phase 6B — Content Skills (Generate & De-identify)
 

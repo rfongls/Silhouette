@@ -72,6 +72,7 @@ def test_generate_and_deidentify(tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     last_step = result_deid["report"][-1]
     assert last_step["ok"] == 2
     assert last_step["failed"] == 0
+    assert last_step["failures"] == []
 
     plan_assist = orchestrator.interpret(f"assist preview {pipeline.id} lookback 7")
     assert plan_assist.intent == "assist_preview"
@@ -90,3 +91,30 @@ def test_generate_and_deidentify(tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     assert cancel_step["status"] == "succeeded"
     canceled_job = store.get_job(job.id)
     assert canceled_job is not None and canceled_job.status == "canceled"
+
+
+def test_wildcard_bind_guard(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv("ENGINE_NET_BIND_ANY", raising=False)
+    monkeypatch.setenv("AGENT_DATA_ROOT", str(tmp_path / "agent"))
+
+    reset_store()
+    store = get_store()
+    store.ensure_schema()
+
+    orchestrator = _reload_orchestrator()
+
+    spec = load_pipeline_spec(PIPELINE_YAML)
+    pipeline = store.save_pipeline(
+        name="guard-pipe",
+        yaml=PIPELINE_YAML,
+        spec=dump_pipeline_spec(spec),
+    )
+
+    plan = orchestrator.interpret(
+        f"create inbound guard-test on 0.0.0.0:4321 for pipeline {pipeline.id}"
+    )
+    result = asyncio.run(orchestrator.execute(store, plan))
+    step = result["report"][-1]
+    assert step["status"] == "failed"
+    assert "blocked by policy" in step.get("error", "")
+    assert store.get_endpoint_by_name("guard-test") is None

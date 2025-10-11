@@ -626,17 +626,19 @@ deidentify incoming/ward to ward_deid with pipeline 3
 
 **Scope**
 - Assist preview execution surfaced inline with actionable summaries.
-- Richer timeline affordances (quick actions, badges, deep links).
-- Optional “cancel last” helpers once guardrails settle.
+- Richer timeline affordances (quick actions, badges, deep links, failure callouts).
+- Friendly guardrail messaging for unsafe binds and future "cancel last" helpers once policy settles.
 
 **Shipped in this patch**
 - Quick actions on the Activity Timeline (Start/Stop/Delete endpoint, Cancel job) with confirmations streamed in-page.
+- Timeline entries include deep links to Engine detail views and collapsed failure lists for de-identify runs.
 - `assist_preview` intent executes locally and records suggestion counts + draft YAML in the Result pane.
 - Natural language `cancel job <id>` intent and quick-action buttons share the same executor path.
+- Wildcard bind attempts (`0.0.0.0`) return a friendly policy reminder unless `ENGINE_NET_BIND_ANY=1` is set.
 
 **Upcoming**
-- Enrich step/result panes with direct links into Engine detail pages.
 - Optional “cancel last” chat shortcuts once UX is validated.
+- Additional timeline badges for pipeline/job outcomes.
 
 **Configuration**
 - `AGENT_DATA_ROOT` (default `./data/agent`) — root for generate/deidentify demo.  

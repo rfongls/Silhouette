@@ -18,6 +18,11 @@
       .badge.ok { background:#1b7f4d; color:#ecfdf5; }
       .badge.err { background:#9b1c1c; color:#fee2e2; }
       .qa { display:inline-flex; gap:.25rem; margin-left:.5rem; }
+      .timeline a { color:#7dd3fc; text-decoration:none; }
+      .timeline a:hover { text-decoration:underline; }
+      .failure-details { margin-top:.25rem; }
+      .failure-details ul { margin:.25rem 0 0 1.25rem; padding:0; }
+      .failure-details li { list-style:disc; }
       .btn.btn-xs { font-size:.75rem; padding:.15rem .4rem; border-radius:.25rem; }
       .muted { opacity: .85; }
       .mono { font-family: ui-monospace, Menlo, monospace; }
@@ -58,6 +63,12 @@
 <script>
   const $ = (s) => document.querySelector(s);
   function esc(s){ const t=document.createElement('div'); t.textContent=String(s ?? ''); return t.innerHTML; }
+  function linkHtml(href, label){
+    const a = document.createElement('a');
+    a.href = href;
+    a.textContent = label;
+    return a.outerHTML;
+  }
   function set(el, text){ if (el) el.textContent = text; }
   const activityBox = $('#activity');
   const seenActionIds = new Set();
@@ -78,14 +89,51 @@
     else if (status === 'failed') badgeHtml = '<span class="badge err">err</span>';
     else if (status) badgeHtml = `<span class="badge">${esc(status)}</span>`;
     let noteParts = [];
-    if (data.endpoint_id) noteParts.push(`endpoint #${esc(data.endpoint_id)}`);
-    if (data.job_id) noteParts.push(`job #${esc(data.job_id)}`);
-    if (data.run_id) noteParts.push(`run #${esc(data.run_id)}`);
+    let failureItems = [];
+    if (data.endpoint_id) {
+      const endpointId = Number(data.endpoint_id);
+      if (!Number.isNaN(endpointId) && endpointId > 0) {
+        const href = `/ui/engine?focus=${encodeURIComponent(`endpoint:${endpointId}`)}`;
+        noteParts.push(linkHtml(href, `endpoint #${endpointId}`));
+      } else {
+        noteParts.push(`endpoint #${esc(data.endpoint_id)}`);
+      }
+    }
+    if (data.job_id) {
+      const jobId = Number(data.job_id);
+      if (!Number.isNaN(jobId) && jobId > 0) {
+        const href = `/ui/engine?focus=${encodeURIComponent(`job:${jobId}`)}`;
+        noteParts.push(linkHtml(href, `job #${jobId}`));
+      } else {
+        noteParts.push(`job #${esc(data.job_id)}`);
+      }
+    }
+    if (data.run_id) {
+      const runId = Number(data.run_id);
+      if (!Number.isNaN(runId) && runId > 0) {
+        const href = `/ui/engine?focus=${encodeURIComponent(`run:${runId}`)}`;
+        noteParts.push(linkHtml(href, `run #${runId}`));
+      } else {
+        noteParts.push(`run #${esc(data.run_id)}`);
+      }
+    }
     const summary = data?.result?.summary;
     if (summary && typeof summary === 'object') {
       const summaryParts = [];
       for (const [key, value] of Object.entries(summary)) {
-        summaryParts.push(`${esc(key)}=${esc(value)}`);
+        if (value === undefined || value === null) continue;
+        if (Array.isArray(value)) {
+          if (key === 'failures') {
+            failureItems = value.map((item) => String(item));
+            summaryParts.push(`${esc(key)}=${esc(value.length)}`);
+          } else {
+            summaryParts.push(`${esc(key)}=${esc(value.length)}`);
+          }
+        } else if (typeof value === 'object') {
+          summaryParts.push(`${esc(key)}=…`);
+        } else {
+          summaryParts.push(`${esc(key)}=${esc(value)}`);
+        }
       }
       if (summaryParts.length) {
         noteParts.push(summaryParts.join(', '));
@@ -112,6 +160,21 @@
       }
     }
     line.innerHTML = `[${when}] #${id} ${badgeHtml} <strong>${intent}</strong>${note} ${qaHtml}`;
+    if (failureItems.length) {
+      const details = document.createElement('details');
+      details.className = 'failure-details';
+      const summaryEl = document.createElement('summary');
+      summaryEl.textContent = `Failed files (${failureItems.length})`;
+      const list = document.createElement('ul');
+      failureItems.forEach((item) => {
+        const li = document.createElement('li');
+        li.textContent = item;
+        list.appendChild(li);
+      });
+      details.appendChild(summaryEl);
+      details.appendChild(list);
+      line.appendChild(details);
+    }
     activityBox.appendChild(line);
     activityBox.scrollTop = activityBox.scrollHeight;
   }
