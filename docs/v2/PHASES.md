@@ -392,10 +392,60 @@ Deliver a durable background execution path so stored pipelines can run asynchro
 - Per-pipeline concurrency quotas and scheduled/cron jobs.
 - `/api/engine/jobs/{id}/requeue` convenience helper and richer job logs/metrics streaming.
 
-## Phase 4 — ML Assist Hooks (🔜 Planned)
-- Allowlist suggestions and anomaly baselines
-- UI hints from ML assist results
-- Draft config suggestions without auto-apply
+## Phase 4 — ML Assist Hooks (✅ Implemented)
+
+**Goal**
+
+Offer operator-facing guidance derived from recent Insights data without automatically mutating pipeline specs.
+
+**What shipped**
+
+- Assist service (`engine/ml_assist.py`) surfaces:
+  - Allowlist and severity downgrade suggestions for frequent low-signal issues.
+  - Anomaly highlights computed via a robust z-score on recent vs. baseline issue rates.
+- API endpoints (`POST /api/engine/assist/preview`, `GET /api/engine/assist/anomalies`) expose draft suggestions and anomaly listings for the UI.
+- Engine UI Assist card lets operators fetch suggestions, inspect raw allowlist/severity candidates, view anomalies, and insert a commented YAML draft into the editor (no auto-apply).
+- Tests (`tests/test_ml_assist_phase4.py`) cover suggestion heuristics and API flows.
+- Documentation (this runbook, STATUS, CHANGELOG) updated with Phase 4 deliverables.
+
+**Notes**
+
+- Suggestions are always returned as commented YAML blocks; operators must review and save manually.
+- No schema migration required—Assist reads existing `engine_runs`, `engine_messages`, and `engine_issues` tables.
+
+**Follow-ups / nice-to-haves**
+
+- Persisted Assist history per pipeline (compare proposed vs. applied rules).
+- Inline diffing against current YAML to show exact impact.
+- Export Assist drafts as standalone files for review.
+
+## Network I/O — MLLP Endpoints (✅ Implemented)
+
+**Goal**
+
+Enable controlled network ingress/egress for HL7v2 via MLLP, managed entirely through Engine APIs and UI.
+
+**What shipped**
+
+- Schema migration adding `engine_endpoints` for inbound/outbound definitions (kind, config JSON, status, errors).
+- Runtime additions:
+  - Inline adapter enabling `kind:"ingest"` jobs to inject payloads without modifying saved pipeline YAML.
+  - MLLP listener (`engine/net/mllp_server.py`) with CIDR allowlists, per-endpoint lifecycle management, and queue back-pressure handling.
+  - MLLP target sink for outbound dispatch to named endpoints.
+- APIs:
+  - `/api/engine/endpoints` (CRUD + start/stop) and `/api/engine/mllp/send` for one-off sends/validation.
+- UI Engine dashboard card to create inbound/outbound endpoints, start/stop listeners, review status, and send test messages.
+- Tests (`tests/test_network_io_mllp.py`) covering inbound job production, runner ingest execution, outbound sink behavior, and API flows.
+
+**Notes**
+
+- Inbound listeners require CIDR allowlists; binding to wildcard hosts still guarded by `ENGINE_BIND_ANY` in the manager.
+- Ingest jobs default to persisted runs, reusing existing pipeline logic and storage schema.
+
+**Follow-ups / nice-to-haves**
+
+- Autostart flags for endpoints on process boot and per-endpoint metrics (message counts, last activity).
+- Allow host overrides per deployment (e.g., IPv6) and richer ACK templating for outbound sends.
 
 ---
 

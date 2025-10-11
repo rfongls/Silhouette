@@ -86,3 +86,33 @@ This document is updated **with each PR** that changes the Engine V2 code or UI.
 **Notes:**
 - Configuration toggles: `ENGINE_RUNNER_ENABLED`, `ENGINE_RUNNER_CONCURRENCY`, `ENGINE_RUNNER_LEASE_TTL_SECS`, `ENGINE_RUNNER_POLL_INTERVAL_SECS`, `ENGINE_QUEUE_MAX_QUEUED_PER_PIPELINE`.
 - Tests cover lifecycle + retry→dead transitions, lease contention, cancellation, replay correctness, and REST validation/dedupe scenarios.
+
+---
+
+## Phase 4 — ML Assist Hooks
+
+**Status:** ✅ Implemented  
+**Implemented:** 2025-10-10T00:00:00Z  
+**Scope:**
+- Assist heuristics to propose allowlist entries and severity downgrades (derived from Insights frequency data).
+- Robust z-score anomaly listing comparing recent vs. baseline per-day rates.
+- API endpoints (`/api/engine/assist/*`) and Engine UI Assist card for previewing suggestions, inserting commented YAML drafts, and browsing anomalies.
+- Test coverage in `tests/test_ml_assist_phase4.py` for suggestion logic and REST flows.
+
+**Notes:** No schema migrations required; Assist computes from existing Insights tables.
+
+---
+
+## Network I/O — MLLP Endpoints
+
+**Status:** ✅ Implemented  
+**Implemented:** 2025-10-16T00:00:00Z  
+**Scope:**
+- `engine_endpoints` table and CRUD helpers for inbound (`mllp_in`) and outbound (`mllp_out`) configurations.
+- Inline adapter + `kind:"ingest"` job path so inbound payloads run against existing pipeline specs without edits.
+- Async MLLP server with CIDR allowlist enforcement, back-pressure handling, and endpoint lifecycle manager.
+- MLLP target sink plus `/api/engine/mllp/send` for ad-hoc transmissions; `/api/engine/endpoints` for create/list/start/stop/delete.
+- Engine UI "Endpoints" card to create listeners/targets, inspect status, and send test messages.
+- Tests in `tests/test_network_io_mllp.py` covering inbound enqueue, runner execution, outbound delivery, and REST endpoints.
+
+**Notes:** Wildcard binds remain disabled unless `ENGINE_BIND_ANY=1` is set; inbound endpoints require allowlists to accept traffic.
