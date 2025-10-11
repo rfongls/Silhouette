@@ -164,7 +164,8 @@ async def run_pipeline(payload: PipelineRunRequest) -> PipelineRunResponse:
     run_id: int | None = None
     if payload.persist:
         store = get_store()
-        run_id = store.persist_run_results(pipeline_name=spec.name, results=results)
+        label = spec.name or "adhoc-pipeline"
+        run_id = store.persist_run_results(pipeline_name=label, results=results)
 
     return PipelineRunResponse(
         run_id=run_id,
