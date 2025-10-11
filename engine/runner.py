@@ -102,6 +102,19 @@ class EngineRunner:
                     "config": replay_config,
                 }
                 spec = load_pipeline_spec(raw_spec)
+            elif started.kind == "ingest":
+                message_b64 = job_payload.get("message_b64")
+                if not isinstance(message_b64, str) or not message_b64:
+                    raise JobNotFoundError("ingest requires payload.message_b64")
+                raw_spec = dump_pipeline_spec(spec)
+                raw_spec["adapter"] = {
+                    "type": "inline",
+                    "config": {
+                        "message_b64": message_b64,
+                        "meta": job_payload.get("meta") or {},
+                    },
+                }
+                spec = load_pipeline_spec(raw_spec)
 
             max_messages = job_payload.get("max_messages")
             persist = job_payload.get("persist", True)

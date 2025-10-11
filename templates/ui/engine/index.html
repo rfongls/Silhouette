@@ -108,6 +108,119 @@
       </div>
     </section>
 
+    <!-- Endpoints -->
+    <section class="card mb" id="endpoints-card">
+      <div class="row" style="justify-content:space-between;align-items:center">
+        <h2 class="text-h2">Endpoints</h2>
+        <div class="row small" style="gap:.5rem">
+          <button class="btn btn-secondary btn-sm" id="endpoints-refresh">Refresh</button>
+        </div>
+      </div>
+      <div class="row small" style="gap:1.5rem; flex-wrap:wrap; margin-bottom:.75rem">
+        <div style="flex:1; min-width:20rem">
+          <h3 class="text-h3">Inbound listener</h3>
+          <div class="row small" style="gap:.5rem; flex-wrap:wrap">
+            <input id="endpoint-in-name" class="input" placeholder="Name" style="flex:1; min-width:10rem">
+            <input id="endpoint-in-host" class="input" placeholder="Host/IP" style="flex:1; min-width:9rem">
+            <input id="endpoint-in-port" class="input" type="number" min="1" max="65535" placeholder="Port" style="width:6rem">
+          </div>
+          <div class="row small" style="gap:.5rem; flex-wrap:wrap; margin-top:.5rem">
+            <select id="endpoint-in-pipeline" class="input" style="flex:1; min-width:12rem">
+              <option value="">Select pipeline…</option>
+            </select>
+            <input id="endpoint-in-cidrs" class="input" placeholder="Allow CIDRs (comma or newline)" style="flex:1; min-width:12rem">
+          </div>
+          <div class="row small" style="gap:.5rem; margin-top:.5rem">
+            <button class="btn btn-primary btn-sm" id="endpoint-create-in">Create inbound</button>
+          </div>
+        </div>
+        <div style="flex:1; min-width:18rem">
+          <h3 class="text-h3">Outbound target</h3>
+          <div class="row small" style="gap:.5rem; flex-wrap:wrap">
+            <input id="endpoint-out-name" class="input" placeholder="Name" style="flex:1; min-width:10rem">
+            <input id="endpoint-out-host" class="input" placeholder="Host/IP" style="flex:1; min-width:9rem">
+            <input id="endpoint-out-port" class="input" type="number" min="1" max="65535" placeholder="Port" style="width:6rem">
+          </div>
+          <div class="row small" style="gap:.5rem; margin-top:.5rem">
+            <button class="btn btn-primary btn-sm" id="endpoint-create-out">Create outbound</button>
+          </div>
+        </div>
+        <div style="flex:1; min-width:22rem">
+          <h3 class="text-h3">Send test message</h3>
+          <div class="row small" style="gap:.5rem; flex-wrap:wrap">
+            <select id="endpoint-send-target" class="input" style="flex:1; min-width:10rem">
+              <option value="">-- choose target --</option>
+            </select>
+            <input id="endpoint-send-host" class="input" placeholder="Host/IP" style="flex:1; min-width:9rem">
+            <input id="endpoint-send-port" class="input" type="number" min="1" max="65535" placeholder="Port" style="width:6rem">
+          </div>
+          <textarea id="endpoint-send-message" class="input" style="width:100%; height:6rem; margin-top:.5rem" placeholder="Paste HL7 message…"></textarea>
+          <div class="row small" style="gap:.5rem; margin-top:.5rem">
+            <button class="btn btn-secondary btn-sm" id="endpoint-send-btn">Send</button>
+          </div>
+        </div>
+      </div>
+      <div class="table-wrapper">
+        <table class="table" id="endpoints-table">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Kind</th>
+              <th>Bind/Target</th>
+              <th>Pipeline</th>
+              <th>Status</th>
+              <th>Notes</th>
+              <th style="width:20%">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td colspan="7">No endpoints.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Assist -->
+    <section class="card mb" id="assist-card">
+      <div class="row" style="justify-content:space-between;align-items:center">
+        <h2 class="text-h2">Assist (Phase 4)</h2>
+        <div class="row small" style="gap:.5rem">
+          <label class="text-body muted" for="assist-lookback">Lookback days</label>
+          <input id="assist-lookback" class="input" type="number" min="1" max="90" value="14" style="width:5rem">
+          <button class="btn btn-secondary btn-sm" id="assist-preview">Get suggestions</button>
+          <button class="btn btn-primary btn-sm" id="assist-insert">Insert draft into YAML</button>
+        </div>
+      </div>
+      <div class="row small" style="gap:1rem; flex-wrap:wrap">
+        <div style="flex:1; min-width:20rem">
+          <h3 class="text-h3">Allowlist</h3>
+          <pre id="assist-allowlist" class="diff" style="min-height:6rem">—</pre>
+        </div>
+        <div style="flex:1; min-width:20rem">
+          <h3 class="text-h3">Severity rules</h3>
+          <pre id="assist-severity" class="diff" style="min-height:6rem">—</pre>
+        </div>
+      </div>
+      <div class="row small" style="gap:.5rem">
+        <h3 class="text-h3">Draft YAML (commented)</h3>
+      </div>
+      <pre id="assist-draft" class="diff" style="min-height:8rem">—</pre>
+      <div class="row small" style="gap:.5rem; align-items:center; margin-top:.5rem">
+        <label class="text-body muted" for="assist-recent">Anomalies</label>
+        <input id="assist-recent" class="input" type="number" min="1" max="60" value="7" style="width:4rem">
+        <input id="assist-baseline" class="input" type="number" min="7" max="120" value="30" style="width:4rem">
+        <button class="btn btn-secondary btn-sm" id="assist-load-anoms">Load anomalies</button>
+      </div>
+      <div class="table-wrapper">
+        <table class="table" id="assist-anoms-table">
+          <thead>
+            <tr><th>Code</th><th>Segment</th><th>Count</th><th>Baseline/day</th><th>|z|</th><th>Window</th></tr>
+          </thead>
+          <tbody><tr><td colspan="6">—</td></tr></tbody>
+        </table>
+      </div>
+    </section>
+
     <section class="card">
       <h2 class="text-h2">Insights</h2>
       <p class="text-body muted">Seed the store then review run-level summaries below.</p>
@@ -182,9 +295,34 @@
     }
   }
 
-  const PLS = { currentId: null, origYaml: '' };
+  const PLS = { currentId: null, origYaml: '', pipelines: [] };
+  const ENDPOINTS = { items: [] };
   const TEMPLATE_ROOT = "{{ root }}";
   const ROOT_PATH = (document.body?.dataset?.root ?? TEMPLATE_ROOT) || '';
+
+  function currentPipelineId() {
+    if (PLS.currentId) return PLS.currentId;
+    const button = document.querySelector('#pl-table tbody tr button[data-pipeline]');
+    if (button instanceof HTMLButtonElement) {
+      const id = Number(button.dataset.pipeline);
+      if (!Number.isNaN(id)) return id;
+    }
+    return null;
+  }
+
+  function renderEndpointPipelineOptions() {
+    const select = document.getElementById('endpoint-in-pipeline');
+    if (!(select instanceof HTMLSelectElement)) return;
+    const previous = select.value;
+    const options = ['<option value="">Select pipeline…</option>'];
+    for (const item of PLS.pipelines || []) {
+      options.push(`<option value="${item.id}">${escapeHtml(item.name || `Pipeline #${item.id}`)}</option>`);
+    }
+    select.innerHTML = options.join('');
+    if (previous && options.some((opt) => opt.includes(`value="${previous}"`))) {
+      select.value = previous;
+    }
+  }
 
   async function withBusy(button, fn) {
     if (!button) return fn();
@@ -220,6 +358,16 @@
     const span = document.createElement('span');
     span.textContent = value ?? '';
     return span.innerHTML;
+  }
+
+  function encodeBase64(text) {
+    const encoder = new TextEncoder();
+    const bytes = encoder.encode(text || '');
+    let binary = '';
+    bytes.forEach((byte) => {
+      binary += String.fromCharCode(byte);
+    });
+    return btoa(binary);
   }
 
   function setPipelineStatus(message) {
@@ -358,7 +506,9 @@
         throw new Error(await extractError(response));
       }
       const data = await response.json();
-      const rows = (data.items || []).map((item) => `
+      PLS.pipelines = Array.isArray(data.items) ? data.items : [];
+      renderEndpointPipelineOptions();
+      const rows = PLS.pipelines.map((item) => `
         <tr>
           <td><strong>${escapeHtml(item.name)}</strong></td>
           <td class="muted">${escapeHtml(item.description || '')}</td>
@@ -373,6 +523,7 @@
         </tr>
       `).join('');
       tbody.innerHTML = rows || '<tr><td colspan="4">No pipelines yet. Click "New pipeline" to create one.</td></tr>';
+      refreshEndpoints();
     } catch (err) {
       console.error(err);
       tbody.innerHTML = '<tr><td colspan="4">Failed to load pipelines.</td></tr>';
@@ -491,6 +642,252 @@
     } else if (action === 'retry') {
       withBusy(target, () => retryJob(jobId));
     }
+  }
+
+  function renderEndpointTargets() {
+    const select = document.getElementById('endpoint-send-target');
+    if (!(select instanceof HTMLSelectElement)) return;
+    const prior = select.value;
+    const options = ['<option value="">-- choose target --</option>'];
+    for (const endpoint of ENDPOINTS.items || []) {
+      if (endpoint.kind === 'mllp_out') {
+        options.push(`<option value="${endpoint.name}">${escapeHtml(endpoint.name)} (${escapeHtml(endpoint.config?.host || '')}:${escapeHtml(String(endpoint.config?.port ?? ''))})</option>`);
+      }
+    }
+    select.innerHTML = options.join('');
+    if (prior && options.some((opt) => opt.includes(`value="${prior}"`))) {
+      select.value = prior;
+    }
+  }
+
+  async function refreshEndpoints() {
+    const tbody = document.querySelector('#endpoints-table tbody');
+    if (!tbody) return;
+    tbody.innerHTML = '<tr><td colspan="7">Loading…</td></tr>';
+    try {
+      const response = await fetch(`${ROOT_PATH}/api/engine/endpoints`);
+      if (!response.ok) {
+        throw new Error(await extractError(response));
+      }
+      const data = await response.json();
+      ENDPOINTS.items = Array.isArray(data.items) ? data.items : [];
+      renderEndpointTargets();
+      const rows = ENDPOINTS.items.map((endpoint) => {
+        const cfg = endpoint.config || {};
+        const host = cfg.host ? `${cfg.host}:${cfg.port ?? ''}` : '';
+        const pipelineRecord = (PLS.pipelines || []).find((p) => p.id === endpoint.pipeline_id);
+        const pipeline = pipelineRecord
+          ? `${pipelineRecord.name || `Pipeline #${endpoint.pipeline_id}`} (#${endpoint.pipeline_id})`
+          : (endpoint.pipeline_id ? `#${endpoint.pipeline_id}` : '');
+        const allow = Array.isArray(cfg.allow_cidrs) ? cfg.allow_cidrs.join(', ') : '';
+        const actions = [];
+        if (endpoint.kind === 'mllp_in') {
+          actions.push(`<button class="btn btn-secondary btn-xs" data-endpoint="${endpoint.id}" data-endpoint-action="start">Start</button>`);
+          actions.push(`<button class="btn btn-text btn-xs" data-endpoint="${endpoint.id}" data-endpoint-action="stop">Stop</button>`);
+        }
+        actions.push(`<button class="btn btn-text btn-xs" data-endpoint="${endpoint.id}" data-endpoint-action="delete">Delete</button>`);
+        const notes = endpoint.kind === 'mllp_in'
+          ? (allow ? `Allow: ${escapeHtml(allow)}` : 'Allowlist required')
+          : '';
+        return `
+          <tr>
+            <td>${escapeHtml(endpoint.name)}</td>
+            <td>${escapeHtml(endpoint.kind)}</td>
+            <td>${escapeHtml(host)}</td>
+            <td>${escapeHtml(pipeline)}</td>
+            <td>${escapeHtml(endpoint.status || '')}</td>
+            <td>${notes || '&nbsp;'}</td>
+            <td>${actions.join(' ')}</td>
+          </tr>
+        `;
+      }).join('');
+      tbody.innerHTML = rows || '<tr><td colspan="7">No endpoints.</td></tr>';
+    } catch (err) {
+      console.error(err);
+      tbody.innerHTML = '<tr><td colspan="7">Failed to load endpoints.</td></tr>';
+      showToast('error', `Failed to load endpoints: ${err.message || err}`);
+    }
+  }
+
+  function handleEndpointAction(event) {
+    const target = event.target;
+    if (!(target instanceof HTMLButtonElement)) return;
+    const endpointId = Number(target.dataset.endpoint);
+    if (!endpointId) return;
+    const action = target.dataset.endpointAction;
+    if (!action) return;
+    if (action === 'start') {
+      withBusy(target, () => modifyEndpoint(endpointId, 'start'));
+    } else if (action === 'stop') {
+      withBusy(target, () => modifyEndpoint(endpointId, 'stop'));
+    } else if (action === 'delete') {
+      if (!confirm('Delete this endpoint?')) return;
+      withBusy(target, () => deleteEndpoint(endpointId));
+    }
+  }
+
+  async function modifyEndpoint(endpointId, action) {
+    const response = await fetch(`${ROOT_PATH}/api/engine/endpoints/${endpointId}/${action}`, { method: 'POST' });
+    if (!response.ok) {
+      const detail = await extractError(response);
+      showToast('error', `${action} failed: ${detail}`);
+      return;
+    }
+    await refreshEndpoints();
+    const verb = action === 'start' ? 'started' : action === 'stop' ? 'stopped' : action;
+    showToast('success', `Endpoint ${verb}`);
+  }
+
+  async function deleteEndpoint(endpointId) {
+    const response = await fetch(`${ROOT_PATH}/api/engine/endpoints/${endpointId}`, { method: 'DELETE' });
+    if (!response.ok) {
+      const detail = await extractError(response);
+      showToast('error', `Delete failed: ${detail}`);
+      return;
+    }
+    await refreshEndpoints();
+    showToast('success', 'Endpoint deleted');
+  }
+
+  async function createInboundEndpoint() {
+    const nameEl = document.getElementById('endpoint-in-name');
+    const hostEl = document.getElementById('endpoint-in-host');
+    const portEl = document.getElementById('endpoint-in-port');
+    const pipelineSelect = document.getElementById('endpoint-in-pipeline');
+    const cidrsEl = document.getElementById('endpoint-in-cidrs');
+    if (
+      !(nameEl instanceof HTMLInputElement) ||
+      !(hostEl instanceof HTMLInputElement) ||
+      !(portEl instanceof HTMLInputElement) ||
+      !(cidrsEl instanceof HTMLInputElement)
+    ) {
+      showToast('error', 'Inbound form not ready');
+      return;
+    }
+    const pipelineId = pipelineSelect instanceof HTMLSelectElement ? Number(pipelineSelect.value) : 0;
+    const name = nameEl.value.trim();
+    const host = hostEl.value.trim();
+    const portValue = portEl.value;
+    const cidrsRaw = cidrsEl.value;
+    if (!name || !host || !portValue || !pipelineId) {
+      showToast('error', 'Name, host, port, and pipeline are required');
+      return;
+    }
+    const allowCidrs = (cidrsRaw || '')
+      .split(/[,\n\r]+/)
+      .map((item) => item.trim())
+      .filter(Boolean);
+    const body = {
+      kind: 'mllp_in',
+      name,
+      pipeline_id: pipelineId,
+      config: { host, port: Number(portValue), allow_cidrs: allowCidrs },
+    };
+    const response = await fetch(`${ROOT_PATH}/api/engine/endpoints`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    if (!response.ok) {
+      const detail = await extractError(response);
+      showToast('error', `Create failed: ${detail}`);
+      return;
+    }
+    showToast('success', 'Inbound endpoint created');
+    nameEl.value = '';
+    hostEl.value = '';
+    portEl.value = '';
+    cidrsEl.value = '';
+    if (pipelineSelect instanceof HTMLSelectElement) {
+      pipelineSelect.value = '';
+    }
+    await refreshEndpoints();
+  }
+
+  async function createOutboundEndpoint() {
+    const nameEl = document.getElementById('endpoint-out-name');
+    const hostEl = document.getElementById('endpoint-out-host');
+    const portEl = document.getElementById('endpoint-out-port');
+    if (
+      !(nameEl instanceof HTMLInputElement) ||
+      !(hostEl instanceof HTMLInputElement) ||
+      !(portEl instanceof HTMLInputElement)
+    ) {
+      showToast('error', 'Outbound form not ready');
+      return;
+    }
+    const name = nameEl.value.trim();
+    const host = hostEl.value.trim();
+    const portValue = portEl.value;
+    if (!name || !host || !portValue) {
+      showToast('error', 'Name, host, and port are required');
+      return;
+    }
+    const body = {
+      kind: 'mllp_out',
+      name,
+      pipeline_id: null,
+      config: { host, port: Number(portValue) },
+    };
+    const response = await fetch(`${ROOT_PATH}/api/engine/endpoints`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    if (!response.ok) {
+      const detail = await extractError(response);
+      showToast('error', `Create failed: ${detail}`);
+      return;
+    }
+    showToast('success', 'Outbound endpoint created');
+    nameEl.value = '';
+    hostEl.value = '';
+    portEl.value = '';
+    await refreshEndpoints();
+  }
+
+  async function sendTestMessage() {
+    const targetSelect = document.getElementById('endpoint-send-target');
+    const hostInput = document.getElementById('endpoint-send-host');
+    const portInput = document.getElementById('endpoint-send-port');
+    const messageInput = document.getElementById('endpoint-send-message');
+    if (
+      !(targetSelect instanceof HTMLSelectElement) ||
+      !(hostInput instanceof HTMLInputElement) ||
+      !(portInput instanceof HTMLInputElement) ||
+      !(messageInput instanceof HTMLTextAreaElement)
+    ) {
+      showToast('error', 'Send form not ready');
+      return;
+    }
+    const targetName = targetSelect.value;
+    if (!targetName && (!hostInput.value || !portInput.value)) {
+      showToast('error', 'Select a target or provide host and port');
+      return;
+    }
+    if (!messageInput.value.trim()) {
+      showToast('error', 'Message is required');
+      return;
+    }
+    const payload = {
+      target_name: targetName || null,
+      host: targetName ? null : hostInput.value.trim(),
+      port: targetName ? null : Number(portInput.value),
+      message_b64: encodeBase64(messageInput.value),
+    };
+    const response = await fetch(`${ROOT_PATH}/api/engine/mllp/send`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (!response.ok) {
+      const detail = await extractError(response);
+      showToast('error', `Send failed: ${detail}`);
+      return;
+    }
+    const data = await response.json();
+    const preview = data.ack_preview ? `ACK preview: ${data.ack_preview}` : 'ACK received';
+    showToast('success', preview);
   }
 
   async function fetchPipeline(id) {
@@ -878,6 +1275,7 @@ sinks:
     loadInsightsSummary();
     loadPipelines();
     refreshJobs();
+    refreshEndpoints();
     document.getElementById('pl-new-btn')?.addEventListener('click', () => openEditor(null));
     document.getElementById('pl-save-btn')?.addEventListener('click', (event) => {
       const button = event.currentTarget;
@@ -908,6 +1306,133 @@ sinks:
       const button = event.currentTarget;
       if (!(button instanceof HTMLButtonElement)) return;
       withBusy(button, () => refreshJobs());
+    });
+
+    document.getElementById('endpoints-refresh')?.addEventListener('click', (event) => {
+      const button = event.currentTarget;
+      if (!(button instanceof HTMLButtonElement)) return;
+      withBusy(button, () => refreshEndpoints());
+    });
+    document.getElementById('endpoint-create-in')?.addEventListener('click', (event) => {
+      const button = event.currentTarget;
+      if (!(button instanceof HTMLButtonElement)) return;
+      withBusy(button, () => createInboundEndpoint());
+    });
+    document.getElementById('endpoint-create-out')?.addEventListener('click', (event) => {
+      const button = event.currentTarget;
+      if (!(button instanceof HTMLButtonElement)) return;
+      withBusy(button, () => createOutboundEndpoint());
+    });
+    document.getElementById('endpoint-send-btn')?.addEventListener('click', (event) => {
+      const button = event.currentTarget;
+      if (!(button instanceof HTMLButtonElement)) return;
+      withBusy(button, () => sendTestMessage());
+    });
+    document.getElementById('endpoints-table')?.addEventListener('click', handleEndpointAction);
+    document.getElementById('endpoint-send-target')?.addEventListener('change', (event) => {
+      const select = event.currentTarget;
+      if (!(select instanceof HTMLSelectElement)) return;
+      if (select.value) {
+        document.getElementById('endpoint-send-host').value = '';
+        document.getElementById('endpoint-send-port').value = '';
+      }
+    });
+
+    document.getElementById('assist-preview')?.addEventListener('click', async () => {
+      const pipelineId = currentPipelineId();
+      if (!pipelineId) {
+        showToast('error', 'Open or select a pipeline first');
+        return;
+      }
+      const input = document.getElementById('assist-lookback');
+      const lookback = Number(input instanceof HTMLInputElement ? input.value : '14') || 14;
+      try {
+        const response = await fetch('/api/engine/assist/preview', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ pipeline_id: pipelineId, lookback_days: lookback }),
+        });
+        if (!response.ok) {
+          throw new Error(await extractError(response));
+        }
+        const data = await response.json();
+        const allow = document.getElementById('assist-allowlist');
+        const severity = document.getElementById('assist-severity');
+        const draft = document.getElementById('assist-draft');
+        if (allow) {
+          const items = Array.isArray(data.allowlist) ? data.allowlist : [];
+          allow.textContent = items.length ? items.map((item) => JSON.stringify(item)).join('\n') : '—';
+        }
+        if (severity) {
+          const items = Array.isArray(data.severity_rules) ? data.severity_rules : [];
+          severity.textContent = items.length ? items.map((item) => JSON.stringify(item)).join('\n') : '—';
+        }
+        if (draft) {
+          draft.textContent = typeof data.draft_yaml === 'string' && data.draft_yaml.trim() ? data.draft_yaml : '—';
+        }
+        showToast('success', 'Assist suggestions ready');
+      } catch (err) {
+        console.error(err);
+        showToast('error', err.message || String(err));
+      }
+    });
+
+    document.getElementById('assist-insert')?.addEventListener('click', () => {
+      const textarea = document.getElementById('pl-yaml');
+      const draft = document.getElementById('assist-draft');
+      if (!(textarea instanceof HTMLTextAreaElement) || !draft) {
+        showToast('error', 'Nothing to insert');
+        return;
+      }
+      const content = (draft.textContent || '').trim();
+      if (!content) {
+        showToast('error', 'Nothing to insert');
+        return;
+      }
+      textarea.value = `${textarea.value.trimEnd()}\n\n${content}\n`;
+      showToast('success', 'Draft suggestions inserted (commented). Review and save when ready.');
+    });
+
+    document.getElementById('assist-load-anoms')?.addEventListener('click', async () => {
+      const pipelineId = currentPipelineId();
+      if (!pipelineId) {
+        showToast('error', 'Open or select a pipeline first');
+        return;
+      }
+      const recentInput = document.getElementById('assist-recent');
+      const baselineInput = document.getElementById('assist-baseline');
+      const recent = Number(recentInput instanceof HTMLInputElement ? recentInput.value : '7') || 7;
+      const baseline = Number(baselineInput instanceof HTMLInputElement ? baselineInput.value : '30') || 30;
+      try {
+        const response = await fetch(`/api/engine/assist/anomalies?pipeline_id=${pipelineId}&recent_days=${recent}&baseline_days=${baseline}`);
+        if (!response.ok) {
+          throw new Error(await extractError(response));
+        }
+        const data = await response.json();
+        const tbody = document.querySelector('#assist-anoms-table tbody');
+        if (tbody) {
+          const items = Array.isArray(data.items) ? data.items : [];
+          const rows = items.map((anomaly) => {
+            const start = anomaly.window_start ? new Date(anomaly.window_start).toLocaleDateString() : '';
+            const end = anomaly.window_end ? new Date(anomaly.window_end).toLocaleDateString() : '';
+            const deviation = typeof anomaly.deviation === 'number' ? Math.abs(anomaly.deviation).toFixed(2) : '';
+            const baselineVal = typeof anomaly.baseline === 'number' ? anomaly.baseline.toFixed(2) : '';
+            return `<tr>
+              <td>${escapeHtml(anomaly.code || '')}</td>
+              <td>${escapeHtml(anomaly.segment || '')}</td>
+              <td>${Number(anomaly.count) || 0}</td>
+              <td>${baselineVal}</td>
+              <td>${deviation}</td>
+              <td>${escapeHtml(start)} → ${escapeHtml(end)}</td>
+            </tr>`;
+          }).join('');
+          tbody.innerHTML = rows || '<tr><td colspan="6">No anomalies.</td></tr>';
+        }
+        showToast('success', 'Anomalies loaded');
+      } catch (err) {
+        console.error(err);
+        showToast('error', err.message || String(err));
+      }
     });
   });
 </script>
