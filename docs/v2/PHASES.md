@@ -572,3 +572,70 @@ sinks:
 2. Update **STATUS.md** with shipped scope + UTC timestamp
 3. Update **CHANGELOG.md** with user-facing notes
 4. Ensure tests pass and Quickstart commands above remain valid
+
+---
+
+## Phase 6 — Agent Landing & Orchestrator (Demo) (🚧 In progress)
+
+**Goal**
+
+Provide a single **landing page** that lets an operator either:
+- Use a **Chat (beta)** text box to type natural commands that run **without leaving the page**, showing **live confirmations** of exactly what was added and when; or
+- Jump to the existing **Engine (manual)** UI.
+
+No external LLM yet; this phase uses a **deterministic parser + orchestrator** to map text → Engine actions. The demo also supports **Generate** and **De-identify** flows against a configured **folder/bucket**.
+
+**What’s included in this phase**
+
+- **Agent API**:  
+  - `POST /api/agent/interpret` → map text to `{ intent, params, steps }` (no side effects).  
+  - `POST /api/agent/execute` → run the plan; return step-by-step **Execution Report**.  
+  - `GET /api/agent/registry` → show supported intents & parameter schemas.  
+  - `GET /api/agent/actions` → recent activity log.  
+  - `GET /api/agent/actions/stream` → **SSE** for live Activity Timeline.
+- **Activity Log**: new `agent_actions` table records intent, params, timestamps, status, and result references (endpoint/job/run ids).
+- **Landing page** `/ui/landing`:
+  - Chat input with **Preview steps** and **Run**.  
+  - **Activity Timeline** (SSE) shows all actions with timestamps and confirmations (**created/started**, **job enqueued**, **run succeeded**).
+
+**6A — Foundations**
+- Implement agent actions data model + store helpers.  
+- Orchestrator (interpret/execute) with idempotency and safety gates.  
+- Landing page (chat + live activity).
+
+### 6B — Content skills (✅ Implemented)
+
+**Scope**
+- `generate_messages` writes N HL7 messages to `${AGENT_DATA_ROOT}/out/<folder>`.
+- `deidentify_folder` reads `${AGENT_DATA_ROOT}/in/<folder>/**/*.hl7`, runs the configured pipeline **in-process** (inline adapter per file), and writes outputs to `${AGENT_DATA_ROOT}/out/<folder>`.
+
+**Behavior**
+- Both tasks post per-action summaries (counts + folder paths) to the **Activity Log**, which the landing page renders live via SSE.
+- File operations are confined to `AGENT_DATA_ROOT`; traversal is blocked.
+
+**Config**
+- `AGENT_DATA_ROOT` (default `./data/agent`)
+
+**Examples**
+```
+generate 25 ADT messages to demo-adt
+deidentify incoming/ward to ward_deid with pipeline 3
+```
+
+### 6C — Advanced UX (🚧)
+- Assist preview execution summaries surfaced inline.
+- Richer timeline badges/links for endpoints, jobs, and runs.
+- Optional “cancel last” and quick actions once guardrails settle.
+
+**Configuration**
+- `AGENT_DATA_ROOT` (default `./data/agent`) — root for generate/deidentify demo.  
+- Uses existing Phase 5/3 env vars: `ENGINE_NET_BIND_ANY`, `ENGINE_MLLP_READ_TIMEOUT_SECS`, `ENGINE_MLLP_MAX_FRAME_BYTES`, runner tuning.
+
+**Acceptance**
+- Creating a channel (e.g., port **4321**, host **127.0.0.1**) shows **inline confirmation** and appears in the **Activity Timeline** with timestamps (no page navigation).  
+- “Generate 10 messages to demo-adt” writes 10 files and logs a summary activity.  
+- “De-identify incoming/ward to ward_deid with pipeline 3” processes the folder and logs success/failure counts.  
+- All actions callable **headlessly** through APIs.
+
+**Docs**
+- See `docs/v2/README-agent.md` for examples and operator notes.
