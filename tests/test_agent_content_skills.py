@@ -50,6 +50,8 @@ def _free_port() -> int:
 def _setup_store(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
     db_path = tmp_path / "insights.db"
     monkeypatch.setenv("INSIGHTS_DB_URL", f"sqlite:///{db_path}")
+    # Keep wildcard bind disabled explicitly so policy guard coverage remains deterministic.
+    monkeypatch.setenv("ENGINE_NET_BIND_ANY", "0")
     reset_store()
     store = get_store()
     store.ensure_schema()
@@ -276,6 +278,32 @@ def test_create_inbound_with_pipeline_name(
     assert endpoint.pipeline_id == pipeline.id
     assert str(endpoint.config.get("host")) == "127.0.0.1"
     assert int(endpoint.config.get("port")) == port
+    assert endpoint.config.get("allow_cidrs") == ["127.0.0.1/32"]
+
+
+def test_create_inbound_with_unknown_pipeline_name(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Unknown pipeline names surface a friendly error and skip creation."""
+
+    monkeypatch.setenv("AGENT_DATA_ROOT", str(tmp_path / "agent"))
+
+    store = _setup_store(tmp_path, monkeypatch)
+
+    orchestrator = _reload_orchestrator()
+
+    port = _free_port()
+    plan = orchestrator.interpret(
+        f'create inbound adt-unknown on 127.0.0.1:{port} for pipeline "does-not-exist" allow 127.0.0.1/32'
+    )
+    assert plan.intent == "create_inbound_listener"
+
+    result = asyncio.run(orchestrator.execute(store, plan))
+    step = result["report"][-1]
+    assert step["step"] == "create_endpoint"
+    assert step["status"] == "failed"
+    assert "not found" in (step.get("error") or "").lower()
+    assert store.get_endpoint_by_name("adt-unknown") is None
 
 
 def test_deidentify_with_pipeline_name(

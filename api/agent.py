@@ -67,7 +67,7 @@ class ActionListResponse(BaseModel):
 
 _REGISTRY = {
     "intents": [
-        {"name": "create_inbound_listener", "params": ["name", "host", "port", "pipeline_id", "allow_cidrs[]"]},
+        {"name": "create_inbound_listener", "params": ["name", "host", "port", "pipeline_id|name", "allow_cidrs[]"]},
         {"name": "create_outbound_target", "params": ["name", "host", "port"]},
         {"name": "start_endpoint", "params": ["name|endpoint_id"]},
         {"name": "stop_endpoint", "params": ["name|endpoint_id"]},
