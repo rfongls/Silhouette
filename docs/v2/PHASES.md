@@ -392,10 +392,32 @@ Deliver a durable background execution path so stored pipelines can run asynchro
 - Per-pipeline concurrency quotas and scheduled/cron jobs.
 - `/api/engine/jobs/{id}/requeue` convenience helper and richer job logs/metrics streaming.
 
-## Phase 4 — ML Assist Hooks (🔜 Planned)
-- Allowlist suggestions and anomaly baselines
-- UI hints from ML assist results
-- Draft config suggestions without auto-apply
+## Phase 4 — ML Assist Hooks (✅ Implemented)
+
+**Goal**
+
+Offer operator-facing guidance derived from recent Insights data without automatically mutating pipeline specs.
+
+**What shipped**
+
+- Assist service (`engine/ml_assist.py`) surfaces:
+  - Allowlist and severity downgrade suggestions for frequent low-signal issues.
+  - Anomaly highlights computed via a robust z-score on recent vs. baseline issue rates.
+- API endpoints (`POST /api/engine/assist/preview`, `GET /api/engine/assist/anomalies`) expose draft suggestions and anomaly listings for the UI.
+- Engine UI Assist card lets operators fetch suggestions, inspect raw allowlist/severity candidates, view anomalies, and insert a commented YAML draft into the editor (no auto-apply).
+- Tests (`tests/test_ml_assist_phase4.py`) cover suggestion heuristics and API flows.
+- Documentation (this runbook, STATUS, CHANGELOG) updated with Phase 4 deliverables.
+
+**Notes**
+
+- Suggestions are always returned as commented YAML blocks; operators must review and save manually.
+- No schema migration required—Assist reads existing `engine_runs`, `engine_messages`, and `engine_issues` tables.
+
+**Follow-ups / nice-to-haves**
+
+- Persisted Assist history per pipeline (compare proposed vs. applied rules).
+- Inline diffing against current YAML to show exact impact.
+- Export Assist drafts as standalone files for review.
 
 ---
 
