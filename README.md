@@ -75,19 +75,37 @@ For more details see [docs/ops/agent_setup.md](docs/ops/agent_setup.md).
 - **macOS**: double-click `scripts/run_ui.command` (first time only, you may need to run `chmod +x scripts/run_ui.command`)
 - **Linux**: double-click `scripts/run_ui.sh` in your file manager (or run `bash scripts/run_ui.sh`). First time only: `chmod +x scripts/run_ui.sh`
 
-These will:
+- **Direct Engine V2 launcher**: run `run.engine.bat` (Command Prompt) or `run.engine.ps1` (PowerShell) to set `ENGINE_V2=1`, apply sensible defaults for `INSIGHTS_DB_URL` / `AGENT_DATA_ROOT`, and start `uvicorn server:app --reload --host 127.0.0.1 --port 8000`.
+
+These launchers now enable **Engine V2 + Agent landing** automatically:
 1) Create `.venv` (if missing)
 2) Install minimal UI deps
-3) Launch the server and open your browser at:
-   - http://localhost:8000/ui/security/dashboard
-   - http://localhost:8000/ui/interop/dashboard
+3) Launch Uvicorn with `ENGINE_V2=1`
+4) Open your browser at:
+   - http://localhost:8000/ui/landing (Agent chat + live activity timeline)
+   - http://localhost:8000/ui/engine (Engine beta dashboard)
+   - http://localhost:8000/ui/security/dashboard and http://localhost:8000/ui/interop/dashboard (classic dashboards)
 
 ### Manual
 Launch the dashboards locally:
 
 ```bash
-uvicorn main:app --reload
+ENGINE_V2=1 uvicorn server:app --reload
 ```
+
+Optional helpers for the Agent demo flows:
+
+```bash
+export AGENT_DATA_ROOT=./data/agent
+export INSIGHTS_DB_URL="sqlite:///data/insights.db"
+```
+
+### Start Menu shortcuts (Windows)
+- `scripts\install_shortcuts.bat` — installs Start Menu entries without requiring PowerShell.
+- `make install-shortcuts` — runs the same Python installer (see `make uninstall-shortcuts` to remove them).
+- `python scripts/install_shortcuts.py --dry-run` — preview what will be created or pass `--start-menu-path` for a custom location.
+
+The installer creates launchers for the classic UI, the Engine V2 dev server, and handy browser links (Landing + Agent README).
 
 ### What you’ll see (plug-and-play)
 Both dashboards open with **KPI bars** and **Quick Start** so a new user can click → run → see insights immediately.
