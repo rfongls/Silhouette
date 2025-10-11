@@ -128,3 +128,20 @@ class EndpointRecord(Base):
     updated_at: Mapped[datetime] = mapped_column(
         DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False
     )
+
+
+class AgentActionRecord(Base):
+    __tablename__ = "agent_actions"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    ts: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
+    actor: Mapped[str] = mapped_column(String(64), default="demo-agent", nullable=False)
+    intent: Mapped[str] = mapped_column(String(64), nullable=False)
+    params: Mapped[dict[str, Any]] = mapped_column(JSON, default=dict, nullable=False)
+    status: Mapped[str] = mapped_column(String(16), default="planned", nullable=False)
+    result: Mapped[dict[str, Any] | None] = mapped_column(JSON)
+    error: Mapped[str | None] = mapped_column(Text)
+    endpoint_id: Mapped[int | None] = mapped_column(Integer)
+    job_id: Mapped[int | None] = mapped_column(Integer)
+    run_id: Mapped[int | None] = mapped_column(Integer)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)

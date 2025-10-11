@@ -23,6 +23,7 @@ from api.diag_fallback import ensure_diagnostics
 from api.debug_log import log_debug_event
 from api.metrics import router as metrics_router
 from api.engine_jobs import router as engine_jobs_router
+from api.agent import router as agent_router
 from api.endpoints import router as endpoints_router
 from api.engine_assist import router as engine_assist_router
 from api.mllp_send import router as mllp_send_router
@@ -128,6 +129,7 @@ for r in (
     diag_router,
     admin_router,
     metrics_router,
+    agent_router,
     engine_jobs_router,
     endpoints_router,
     mllp_send_router,
