@@ -4,11 +4,9 @@ Maps simple natural commands to engine actions, plans steps, and executes them.
 from __future__ import annotations
 
 import asyncio
-import base64
 import re
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional
-
+from typing import Any, Dict, List
 from insights.store import InsightsStore
 from engine.net.endpoints import get_manager
 
@@ -128,10 +126,13 @@ async def _send_mllp(host: str, port: int, payload: bytes) -> bytes:
         writer.close()
         await writer.wait_closed()
 
-def _b64(s: str) -> str:
-    return base64.b64encode(s.encode("utf-8")).decode("ascii")
-
-async def execute(store: InsightsStore, plan: IntentPlan, *, actor: str = "demo-agent", dry_run: bool = False) -> Dict[str, Any]:
+async def execute(
+    store: InsightsStore,
+    plan: IntentPlan,
+    *,
+    actor: str = "demo-agent",
+    dry_run: bool = False,
+) -> Dict[str, Any]:
     """Execute a plan step-by-step, logging activity; return an execution report."""
     action = store.log_action(actor=actor, intent=plan.intent, params=plan.params, status="planned")
     report: List[Dict[str, Any]] = []
@@ -146,6 +147,21 @@ async def execute(store: InsightsStore, plan: IntentPlan, *, actor: str = "demo-
         # helper: resolve endpoint by name
         def _endpoint_by_name(name: str):
             return store.get_endpoint_by_name(name)
+
+        def _resolve_pipeline_id(identifier: Any) -> int:
+            if identifier is None:
+                raise ValueError("pipeline identifier required")
+            if isinstance(identifier, int):
+                return identifier
+            ident_str = str(identifier).strip()
+            if not ident_str:
+                raise ValueError("pipeline identifier required")
+            if ident_str.isdigit():
+                return int(ident_str)
+            pipeline = store.get_pipeline_by_name(ident_str)
+            if pipeline is None:
+                raise ValueError(f"pipeline {ident_str!r} not found")
+            return pipeline.id
 
         # Iterate steps
         for step in plan.steps:
@@ -176,6 +192,16 @@ async def execute(store: InsightsStore, plan: IntentPlan, *, actor: str = "demo-
                         await manager.stop_endpoint(ep.id)
                         s["endpoint_id"] = ep.id
 
+                elif step.action == "delete_endpoint":
+                    name = step.args.get("name")
+                    ep = _endpoint_by_name(name) if name else None
+                    if not ep:
+                        raise ValueError(f"endpoint {name!r} not found")
+                    manager = get_manager(store)
+                    await manager.stop_endpoint(ep.id)
+                    store.delete_endpoint(ep.id)
+                    s["endpoint_id"] = ep.id
+
                 elif step.action == "send_mllp":
                     target = step.args.get("target_name")
                     hl7 = step.args.get("hl7_text", "")
@@ -189,19 +215,22 @@ async def execute(store: InsightsStore, plan: IntentPlan, *, actor: str = "demo-
                     s["ack_preview"] = ack[:64].decode("utf-8", "ignore")
 
                 elif step.action == "run_pipeline":
-                    ident = step.args.get("pipeline")
+                    ident = step.args.get("pipeline") or step.args.get("pipeline_id")
                     persist = bool(step.args.get("persist"))
-                    # ident can be id or name; here we assume id
-                    pid = int(ident) if str(ident).isdigit() else None
-                    if pid is None:
-                        raise ValueError("only numeric pipeline id supported in demo")
+                    pid = _resolve_pipeline_id(ident)
                     # Enqueue run as background job for parity with UI:
                     job = store.enqueue_job(pipeline_id=pid, kind="run", payload={"persist": persist})
                     s["job_id"] = job.id
                     store.update_action(action.id, job_id=job.id)
 
                 elif step.action == "enqueue_job":
-                    job = store.enqueue_job(**step.args)
+                    args = dict(step.args)
+                    if "pipeline" in args and "pipeline_id" not in args:
+                        args["pipeline_id"] = _resolve_pipeline_id(args["pipeline"])
+                        del args["pipeline"]
+                    if "pipeline_id" in args:
+                        args["pipeline_id"] = _resolve_pipeline_id(args["pipeline_id"])
+                    job = store.enqueue_job(**args)
                     s["job_id"] = job.id
                     store.update_action(action.id, job_id=job.id)
 

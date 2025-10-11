@@ -6,10 +6,15 @@ from datetime import datetime
 from typing import Any, Dict, List, Optional
 
 from fastapi import APIRouter, HTTPException, Request
-from fastapi.responses import EventSourceResponse, JSONResponse
+from fastapi.responses import EventSourceResponse
 from pydantic import BaseModel, Field
 
-from agent.orchestrator import interpret as _interpret, execute as _execute
+from agent.orchestrator import (
+    IntentPlan,
+    PlanStep,
+    execute as _execute,
+    interpret as _interpret,
+)
 from insights.store import get_store
 from insights.models import AgentActionRecord
 
@@ -26,10 +31,15 @@ class InterpretResponse(BaseModel):
     params: Dict[str, Any]
     steps: List[Dict[str, Any]]
 
+class PlanStepModel(BaseModel):
+    action: str
+    args: Dict[str, Any] = Field(default_factory=dict)
+
 class ExecuteRequest(BaseModel):
     intent: str
     params: Dict[str, Any]
     dry_run: bool = False
+    steps: Optional[List[PlanStepModel]] = None
 
 class ExecuteResponse(BaseModel):
     plan: List[Dict[str, Any]]
@@ -90,17 +100,14 @@ def interpret(payload: InterpretRequest) -> InterpretResponse:
 @router.post("/api/agent/execute", response_model=ExecuteResponse)
 async def execute(payload: ExecuteRequest) -> ExecuteResponse:
     store = get_store()
-    # Rebuild a plan from provided intent/params (trusting UI interpret is one option; here we accept intent directly)
-    plan_steps = payload.params.pop("__steps__", None)  # optional explicit steps
-    plan = _interpret("")  # dummy
-    plan.intent = payload.intent
-    plan.params = payload.params
-    if plan_steps:
-        from agent.orchestrator import PlanStep
-        plan.steps = [PlanStep(action=s["action"], args=s.get("args", {})) for s in plan_steps]
-    elif not plan.steps:
-        # If steps not provided, best effort: interpret from a synthetic sentence later; for now, rely on intent-only executor branch
-        pass
+    params = dict(payload.params or {})
+    if not payload.steps:
+        raise HTTPException(status_code=400, detail="steps required; call interpret before execute")
+    plan = IntentPlan(
+        intent=payload.intent,
+        params=params,
+        steps=[PlanStep(action=step.action, args=dict(step.args)) for step in payload.steps],
+    )
     result = await _execute(store, plan, actor="demo-agent", dry_run=payload.dry_run)
     return ExecuteResponse(**result)
 
@@ -127,12 +134,12 @@ def actions(limit: int = 50) -> ActionListResponse:
 # ---------- SSE: Activity stream ----------
 
 @router.get("/api/agent/actions/stream")
-async def stream_actions(request: Request):
+async def stream_actions(request: Request, since: int = 0):
     """Very simple polling-to-SSE bridge for demo purposes.
     In production, replace with DB notifications or broker.
     """
     store = get_store()
-    last_id: int = 0
+    last_id: int = max(0, since)
 
     async def gen():
         nonlocal last_id

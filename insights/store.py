@@ -223,6 +223,14 @@ class InsightsStore:
         with self.session() as session:
             return session.get(PipelineRecord, pipeline_id)
 
+    def get_pipeline_by_name(self, name: str) -> PipelineRecord | None:
+        with self.session() as session:
+            return (
+                session.query(PipelineRecord)
+                .filter(PipelineRecord.name == name)
+                .first()
+            )
+
     def delete_pipeline(self, pipeline_id: int) -> bool:
         with self.session() as session:
             record = session.get(PipelineRecord, pipeline_id)

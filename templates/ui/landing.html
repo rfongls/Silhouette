@@ -4,7 +4,7 @@
   <div class="dashboard-container">
     <header class="dashboard-header">
       <h1 class="text-h1">Welcome</h1>
-      <p class="text-body">Drive the Engine via <strong>Chat (beta)</strong> or open the manual UI.</p>
+      <p class="text-body">Drive the Engine via <strong>Chat (beta)</strong>, jump into the manual UI, or skim examples in <code>docs/v2/README-agent.md</code>.</p>
       <div class="row small" style="gap:.5rem">
         <a class="btn btn-secondary btn-sm" href="/ui/engine">Open Engine (manual)</a>
       </div>
@@ -14,8 +14,9 @@
       .two-col { display:grid; grid-template-columns: 1.1fr .9fr; gap: 1rem; align-items:start; }
       .timeline { max-height: 460px; overflow:auto; border:1px solid #333; padding:.5rem; border-radius:.375rem; background:#0a0a0a;}
       .log { font-family: ui-monospace, Menlo, monospace; font-size: .9rem; }
-      .badge.ok { background:#1b7f4d; color:#ecfdf5; padding:.1rem .4rem; border-radius:.25rem; }
-      .badge.err { background:#9b1c1c; color:#fee2e2; padding:.1rem .4rem; border-radius:.25rem; }
+      .badge { background:#1f2933; color:#e4e7eb; padding:.1rem .4rem; border-radius:.25rem; display:inline-block; }
+      .badge.ok { background:#1b7f4d; color:#ecfdf5; }
+      .badge.err { background:#9b1c1c; color:#fee2e2; }
       .muted { opacity: .85; }
       .mono { font-family: ui-monospace, Menlo, monospace; }
       .card-subtitle { margin: .25rem 0 .5rem 0; }
@@ -55,7 +56,34 @@
 <script>
   const $ = (s) => document.querySelector(s);
   function esc(s){ const t=document.createElement('div'); t.textContent=String(s ?? ''); return t.innerHTML; }
-  function set(el, text){ el.textContent = text; }
+  function set(el, text){ if (el) el.textContent = text; }
+  const activityBox = $('#activity');
+  const seenActionIds = new Set();
+
+  function renderAction(data) {
+    if (!data || !activityBox || seenActionIds.has(data.id)) return;
+    if (activityBox.firstElementChild && activityBox.firstElementChild.classList.contains('muted')) {
+      activityBox.innerHTML = '';
+    }
+    seenActionIds.add(data.id);
+    const line = document.createElement('div');
+    const when = esc(new Date(data.ts).toLocaleTimeString());
+    const id = esc(data.id);
+    const intent = esc(data.intent ?? '');
+    const status = String(data.status ?? '').toLowerCase();
+    let badgeHtml = '<span class="badge">—</span>';
+    if (status === 'succeeded') badgeHtml = '<span class="badge ok">ok</span>';
+    else if (status === 'failed') badgeHtml = '<span class="badge err">err</span>';
+    else if (status) badgeHtml = `<span class="badge">${esc(status)}</span>`;
+    let noteParts = [];
+    if (data.endpoint_id) noteParts.push(`endpoint #${esc(data.endpoint_id)}`);
+    if (data.job_id) noteParts.push(`job #${esc(data.job_id)}`);
+    if (data.run_id) noteParts.push(`run #${esc(data.run_id)}`);
+    const note = noteParts.length ? ` · ${noteParts.join(' · ')}` : '';
+    line.innerHTML = `[${when}] #${id} ${badgeHtml} <strong>${intent}</strong>${note}`;
+    activityBox.appendChild(line);
+    activityBox.scrollTop = activityBox.scrollHeight;
+  }
 
   async function interpretCmd() {
     const text = $('#agent-input').value || '';
@@ -69,11 +97,13 @@
     if (!preview) return;
     const payload = {
       intent: preview.intent,
-      params: preview.params,
-      dry_run: false
+      params: {...preview.params},
+      dry_run: false,
+      steps: (preview.steps || []).map(step => ({
+        action: step.action,
+        args: {...(step.args || {})}
+      }))
     };
-    // Optional: pass explicit steps resolved by interpret
-    payload.params["__steps__"] = preview.steps;
     const res = await fetch('/api/agent/execute', { method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify(payload)});
     if (!res.ok) { set($('#agent-result'), await res.text()); return; }
     const data = await res.json();
@@ -86,32 +116,39 @@
   });
 
   // SSE Timeline
-  (function initSSE(){
+  async function loadRecentActions() {
+    if (!activityBox) return 0;
     try {
-      const box = $('#activity');
-      const ev = new EventSource('/api/agent/actions/stream');
-      box.innerHTML = '';
-      ev.onmessage = (e)=>{}; // unused
+      const res = await fetch('/api/agent/actions?limit=20');
+      if (!res.ok) return 0;
+      const payload = await res.json();
+      const items = Array.isArray(payload.items) ? payload.items : [];
+      if (!items.length) return 0;
+      activityBox.innerHTML = '';
+      items.sort((a, b) => a.id - b.id).forEach(renderAction);
+      return items[items.length - 1].id;
+    } catch (err) {
+      console.warn('recent activity fetch failed', err);
+      return 0;
+    }
+  }
+
+  async function initActivityStream() {
+    const lastId = await loadRecentActions();
+    try {
+      const streamUrl = lastId ? `/api/agent/actions/stream?since=${encodeURIComponent(lastId)}` : '/api/agent/actions/stream';
+      const ev = new EventSource(streamUrl);
+      if (activityBox) activityBox.innerHTML = activityBox.innerHTML || '';
       ev.addEventListener('action', (e) => {
         const data = JSON.parse(e.data || '{}');
-        const line = document.createElement('div');
-        const when = esc(new Date(data.ts).toLocaleTimeString());
-        const id   = esc(data.id);
-        const intent = esc(data.intent);
-        const status = String(data.status||'').toLowerCase();
-        const badge = status === 'succeeded' ? '<span class="badge ok">ok</span>'
-                    : status === 'failed'    ? '<span class="badge err">err</span>'
-                    : `<span class="badge">${esc(status)}</span>`;
-        let note = '';
-        if (data.endpoint_id) note += ` endpoint #${esc(data.endpoint_id)}`;
-        if (data.job_id) note += ` job #${esc(data.job_id)}`;
-        if (data.run_id) note += ` run #${esc(data.run_id)}`;
-        line.innerHTML = `[${when}] #${id} ${badge} <strong>${intent}</strong>${note ? ' · '+note : ''}`;
-        box.appendChild(line);
-        box.scrollTop = box.scrollHeight;
+        renderAction(data);
       });
-      ev.onerror = ()=>{};
-    } catch (err) { console.warn('SSE init failed', err); }
-  })();
+      ev.onerror = () => {};
+    } catch (err) {
+      console.warn('SSE init failed', err);
+    }
+  }
+
+  initActivityStream();
 </script>
 {% endblock %}
