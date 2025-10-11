@@ -10,7 +10,6 @@ from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from starlette.responses import RedirectResponse
-
 from api.security import router as security_router
 from api.interop import router as interop_router
 from api.ui_security import router as ui_security_router
