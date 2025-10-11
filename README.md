@@ -75,6 +75,8 @@ For more details see [docs/ops/agent_setup.md](docs/ops/agent_setup.md).
 - **macOS**: double-click `scripts/run_ui.command` (first time only, you may need to run `chmod +x scripts/run_ui.command`)
 - **Linux**: double-click `scripts/run_ui.sh` in your file manager (or run `bash scripts/run_ui.sh`). First time only: `chmod +x scripts/run_ui.sh`
 
+- **Direct Engine V2 launcher**: run `run.engine.bat` (Command Prompt) or `run.engine.ps1` (PowerShell) to set `ENGINE_V2=1`, apply sensible defaults for `INSIGHTS_DB_URL` / `AGENT_DATA_ROOT`, and start `uvicorn server:app --reload --host 127.0.0.1 --port 8000`.
+
 These launchers now enable **Engine V2 + Agent landing** automatically:
 1) Create `.venv` (if missing)
 2) Install minimal UI deps
