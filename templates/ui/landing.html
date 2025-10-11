@@ -27,6 +27,11 @@
       .muted { opacity: .85; }
       .mono { font-family: ui-monospace, Menlo, monospace; }
       .card-subtitle { margin: .25rem 0 .5rem 0; }
+      .toasts { position:fixed; top:1rem; right:1rem; z-index:2000; display:flex; flex-direction:column; gap:.5rem; }
+      .toast { background:#1f2937; color:#f9fafb; padding:.45rem .75rem; border-radius:.375rem; box-shadow:0 4px 16px rgba(15,23,42,.35); font-size:.9rem; display:flex; align-items:center; gap:.5rem; }
+      .toast.error { background:#991b1b; }
+      .toast.success { background:#166534; }
+      .toast.info { background:#1e40af; }
     </style>
 
     <div class="two-col">
@@ -57,6 +62,7 @@
         </div>
       </section>
     </div>
+    <div id="toast-root" class="toasts" aria-live="polite" aria-atomic="true"></div>
   </div>
 </section>
 
@@ -71,9 +77,23 @@
   }
   function set(el, text){ if (el) el.textContent = text; }
   const activityBox = $('#activity');
+  const toastRoot = $('#toast-root');
   const seenActionIds = new Set();
   const seenActionOrder = [];
   const MAX_SEEN_IDS = 500;
+
+  function showToast(kind, message, timeout = 2600) {
+    if (!toastRoot) return;
+    const el = document.createElement('div');
+    el.className = `toast ${kind}`;
+    el.textContent = message || '';
+    toastRoot.appendChild(el);
+    setTimeout(() => {
+      if (el.parentNode) {
+        el.parentNode.removeChild(el);
+      }
+    }, timeout);
+  }
 
   function renderAction(data) {
     if (!data || !activityBox || seenActionIds.has(data.id)) return;
@@ -191,7 +211,12 @@
   async function interpretCmd() {
     const text = $('#agent-input').value || '';
     const res = await fetch('/api/agent/interpret', { method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify({text})});
-    if (!res.ok) { set($('#agent-plan'), await res.text()); return null; }
+    if (!res.ok) {
+      const textResp = await res.text();
+      showToast('error', textResp || 'Interpret failed');
+      set($('#agent-plan'), textResp);
+      return null;
+    }
     const data = await res.json();
     set($('#agent-plan'), JSON.stringify(data, null, 2));
     return data;
@@ -208,7 +233,12 @@
       }))
     };
     const res = await fetch('/api/agent/execute', { method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify(payload)});
-    if (!res.ok) { set($('#agent-result'), await res.text()); return; }
+    if (!res.ok) {
+      const textResp = await res.text();
+      showToast('error', textResp || 'Execution failed');
+      set($('#agent-result'), textResp);
+      return;
+    }
     const data = await res.json();
     set($('#agent-result'), JSON.stringify(data, null, 2));
   }
@@ -232,6 +262,7 @@
       return items[items.length - 1].id;
     } catch (err) {
       console.warn('recent activity fetch failed', err);
+      showToast('error', 'Unable to load recent activity');
       return 0;
     }
   }
@@ -249,6 +280,7 @@
       ev.onerror = () => {};
     } catch (err) {
       console.warn('SSE init failed', err);
+      showToast('error', 'Live updates unavailable');
     }
   }
 
@@ -298,10 +330,13 @@
         body: JSON.stringify(payload)
       });
       if (!res.ok) {
-        console.warn('quick action failed', await res.text());
+        const text = await res.text();
+        console.warn('quick action failed', text);
+        showToast('error', text || 'Quick action failed');
       }
     } catch (err) {
       console.warn('quick action error', err);
+      showToast('error', 'Quick action error');
     }
   });
 </script>
