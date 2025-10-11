@@ -10,7 +10,6 @@ from fastapi.responses import HTMLResponse, JSONResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from starlette.responses import RedirectResponse
-
 from api.security import router as security_router
 from api.interop import router as interop_router
 from api.ui_security import router as ui_security_router
@@ -24,7 +23,9 @@ from api.diag_fallback import ensure_diagnostics
 from api.debug_log import log_debug_event
 from api.metrics import router as metrics_router
 from api.engine_jobs import router as engine_jobs_router
+from api.endpoints import router as endpoints_router
 from api.engine_assist import router as engine_assist_router
+from api.mllp_send import router as mllp_send_router
 from ui_home import router as ui_home_router
 from ui_pages import router as ui_pages_router
 
@@ -128,6 +129,8 @@ for r in (
     admin_router,
     metrics_router,
     engine_jobs_router,
+    endpoints_router,
+    mllp_send_router,
     engine_assist_router,
     ui_pages_router,     # generic /ui/{page} catch-all (must come last)
 ):

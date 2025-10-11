@@ -100,3 +100,19 @@ This document is updated **with each PR** that changes the Engine V2 code or UI.
 - Test coverage in `tests/test_ml_assist_phase4.py` for suggestion logic and REST flows.
 
 **Notes:** No schema migrations required; Assist computes from existing Insights tables.
+
+---
+
+## Network I/O — MLLP Endpoints
+
+**Status:** ✅ Implemented  
+**Implemented:** 2025-10-16T00:00:00Z  
+**Scope:**
+- `engine_endpoints` table and CRUD helpers for inbound (`mllp_in`) and outbound (`mllp_out`) configurations.
+- Inline adapter + `kind:"ingest"` job path so inbound payloads run against existing pipeline specs without edits.
+- Async MLLP server with CIDR allowlist enforcement, back-pressure handling, and endpoint lifecycle manager.
+- MLLP target sink plus `/api/engine/mllp/send` for ad-hoc transmissions; `/api/engine/endpoints` for create/list/start/stop/delete.
+- Engine UI "Endpoints" card to create listeners/targets, inspect status, and send test messages.
+- Tests in `tests/test_network_io_mllp.py` covering inbound enqueue, runner execution, outbound delivery, and REST endpoints.
+
+**Notes:** Wildcard binds remain disabled unless `ENGINE_BIND_ANY=1` is set; inbound endpoints require allowlists to accept traffic.
