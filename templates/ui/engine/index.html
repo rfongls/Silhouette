@@ -659,6 +659,8 @@ sinks:
       withBusy(target, () => runPipeline(id, false));
     } else if (action === 'run-persist') {
       withBusy(target, () => runPipeline(id, true));
+    } else if (action === 'run-bg') {
+      withBusy(target, () => enqueueBackgroundRun(id));
     }
   }
 
