@@ -1,0 +1,117 @@
+{% extends "layout.html" %}
+{% block content %}
+<section class="dashboard">
+  <div class="dashboard-container">
+    <header class="dashboard-header">
+      <h1 class="text-h1">Welcome</h1>
+      <p class="text-body">Drive the Engine via <strong>Chat (beta)</strong> or open the manual UI.</p>
+      <div class="row small" style="gap:.5rem">
+        <a class="btn btn-secondary btn-sm" href="/ui/engine">Open Engine (manual)</a>
+      </div>
+    </header>
+
+    <style>
+      .two-col { display:grid; grid-template-columns: 1.1fr .9fr; gap: 1rem; align-items:start; }
+      .timeline { max-height: 460px; overflow:auto; border:1px solid #333; padding:.5rem; border-radius:.375rem; background:#0a0a0a;}
+      .log { font-family: ui-monospace, Menlo, monospace; font-size: .9rem; }
+      .badge.ok { background:#1b7f4d; color:#ecfdf5; padding:.1rem .4rem; border-radius:.25rem; }
+      .badge.err { background:#9b1c1c; color:#fee2e2; padding:.1rem .4rem; border-radius:.25rem; }
+      .muted { opacity: .85; }
+      .mono { font-family: ui-monospace, Menlo, monospace; }
+      .card-subtitle { margin: .25rem 0 .5rem 0; }
+    </style>
+
+    <div class="two-col">
+      <!-- Left: Chat -->
+      <section class="card">
+        <h2 class="text-h2">Chat (beta)</h2>
+        <p class="text-body muted card-subtitle">Type a command, preview steps, and run — confirmations will appear on the right.</p>
+        <textarea id="agent-input" class="input" style="width:100%;height:7rem" placeholder="e.g. create inbound adt-in on 127.0.0.1:4321 for pipeline 3 allow 127.0.0.1/32"></textarea>
+        <div class="row small" style="gap:.5rem;margin-top:.5rem">
+          <button class="btn btn-secondary btn-sm" id="agent-preview">Preview steps</button>
+          <button class="btn btn-primary btn-sm" id="agent-run">Run</button>
+        </div>
+        <div style="margin-top:.75rem">
+          <h3 class="text-h3">Planned steps</h3>
+          <pre id="agent-plan" class="log">—</pre>
+        </div>
+        <div style="margin-top:.5rem">
+          <h3 class="text-h3">Result</h3>
+          <pre id="agent-result" class="log">—</pre>
+        </div>
+      </section>
+
+      <!-- Right: Live Activity -->
+      <section class="card">
+        <h2 class="text-h2">Activity Timeline</h2>
+        <div id="activity" class="timeline log">
+          <div class="muted">Waiting for actions…</div>
+        </div>
+      </section>
+    </div>
+  </div>
+</section>
+
+<script>
+  const $ = (s) => document.querySelector(s);
+  function esc(s){ const t=document.createElement('div'); t.textContent=String(s ?? ''); return t.innerHTML; }
+  function set(el, text){ el.textContent = text; }
+
+  async function interpretCmd() {
+    const text = $('#agent-input').value || '';
+    const res = await fetch('/api/agent/interpret', { method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify({text})});
+    if (!res.ok) { set($('#agent-plan'), await res.text()); return null; }
+    const data = await res.json();
+    set($('#agent-plan'), JSON.stringify(data, null, 2));
+    return data;
+  }
+  async function runCmd(preview) {
+    if (!preview) return;
+    const payload = {
+      intent: preview.intent,
+      params: preview.params,
+      dry_run: false
+    };
+    // Optional: pass explicit steps resolved by interpret
+    payload.params["__steps__"] = preview.steps;
+    const res = await fetch('/api/agent/execute', { method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify(payload)});
+    if (!res.ok) { set($('#agent-result'), await res.text()); return; }
+    const data = await res.json();
+    set($('#agent-result'), JSON.stringify(data, null, 2));
+  }
+  $('#agent-preview')?.addEventListener('click', interpretCmd);
+  $('#agent-run')?.addEventListener('click', async () => {
+    const preview = await interpretCmd();
+    await runCmd(preview);
+  });
+
+  // SSE Timeline
+  (function initSSE(){
+    try {
+      const box = $('#activity');
+      const ev = new EventSource('/api/agent/actions/stream');
+      box.innerHTML = '';
+      ev.onmessage = (e)=>{}; // unused
+      ev.addEventListener('action', (e) => {
+        const data = JSON.parse(e.data || '{}');
+        const line = document.createElement('div');
+        const when = esc(new Date(data.ts).toLocaleTimeString());
+        const id   = esc(data.id);
+        const intent = esc(data.intent);
+        const status = String(data.status||'').toLowerCase();
+        const badge = status === 'succeeded' ? '<span class="badge ok">ok</span>'
+                    : status === 'failed'    ? '<span class="badge err">err</span>'
+                    : `<span class="badge">${esc(status)}</span>`;
+        let note = '';
+        if (data.endpoint_id) note += ` endpoint #${esc(data.endpoint_id)}`;
+        if (data.job_id) note += ` job #${esc(data.job_id)}`;
+        if (data.run_id) note += ` run #${esc(data.run_id)}`;
+        line.innerHTML = `[${when}] #${id} ${badge} <strong>${intent}</strong>${note ? ' · '+note : ''}`;
+        box.appendChild(line);
+        box.scrollTop = box.scrollHeight;
+      });
+      ev.onerror = ()=>{};
+    } catch (err) { console.warn('SSE init failed', err); }
+  })();
+</script>
+{% endblock %}
