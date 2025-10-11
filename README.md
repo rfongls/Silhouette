@@ -100,6 +100,13 @@ export AGENT_DATA_ROOT=./data/agent
 export INSIGHTS_DB_URL="sqlite:///data/insights.db"
 ```
 
+### Start Menu shortcuts (Windows)
+- `scripts\install_shortcuts.bat` — installs Start Menu entries without requiring PowerShell.
+- `make install-shortcuts` — runs the same Python installer (see `make uninstall-shortcuts` to remove them).
+- `python scripts/install_shortcuts.py --dry-run` — preview what will be created or pass `--start-menu-path` for a custom location.
+
+The installer creates launchers for the classic UI, the Engine V2 dev server, and handy browser links (Landing + Agent README).
+
 ### What you’ll see (plug-and-play)
 Both dashboards open with **KPI bars** and **Quick Start** so a new user can click → run → see insights immediately.
 
