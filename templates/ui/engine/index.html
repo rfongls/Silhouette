@@ -108,6 +108,47 @@
       </div>
     </section>
 
+    <!-- Assist -->
+    <section class="card mb" id="assist-card">
+      <div class="row" style="justify-content:space-between;align-items:center">
+        <h2 class="text-h2">Assist (Phase 4)</h2>
+        <div class="row small" style="gap:.5rem">
+          <label class="text-body muted" for="assist-lookback">Lookback days</label>
+          <input id="assist-lookback" class="input" type="number" min="1" max="90" value="14" style="width:5rem">
+          <button class="btn btn-secondary btn-sm" id="assist-preview">Get suggestions</button>
+          <button class="btn btn-primary btn-sm" id="assist-insert">Insert draft into YAML</button>
+        </div>
+      </div>
+      <div class="row small" style="gap:1rem; flex-wrap:wrap">
+        <div style="flex:1; min-width:20rem">
+          <h3 class="text-h3">Allowlist</h3>
+          <pre id="assist-allowlist" class="diff" style="min-height:6rem">—</pre>
+        </div>
+        <div style="flex:1; min-width:20rem">
+          <h3 class="text-h3">Severity rules</h3>
+          <pre id="assist-severity" class="diff" style="min-height:6rem">—</pre>
+        </div>
+      </div>
+      <div class="row small" style="gap:.5rem">
+        <h3 class="text-h3">Draft YAML (commented)</h3>
+      </div>
+      <pre id="assist-draft" class="diff" style="min-height:8rem">—</pre>
+      <div class="row small" style="gap:.5rem; align-items:center; margin-top:.5rem">
+        <label class="text-body muted" for="assist-recent">Anomalies</label>
+        <input id="assist-recent" class="input" type="number" min="1" max="60" value="7" style="width:4rem">
+        <input id="assist-baseline" class="input" type="number" min="7" max="120" value="30" style="width:4rem">
+        <button class="btn btn-secondary btn-sm" id="assist-load-anoms">Load anomalies</button>
+      </div>
+      <div class="table-wrapper">
+        <table class="table" id="assist-anoms-table">
+          <thead>
+            <tr><th>Code</th><th>Segment</th><th>Count</th><th>Baseline/day</th><th>|z|</th><th>Window</th></tr>
+          </thead>
+          <tbody><tr><td colspan="6">—</td></tr></tbody>
+        </table>
+      </div>
+    </section>
+
     <section class="card">
       <h2 class="text-h2">Insights</h2>
       <p class="text-body muted">Seed the store then review run-level summaries below.</p>
@@ -185,6 +226,16 @@
   const PLS = { currentId: null, origYaml: '' };
   const TEMPLATE_ROOT = "{{ root }}";
   const ROOT_PATH = (document.body?.dataset?.root ?? TEMPLATE_ROOT) || '';
+
+  function currentPipelineId() {
+    if (PLS.currentId) return PLS.currentId;
+    const button = document.querySelector('#pl-table tbody tr button[data-pipeline]');
+    if (button instanceof HTMLButtonElement) {
+      const id = Number(button.dataset.pipeline);
+      if (!Number.isNaN(id)) return id;
+    }
+    return null;
+  }
 
   async function withBusy(button, fn) {
     if (!button) return fn();
@@ -908,6 +959,103 @@ sinks:
       const button = event.currentTarget;
       if (!(button instanceof HTMLButtonElement)) return;
       withBusy(button, () => refreshJobs());
+    });
+
+    document.getElementById('assist-preview')?.addEventListener('click', async () => {
+      const pipelineId = currentPipelineId();
+      if (!pipelineId) {
+        showToast('error', 'Open or select a pipeline first');
+        return;
+      }
+      const input = document.getElementById('assist-lookback');
+      const lookback = Number(input instanceof HTMLInputElement ? input.value : '14') || 14;
+      try {
+        const response = await fetch('/api/engine/assist/preview', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ pipeline_id: pipelineId, lookback_days: lookback }),
+        });
+        if (!response.ok) {
+          throw new Error(await extractError(response));
+        }
+        const data = await response.json();
+        const allow = document.getElementById('assist-allowlist');
+        const severity = document.getElementById('assist-severity');
+        const draft = document.getElementById('assist-draft');
+        if (allow) {
+          const items = Array.isArray(data.allowlist) ? data.allowlist : [];
+          allow.textContent = items.length ? items.map((item) => JSON.stringify(item)).join('\n') : '—';
+        }
+        if (severity) {
+          const items = Array.isArray(data.severity_rules) ? data.severity_rules : [];
+          severity.textContent = items.length ? items.map((item) => JSON.stringify(item)).join('\n') : '—';
+        }
+        if (draft) {
+          draft.textContent = typeof data.draft_yaml === 'string' && data.draft_yaml.trim() ? data.draft_yaml : '—';
+        }
+        showToast('success', 'Assist suggestions ready');
+      } catch (err) {
+        console.error(err);
+        showToast('error', err.message || String(err));
+      }
+    });
+
+    document.getElementById('assist-insert')?.addEventListener('click', () => {
+      const textarea = document.getElementById('pl-yaml');
+      const draft = document.getElementById('assist-draft');
+      if (!(textarea instanceof HTMLTextAreaElement) || !draft) {
+        showToast('error', 'Nothing to insert');
+        return;
+      }
+      const content = (draft.textContent || '').trim();
+      if (!content) {
+        showToast('error', 'Nothing to insert');
+        return;
+      }
+      textarea.value = `${textarea.value.trimEnd()}\n\n${content}\n`;
+      showToast('success', 'Draft suggestions inserted (commented). Review and save when ready.');
+    });
+
+    document.getElementById('assist-load-anoms')?.addEventListener('click', async () => {
+      const pipelineId = currentPipelineId();
+      if (!pipelineId) {
+        showToast('error', 'Open or select a pipeline first');
+        return;
+      }
+      const recentInput = document.getElementById('assist-recent');
+      const baselineInput = document.getElementById('assist-baseline');
+      const recent = Number(recentInput instanceof HTMLInputElement ? recentInput.value : '7') || 7;
+      const baseline = Number(baselineInput instanceof HTMLInputElement ? baselineInput.value : '30') || 30;
+      try {
+        const response = await fetch(`/api/engine/assist/anomalies?pipeline_id=${pipelineId}&recent_days=${recent}&baseline_days=${baseline}`);
+        if (!response.ok) {
+          throw new Error(await extractError(response));
+        }
+        const data = await response.json();
+        const tbody = document.querySelector('#assist-anoms-table tbody');
+        if (tbody) {
+          const items = Array.isArray(data.items) ? data.items : [];
+          const rows = items.map((anomaly) => {
+            const start = anomaly.window_start ? new Date(anomaly.window_start).toLocaleDateString() : '';
+            const end = anomaly.window_end ? new Date(anomaly.window_end).toLocaleDateString() : '';
+            const deviation = typeof anomaly.deviation === 'number' ? Math.abs(anomaly.deviation).toFixed(2) : '';
+            const baselineVal = typeof anomaly.baseline === 'number' ? anomaly.baseline.toFixed(2) : '';
+            return `<tr>
+              <td>${escapeHtml(anomaly.code || '')}</td>
+              <td>${escapeHtml(anomaly.segment || '')}</td>
+              <td>${Number(anomaly.count) || 0}</td>
+              <td>${baselineVal}</td>
+              <td>${deviation}</td>
+              <td>${escapeHtml(start)} → ${escapeHtml(end)}</td>
+            </tr>`;
+          }).join('');
+          tbody.innerHTML = rows || '<tr><td colspan="6">No anomalies.</td></tr>';
+        }
+        showToast('success', 'Anomalies loaded');
+      } catch (err) {
+        console.error(err);
+        showToast('error', err.message || String(err));
+      }
     });
   });
 </script>

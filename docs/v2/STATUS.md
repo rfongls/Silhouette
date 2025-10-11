@@ -86,3 +86,17 @@ This document is updated **with each PR** that changes the Engine V2 code or UI.
 **Notes:**
 - Configuration toggles: `ENGINE_RUNNER_ENABLED`, `ENGINE_RUNNER_CONCURRENCY`, `ENGINE_RUNNER_LEASE_TTL_SECS`, `ENGINE_RUNNER_POLL_INTERVAL_SECS`, `ENGINE_QUEUE_MAX_QUEUED_PER_PIPELINE`.
 - Tests cover lifecycle + retry→dead transitions, lease contention, cancellation, replay correctness, and REST validation/dedupe scenarios.
+
+---
+
+## Phase 4 — ML Assist Hooks
+
+**Status:** ✅ Implemented  
+**Implemented:** 2025-10-10T00:00:00Z  
+**Scope:**
+- Assist heuristics to propose allowlist entries and severity downgrades (derived from Insights frequency data).
+- Robust z-score anomaly listing comparing recent vs. baseline per-day rates.
+- API endpoints (`/api/engine/assist/*`) and Engine UI Assist card for previewing suggestions, inserting commented YAML drafts, and browsing anomalies.
+- Test coverage in `tests/test_ml_assist_phase4.py` for suggestion logic and REST flows.
+
+**Notes:** No schema migrations required; Assist computes from existing Insights tables.
