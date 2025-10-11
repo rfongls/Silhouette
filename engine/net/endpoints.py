@@ -13,7 +13,7 @@ from .mllp_server import MLLPServer
 
 logger = logging.getLogger(__name__)
 
-_BIND_ANY = os.getenv("ENGINE_BIND_ANY", "0").lower() in {"1", "true", "yes"}
+_BIND_ANY = os.getenv("ENGINE_NET_BIND_ANY", "0").lower() in {"1", "true", "yes"}
 
 
 class EndpointManager:
@@ -40,7 +40,7 @@ class EndpointManager:
             if not host or port <= 0:
                 raise ValueError("host and port are required")
             if host in {"0.0.0.0", "::"} and not _BIND_ANY:
-                raise PermissionError("binding to wildcard host requires ENGINE_BIND_ANY=1")
+                raise PermissionError("binding to wildcard host requires ENGINE_NET_BIND_ANY=1")
 
             if endpoint_id in self._servers:
                 logger.debug("endpoint.already_running", extra={"endpoint_id": endpoint_id})

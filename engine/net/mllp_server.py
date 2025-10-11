@@ -6,6 +6,7 @@ import asyncio
 import base64
 import ipaddress
 import logging
+import os
 from dataclasses import dataclass, field
 from typing import Iterable
 
@@ -15,6 +16,9 @@ logger = logging.getLogger(__name__)
 
 VT = b"\x0b"
 FS_CR = b"\x1c\x0d"
+
+_READ_TIMEOUT_SECS = max(float(os.getenv("ENGINE_MLLP_READ_TIMEOUT_SECS", "30")), 0.1)
+_MAX_FRAME_BYTES = max(int(os.getenv("ENGINE_MLLP_MAX_FRAME_BYTES", "1000000")), 1)
 
 
 def _allowed(peer_ip: str, cidrs: Iterable[str]) -> bool:
@@ -103,7 +107,14 @@ class MLLPServer:
         try:
             while True:
                 try:
-                    frame = await reader.readuntil(FS_CR)
+                    frame = await asyncio.wait_for(reader.readuntil(FS_CR), timeout=_READ_TIMEOUT_SECS)
+                except asyncio.TimeoutError:
+                    logger.warning(
+                        "mllp.client.timeout",
+                        extra={"host": self.host, "port": self.port, "peer": peer_ip},
+                    )
+                    await _send_ack(writer, b"AE")
+                    break
                 except asyncio.IncompleteReadError:
                     break
                 if not frame:
@@ -111,6 +122,18 @@ class MLLPServer:
                 payload = frame[:-2]
                 if payload.startswith(VT):
                     payload = payload[1:]
+                if len(payload) > _MAX_FRAME_BYTES:
+                    logger.warning(
+                        "mllp.client.frame_too_large",
+                        extra={
+                            "host": self.host,
+                            "port": self.port,
+                            "peer": peer_ip,
+                            "size": len(payload),
+                        },
+                    )
+                    await _send_ack(writer, b"AE")
+                    break
                 if not payload:
                     continue
 
