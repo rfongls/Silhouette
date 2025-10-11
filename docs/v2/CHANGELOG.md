@@ -2,6 +2,29 @@
 
 > User-facing notes per PR. Keep this lean and helpful (what changed, why it matters, and any action required).
 
+## 2025-10-10 — Phase 5 — Network I/O (MLLP Ingest & Send) — planning
+
+**Highlights**
+- Documented the plan to add inbound MLLP listeners (bind IP/port + CIDR allowlist) and outbound MLLP targets with API + UI control.
+- Inbound traffic becomes `ingest` jobs executed via an inline adapter; outbound supported via `mllp_target` sink and a one-off send API.
+
+**Details**
+- New `engine_endpoints` table for endpoint management.
+- Endpoint manager to start/stop listeners, with status/error reporting.
+- Security defaults to deny-all for inbound; `0.0.0.0` binds require explicit env opt-in.
+
+## 2025-10-10 — Phase 4 — ML Assist Hooks
+
+**Highlights**
+- Assist service proposes allowlist and severity tuning hints derived from recent Insights frequency data.
+- Robust z-score anomaly surfacing flags outlier issue codes/segments across recent vs. baseline windows.
+- Engine UI gains an Assist card to preview suggestions, view anomalies, and insert a commented YAML draft (no auto-apply).
+
+**Details**
+- Endpoints: `POST /api/engine/assist/preview`, `GET /api/engine/assist/anomalies`.
+- Suggestions render as commented YAML blocks so operators review before applying.
+- Tests added in `tests/test_ml_assist_phase4.py` to validate suggestion heuristics and REST responses.
+
 ## 2025-10-10 — Phase 3 — Background runner, replay, and UI
 
 **Highlights**

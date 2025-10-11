@@ -20,6 +20,7 @@ from api.sql_logging import install_sql_logging
 
 from .models import (
     Base,
+    EndpointRecord,
     IssueRecord,
     JobRecord,
     MessageRecord,
@@ -239,6 +240,78 @@ class InsightsStore:
         for result in results:
             self.record_result(run_id=run.id, result=result)
         return run.id
+
+    # --- Endpoint helpers ---------------------------------------------------
+
+    def create_endpoint(
+        self,
+        *,
+        kind: str,
+        name: str,
+        pipeline_id: int | None,
+        config: dict[str, Any],
+    ) -> EndpointRecord:
+        now = datetime.utcnow()
+        with self.session() as session:
+            if pipeline_id is not None:
+                pipeline = session.get(PipelineRecord, pipeline_id)
+                if pipeline is None:
+                    raise KeyError(f"pipeline {pipeline_id} not found")
+            record = EndpointRecord(
+                kind=kind,
+                name=name,
+                pipeline_id=pipeline_id,
+                config=dict(config or {}),
+                status="stopped",
+                created_at=now,
+                updated_at=now,
+            )
+            session.add(record)
+            session.flush()
+            session.refresh(record)
+            return record
+
+    def update_endpoint(self, endpoint_id: int, **fields: Any) -> bool:
+        with self.session() as session:
+            record = session.get(EndpointRecord, endpoint_id)
+            if record is None:
+                return False
+            for key, value in fields.items():
+                if not hasattr(record, key):
+                    continue
+                setattr(record, key, value)
+            record.updated_at = datetime.utcnow()
+            session.add(record)
+            return True
+
+    def delete_endpoint(self, endpoint_id: int) -> bool:
+        with self.session() as session:
+            record = session.get(EndpointRecord, endpoint_id)
+            if record is None:
+                return False
+            session.delete(record)
+            return True
+
+    def get_endpoint(self, endpoint_id: int) -> EndpointRecord | None:
+        with self.session() as session:
+            return session.get(EndpointRecord, endpoint_id)
+
+    def get_endpoint_by_name(self, name: str) -> EndpointRecord | None:
+        with self.session() as session:
+            return (
+                session.execute(
+                    select(EndpointRecord).where(EndpointRecord.name == name)
+                )
+                .scalars()
+                .first()
+            )
+
+    def list_endpoints(self, *, kind: list[str] | None = None) -> list[EndpointRecord]:
+        with self.session() as session:
+            query = select(EndpointRecord)
+            if kind:
+                query = query.where(EndpointRecord.kind.in_(kind))
+            return session.execute(query.order_by(EndpointRecord.id.asc())).scalars().all()
 
     # --- Job queue helpers ---------------------------------------------------
 
