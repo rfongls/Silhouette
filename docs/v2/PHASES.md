@@ -603,14 +603,29 @@ No external LLM yet; this phase uses a **deterministic parser + orchestrator** t
 - Orchestrator (interpret/execute) with idempotency and safety gates.  
 - Landing page (chat + live activity).
 
-**6B — Content skills**
-- `generate_messages`: write N HL7 files to `${AGENT_DATA_ROOT}/out/<folder>`.  
-- `deidentify_folder`: read `${AGENT_DATA_ROOT}/in/<folder>/**/*.hl7`, run pipeline de-identification, write to `${AGENT_DATA_ROOT}/out/<folder>`.
+### 6B — Content skills (✅ Implemented)
 
-**6C — Advanced UX**
-- Replay & Assist shortcuts in Chat.  
-- Better idempotency semantics; wildcard bind enforcement; file root confinement.  
-- Richer status badges, links to endpoint/job/run.
+**Scope**
+- `generate_messages` writes N HL7 messages to `${AGENT_DATA_ROOT}/out/<folder>`.
+- `deidentify_folder` reads `${AGENT_DATA_ROOT}/in/<folder>/**/*.hl7`, runs the configured pipeline **in-process** (inline adapter per file), and writes outputs to `${AGENT_DATA_ROOT}/out/<folder>`.
+
+**Behavior**
+- Both tasks post per-action summaries (counts + folder paths) to the **Activity Log**, which the landing page renders live via SSE.
+- File operations are confined to `AGENT_DATA_ROOT`; traversal is blocked.
+
+**Config**
+- `AGENT_DATA_ROOT` (default `./data/agent`)
+
+**Examples**
+```
+generate 25 ADT messages to demo-adt
+deidentify incoming/ward to ward_deid with pipeline 3
+```
+
+### 6C — Advanced UX (🚧)
+- Assist preview execution summaries surfaced inline.
+- Richer timeline badges/links for endpoints, jobs, and runs.
+- Optional “cancel last” and quick actions once guardrails settle.
 
 **Configuration**
 - `AGENT_DATA_ROOT` (default `./data/agent`) — root for generate/deidentify demo.  

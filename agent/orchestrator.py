@@ -4,11 +4,22 @@ Maps simple natural commands to engine actions, plans steps, and executes them.
 from __future__ import annotations
 
 import asyncio
+import base64
 import re
 from dataclasses import dataclass
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
+
 from insights.store import InsightsStore
 from engine.net.endpoints import get_manager
+from engine.runtime import EngineRuntime
+from engine.spec import dump_pipeline_spec, load_pipeline_spec
+from agent.fs_utils import (
+    in_folder,
+    out_folder,
+    synthesize_hl7,
+    walk_hl7_files,
+    write_bytes,
+)
 
 # --- Intent plan -------------------------------------------------------------
 
@@ -164,6 +175,8 @@ async def execute(
             return pipeline.id
 
         # Iterate steps
+        summary: Optional[Dict[str, Any]] = None
+
         for step in plan.steps:
             s = {"step": step.action, "status": "succeeded"}
             try:
@@ -239,12 +252,66 @@ async def execute(
                     s["note"] = "assist_preview enqueued"
 
                 elif step.action == "generate_messages":
-                    # Write N simple messages to AGENT_DATA_ROOT/out/<folder> (implemented later by a job)
-                    s["note"] = "generate scheduled"
+                    count = int(step.args.get("count") or 0)
+                    folder = str(step.args.get("out_folder") or "").strip()
+                    if not folder:
+                        raise ValueError("out_folder is required")
+                    out_dir = out_folder(folder)
+                    written = 0
+                    for idx in range(count):
+                        filename = f"gen_{idx + 1:04d}.hl7"
+                        write_bytes(out_dir, filename, synthesize_hl7(idx + 1))
+                        written += 1
+                    s["written"] = written
+                    s["out_folder"] = str(out_dir)
+                    summary = {"written": written, "out_folder": str(out_dir)}
 
                 elif step.action == "deidentify_folder":
-                    # Walk AGENT_DATA_ROOT/in/in_folder and schedule per-file deid jobs (implemented later)
-                    s["note"] = "deidentify scheduled"
+                    in_rel = str(step.args.get("in_folder") or "").strip()
+                    out_rel = str(step.args.get("out_folder") or "").strip()
+                    pipeline_identifier = step.args.get("pipeline_id") or step.args.get("pipeline")
+                    pipeline_id = _resolve_pipeline_id(pipeline_identifier)
+                    src_root = in_folder(in_rel)
+                    dst_root = out_folder(out_rel)
+
+                    pipeline = store.get_pipeline(pipeline_id)
+                    if pipeline is None:
+                        raise ValueError(f"pipeline {pipeline_id} not found")
+                    base_spec = load_pipeline_spec(pipeline.spec or pipeline.yaml)
+                    base_dict = dump_pipeline_spec(base_spec)
+
+                    ok = 0
+                    failed = 0
+                    for hl7_path in walk_hl7_files(src_root):
+                        try:
+                            payload = hl7_path.read_bytes()
+                            spec_dict = dict(base_dict)
+                            spec_dict["adapter"] = {
+                                "type": "inline",
+                                "config": {
+                                    "message_b64": base64.b64encode(payload).decode("ascii"),
+                                    "meta": {"source_path": str(hl7_path)},
+                                },
+                            }
+                            spec = load_pipeline_spec(spec_dict)
+                            runtime = EngineRuntime(spec)
+                            results = await runtime.run(max_messages=1)
+                            if not results:
+                                raise RuntimeError("pipeline returned no results")
+                            write_bytes(dst_root, hl7_path.name, results[0].message.raw)
+                            ok += 1
+                        except Exception:  # noqa: PERF203 - fine-grained logging optional
+                            failed += 1
+                    s["ok"] = ok
+                    s["failed"] = failed
+                    s["in_folder"] = str(src_root)
+                    s["out_folder"] = str(dst_root)
+                    summary = {
+                        "ok": ok,
+                        "failed": failed,
+                        "out_folder": str(dst_root),
+                        "in_folder": str(src_root),
+                    }
 
                 else:
                     s["status"] = "failed"
@@ -259,7 +326,10 @@ async def execute(
 
             report.append(s)
 
-        store.update_action(action.id, status="succeeded", result={"report": report})
+        result_payload: Dict[str, Any] = {"report": report}
+        if summary:
+            result_payload["summary"] = summary
+        store.update_action(action.id, status="succeeded", result=result_payload)
         return {"plan": [s.__dict__ for s in plan.steps], "report": report, "activity": {"action_id": action.id}}
 
     except Exception as exc:

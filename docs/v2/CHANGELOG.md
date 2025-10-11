@@ -1,5 +1,17 @@
 # Engine V2 — Changelog
 
+## 2025-10-21 — Phase 6B — Content Skills (Generate & De-identify)
+
+**Highlights**
+- `generate_messages` writes HL7 messages to `${AGENT_DATA_ROOT}/out/<folder>` with guardrails.  
+- `deidentify_folder` walks `${AGENT_DATA_ROOT}/in/<folder>/**/*.hl7`, runs the selected pipeline inline, and writes outputs to `${AGENT_DATA_ROOT}/out/<folder>`.  
+- Activity timeline entries now include per-action summaries (counts + folders).
+
+**Details**
+- New `agent/fs_utils.py` module confines file IO to the agent root and synthesizes demo HL7 payloads.  
+- Orchestrator executes both skills in-process and persists summaries to the Activity Log for SSE consumers.  
+- Regression test covers generation and de-identification flows end-to-end.
+
 ## 2025-10-20 — Phase 6 — Agent Landing & Orchestrator (Demo) — planning
 
 **Highlights**

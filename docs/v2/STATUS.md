@@ -128,4 +128,4 @@ This document is updated **with each PR** that changes the Engine V2 code or UI.
 - Landing page with **Chat (beta)**, **Preview steps**, **Run**, and **no-navigation confirmations**.  
 - Demo content skills: **generate** files to a folder, **de-identify** from a folder.
 
-**Notes:** All actions are also available via the API for headless operation.
+**Notes:** All actions are also available via the API for headless operation. Phase 6B content skills (generate/de-identify) now run inline with filesystem confinement.

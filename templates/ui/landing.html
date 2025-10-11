@@ -79,6 +79,16 @@
     if (data.endpoint_id) noteParts.push(`endpoint #${esc(data.endpoint_id)}`);
     if (data.job_id) noteParts.push(`job #${esc(data.job_id)}`);
     if (data.run_id) noteParts.push(`run #${esc(data.run_id)}`);
+    const summary = data?.result?.summary;
+    if (summary && typeof summary === 'object') {
+      const summaryParts = [];
+      for (const [key, value] of Object.entries(summary)) {
+        summaryParts.push(`${esc(key)}=${esc(value)}`);
+      }
+      if (summaryParts.length) {
+        noteParts.push(summaryParts.join(', '));
+      }
+    }
     const note = noteParts.length ? ` · ${noteParts.join(' · ')}` : '';
     line.innerHTML = `[${when}] #${id} ${badgeHtml} <strong>${intent}</strong>${note}`;
     activityBox.appendChild(line);

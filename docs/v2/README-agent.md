@@ -44,6 +44,15 @@ The orchestrator enforces confinement to this root.
 
 ## Notes
 
-- Wildcard bind (`0.0.0.0`) is blocked unless `ENGINE_NET_BIND_ANY=1`.  
-- All actions are callable through the API for headless/demo scripting.  
+- Wildcard bind (`0.0.0.0`) is blocked unless `ENGINE_NET_BIND_ANY=1`.
+- All actions are callable through the API for headless/demo scripting.
 - In later phases, you can replace the deterministic parser with a real LLM.
+
+## Phase 6B additions
+
+- **Generate**  
+  `generate 10 ADT messages to demo-adt` → writes `data/agent/out/demo-adt/gen_0001.hl7`…`gen_0010.hl7`
+
+- **De-identify**  
+  Place files in `data/agent/in/<your-folder>/**/*.hl7`, then run:  
+  `deidentify <your-folder> to <your-folder>_deid with pipeline 3` → outputs appear in `data/agent/out/<your-folder>_deid/*.hl7`
