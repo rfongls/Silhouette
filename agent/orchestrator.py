@@ -60,25 +60,29 @@ def interpret(text: str) -> IntentPlan:
     if not raw:
         return IntentPlan("unknown", {"text": text}, [])
 
-    # create inbound NAME on HOST:PORT for pipeline N allow CIDR[, CIDR...]
+    PIPE = r'(?:"([^"]+)"|([^\s]+))'
+
+    # create inbound NAME on HOST:PORT for pipeline <ID|NAME> allow CIDR[, CIDR...]
     m = re.match(
-        r"^create inbound ['\"]?([\w\-\.:]+)['\"]? on ([\w\.\:]+):(\d+) for pipeline (\d+)(?: allow (.+))?$",
+        rf"^create inbound ['\"]?([\w\-\.:]+)['\"]? on ([\w\.\:]+):(\d+) for pipeline {PIPE}(?: allow (.+))?",
         raw,
         re.IGNORECASE,
     )
     if m:
-        name, host, port, pipeline_id, allow = m.groups()
+        name, host, port, pipe_quoted, pipe_unquoted, allow = m.groups()
+        ident = _strip_quotes(pipe_quoted or pipe_unquoted or "")
+        pipeline_param: Any = int(ident) if ident.isdigit() else ident
         cidrs = []
         if allow:
             cidrs = [c.strip() for c in re.split(r"[,\s]+", allow) if c.strip()]
-        params = dict(name=name, host=host, port=int(port), pipeline_id=int(pipeline_id), allow_cidrs=cidrs)
+        params = dict(name=name, host=host, port=int(port), pipeline=pipeline_param, allow_cidrs=cidrs)
         steps = [
             PlanStep(
                 "create_endpoint",
                 {
                     "kind": "mllp_in",
                     "name": name,
-                    "pipeline_id": int(pipeline_id),
+                    "pipeline": pipeline_param,
                     "config": {"host": host, "port": int(port), "allow_cidrs": cidrs},
                 },
             ),
@@ -168,11 +172,13 @@ def interpret(text: str) -> IntentPlan:
         params = {"count": int(count), "out_folder": folder}
         return IntentPlan("generate_messages", params, [PlanStep("generate_messages", params)])
 
-    # deidentify IN to OUT with pipeline P
-    m = re.match(r"^deidentify ([\w\-/\.]+) to ([\w\-/\.]+) with pipeline (\d+)$", raw, re.IGNORECASE)
+    # deidentify IN to OUT with pipeline <ID|NAME>
+    m = re.match(rf"^deidentify ([\w\-/\.]+) to ([\w\-/\.]+) with pipeline {PIPE}$", raw, re.IGNORECASE)
     if m:
-        inf, outf, pid = m.groups()
-        params = {"in_folder": inf, "out_folder": outf, "pipeline_id": int(pid)}
+        inf, outf, pipe_quoted, pipe_unquoted = m.groups()
+        ident = _strip_quotes(pipe_quoted or pipe_unquoted or "")
+        pipeline_param: Any = int(ident) if ident.isdigit() else ident
+        params = {"in_folder": inf, "out_folder": outf, "pipeline": pipeline_param}
         return IntentPlan("deidentify_folder", params, [PlanStep("deidentify_folder", params)])
 
     # default: unknown
@@ -245,6 +251,10 @@ async def execute(
             s = {"step": step.action, "status": "succeeded"}
             try:
                 if step.action == "create_endpoint":
+                    if "pipeline" in step.args and "pipeline_id" not in step.args:
+                        step.args = dict(step.args)
+                        step.args["pipeline_id"] = _resolve_pipeline_id(step.args["pipeline"])
+                        del step.args["pipeline"]
                     name = step.args["name"]
                     config = dict(step.args.get("config") or {})
                     host = str(config.get("host") or "").strip()
