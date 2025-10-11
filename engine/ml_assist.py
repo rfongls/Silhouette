@@ -31,6 +31,16 @@ class Anomaly:
     window_end: datetime
 
 
+@dataclass
+class WindowStats:
+    """Aggregate counts and per-day rates for a (code, segment) window."""
+
+    counts: Dict[Tuple[str, str | None], int]
+    rates: Dict[Tuple[str, str | None], float]
+    window_start: datetime
+    window_end: datetime
+
+
 def _recent_window(now: datetime, days: int) -> Tuple[datetime, datetime]:
     return now - timedelta(days=days), now
 
@@ -51,7 +61,7 @@ def _fetch_issue_counts(
     pipeline_name: str,
     start: datetime,
     end: datetime,
-) -> List[Tuple[str, str | None, int]]:
+) -> Dict[Tuple[str, str | None], int]:
     with store.session() as session:
         query = (
             session.query(IssueRecord.code, IssueRecord.segment, func.count(IssueRecord.id))
@@ -66,35 +76,22 @@ def _fetch_issue_counts(
             )
             .group_by(IssueRecord.code, IssueRecord.segment)
         )
-        return [(code, segment, count) for code, segment, count in query.all()]
+        return {
+            (code, segment): count
+            for code, segment, count in query.all()
+        }
 
 
-def _fetch_recent_issue_rates(
+def _issue_stats_for_window(
     store: InsightsStore,
     pipeline_name: str,
-    now: datetime,
-    days_recent: int = 7,
-    days_baseline: int = 30,
-) -> Tuple[
-    Dict[Tuple[str, str | None], float],
-    Dict[Tuple[str, str | None], float],
-    Tuple[datetime, datetime],
-    Tuple[datetime, datetime],
-]:
-    start_recent, end_recent = _recent_window(now, days_recent)
-    start_baseline, end_baseline = _recent_window(now, days_baseline)
-
-    recent_counts = _fetch_issue_counts(store, pipeline_name, start_recent, end_recent)
-    baseline_counts = _fetch_issue_counts(store, pipeline_name, start_baseline, end_baseline)
-
-    denom_recent = max((end_recent - start_recent).days, 1)
-    denom_baseline = max((end_baseline - start_baseline).days, 1)
-
-    recent_rates = {(code, segment): count / denom_recent for code, segment, count in recent_counts}
-    baseline_rates = {
-        (code, segment): count / denom_baseline for code, segment, count in baseline_counts
-    }
-    return recent_rates, baseline_rates, (start_recent, end_recent), (start_baseline, end_baseline)
+    start: datetime,
+    end: datetime,
+) -> WindowStats:
+    counts = _fetch_issue_counts(store, pipeline_name, start, end)
+    denom = max((end - start).days, 1)
+    rates = {key: count / denom for key, count in counts.items()}
+    return WindowStats(counts=counts, rates=rates, window_start=start, window_end=end)
 
 
 def compute_anomalies(
@@ -106,29 +103,37 @@ def compute_anomalies(
     min_rate: float = 0.1,
 ) -> List[Anomaly]:
     pipeline = _require_pipeline(store, pipeline_id)
-    recent_rates, baseline_rates, recent_window, _ = _fetch_recent_issue_rates(
-        store, pipeline.name, now, recent_days, baseline_days
+    recent_window = _issue_stats_for_window(
+        store,
+        pipeline.name,
+        *_recent_window(now, recent_days),
+    )
+    baseline_window = _issue_stats_for_window(
+        store,
+        pipeline.name,
+        *_recent_window(now, baseline_days),
     )
 
     anomalies: List[Anomaly] = []
-    for key, recent_rate in recent_rates.items():
+    for key, recent_rate in recent_window.rates.items():
         if recent_rate < min_rate:
             continue
-        baseline_rate = baseline_rates.get(key, 0.0)
+        baseline_rate = baseline_window.rates.get(key, 0.0)
         median = baseline_rate
         mad = max(baseline_rate * 0.1, 0.01)
         deviation = _robust_z(recent_rate, median, mad)
         code, segment = key
-        day_span = max((recent_window[1] - recent_window[0]).days, 1)
+        day_span = max((recent_window.window_end - recent_window.window_start).days, 1)
+        count = recent_window.counts.get(key, 0)
         anomalies.append(
             Anomaly(
                 code=code,
                 segment=segment,
-                count=int(recent_rate * day_span),
+                count=count if count else int(recent_rate * day_span),
                 baseline=baseline_rate,
                 deviation=deviation,
-                window_start=recent_window[0],
-                window_end=recent_window[1],
+                window_start=recent_window.window_start,
+                window_end=recent_window.window_end,
             )
         )
 

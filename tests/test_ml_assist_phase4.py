@@ -78,6 +78,7 @@ def test_assist_suggestions_and_anomalies(tmp_path, monkeypatch):
 
     anomalies = compute_anomalies(store, pipeline_id, now=datetime.utcnow())
     assert isinstance(anomalies, list)
+    assert anomalies and anomalies[0].count == 3
 
     # API sanity check
     app = FastAPI()
@@ -97,3 +98,24 @@ def test_assist_suggestions_and_anomalies(tmp_path, monkeypatch):
     )
     assert response.status_code == 200, response.text
     assert isinstance(response.json()["items"], list)
+
+
+def test_assist_missing_pipeline_returns_404(tmp_path, monkeypatch):
+    reset_store()
+    monkeypatch.setenv("INSIGHTS_DB_URL", f"sqlite:///{tmp_path / 'assist4_missing.db'}")
+    get_store().ensure_schema()
+
+    app = FastAPI()
+    app.include_router(assist_router)
+    client = TestClient(app)
+
+    preview = client.post(
+        "/api/engine/assist/preview",
+        json={"pipeline_id": 999, "lookback_days": 7},
+    )
+    assert preview.status_code == 404
+
+    anomalies = client.get(
+        "/api/engine/assist/anomalies?pipeline_id=999&recent_days=7&baseline_days=30",
+    )
+    assert anomalies.status_code == 404
