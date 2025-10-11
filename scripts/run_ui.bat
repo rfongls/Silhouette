@@ -4,7 +4,9 @@ pushd %~dp0\..
 
 set HOST=127.0.0.1
 set PORT=8000
-set URL=http://%HOST%:%PORT%/ui/home
+set URL=http://%HOST%:%PORT%/ui/landing
+
+if not defined ENGINE_V2 set ENGINE_V2=1
 
 REM Optional: activate venv if present
 if exist venv\Scripts\activate.bat call venv\Scripts\activate.bat
