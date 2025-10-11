@@ -250,10 +250,14 @@ async def execute(
                     target = step.args.get("target_name")
                     hl7 = step.args.get("hl7_text", "")
                     if target:
-                        ep = _endpoint_by_name(target)
+                        ep = _endpoint_lookup(target)
                         if not ep or ep.kind != "mllp_out":
                             raise ValueError(f"target {target!r} not found")
-                        ack = await _send_mllp(str(ep.config.get("host")), int(ep.config.get("port")), hl7.encode("utf-8"))
+                        ack = await _send_mllp(
+                            str(ep.config.get("host")),
+                            int(ep.config.get("port")),
+                            hl7.encode("utf-8"),
+                        )
                     else:
                         raise ValueError("only target_name is supported in demo")
                     s["ack_preview"] = ack[:64].decode("utf-8", "ignore")
