@@ -105,8 +105,8 @@ This document is updated **with each PR** that changes the Engine V2 code or UI.
 
 ## Phase 5 — Network I/O (MLLP Ingest & Send)
 
-**Status:** 🔜 Planned
-**Planned:** 2025-10-10T00:00:00Z
+**Status:** ✅ Implemented
+**Implemented:** 2025-10-10T00:00:00Z
 **Scope:**
 - Inbound MLLP listeners (bind IP/port + CIDR allowlist) producing `ingest` jobs executed against stored pipelines via an inline adapter.
 - Outbound MLLP targets (name → host:port), `mllp_target` sink, and a one-off send API for testing.

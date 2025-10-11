@@ -419,13 +419,13 @@ Offer operator-facing guidance derived from recent Insights data without automat
 - Inline diffing against current YAML to show exact impact.
 - Export Assist drafts as standalone files for review.
 
-## Phase 5 — Network I/O (MLLP Ingest & Send) (🔜 Planned)
+## Phase 5 — Network I/O (MLLP Ingest & Send) (✅ Implemented)
 
 **Goal**
 
 Enable the Engine to **ingest** HL7 v2 via **MLLP** on **specific IP/ports** and to **send** HL7 to configured MLLP targets, managed via API + UI. Inbound traffic becomes background jobs that execute against stored pipelines without requiring YAML edits; outbound delivery is selectable via a named target sink or one-off API call.
 
-**What we will deliver**
+**What shipped**
 
 - **Inbound MLLP listeners** bound to **host/IP + port** with **CIDR allowlist** and lightweight back-pressure (job queue).
 - **Ingestion jobs** (`kind: "ingest"`) that wrap received bytes in an **inline adapter** and run the attached pipeline.

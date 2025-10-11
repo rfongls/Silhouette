@@ -2,16 +2,16 @@
 
 > User-facing notes per PR. Keep this lean and helpful (what changed, why it matters, and any action required).
 
-## 2025-10-10 — Phase 5 — Network I/O (MLLP Ingest & Send) — planning
+## 2025-10-10 — Phase 5 — Network I/O (MLLP Ingest & Send) — shipped
 
 **Highlights**
-- Documented the plan to add inbound MLLP listeners (bind IP/port + CIDR allowlist) and outbound MLLP targets with API + UI control.
-- Inbound traffic becomes `ingest` jobs executed via an inline adapter; outbound supported via `mllp_target` sink and a one-off send API.
+- Inbound MLLP listeners (bind IP/port + CIDR allowlist) enqueue `ingest` jobs that execute stored pipelines via an inline adapter.
+- Outbound delivery through named MLLP targets, the `mllp_target` sink, and an ad-hoc send API for validation.
 
 **Details**
-- New `engine_endpoints` table for endpoint management.
-- Endpoint manager to start/stop listeners, with status/error reporting.
-- Security defaults to deny-all for inbound; `0.0.0.0` binds require explicit env opt-in.
+- Added `engine_endpoints` table and CRUD helpers for inbound/outbound definitions.
+- Endpoint manager coordinates start/stop lifecycle, updating status/error fields surfaced via API/UI.
+- Default deny inbound posture with CIDR allowlists and env-gated wildcard binding.
 
 ## 2025-10-10 — Phase 4 — ML Assist Hooks
 
