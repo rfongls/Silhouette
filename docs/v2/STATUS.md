@@ -115,3 +115,17 @@ This document is updated **with each PR** that changes the Engine V2 code or UI.
 **Notes:**
 - Security defaults to deny-all for inbound; `0.0.0.0` binds blocked unless explicitly allowed by env.
 - Reuses Phase 3 queue semantics for back-pressure and retries on transient errors.
+
+---
+
+## Phase 6 — Agent Landing & Orchestrator (Demo)
+
+**Status:** 🚧 In progress  
+**Planned:** 2025-10-20T00:00:00Z  
+**Scope:**
+- New agent APIs to **interpret** and **execute** natural commands (no external LLM).  
+- **Activity Log** with **SSE** stream for a live timeline on the landing page.  
+- Landing page with **Chat (beta)**, **Preview steps**, **Run**, and **no-navigation confirmations**.  
+- Demo content skills: **generate** files to a folder, **de-identify** from a folder.
+
+**Notes:** All actions are also available via the API for headless operation.

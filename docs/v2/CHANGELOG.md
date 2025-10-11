@@ -1,5 +1,17 @@
 # Engine V2 — Changelog
 
+## 2025-10-20 — Phase 6 — Agent Landing & Orchestrator (Demo) — planning
+
+**Highlights**
+- Introduces a landing page with **Chat (beta)**, **Preview**, **Run**, and a **live Activity Timeline (SSE)** to confirm actions in-page.  
+- Adds agent APIs to **interpret** and **execute** commands without an external LLM.  
+- Demo skills: **generate** HL7 files to a folder, **de-identify** a folder into an output bucket.
+
+**Details**
+- New `agent_actions` table for activity tracking and live streaming.  
+- APIs: `/api/agent/interpret`, `/api/agent/execute`, `/api/agent/registry`, `/api/agent/actions`, `/api/agent/actions/stream`.  
+- Docs: `README-agent.md` added.
+
 > User-facing notes per PR. Keep this lean and helpful (what changed, why it matters, and any action required).
 
 ## 2025-10-10 — Phase 5 — Network I/O (MLLP Ingest & Send) — shipped
