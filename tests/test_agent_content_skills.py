@@ -5,9 +5,7 @@ import importlib
 import sys
 from datetime import datetime, timedelta
 from pathlib import Path
-
 import pytest
-
 from engine.contracts import Issue, Message, Result
 from engine.spec import dump_pipeline_spec, load_pipeline_spec
 from insights.models import AgentActionRecord, RunRecord
