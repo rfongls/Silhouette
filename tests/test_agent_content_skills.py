@@ -130,7 +130,7 @@ def test_assist_anomalies(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> No
 
     spec = load_pipeline_spec(PIPELINE_YAML)
     pipeline = store.save_pipeline(
-        name="anomaly-pipe",
+        name="Anomaly Pipe",
         yaml=PIPELINE_YAML,
         spec=dump_pipeline_spec(spec),
     )
@@ -161,7 +161,9 @@ def test_assist_anomalies(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> No
             ),
         )
 
-    plan = orchestrator.interpret(f"assist anomalies {pipeline.id} recent 7 baseline 30 minrate 0.01")
+    plan = orchestrator.interpret(
+        "assist anomalies \"Anomaly Pipe\" recent 7 baseline 30 minrate 0.01"
+    )
     assert plan.intent == "assist_anomalies"
 
     result = asyncio.run(orchestrator.execute(store, plan))

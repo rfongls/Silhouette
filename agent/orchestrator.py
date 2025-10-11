@@ -40,17 +40,32 @@ class IntentPlan:
 
 # --- Interpret ---------------------------------------------------------------
 
+
 _SPACE = re.compile(r"\s+")
+
 
 def _norm(text: str) -> str:
     return _SPACE.sub(" ", (text or "").strip())
 
+
+def _strip_quotes(value: str) -> str:
+    v = (value or "").strip()
+    if len(v) >= 2 and ((v[0] == v[-1] == '"') or (v[0] == v[-1] == "'")):
+        return v[1:-1]
+    return v
+
 def interpret(text: str) -> IntentPlan:
     """Map input text to an IntentPlan (no side effects)."""
-    t = _norm(text).lower()
+    raw = _norm(text)
+    if not raw:
+        return IntentPlan("unknown", {"text": text}, [])
 
     # create inbound NAME on HOST:PORT for pipeline N allow CIDR[, CIDR...]
-    m = re.match(r"^create inbound ['\"]?([\w\-\.:]+)['\"]? on ([\w\.\:]+):(\d+) for pipeline (\d+)(?: allow (.+))?$", t)
+    m = re.match(
+        r"^create inbound ['\"]?([\w\-\.:]+)['\"]? on ([\w\.\:]+):(\d+) for pipeline (\d+)(?: allow (.+))?$",
+        raw,
+        re.IGNORECASE,
+    )
     if m:
         name, host, port, pipeline_id, allow = m.groups()
         cidrs = []
@@ -58,20 +73,28 @@ def interpret(text: str) -> IntentPlan:
             cidrs = [c.strip() for c in re.split(r"[,\s]+", allow) if c.strip()]
         params = dict(name=name, host=host, port=int(port), pipeline_id=int(pipeline_id), allow_cidrs=cidrs)
         steps = [
-            PlanStep("create_endpoint", {"kind": "mllp_in", "name": name, "pipeline_id": int(pipeline_id), "config": {"host": host, "port": int(port), "allow_cidrs": cidrs}}),
+            PlanStep(
+                "create_endpoint",
+                {
+                    "kind": "mllp_in",
+                    "name": name,
+                    "pipeline_id": int(pipeline_id),
+                    "config": {"host": host, "port": int(port), "allow_cidrs": cidrs},
+                },
+            ),
             PlanStep("start_endpoint", {"name": name}),
         ]
         return IntentPlan("create_inbound_listener", params, steps)
 
     # start/stop/delete endpoint NAME
-    m = re.match(r"^(start|stop|delete) endpoint ['\"]?([\w\-\.:]+)['\"]?$", t)
+    m = re.match(r"^(start|stop|delete) endpoint ['\"]?([\w\-\.:]+)['\"]?$", raw, re.IGNORECASE)
     if m:
         op, name = m.groups()
         intent = f"{op}_endpoint"
         return IntentPlan(intent, {"name": name}, [PlanStep(intent, {"name": name})])
 
     # create outbound NAME to HOST:PORT
-    m = re.match(r"^create outbound ['\"]?([\w\-\.:]+)['\"]? to ([\w\.\-]+):(\d+)$", t)
+    m = re.match(r"^create outbound ['\"]?([\w\-\.:]+)['\"]? to ([\w\.\-]+):(\d+)$", raw, re.IGNORECASE)
     if m:
         name, host, port = m.groups()
         params = {"name": name, "host": host, "port": int(port)}
@@ -79,20 +102,22 @@ def interpret(text: str) -> IntentPlan:
         return IntentPlan("create_outbound_target", params, steps)
 
     # send to NAME: HL7...
-    m = re.match(r"^send to ['\"]?([\w\-\.:]+)['\"]?:\s*(.+)$", t, re.DOTALL)
+    m = re.match(r"^send to ['\"]?([\w\-\.:]+)['\"]?:\s*(.+)$", raw, re.IGNORECASE | re.DOTALL)
     if m:
         target, hl7 = m.groups()
         return IntentPlan("send_mllp", {"target_name": target, "hl7_text": hl7}, [PlanStep("send_mllp", {"target_name": target, "hl7_text": hl7})])
 
     # run pipeline N persist (true|false)
-    m = re.match(r"^run pipeline (.+?) persist (true|false)$", t)
+    m = re.match(r"^run pipeline (.+?) persist (true|false)$", raw, re.IGNORECASE)
     if m:
-        ident, persist = m.groups()
-        params = {"pipeline": ident, "persist": persist == "true"}
+        ident_raw, persist_raw = m.groups()
+        ident = _strip_quotes(ident_raw)
+        pipeline_param: Any = int(ident) if ident.isdigit() else ident
+        params = {"pipeline": pipeline_param, "persist": persist_raw.lower() == "true"}
         return IntentPlan("run_pipeline", params, [PlanStep("run_pipeline", params)])
 
     # replay run N on pipeline P
-    m = re.match(r"^replay run (\d+) on pipeline (\d+)$", t)
+    m = re.match(r"^replay run (\d+) on pipeline (\d+)$", raw, re.IGNORECASE)
     if m:
         rid, pid = m.groups()
         params = {"pipeline_id": int(pid), "replay_run_id": int(rid)}
@@ -103,21 +128,26 @@ def interpret(text: str) -> IntentPlan:
         )
 
     # assist preview P lookback D
-    m = re.match(r"^assist preview (\d+)(?: lookback (\d+))?$", t)
+    m = re.match(r"^assist preview (.+?)(?: lookback (\d+))?$", raw, re.IGNORECASE)
     if m:
-        pid, look = m.groups()
-        params = {"pipeline_id": int(pid), "lookback_days": int(look or 14)}
+        ident_raw, look = m.groups()
+        ident = _strip_quotes(ident_raw)
+        pipeline_param: Any = int(ident) if ident.isdigit() else ident
+        params = {"pipeline": pipeline_param, "lookback_days": int(look or 14)}
         return IntentPlan("assist_preview", params, [PlanStep("assist_preview", params)])
 
     # assist anomalies ID [recent D] [baseline B] [minrate R]
     m = re.match(
-        r"^assist anomalies (\S+)(?: recent (\d+))?(?: baseline (\d+))?(?: minrate ([0-9]*\.?[0-9]+))?$",
-        t,
+        r"^assist anomalies (.+?)(?: recent (\d+))?(?: baseline (\d+))?(?: minrate ([0-9]*\.?[0-9]+))?$",
+        raw,
+        re.IGNORECASE,
     )
     if m:
-        ident, recent, baseline, minrate = m.groups()
+        ident_raw, recent, baseline, minrate = m.groups()
+        ident = _strip_quotes(ident_raw)
+        pipeline_param: Any = int(ident) if ident.isdigit() else ident
         params = {
-            "pipeline": ident,
+            "pipeline": pipeline_param,
             "recent_days": int(recent or 7),
             "baseline_days": int(baseline or 30),
             "min_rate": float(minrate or 0.1),
@@ -125,21 +155,21 @@ def interpret(text: str) -> IntentPlan:
         return IntentPlan("assist_anomalies", params, [PlanStep("assist_anomalies", params)])
 
     # cancel job N
-    m = re.match(r"^cancel job (\d+)$", t)
+    m = re.match(r"^cancel job (\d+)$", raw, re.IGNORECASE)
     if m:
         job_id = int(m.group(1))
         params = {"job_id": job_id}
         return IntentPlan("cancel_job", params, [PlanStep("cancel_job", params)])
 
     # generate N ADT messages to FOLDER
-    m = re.match(r"^generate (\d+).+?messages to ([\w\-/\.]+)$", t)
+    m = re.match(r"^generate (\d+).+?messages to ([\w\-/\.]+)$", raw, re.IGNORECASE)
     if m:
         count, folder = m.groups()
         params = {"count": int(count), "out_folder": folder}
         return IntentPlan("generate_messages", params, [PlanStep("generate_messages", params)])
 
     # deidentify IN to OUT with pipeline P
-    m = re.match(r"^deidentify ([\w\-/\.]+) to ([\w\-/\.]+) with pipeline (\d+)$", t)
+    m = re.match(r"^deidentify ([\w\-/\.]+) to ([\w\-/\.]+) with pipeline (\d+)$", raw, re.IGNORECASE)
     if m:
         inf, outf, pid = m.groups()
         params = {"in_folder": inf, "out_folder": outf, "pipeline_id": int(pid)}
