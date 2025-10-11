@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import importlib
+import socket
 import sys
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -37,12 +38,28 @@ def _reload_orchestrator():
     return orchestrator
 
 
-def test_generate_and_deidentify(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("AGENT_DATA_ROOT", str(tmp_path / "agent"))
+def _free_port() -> int:
+    """Return an available TCP port on 127.0.0.1 (best effort)."""
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.bind(("127.0.0.1", 0))
+    port = sock.getsockname()[1]
+    sock.close()
+    return port
 
+
+def _setup_store(tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+    db_path = tmp_path / "insights.db"
+    monkeypatch.setenv("INSIGHTS_DB_URL", f"sqlite:///{db_path}")
     reset_store()
     store = get_store()
     store.ensure_schema()
+    return store
+
+
+def test_generate_and_deidentify(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("AGENT_DATA_ROOT", str(tmp_path / "agent"))
+
+    store = _setup_store(tmp_path, monkeypatch)
 
     orchestrator = _reload_orchestrator()
     fs_utils = importlib.import_module("agent.fs_utils")
@@ -124,9 +141,7 @@ def test_generate_and_deidentify(tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 def test_assist_anomalies(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("AGENT_DATA_ROOT", str(tmp_path / "agent"))
 
-    reset_store()
-    store = get_store()
-    store.ensure_schema()
+    store = _setup_store(tmp_path, monkeypatch)
 
     orchestrator = _reload_orchestrator()
 
@@ -191,9 +206,7 @@ def test_wildcard_bind_guard(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) ->
     monkeypatch.delenv("ENGINE_NET_BIND_ANY", raising=False)
     monkeypatch.setenv("AGENT_DATA_ROOT", str(tmp_path / "agent"))
 
-    reset_store()
-    store = get_store()
-    store.ensure_schema()
+    store = _setup_store(tmp_path, monkeypatch)
 
     orchestrator = _reload_orchestrator()
 
@@ -212,3 +225,113 @@ def test_wildcard_bind_guard(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) ->
     assert step["status"] == "failed"
     assert "blocked by policy" in step.get("error", "")
     assert store.get_endpoint_by_name("guard-test") is None
+
+
+def test_create_inbound_with_pipeline_name(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """`create inbound ... for pipeline "<name>"` resolves pipeline names."""
+
+    monkeypatch.setenv("AGENT_DATA_ROOT", str(tmp_path / "agent"))
+
+    store = _setup_store(tmp_path, monkeypatch)
+
+    orchestrator = _reload_orchestrator()
+
+    pipeline_yaml = """
+    version: 1
+    name: Friendly Pipe
+    adapter:
+      type: sequence
+      config:
+        messages:
+          - id: "m1"
+            text: hello
+    operators:
+      - type: echo
+    sinks:
+      - type: memory
+    """
+
+    spec = load_pipeline_spec(pipeline_yaml)
+    pipeline = store.save_pipeline(
+        name="Friendly Pipe",
+        yaml=pipeline_yaml,
+        spec=dump_pipeline_spec(spec),
+    )
+
+    port = _free_port()
+    plan = orchestrator.interpret(
+        f'create inbound adt-in on 127.0.0.1:{port} for pipeline "Friendly Pipe" allow 127.0.0.1/32'
+    )
+    assert plan.intent == "create_inbound_listener"
+
+    result = asyncio.run(orchestrator.execute(store, plan))
+    assert result["report"], "execution report empty"
+    assert all(step.get("status") != "failed" for step in result["report"])
+
+    endpoint = store.get_endpoint_by_name("adt-in")
+    assert endpoint is not None, "endpoint not created"
+    assert endpoint.kind == "mllp_in"
+    assert endpoint.pipeline_id == pipeline.id
+    assert str(endpoint.config.get("host")) == "127.0.0.1"
+    assert int(endpoint.config.get("port")) == port
+
+
+def test_deidentify_with_pipeline_name(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """`deidentify ... with pipeline "<name>"` executes successfully."""
+
+    monkeypatch.setenv("AGENT_DATA_ROOT", str(tmp_path / "agent"))
+
+    store = _setup_store(tmp_path, monkeypatch)
+
+    orchestrator = _reload_orchestrator()
+    fs_utils = importlib.import_module("agent.fs_utils")
+
+    pipeline_yaml = """
+    version: 1
+    name: Friendly Pipe Deid
+    adapter:
+      type: sequence
+      config:
+        messages:
+          - id: "m1"
+            text: hello
+    operators:
+      - type: echo
+    sinks:
+      - type: memory
+    """
+
+    spec = load_pipeline_spec(pipeline_yaml)
+    store.save_pipeline(
+        name="Friendly Pipe Deid",
+        yaml=pipeline_yaml,
+        spec=dump_pipeline_spec(spec),
+    )
+
+    src_dir = fs_utils.in_folder("incoming/friendly-ward")
+    (src_dir / "a.hl7").write_bytes(
+        b"MSH|^~\\&|SIL|SRC|LAB|HOSP|202501010101||ADT^A01|X|P|2.5\rPID|1||A^B\r"
+    )
+    (src_dir / "b.hl7").write_bytes(
+        b"MSH|^~\\&|SIL|SRC|LAB|HOSP|202501010102||ADT^A08|Y|P|2.5\rPID|1||C^D\r"
+    )
+
+    plan = orchestrator.interpret(
+        'deidentify incoming/friendly-ward to friendly_ward_deid with pipeline "Friendly Pipe Deid"'
+    )
+    assert plan.intent == "deidentify_folder"
+
+    result = asyncio.run(orchestrator.execute(store, plan))
+    step = result["report"][-1]
+    assert step["step"] == "deidentify_folder"
+    assert step["status"] == "succeeded"
+    assert step["ok"] == 2
+    assert step["failed"] == 0
+
+    dst_dir = fs_utils.out_folder("friendly_ward_deid")
+    outputs = sorted(dst_dir.glob("*.hl7"))
+    assert len(outputs) == 2
