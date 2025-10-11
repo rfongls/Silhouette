@@ -170,16 +170,7 @@ install-shortcuts:
         python scripts/install_shortcuts.py
 
 uninstall-shortcuts:
-        python - <<"PY"
-import os
-import pathlib
-import shutil
-
-appdata = os.environ.get("APPDATA", "")
-path = pathlib.Path(appdata) / r"Microsoft/Windows/Start Menu/Programs/Silhouette"
-print(f"Removing: {path}")
-shutil.rmtree(path, ignore_errors=True)
-PY
+	python scripts/uninstall_shortcuts.py
 
 run-ui:
         $(RUN_UI)

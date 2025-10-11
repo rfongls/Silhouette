@@ -102,7 +102,8 @@ export INSIGHTS_DB_URL="sqlite:///data/insights.db"
 
 ### Start Menu shortcuts (Windows)
 - `scripts\install_shortcuts.bat` — installs Start Menu entries without requiring PowerShell.
-- `make install-shortcuts` — runs the same Python installer (see `make uninstall-shortcuts` to remove them).
+- `scripts\uninstall_shortcuts.bat` — removes the Start Menu folder the installer creates (supports `--dry-run`, `--both`, etc.).
+- `make install-shortcuts` / `make uninstall-shortcuts` — automation-friendly wrappers.
 - `python scripts/install_shortcuts.py --dry-run` — preview what will be created or pass `--start-menu-path` for a custom location.
 
 The installer creates launchers for the classic UI, the Engine V2 dev server, and handy browser links (Landing + Agent README).
