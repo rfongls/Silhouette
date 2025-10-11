@@ -21,6 +21,7 @@ from api.sql_logging import install_sql_logging
 from .models import (
     Base,
     EndpointRecord,
+    AgentActionRecord,
     IssueRecord,
     JobRecord,
     MessageRecord,
@@ -222,6 +223,14 @@ class InsightsStore:
         with self.session() as session:
             return session.get(PipelineRecord, pipeline_id)
 
+    def get_pipeline_by_name(self, name: str) -> PipelineRecord | None:
+        with self.session() as session:
+            return (
+                session.query(PipelineRecord)
+                .filter(PipelineRecord.name == name)
+                .first()
+            )
+
     def delete_pipeline(self, pipeline_id: int) -> bool:
         with self.session() as session:
             record = session.get(PipelineRecord, pipeline_id)
@@ -314,6 +323,69 @@ class InsightsStore:
             return session.execute(query.order_by(EndpointRecord.id.asc())).scalars().all()
 
     # --- Job queue helpers ---------------------------------------------------
+    # (unchanged)
+
+    # --- Agent activity helpers ---------------------------------------------
+
+    def log_action(
+        self,
+        *,
+        actor: str,
+        intent: str,
+        params: dict[str, Any],
+        status: str = "planned",
+        endpoint_id: int | None = None,
+        job_id: int | None = None,
+        run_id: int | None = None,
+        result: dict[str, Any] | None = None,
+        error: str | None = None,
+    ) -> AgentActionRecord:
+        with self.session() as session:
+            rec = AgentActionRecord(
+                actor=actor,
+                intent=intent,
+                params=dict(params or {}),
+                status=status,
+                endpoint_id=endpoint_id,
+                job_id=job_id,
+                run_id=run_id,
+                result=result,
+                error=error,
+            )
+            session.add(rec)
+            session.flush()
+            session.refresh(rec)
+            return rec
+
+    def update_action(
+        self,
+        action_id: int,
+        *,
+        status: str | None = None,
+        result: dict[str, Any] | None = None,
+        error: str | None = None,
+        endpoint_id: int | None = None,
+        job_id: int | None = None,
+        run_id: int | None = None,
+    ) -> bool:
+        with self.session() as session:
+            rec = session.get(AgentActionRecord, action_id)
+            if rec is None:
+                return False
+            if status is not None:
+                rec.status = status
+            if result is not None:
+                rec.result = result
+            if error is not None:
+                rec.error = error
+            if endpoint_id is not None:
+                rec.endpoint_id = endpoint_id
+            if job_id is not None:
+                rec.job_id = job_id
+            if run_id is not None:
+                rec.run_id = run_id
+            session.add(rec)
+            return True
 
     def enqueue_job(
         self,
