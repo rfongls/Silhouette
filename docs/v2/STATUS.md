@@ -86,3 +86,32 @@ This document is updated **with each PR** that changes the Engine V2 code or UI.
 **Notes:**
 - Configuration toggles: `ENGINE_RUNNER_ENABLED`, `ENGINE_RUNNER_CONCURRENCY`, `ENGINE_RUNNER_LEASE_TTL_SECS`, `ENGINE_RUNNER_POLL_INTERVAL_SECS`, `ENGINE_QUEUE_MAX_QUEUED_PER_PIPELINE`.
 - Tests cover lifecycle + retry→dead transitions, lease contention, cancellation, replay correctness, and REST validation/dedupe scenarios.
+
+---
+
+## Phase 4 — ML Assist Hooks
+
+**Status:** ✅ Implemented  
+**Implemented:** 2025-10-10T00:00:00Z  
+**Scope:**
+- Assist heuristics to propose allowlist entries and severity downgrades (derived from Insights frequency data).
+- Robust z-score anomaly listing comparing recent vs. baseline per-day rates.
+- API endpoints (`/api/engine/assist/*`) and Engine UI Assist card for previewing suggestions, inserting commented YAML drafts, and browsing anomalies.
+- Test coverage in `tests/test_ml_assist_phase4.py` for suggestion logic and REST flows.
+
+**Notes:** No schema migrations required; Assist computes from existing Insights tables.
+
+---
+
+## Phase 5 — Network I/O (MLLP Ingest & Send)
+
+**Status:** ✅ Implemented
+**Implemented:** 2025-10-10T00:00:00Z
+**Scope:**
+- Inbound MLLP listeners (bind IP/port + CIDR allowlist) producing `ingest` jobs executed against stored pipelines via an inline adapter.
+- Outbound MLLP targets (name → host:port), `mllp_target` sink, and a one-off send API for testing.
+- Endpoint manager with Start/Stop and UI card for CRUD + control + test send.
+
+**Notes:**
+- Security defaults to deny-all for inbound; `0.0.0.0` binds blocked unless explicitly allowed by env.
+- Reuses Phase 3 queue semantics for back-pressure and retries on transient errors.

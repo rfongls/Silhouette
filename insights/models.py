@@ -108,3 +108,23 @@ class JobRecord(Base):
 
     pipeline: Mapped["PipelineRecord"] = relationship("PipelineRecord")
     run: Mapped["RunRecord"] = relationship("RunRecord")
+
+
+class EndpointRecord(Base):
+    __tablename__ = "engine_endpoints"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    kind: Mapped[str] = mapped_column(String(16), nullable=False)
+    name: Mapped[str] = mapped_column(String(200), nullable=False, unique=True)
+    pipeline_id: Mapped[int | None] = mapped_column(
+        ForeignKey("pipelines.id", ondelete="SET NULL"), nullable=True
+    )
+    config: Mapped[dict[str, Any]] = mapped_column(JSON, nullable=False, default={})
+    status: Mapped[str] = mapped_column(String(16), default="stopped", nullable=False)
+    last_error: Mapped[str | None] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime, default=datetime.utcnow, nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, default=datetime.utcnow, onupdate=datetime.utcnow, nullable=False
+    )
