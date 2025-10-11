@@ -2,17 +2,16 @@
 
 > User-facing notes per PR. Keep this lean and helpful (what changed, why it matters, and any action required).
 
-## 2025-10-16 — Network I/O — MLLP Endpoints
+## 2025-10-10 — Phase 5 — Network I/O (MLLP Ingest & Send) — planning
 
 **Highlights**
-- Added configurable inbound MLLP listeners with CIDR allowlists that emit `kind:"ingest"` jobs against existing pipelines.
-- Introduced outbound MLLP targets, a reusable sink, and a `/api/engine/mllp/send` helper for quick validation.
-- Engine UI now exposes an "Endpoints" card to create/list/start/stop listeners, register targets, and send test messages.
+- Documented the plan to add inbound MLLP listeners (bind IP/port + CIDR allowlist) and outbound MLLP targets with API + UI control.
+- Inbound traffic becomes `ingest` jobs executed via an inline adapter; outbound supported via `mllp_target` sink and a one-off send API.
 
 **Details**
-- New table: `engine_endpoints` plus store helpers and Alembic migration `20251016_add_engine_endpoints`.
-- Runtime updates: inline adapter, MLLP server/manager, and target sink wired through router imports.
-- REST coverage with `/api/engine/endpoints` CRUD/start/stop and UI integration, backed by `tests/test_network_io_mllp.py`.
+- New `engine_endpoints` table for endpoint management.
+- Endpoint manager to start/stop listeners, with status/error reporting.
+- Security defaults to deny-all for inbound; `0.0.0.0` binds require explicit env opt-in.
 
 ## 2025-10-10 — Phase 4 — ML Assist Hooks
 

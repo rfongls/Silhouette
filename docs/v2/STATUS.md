@@ -103,16 +103,15 @@ This document is updated **with each PR** that changes the Engine V2 code or UI.
 
 ---
 
-## Network I/O — MLLP Endpoints
+## Phase 5 — Network I/O (MLLP Ingest & Send)
 
-**Status:** ✅ Implemented  
-**Implemented:** 2025-10-16T00:00:00Z  
+**Status:** 🔜 Planned
+**Planned:** 2025-10-10T00:00:00Z
 **Scope:**
-- `engine_endpoints` table and CRUD helpers for inbound (`mllp_in`) and outbound (`mllp_out`) configurations.
-- Inline adapter + `kind:"ingest"` job path so inbound payloads run against existing pipeline specs without edits.
-- Async MLLP server with CIDR allowlist enforcement, back-pressure handling, and endpoint lifecycle manager.
-- MLLP target sink plus `/api/engine/mllp/send` for ad-hoc transmissions; `/api/engine/endpoints` for create/list/start/stop/delete.
-- Engine UI "Endpoints" card to create listeners/targets, inspect status, and send test messages.
-- Tests in `tests/test_network_io_mllp.py` covering inbound enqueue, runner execution, outbound delivery, and REST endpoints.
+- Inbound MLLP listeners (bind IP/port + CIDR allowlist) producing `ingest` jobs executed against stored pipelines via an inline adapter.
+- Outbound MLLP targets (name → host:port), `mllp_target` sink, and a one-off send API for testing.
+- Endpoint manager with Start/Stop and UI card for CRUD + control + test send.
 
-**Notes:** Wildcard binds remain disabled unless `ENGINE_BIND_ANY=1` is set; inbound endpoints require allowlists to accept traffic.
+**Notes:**
+- Security defaults to deny-all for inbound; `0.0.0.0` binds blocked unless explicitly allowed by env.
+- Reuses Phase 3 queue semantics for back-pressure and retries on transient errors.

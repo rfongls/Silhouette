@@ -419,33 +419,151 @@ Offer operator-facing guidance derived from recent Insights data without automat
 - Inline diffing against current YAML to show exact impact.
 - Export Assist drafts as standalone files for review.
 
-## Network I/O — MLLP Endpoints (✅ Implemented)
+## Phase 5 — Network I/O (MLLP Ingest & Send) (🔜 Planned)
 
 **Goal**
 
-Enable controlled network ingress/egress for HL7v2 via MLLP, managed entirely through Engine APIs and UI.
+Enable the Engine to **ingest** HL7 v2 via **MLLP** on **specific IP/ports** and to **send** HL7 to configured MLLP targets, managed via API + UI. Inbound traffic becomes background jobs that execute against stored pipelines without requiring YAML edits; outbound delivery is selectable via a named target sink or one-off API call.
 
-**What shipped**
+**What we will deliver**
 
-- Schema migration adding `engine_endpoints` for inbound/outbound definitions (kind, config JSON, status, errors).
-- Runtime additions:
-  - Inline adapter enabling `kind:"ingest"` jobs to inject payloads without modifying saved pipeline YAML.
-  - MLLP listener (`engine/net/mllp_server.py`) with CIDR allowlists, per-endpoint lifecycle management, and queue back-pressure handling.
-  - MLLP target sink for outbound dispatch to named endpoints.
-- APIs:
-  - `/api/engine/endpoints` (CRUD + start/stop) and `/api/engine/mllp/send` for one-off sends/validation.
-- UI Engine dashboard card to create inbound/outbound endpoints, start/stop listeners, review status, and send test messages.
-- Tests (`tests/test_network_io_mllp.py`) covering inbound job production, runner ingest execution, outbound sink behavior, and API flows.
+- **Inbound MLLP listeners** bound to **host/IP + port** with **CIDR allowlist** and lightweight back-pressure (job queue).
+- **Ingestion jobs** (`kind: "ingest"`) that wrap received bytes in an **inline adapter** and run the attached pipeline.
+- **Outbound MLLP targets** (name → host:port), plus a `mllp_target` sink and a **one-off send** API for testing.
+- **Endpoint manager** to Start/Stop listeners at runtime.
+- **UI Endpoints card** to create inbound/outbound endpoints, manage state, and test sends.
+- **Migrations, tests, and docs** to make this production-ready.
 
-**Notes**
+**Milestones**
 
-- Inbound listeners require CIDR allowlists; binding to wildcard hosts still guarded by `ENGINE_BIND_ANY` in the manager.
-- Ingest jobs default to persisted runs, reusing existing pipeline logic and storage schema.
+- **5A — Inbound**
+  - Migration + model for `engine_endpoints` (inbound/outbound).
+  - Async MLLP server (bind host:port, CIDR allowlist).
+  - Endpoint manager (start/stop) + API.
+  - Runner `kind:"ingest"` override (inline adapter injection).
+  - Tests: bind/reject by CIDR, create `ingest` job, end-to-end pipeline execution.
 
-**Follow-ups / nice-to-haves**
+- **5B — Outbound + UI**
+  - `mllp_target` sink (resolve named target and deliver).
+  - One-off send API (`/api/engine/mllp/send`) with base64 payload.
+  - UI Endpoints card (CRUD + start/stop + “send test”).
+  - Tests: outbound to mock MLLP echo, UI/API coverage.
 
-- Autostart flags for endpoints on process boot and per-endpoint metrics (message counts, last activity).
-- Allow host overrides per deployment (e.g., IPv6) and richer ACK templating for outbound sends.
+**Data model**
+
+- **Table:** `engine_endpoints`
+  - `id` (PK), `kind` (`mllp_in` | `mllp_out`), `name` (unique)
+  - `pipeline_id` (nullable; required for `mllp_in`)
+  - `config` (JSON)
+    - For `mllp_in`: `{ "host": "127.0.0.1", "port": 2575, "allow_cidrs": ["127.0.0.1/32"], "timeout": 30 }`
+    - For `mllp_out`: `{ "host": "10.0.0.12", "port": 2575 }`
+  - `status` (`stopped|starting|running|error`), `last_error`
+  - `created_at`, `updated_at`
+
+**Store/API surfaces**
+
+- **Store helpers**
+  - `create_endpoint(kind, name, pipeline_id, config) -> EndpointRecord`
+  - `update_endpoint(endpoint_id, **fields) -> bool`
+  - `delete_endpoint(endpoint_id) -> bool`
+  - `get_endpoint(endpoint_id)`, `get_endpoint_by_name(name)`
+  - `list_endpoints(kind: list[str] | None) -> list[EndpointRecord]`
+
+- **HTTP API**
+  - `POST /api/engine/endpoints` → create inbound/outbound
+  - `GET /api/engine/endpoints` → list (optional `?kind=mllp_in|mllp_out`)
+  - `GET /api/engine/endpoints/{id}` → detail
+  - `POST /api/engine/endpoints/{id}/start` / `stop` → control inbound listener
+  - `DELETE /api/engine/endpoints/{id}` → delete endpoint
+  - `POST /api/engine/mllp/send` → one-off send: `{target_name? | host+port, message_b64}`
+
+  **Error codes**: 400 invalid input, 404 unknown id/name, 409 bind in use, 422 malformed frame.
+
+**Runtime changes**
+
+- **Inline adapter** (`type: inline`) feeds decoded `message_b64` + optional meta into pipeline without requiring spec edits.
+- Runner recognizes `kind:"ingest"` and overlays:
+  ```yaml
+  adapter:
+    type: inline
+    config:
+      message_b64: "<payload>"
+      meta: { peer_ip: "x.x.x.x" }
+  ```
+- **Endpoint manager** holds active MLLP servers (start/stop), updates `status/last_error`.
+
+**Security**
+
+- **CIDR allowlist is required** for inbound; default deny (no accept unless matched).
+- Disallow binding `0.0.0.0` unless explicitly permitted via env (see Config).
+- Minimal ACK (AA/AE) to limit info leakage. (Optional future: HL7 MSA templating.)
+- All received bytes are treated as **untrusted**; pipelines should validate early (e.g., `validate-hl7` operator).
+
+**Configuration**
+
+- `ENGINE_NET_BIND_ANY` (0/1) – allow `0.0.0.0` binds (default 0)
+- `ENGINE_MLLP_READ_TIMEOUT_SECS` (default 30)
+- `ENGINE_MLLP_MAX_FRAME_BYTES` (default 1_000_000)
+- Reuse Phase 3 runner vars for queue/back-pressure as needed.
+
+**Acceptance criteria**
+
+1. Create inbound endpoint with `host`, `port`, `allow_cidrs`, `pipeline_id`; **start** successfully; second process bind should return **409**.
+2. Connections from allowed CIDR are **accepted**, framed HL7 is received, and an **`ingest` job** is enqueued → pipeline runs → Insights updated.
+3. Non-allowed client IPs are **rejected** with no job creation.
+4. Create outbound target and **send** via:
+   - Pipeline `mllp_target` sink, and
+   - API `/api/engine/mllp/send`.
+5. UI Endpoints card can **create/list/start/stop/delete** endpoints and perform a test send.
+
+**Quick usage examples**
+
+Create inbound & start:
+```bash
+curl -X POST /api/engine/endpoints -H 'content-type: application/json' \
+  -d '{"kind":"mllp_in","name":"adt-in","pipeline_id":3,
+       "config":{"host":"127.0.0.1","port":2575,"allow_cidrs":["127.0.0.1/32"]}}'
+curl -X POST /api/engine/endpoints/1/start
+```
+
+Create outbound target:
+```bash
+curl -X POST /api/engine/endpoints -H 'content-type: application/json' \
+  -d '{"kind":"mllp_out","name":"adt-out","config":{"host":"10.0.0.12","port":2575}}'
+```
+
+Send once:
+```bash
+MSG=$(printf 'MSH|^~\\&|SILHOUETTE|TESTFAC|...\\r' | base64 -w0)
+curl -X POST /api/engine/mllp/send -H 'content-type: application/json' \
+  -d "{\"target_name\":\"adt-out\",\"message_b64\":\"$MSG\"}"
+```
+
+Pipeline sink (YAML):
+```yaml
+sinks:
+  - type: mllp_target
+    config:
+      target_name: adt-out
+```
+
+**Testing plan**
+
+- **Inbound**
+  - Start listener; connect from allowed IP; send framed VT…FS CR HL7; expect `ingest` job → `succeeded`.
+  - Connect from non-allowed IP; expect close/AE; **no job** created.
+  - Bind conflict on second start returns 409.
+  - Oversized frame (> `ENGINE_MLLP_MAX_FRAME_BYTES`) returns AE.
+- **Outbound**
+  - Mock MLLP echo server; send via `/mllp/send` and via `mllp_target` sink; verify ACK and payload reception.
+  - Errors (connection refused, timeout) produce job failure + retry (Phase 3 backoff).
+- **UI**
+  - Form validation; start/stop transitions; errors surfaced in `last_error`.
+
+**Rollout**
+
+- Default: **no endpoints** running. Ops explicitly create and start inbound listeners.
+- Autostart can be considered later via an `autostart` flag; not included in this phase to reduce risk.
 
 ---
 
