@@ -7,12 +7,14 @@ import asyncio
 import base64
 import re
 from dataclasses import dataclass
+from datetime import datetime
 from typing import Any, Dict, List, Optional
 
 from insights.store import InsightsStore
 from engine.net.endpoints import get_manager
 from engine.runtime import EngineRuntime
 from engine.spec import dump_pipeline_spec, load_pipeline_spec
+from engine.ml_assist import suggest_allowlist, render_draft_yaml
 from agent.fs_utils import (
     in_folder,
     out_folder,
@@ -106,6 +108,13 @@ def interpret(text: str) -> IntentPlan:
         params = {"pipeline_id": int(pid), "lookback_days": int(look or 14)}
         return IntentPlan("assist_preview", params, [PlanStep("assist_preview", params)])
 
+    # cancel job N
+    m = re.match(r"^cancel job (\d+)$", t)
+    if m:
+        job_id = int(m.group(1))
+        params = {"job_id": job_id}
+        return IntentPlan("cancel_job", params, [PlanStep("cancel_job", params)])
+
     # generate N ADT messages to FOLDER
     m = re.match(r"^generate (\d+).+?messages to ([\w\-/\.]+)$", t)
     if m:
@@ -155,9 +164,18 @@ async def execute(
 
         store.update_action(action.id, status="running")
 
-        # helper: resolve endpoint by name
-        def _endpoint_by_name(name: str):
-            return store.get_endpoint_by_name(name)
+        # helper: resolve endpoint by name or id token
+        def _endpoint_lookup(name: str | None = None, endpoint_id: Any | None = None):
+            if endpoint_id is not None:
+                try:
+                    return store.get_endpoint(int(endpoint_id))
+                except (TypeError, ValueError):
+                    return None
+            if not name:
+                return None
+            if isinstance(name, str) and name.startswith("#") and name[1:].isdigit():
+                return store.get_endpoint(int(name[1:]))
+            return store.get_endpoint_by_name(str(name))
 
         def _resolve_pipeline_id(identifier: Any) -> int:
             if identifier is None:
@@ -175,7 +193,7 @@ async def execute(
             return pipeline.id
 
         # Iterate steps
-        summary: Optional[Dict[str, Any]] = None
+        summary: Dict[str, Any] = {}
 
         for step in plan.steps:
             s = {"step": step.action, "status": "succeeded"}
@@ -194,9 +212,11 @@ async def execute(
 
                 elif step.action in {"start_endpoint", "stop_endpoint"}:
                     name = step.args.get("name")
-                    ep = _endpoint_by_name(name) if name else None
+                    endpoint_id = step.args.get("endpoint_id")
+                    ep = _endpoint_lookup(name, endpoint_id)
                     if not ep:
-                        raise ValueError(f"endpoint {name!r} not found")
+                        ident = endpoint_id if endpoint_id is not None else name
+                        raise ValueError(f"endpoint {ident!r} not found")
                     manager = get_manager(store)
                     if step.action == "start_endpoint":
                         await manager.start_endpoint(ep.id)
@@ -204,16 +224,20 @@ async def execute(
                     else:
                         await manager.stop_endpoint(ep.id)
                         s["endpoint_id"] = ep.id
+                    store.update_action(action.id, endpoint_id=ep.id)
 
                 elif step.action == "delete_endpoint":
                     name = step.args.get("name")
-                    ep = _endpoint_by_name(name) if name else None
+                    endpoint_id = step.args.get("endpoint_id")
+                    ep = _endpoint_lookup(name, endpoint_id)
                     if not ep:
-                        raise ValueError(f"endpoint {name!r} not found")
+                        ident = endpoint_id if endpoint_id is not None else name
+                        raise ValueError(f"endpoint {ident!r} not found")
                     manager = get_manager(store)
                     await manager.stop_endpoint(ep.id)
                     store.delete_endpoint(ep.id)
                     s["endpoint_id"] = ep.id
+                    store.update_action(action.id, endpoint_id=ep.id)
 
                 elif step.action == "send_mllp":
                     target = step.args.get("target_name")
@@ -248,8 +272,35 @@ async def execute(
                     store.update_action(action.id, job_id=job.id)
 
                 elif step.action == "assist_preview":
-                    # keep light; actual calculation is done by existing Assist APIs
-                    s["note"] = "assist_preview enqueued"
+                    pipeline_identifier = step.args.get("pipeline_id") or step.args.get("pipeline")
+                    pipeline_id = _resolve_pipeline_id(pipeline_identifier)
+                    lookback = int(step.args.get("lookback_days") or 14)
+                    suggestion = suggest_allowlist(store, pipeline_id, now=datetime.utcnow(), lookback_days=lookback)
+                    draft_yaml = render_draft_yaml(suggestion)
+                    s["notes"] = suggestion.notes
+                    s["allowlist"] = suggestion.allowlist
+                    s["severity_rules"] = suggestion.severity_rules
+                    s["draft_yaml"] = draft_yaml
+                    s["pipeline_id"] = pipeline_id
+                    s["lookback_days"] = lookback
+                    summary.update(
+                        {
+                            "assist_notes": len(suggestion.notes or []),
+                            "allowlist_count": len(suggestion.allowlist or []),
+                            "severity_rules_count": len(suggestion.severity_rules or []),
+                        }
+                    )
+
+                elif step.action == "cancel_job":
+                    job_id = int(step.args.get("job_id") or 0)
+                    if job_id <= 0:
+                        raise ValueError("job_id must be positive")
+                    canceled = store.cancel_job(job_id)
+                    if not canceled:
+                        raise ValueError(f"job {job_id} not cancelable or not found")
+                    s["job_id"] = job_id
+                    store.update_action(action.id, job_id=job_id)
+                    summary.update({"canceled_job": job_id})
 
                 elif step.action == "generate_messages":
                     count = int(step.args.get("count") or 0)
@@ -264,7 +315,7 @@ async def execute(
                         written += 1
                     s["written"] = written
                     s["out_folder"] = str(out_dir)
-                    summary = {"written": written, "out_folder": str(out_dir)}
+                    summary.update({"written": written, "out_folder": str(out_dir)})
 
                 elif step.action == "deidentify_folder":
                     in_rel = str(step.args.get("in_folder") or "").strip()
@@ -306,12 +357,14 @@ async def execute(
                     s["failed"] = failed
                     s["in_folder"] = str(src_root)
                     s["out_folder"] = str(dst_root)
-                    summary = {
-                        "ok": ok,
-                        "failed": failed,
-                        "out_folder": str(dst_root),
-                        "in_folder": str(src_root),
-                    }
+                    summary.update(
+                        {
+                            "ok": ok,
+                            "failed": failed,
+                            "out_folder": str(dst_root),
+                            "in_folder": str(src_root),
+                        }
+                    )
 
                 else:
                     s["status"] = "failed"

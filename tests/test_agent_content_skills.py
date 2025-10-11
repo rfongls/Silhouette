@@ -72,3 +72,21 @@ def test_generate_and_deidentify(tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     last_step = result_deid["report"][-1]
     assert last_step["ok"] == 2
     assert last_step["failed"] == 0
+
+    plan_assist = orchestrator.interpret(f"assist preview {pipeline.id} lookback 7")
+    assert plan_assist.intent == "assist_preview"
+    result_assist = asyncio.run(orchestrator.execute(store, plan_assist))
+    assist_step = result_assist["report"][-1]
+    assert assist_step["step"] == "assist_preview"
+    assert "notes" in assist_step
+    assert "draft_yaml" in assist_step
+
+    job = store.enqueue_job(pipeline_id=pipeline.id, kind="run", payload={})
+    plan_cancel = orchestrator.interpret(f"cancel job {job.id}")
+    assert plan_cancel.intent == "cancel_job"
+    result_cancel = asyncio.run(orchestrator.execute(store, plan_cancel))
+    cancel_step = result_cancel["report"][-1]
+    assert cancel_step["step"] == "cancel_job"
+    assert cancel_step["status"] == "succeeded"
+    canceled_job = store.get_job(job.id)
+    assert canceled_job is not None and canceled_job.status == "canceled"

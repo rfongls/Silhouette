@@ -622,10 +622,21 @@ generate 25 ADT messages to demo-adt
 deidentify incoming/ward to ward_deid with pipeline 3
 ```
 
-### 6C — Advanced UX (🚧)
-- Assist preview execution summaries surfaced inline.
-- Richer timeline badges/links for endpoints, jobs, and runs.
-- Optional “cancel last” and quick actions once guardrails settle.
+### 6C — Advanced UX (🚧 In progress)
+
+**Scope**
+- Assist preview execution surfaced inline with actionable summaries.
+- Richer timeline affordances (quick actions, badges, deep links).
+- Optional “cancel last” helpers once guardrails settle.
+
+**Shipped in this patch**
+- Quick actions on the Activity Timeline (Start/Stop/Delete endpoint, Cancel job) with confirmations streamed in-page.
+- `assist_preview` intent executes locally and records suggestion counts + draft YAML in the Result pane.
+- Natural language `cancel job <id>` intent and quick-action buttons share the same executor path.
+
+**Upcoming**
+- Enrich step/result panes with direct links into Engine detail pages.
+- Optional “cancel last” chat shortcuts once UX is validated.
 
 **Configuration**
 - `AGENT_DATA_ROOT` (default `./data/agent`) — root for generate/deidentify demo.  

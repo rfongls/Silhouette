@@ -17,6 +17,8 @@
       .badge { background:#1f2933; color:#e4e7eb; padding:.1rem .4rem; border-radius:.25rem; display:inline-block; }
       .badge.ok { background:#1b7f4d; color:#ecfdf5; }
       .badge.err { background:#9b1c1c; color:#fee2e2; }
+      .qa { display:inline-flex; gap:.25rem; margin-left:.5rem; }
+      .btn.btn-xs { font-size:.75rem; padding:.15rem .4rem; border-radius:.25rem; }
       .muted { opacity: .85; }
       .mono { font-family: ui-monospace, Menlo, monospace; }
       .card-subtitle { margin: .25rem 0 .5rem 0; }
@@ -90,7 +92,26 @@
       }
     }
     const note = noteParts.length ? ` · ${noteParts.join(' · ')}` : '';
-    line.innerHTML = `[${when}] #${id} ${badgeHtml} <strong>${intent}</strong>${note}`;
+    let qaHtml = '';
+    if (data.endpoint_id) {
+      const endpointId = Number(data.endpoint_id);
+      if (!Number.isNaN(endpointId) && endpointId > 0) {
+        qaHtml += `<span class="qa">
+          <button class="btn btn-secondary btn-xs" data-qa="start_ep" data-ep="${endpointId}" title="Start endpoint">Start</button>
+          <button class="btn btn-secondary btn-xs" data-qa="stop_ep" data-ep="${endpointId}" title="Stop endpoint">Stop</button>
+          <button class="btn btn-secondary btn-xs" data-qa="del_ep" data-ep="${endpointId}" title="Delete endpoint">Delete</button>
+        </span>`;
+      }
+    }
+    if (data.job_id) {
+      const jobId = Number(data.job_id);
+      if (!Number.isNaN(jobId) && jobId > 0) {
+        qaHtml += `<span class="qa">
+          <button class="btn btn-secondary btn-xs" data-qa="cancel_job" data-job="${jobId}" title="Cancel job">Cancel</button>
+        </span>`;
+      }
+    }
+    line.innerHTML = `[${when}] #${id} ${badgeHtml} <strong>${intent}</strong>${note} ${qaHtml}`;
     activityBox.appendChild(line);
     activityBox.scrollTop = activityBox.scrollHeight;
   }
@@ -160,5 +181,56 @@
   }
 
   initActivityStream();
+
+  document.addEventListener('click', async (event) => {
+    const target = event.target;
+    if (!(target instanceof HTMLButtonElement)) return;
+    const action = target.dataset.qa;
+    if (!action) return;
+    let payload = null;
+    if (action === 'start_ep' || action === 'stop_ep' || action === 'del_ep') {
+      const endpointId = Number(target.dataset.ep || '0');
+      if (!endpointId) return;
+      const stepAction = action === 'start_ep' ? 'start_endpoint' : action === 'stop_ep' ? 'stop_endpoint' : 'delete_endpoint';
+      payload = {
+        intent: stepAction,
+        params: { endpoint_id: endpointId },
+        dry_run: false,
+        steps: [
+          {
+            action: stepAction,
+            args: { endpoint_id: endpointId }
+          }
+        ]
+      };
+    } else if (action === 'cancel_job') {
+      const jobId = Number(target.dataset.job || '0');
+      if (!jobId) return;
+      payload = {
+        intent: 'cancel_job',
+        params: { job_id: jobId },
+        dry_run: false,
+        steps: [
+          {
+            action: 'cancel_job',
+            args: { job_id: jobId }
+          }
+        ]
+      };
+    }
+    if (!payload) return;
+    try {
+      const res = await fetch('/api/agent/execute', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      if (!res.ok) {
+        console.warn('quick action failed', await res.text());
+      }
+    } catch (err) {
+      console.warn('quick action error', err);
+    }
+  });
 </script>
 {% endblock %}

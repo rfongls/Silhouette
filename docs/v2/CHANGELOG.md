@@ -1,5 +1,17 @@
 # Engine V2 — Changelog
 
+## 2025-10-22 — Phase 6C — Advanced UX (partial)
+
+**Highlights**
+- Activity Timeline entries now expose quick actions (Start/Stop/Delete endpoint, Cancel job) that confirm in-page without navigation.
+- `assist_preview` intent executes locally, summarizing suggested allowlist/severity changes and embedding the draft YAML in results.
+- Operators can cancel jobs via natural chat commands or quick-action buttons, both routed through the orchestrator.
+
+**Details**
+- Interpreter adds `cancel job <id>`; executor wires to `store.cancel_job` and aggregates summaries for SSE clients.
+- Landing page script renders inline buttons per endpoint/job and reuses `/api/agent/execute` for consistent activity logging.
+- Timeline summaries now include assist note counts, allowlist entries, and cancellation confirmations.
+
 ## 2025-10-21 — Phase 6B — Content Skills (Generate & De-identify)
 
 **Highlights**

@@ -50,9 +50,20 @@ The orchestrator enforces confinement to this root.
 
 ## Phase 6B additions
 
-- **Generate**  
+- **Generate**
   `generate 10 ADT messages to demo-adt` → writes `data/agent/out/demo-adt/gen_0001.hl7`…`gen_0010.hl7`
 
-- **De-identify**  
-  Place files in `data/agent/in/<your-folder>/**/*.hl7`, then run:  
+- **De-identify**
+  Place files in `data/agent/in/<your-folder>/**/*.hl7`, then run:
   `deidentify <your-folder> to <your-folder>_deid with pipeline 3` → outputs appear in `data/agent/out/<your-folder>_deid/*.hl7`
+
+## Phase 6C additions
+
+- **Quick actions**
+  Activity Timeline entries now expose Start/Stop/Delete endpoint buttons and Cancel job, all routed through `POST /api/agent/execute` so confirmations stay inline.
+
+- **Assist preview**
+  `assist preview 3 lookback 14` computes allowlist/severity suggestions locally and reports note counts + the draft YAML block in the result payload.
+
+- **Cancel job**
+  Use natural chat (`cancel job 123`) or the inline button on timeline rows; both invoke the same guardrailed executor path.

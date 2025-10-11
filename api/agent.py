@@ -76,6 +76,7 @@ _REGISTRY = {
         {"name": "run_pipeline", "params": ["pipeline_id|name", "persist:boolean"]},
         {"name": "enqueue_job", "params": ["pipeline_id|name", "kind=run|replay", "payload"]},
         {"name": "assist_preview", "params": ["pipeline_id|name", "lookback_days"]},
+        {"name": "cancel_job", "params": ["job_id"]},
         {"name": "assist_anomalies", "params": ["pipeline_id|name", "recent_days", "baseline_days"]},
         {"name": "generate_messages", "params": ["count", "out_folder"]},
         {"name": "deidentify_folder", "params": ["in_folder", "out_folder", "pipeline_id|name"]},
