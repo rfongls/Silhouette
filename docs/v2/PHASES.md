@@ -365,83 +365,32 @@ sinks:
 - Enhanced diff view (side-by-side + copy helpers)
 - Insights filters (per pipeline, timeframe selection)
 
-## Phase 3 — Background Runner & Replay (🔜 Planned)
+## Phase 3 — Background Runner & Replay (✅ Implemented)
 
 **Goal**
 
-Add a durable background execution path so stored pipelines can run asynchronously with retries, back-pressure, and replay support. Ship in two slices to keep scope manageable.
+Deliver a durable background execution path so stored pipelines can run asynchronously with retries, back-pressure, replay support, and a lightweight UI for operators to manage work.
 
-**Milestones**
+**What shipped**
 
-- **Phase 3A — Core runner (3–4 days)**
-  - Schema/model/migration for `engine_jobs` with leasing fields, dedupe key, attempts, priority, and error tracking.
-  - Store helpers for enqueueing, leasing, heartbeats, completion, retry with exponential backoff, cancelation, listing, and lookup.
-  - Background runner service (`engine.runner`) that repeatedly leases jobs, executes pipelines through `EngineRuntime`, persists results, and records success/failure with retry + dead-letter handling.
-  - Minimal HTTP API: enqueue stored pipeline runs, fetch status, list/filter jobs, cancel queued work, and retry failed jobs.
-  - Tests covering lifecycle (queued → leased → running → succeeded), retry/backoff, dead-letter, cancelation, and concurrent leasing safety.
-
-- **Phase 3B — Replay + UI hooks (2–3 days)**
-  - Adapter `replay` (or runtime override) that replays persisted messages from a prior `engine_runs` entry.
-  - API for enqueueing replay jobs with payload overrides.
-  - UI affordances: "Run in background" button from pipeline list/editor and a basic jobs table (ID, pipeline, kind, status, attempts, priority, scheduled, run id, last error, actions for cancel/retry).
-  - Replay tests: ensure persisted messages feed through the pipeline and produce a new run with expected issue parity.
-
-**Data model**
-
-- New SQLAlchemy model `JobRecord` in `insights/models.py` backed by the `engine_jobs` table (see migration skeleton in this section).
-- Columns include: `pipeline_id`, `kind` (`run|replay`), optional JSON `payload`, lifecycle `status`, `priority`, `attempts`, `max_attempts`, scheduling metadata, lease fields (`leased_by`, `lease_expires_at`), associated `run_id`, optional unique `dedupe_key`, last error text, and timestamps.
-- Alembic migration: `insights/migrations/20251015_add_engine_jobs.py` creates the table with defaults and an index on `(status, scheduled_at, priority)`.
-
-**Store API additions (`insights/store.py`)**
-
-- `enqueue_job(...)` with support for scheduling, priority, dedupe enforcement, and per-pipeline back-pressure (respect `ENGINE_QUEUE_MAX_QUEUED_PER_PIPELINE`).
-- `lease_jobs(...)` implementing optimistic leasing (SQLite-friendly) to atomically assign work to a worker id for a TTL.
-- `heartbeat_job(...)` to extend leases for long-running jobs.
-- `complete_job(job_id, run_id)` finalizes successful runs.
-- `fail_job_and_maybe_retry(...)` increments attempts, schedules retries with exponential backoff, and marks jobs dead when max attempts reached.
-- `cancel_job(job_id)` for queued/leased/running jobs (soft cancel).
-- `list_jobs(...)` and `get_job(job_id)` for API/UI consumption.
-
-**Runner service (`engine/runner.py`)**
-
-- Async worker process with configurable concurrency (`ENGINE_RUNNER_CONCURRENCY`), lease TTL, and poll interval.
-- `EngineRunner.run_forever()` continuously leases jobs and dispatches them under a semaphore to respect concurrency.
-- `_handle_job(...)` resolves the stored pipeline, builds the spec, applies payload overrides (e.g., `max_messages`, `persist`), runs through `EngineRuntime`, persists results when requested, and marks completion.
-- Exceptions trigger `_backoff_secs(attempts)` (exponential with jitter). Failures call `fail_job_and_maybe_retry` with truncated error text.
-- Optional lease heartbeat support to keep long jobs alive.
-- CLI entry (`python -m engine.runner`) and Makefile helper (`make engine-runner`). Honor `ENGINE_RUNNER_ENABLED` for app-embedded startup in dev.
-
-**Replay (Phase 3B)**
-
-- Preferred implementation: adapter `replay` under `engine.plugins` that streams messages from `engine_messages` by `run_id`, yielding prior payloads/metadata for the pipeline to process again.
-- Alternative (if needed later): runtime message override. Option A keeps specs self-describing and serialized for stored pipelines.
-- Replay job payload should carry `replay_run_id`, optional overrides (`max_messages`, `persist`).
-
-**HTTP API (`/api/engine/jobs`)**
-
-- `POST /api/engine/jobs` — enqueue job (validates pipeline, dedupe key conflicts → 409, missing pipeline → 404). Request body matches `JobEnqueueRequest` (see model definitions below).
-- `GET /api/engine/jobs` — list/filter (status array, pipeline id, pagination) returning `JobListResponse`.
-- `GET /api/engine/jobs/{id}` — fetch single job (`JobInfo`).
-- `POST /api/engine/jobs/{id}/cancel` — best-effort cancel (queued/leased/running). Running jobs honor cancel on next poll.
-- `POST /api/engine/jobs/{id}/retry` — reset failed/dead jobs to queued (optionally allow run id clearing and attempt reset).
-- Phase 3B: `POST /api/engine/jobs/{id}/requeue` convenience.
-- Structured logging hooks (`job.start`, `job.success`, `job.fail`, `job.dead`) plus metrics counters for queued/running/succeeded/failed/dead.
+- **Queue & model**: `engine_jobs` table (SQLAlchemy model + Alembic migration) stores pipeline id, job kind (`run`/`replay`), payload overrides, lifecycle status, priority, attempts/max attempts, scheduling metadata, leasing fields, optional dedupe key, run linkage, and last error text. Supporting indexes keep leasing and back-pressure lookups fast.
+- **Store helpers**: `enqueue_job`, `lease_jobs`, `heartbeat_job`, `start_job`, `complete_job`, `fail_job_and_maybe_retry`, `cancel_job`, `retry_job`, `list_jobs`, and `get_job` implement optimistic leasing, dedupe race handling, configurable back-pressure, cancel-wins semantics, and retry/backoff logic.
+- **Runner service**: `engine.runner.EngineRunner` continuously leases jobs under a semaphore, executes pipelines through `EngineRuntime`, persists results when requested, records structured logs (`job.start/success/error`), and applies exponential backoff with dead-letter promotion. CLI entrypoint (`python -m engine.runner`) and `make engine-runner` target wire it up.
+- **Replay adapter**: `type: replay` streams previously persisted messages by `run_id`, rehydrating payload/meta (with replay markers) so pipelines can rerun prior traffic. Runner swaps in the adapter automatically for `kind="replay"` jobs using the job payload's `replay_run_id`.
+- **API surface**: `/api/engine/jobs` endpoints allow enqueue, list/filter, fetch details, cancel (`queued|leased|running`), and retry (`dead|canceled`) jobs with dedupe (409), back-pressure (429), and validation (400/404) handling. Responses expose payloads for observability and UI hooks.
+- **UI hooks**: Engine dashboard gains a "Run in background" action per pipeline plus a Jobs table (status chips, attempts, scheduled time, last error preview, cancel/retry buttons, manual refresh).
+- **Tests**: Coverage spans lifecycle transitions, retry→dead promotion, runner execution, API flows, and replay round-trips (verifying replayed runs recreate prior messages with replay metadata).
+- **Docs**: This runbook, STATUS, and CHANGELOG document the shipped behavior.
 
 **Configuration**
 
-- `ENGINE_RUNNER_ENABLED`, `ENGINE_RUNNER_CONCURRENCY`, `ENGINE_RUNNER_LEASE_TTL_SECS`, `ENGINE_RUNNER_POLL_INTERVAL_SECS`, `ENGINE_QUEUE_MAX_QUEUED_PER_PIPELINE`.
+- `ENGINE_RUNNER_ENABLED`, `ENGINE_RUNNER_CONCURRENCY`, `ENGINE_RUNNER_LEASE_TTL_SECS`, `ENGINE_RUNNER_POLL_INTERVAL_SECS`, `ENGINE_QUEUE_MAX_QUEUED_PER_PIPELINE` govern runner lifecycle, polling cadence, and queue pressure.
 
-**Testing plan**
+**Follow-ups / nice-to-haves**
 
-- Lifecycle: enqueue → lease → run → succeed; failure paths retry with backoff and promote to dead-letter when attempts exhausted.
-- Leasing: concurrency safety (multiple runners cannot double-lease) and lease expiry recovery.
-- Cancel: queued cancellation (status `canceled`), running soft cancel (no requeue).
-- Replay: persisted run with messages reprocessed; ensure issues and message counts align.
-- API: dedupe key conflict returns 409, missing pipeline 404, status filters/pagination behave.
-
-**Documentation updates**
-
-- Keep this section as the authoritative runbook; update `docs/v2/CHANGELOG.md` and `docs/v2/STATUS.md` alongside implementation PRs.
+- Optional lease heartbeat loop for very long jobs (method is in place, wiring TBD).
+- Per-pipeline concurrency quotas and scheduled/cron jobs.
+- `/api/engine/jobs/{id}/requeue` convenience helper and richer job logs/metrics streaming.
 
 ## Phase 4 — ML Assist Hooks (🔜 Planned)
 - Allowlist suggestions and anomaly baselines

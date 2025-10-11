@@ -74,14 +74,15 @@ This document is updated **with each PR** that changes the Engine V2 code or UI.
 
 ## Phase 3 — Background runner & replay
 
-**Status:** 🔜 Planned
-**Implemented:** _TBD_
+**Status:** ✅ Implemented
+**Implemented:** 2025-10-10T00:00:00Z
 **Scope:**
-- Introduce the `engine_jobs` table, SQLAlchemy model, and store helpers for enqueue/lease/heartbeat/complete/fail/cancel/list/get.
-- Ship `engine.runner` background worker with leasing, concurrency control, retries, exponential backoff, and dead-letter handling.
-- Expand the API surface with `/api/engine/jobs` endpoints for enqueue, list/filter, inspect, cancel, and retry.
-- Add replay support (adapter + API wiring) and UI hooks (Run in background button, jobs table) in Phase 3B.
+- Durable `engine_jobs` queue with leasing metadata, retries, dedupe keys, scheduling, and dead-letter tracking plus supporting indexes.
+- Store API for enqueue/lease/heartbeat/start/complete/fail/cancel/retry/list/get with cancel-wins semantics, exponential backoff, and back-pressure enforcement.
+- `engine.runner` async worker that leases under a semaphore, executes pipelines, persists results, logs structured events, and respects job payload overrides.
+- Replay support via a first-class adapter (`type: replay`) that replays persisted messages when the job kind is `replay`.
+- `/api/engine/jobs` endpoints and Engine UI updates: enqueue background runs, list/filter jobs, inspect details, cancel queued/leased/running work, retry dead/canceled jobs, and monitor status/error history.
 
 **Notes:**
 - Configuration toggles: `ENGINE_RUNNER_ENABLED`, `ENGINE_RUNNER_CONCURRENCY`, `ENGINE_RUNNER_LEASE_TTL_SECS`, `ENGINE_RUNNER_POLL_INTERVAL_SECS`, `ENGINE_QUEUE_MAX_QUEUED_PER_PIPELINE`.
-- Testing must cover job lifecycle, retry/backoff, lease contention/expiry, cancelation semantics, replay correctness, and API edge cases (dedupe conflicts, missing pipelines).
+- Tests cover lifecycle + retry→dead transitions, lease contention, cancellation, replay correctness, and REST validation/dedupe scenarios.

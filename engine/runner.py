@@ -7,7 +7,7 @@ import socket
 from datetime import datetime
 
 from engine.runtime import EngineRuntime
-from engine.spec import load_pipeline_spec
+from engine.spec import dump_pipeline_spec, load_pipeline_spec
 from insights.store import InsightsStore, JobNotFoundError, JobRecord
 
 logger = logging.getLogger(__name__)
@@ -89,6 +89,20 @@ class EngineRunner:
 
             spec = load_pipeline_spec(pipeline.yaml)
             job_payload = started.payload or {}
+            if started.kind == "replay":
+                replay_run_id = int(job_payload.get("replay_run_id") or 0)
+                if not replay_run_id:
+                    raise JobNotFoundError("replay requires payload.replay_run_id")
+                raw_spec = dump_pipeline_spec(spec)
+                replay_config = {"run_id": replay_run_id}
+                if job_payload.get("max_messages"):
+                    replay_config["max_messages"] = job_payload.get("max_messages")
+                raw_spec["adapter"] = {
+                    "type": "replay",
+                    "config": replay_config,
+                }
+                spec = load_pipeline_spec(raw_spec)
+
             max_messages = job_payload.get("max_messages")
             persist = job_payload.get("persist", True)
 

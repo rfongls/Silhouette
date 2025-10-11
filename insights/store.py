@@ -52,27 +52,6 @@ _LEASEABLE_STATUSES = {"queued", "leased"}
 _CANCELABLE_STATUSES = {"queued", "leased", "running"}
 
 
-class QueueFullError(RuntimeError):
-    """Raised when enqueueing a job exceeds configured back-pressure limits."""
-
-
-class DuplicateJobError(RuntimeError):
-    """Raised when a job with the same dedupe key already exists."""
-
-    def __init__(self, job: JobRecord):
-        super().__init__("job with dedupe key already exists")
-        self.job = job
-        self.job_data = _job_as_dict(job)
-
-
-class JobNotFoundError(RuntimeError):
-    """Raised when attempting to mutate a job that cannot be found."""
-
-
-_LEASEABLE_STATUSES = {"queued", "leased"}
-_CANCELABLE_STATUSES = {"queued", "leased", "running"}
-
-
 @dataclass
 class InsightsStore:
     """Wrapper around SQLAlchemy sessions with convenience helpers."""
