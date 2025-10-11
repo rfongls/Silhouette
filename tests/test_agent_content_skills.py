@@ -8,6 +8,7 @@ from pathlib import Path
 import pytest
 
 from engine.spec import dump_pipeline_spec, load_pipeline_spec
+from insights.models import AgentActionRecord
 from insights.store import get_store, reset_store
 
 PIPELINE_YAML = """
@@ -74,6 +75,15 @@ def test_generate_and_deidentify(tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     assert last_step["failed"] == 0
     assert last_step["failures"] == []
 
+    with store.session() as session:
+        action = session.query(AgentActionRecord).order_by(AgentActionRecord.id.desc()).first()
+        assert action is not None
+        summary = action.result.get("summary") if action.result else None
+        assert summary is not None
+        assert summary.get("ok") == 2
+        assert summary.get("failed") == 0
+        assert isinstance(summary.get("failures"), list)
+
     plan_assist = orchestrator.interpret(f"assist preview {pipeline.id} lookback 7")
     assert plan_assist.intent == "assist_preview"
     result_assist = asyncio.run(orchestrator.execute(store, plan_assist))
@@ -81,6 +91,15 @@ def test_generate_and_deidentify(tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     assert assist_step["step"] == "assist_preview"
     assert "notes" in assist_step
     assert "draft_yaml" in assist_step
+
+    with store.session() as session:
+        action = session.query(AgentActionRecord).order_by(AgentActionRecord.id.desc()).first()
+        assert action is not None
+        summary = action.result.get("summary") if action.result else None
+        assert summary is not None
+        assert "assist_notes" in summary
+        assert "allowlist_count" in summary
+        assert "severity_rules_count" in summary
 
     job = store.enqueue_job(pipeline_id=pipeline.id, kind="run", payload={})
     plan_cancel = orchestrator.interpret(f"cancel job {job.id}")
@@ -91,6 +110,13 @@ def test_generate_and_deidentify(tmp_path: Path, monkeypatch: pytest.MonkeyPatch
     assert cancel_step["status"] == "succeeded"
     canceled_job = store.get_job(job.id)
     assert canceled_job is not None and canceled_job.status == "canceled"
+
+    with store.session() as session:
+        action = session.query(AgentActionRecord).order_by(AgentActionRecord.id.desc()).first()
+        assert action is not None
+        summary = action.result.get("summary") if action.result else None
+        assert summary is not None
+        assert summary.get("canceled_job") == job.id
 
 
 def test_wildcard_bind_guard(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
