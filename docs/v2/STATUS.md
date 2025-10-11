@@ -69,3 +69,20 @@ This document is updated **with each PR** that changes the Engine V2 code or UI.
 **Notes:**
 - Store auto-creates tables in dev/test if Alembic hasn't run; production should still apply migrations.
 - Canvas chart is intentionally lightweight; follow-up will revisit responsiveness and accessibility.
+
+---
+
+## Phase 3 — Background runner & replay
+
+**Status:** ✅ Implemented
+**Implemented:** 2025-10-10T00:00:00Z
+**Scope:**
+- Durable `engine_jobs` queue with leasing metadata, retries, dedupe keys, scheduling, and dead-letter tracking plus supporting indexes.
+- Store API for enqueue/lease/heartbeat/start/complete/fail/cancel/retry/list/get with cancel-wins semantics, exponential backoff, and back-pressure enforcement.
+- `engine.runner` async worker that leases under a semaphore, executes pipelines, persists results, logs structured events, and respects job payload overrides.
+- Replay support via a first-class adapter (`type: replay`) that replays persisted messages when the job kind is `replay`.
+- `/api/engine/jobs` endpoints and Engine UI updates: enqueue background runs, list/filter jobs, inspect details, cancel queued/leased/running work, retry dead/canceled jobs, and monitor status/error history.
+
+**Notes:**
+- Configuration toggles: `ENGINE_RUNNER_ENABLED`, `ENGINE_RUNNER_CONCURRENCY`, `ENGINE_RUNNER_LEASE_TTL_SECS`, `ENGINE_RUNNER_POLL_INTERVAL_SECS`, `ENGINE_QUEUE_MAX_QUEUED_PER_PIPELINE`.
+- Tests cover lifecycle + retry→dead transitions, lease contention, cancellation, replay correctness, and REST validation/dedupe scenarios.

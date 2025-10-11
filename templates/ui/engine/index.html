@@ -17,6 +17,13 @@
       .diff-line.add { background: rgba(16, 185, 129, .12); }
       .diff-line.rem { background: rgba(239, 68, 68, .14); }
       .diff-line.neu { opacity: .85; }
+      .status-chip { display:inline-block; padding:.125rem .375rem; border-radius:.375rem; font-size:.8rem; text-transform:uppercase; letter-spacing:.02em; }
+      .st-queued { background:#2a2a2a; color:#f3f4f6; }
+      .st-leased { background:#1e40af; color:#f8fafc; }
+      .st-running { background:#0d9488; color:#ecfeff; }
+      .st-succeeded { background:#1b7f4d; color:#ecfdf5; }
+      .st-dead, .st-canceled { background:#9b1c1c; color:#fee2e2; }
+      .st-failed { background:#b45309; color:#fffbeb; }
       .chart-wrap { width: 100%; overflow: auto; }
     </style>
     <div id="toast-root" class="toasts" aria-live="polite" aria-atomic="true"></div>
@@ -39,7 +46,7 @@
               <th style="width:36%">Name</th>
               <th>Description</th>
               <th style="width:18%">Updated</th>
-              <th style="width:26%">Actions</th>
+              <th style="width:32%">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -70,6 +77,35 @@
       <h2 class="text-h2">YAML diff</h2>
       <p class="text-body muted">Lines removed in red, added in green. Shows differences between the last loaded/saved version and current edits.</p>
       <pre id="pl-diff" class="diff"></pre>
+    </section>
+
+    <!-- Jobs -->
+    <section class="card mb" id="jobs-card">
+      <div class="row" style="justify-content:space-between;align-items:center">
+        <h2 class="text-h2">Jobs</h2>
+        <div class="row small" style="gap:.5rem">
+          <button class="btn btn-secondary btn-sm" id="jobs-refresh">Refresh</button>
+        </div>
+      </div>
+      <div class="table-wrapper">
+        <table class="table" id="jobs-table">
+          <thead>
+            <tr>
+              <th style="width:7%">ID</th>
+              <th style="width:20%">Pipeline</th>
+              <th style="width:10%">Kind</th>
+              <th style="width:12%">Status</th>
+              <th style="width:8%">Attempts</th>
+              <th style="width:15%">Scheduled</th>
+              <th>Last error</th>
+              <th style="width:16%">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td colspan="8">No jobs.</td></tr>
+          </tbody>
+        </table>
+      </div>
     </section>
 
     <section class="card">
@@ -330,6 +366,7 @@
           <td>
             <button class="btn btn-secondary btn-xs" data-pipeline="${item.id}" data-action="run-dry">Run (dry)</button>
             <button class="btn btn-primary btn-xs" data-pipeline="${item.id}" data-action="run-persist">Run (persist)</button>
+            <button class="btn btn-info btn-xs" data-pipeline="${item.id}" data-action="run-bg">Run in background</button>
             <button class="btn btn-text btn-xs" data-pipeline="${item.id}" data-action="edit">Edit</button>
             <button class="btn btn-text btn-xs" data-pipeline="${item.id}" data-action="delete">Delete</button>
           </td>
@@ -340,6 +377,119 @@
       console.error(err);
       tbody.innerHTML = '<tr><td colspan="4">Failed to load pipelines.</td></tr>';
       setPipelineStatus('Unable to load pipelines.');
+    }
+  }
+
+  function statusChip(status) {
+    const key = String(status || '').toLowerCase();
+    const cls = {
+      queued: 'st-queued',
+      leased: 'st-leased',
+      running: 'st-running',
+      succeeded: 'st-succeeded',
+      canceled: 'st-canceled',
+      dead: 'st-dead',
+      failed: 'st-failed',
+    }[key] || 'st-queued';
+    return `<span class="status-chip ${cls}">${escapeHtml(status || '')}</span>`;
+  }
+
+  async function enqueueBackgroundRun(pipelineId) {
+    const root = ROOT_PATH;
+    const body = {
+      pipeline_id: pipelineId,
+      kind: 'run',
+      payload: { persist: true },
+    };
+    const response = await fetch(`${root}/api/engine/jobs`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    if (!response.ok) {
+      const detail = await extractError(response);
+      showToast('error', `Failed to enqueue: ${detail}`);
+      return;
+    }
+    showToast('success', 'Enqueued background job');
+    await refreshJobs();
+  }
+
+  async function cancelJob(jobId) {
+    const root = ROOT_PATH;
+    const response = await fetch(`${root}/api/engine/jobs/${jobId}/cancel`, { method: 'POST' });
+    if (!response.ok) {
+      const detail = await extractError(response);
+      showToast('error', `Cancel failed: ${detail}`);
+      return;
+    }
+    await refreshJobs();
+  }
+
+  async function retryJob(jobId) {
+    const root = ROOT_PATH;
+    const response = await fetch(`${root}/api/engine/jobs/${jobId}/retry`, { method: 'POST' });
+    if (!response.ok) {
+      const detail = await extractError(response);
+      showToast('error', `Retry failed: ${detail}`);
+      return;
+    }
+    await refreshJobs();
+  }
+
+  async function refreshJobs() {
+    const root = ROOT_PATH;
+    const tbody = document.querySelector('#jobs-table tbody');
+    if (!tbody) return;
+    tbody.innerHTML = '<tr><td colspan="8">Loading…</td></tr>';
+    try {
+      const response = await fetch(`${root}/api/engine/jobs?limit=50`);
+      if (!response.ok) {
+        throw new Error(await extractError(response));
+      }
+      const data = await response.json();
+      const items = data.items || [];
+      const rows = items.map((job) => {
+        const err = job.last_error ? String(job.last_error) : '';
+        const truncated = err.length > 90 ? `${escapeHtml(err.slice(0, 90))}…` : escapeHtml(err);
+        const scheduled = job.scheduled_at ? new Date(job.scheduled_at).toLocaleString() : '';
+        let actionHtml = '';
+        if ([ 'queued', 'leased', 'running' ].includes(job.status)) {
+          actionHtml = `<button class="btn btn-danger btn-xs" data-job-action="cancel" data-job-id="${job.id}">Cancel</button>`;
+        } else if ([ 'dead', 'canceled', 'failed' ].includes(job.status)) {
+          actionHtml = `<button class="btn btn-secondary btn-xs" data-job-action="retry" data-job-id="${job.id}">Retry</button>`;
+        }
+        return `
+          <tr>
+            <td>${job.id}</td>
+            <td>#${job.pipeline_id}</td>
+            <td>${escapeHtml(job.kind)}</td>
+            <td>${statusChip(job.status)}</td>
+            <td>${job.attempts}/${job.max_attempts}</td>
+            <td>${escapeHtml(scheduled)}</td>
+            <td title="${escapeHtml(err)}">${truncated || '&nbsp;'}</td>
+            <td>${actionHtml || ''}</td>
+          </tr>
+        `;
+      }).join('');
+      tbody.innerHTML = rows || '<tr><td colspan="8">No jobs.</td></tr>';
+    } catch (err) {
+      console.error(err);
+      tbody.innerHTML = '<tr><td colspan="8">Failed to load jobs.</td></tr>';
+      showToast('error', `Failed to load jobs: ${err.message || err}`);
+    }
+  }
+
+  function handleJobAction(event) {
+    const target = event.target;
+    if (!(target instanceof HTMLButtonElement)) return;
+    const jobId = Number(target.dataset.jobId);
+    if (!jobId) return;
+    const action = target.dataset.jobAction;
+    if (action === 'cancel') {
+      withBusy(target, () => cancelJob(jobId));
+    } else if (action === 'retry') {
+      withBusy(target, () => retryJob(jobId));
     }
   }
 
@@ -514,6 +664,8 @@ sinks:
       withBusy(target, () => runPipeline(id, false));
     } else if (action === 'run-persist') {
       withBusy(target, () => runPipeline(id, true));
+    } else if (action === 'run-bg') {
+      withBusy(target, () => enqueueBackgroundRun(id));
     }
   }
 
@@ -606,6 +758,7 @@ sinks:
   window.addEventListener('load', () => {
     loadInsightsSummary();
     loadPipelines();
+    refreshJobs();
     document.getElementById('pl-new-btn')?.addEventListener('click', () => openEditor(null));
     document.getElementById('pl-save-btn')?.addEventListener('click', (event) => {
       const button = event.currentTarget;
@@ -631,6 +784,12 @@ sinks:
       document.getElementById('pl-diff-card').style.display = 'none';
     });
     document.getElementById('pl-diff-btn')?.addEventListener('click', renderYamlDiff);
+    document.getElementById('jobs-table')?.addEventListener('click', handleJobAction);
+    document.getElementById('jobs-refresh')?.addEventListener('click', (event) => {
+      const button = event.currentTarget;
+      if (!(button instanceof HTMLButtonElement)) return;
+      withBusy(button, () => refreshJobs());
+    });
   });
 </script>
 {% endblock %}

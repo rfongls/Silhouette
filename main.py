@@ -23,6 +23,7 @@ from api.http_logging import install_http_logging
 from api.diag_fallback import ensure_diagnostics
 from api.debug_log import log_debug_event
 from api.metrics import router as metrics_router
+from api.engine_jobs import router as engine_jobs_router
 from ui_home import router as ui_home_router
 from ui_pages import router as ui_pages_router
 
@@ -125,6 +126,7 @@ for r in (
     diag_router,
     admin_router,
     metrics_router,
+    engine_jobs_router,
     ui_pages_router,     # generic /ui/{page} catch-all (must come last)
 ):
     app.include_router(r)

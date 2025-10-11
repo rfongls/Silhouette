@@ -1,48 +1,18 @@
 # Common development and CI convenience targets
-.PHONY: dev engine-dev install build wheel sdist clean repl test eval lint fmt quant-int8 quant-onnx quant-gguf latency latency-edge selfcheck selfcheck-student runtime-fastapi runtime-ml runtime-web runtime-python runtime-cpp runtime-java-ext runtime-dotnet-ext runtime-android-ext lint-cpp scoreboard scoreboard-phase scoreboard-phase6 promote-skill traces traces-promote security-scan gates research-index research-eval
+.PHONY: dev engine-dev engine-runner install build wheel sdist clean repl test eval lint fmt quant-int8 quant-onnx quant-gguf latency latency-edge selfcheck selfcheck-student runtime-fastapi runtime-ml runtime-web runtime-python runtime-cpp runtime-java-ext runtime-dotnet-ext runtime-android-ext lint-cpp scoreboard scoreboard-phase scoreboard-phase6 promote-skill traces traces-promote security-scan gates research-index research-eval
 
 dev:
-        python -m pip install -U pip
-        pip install -e .[all]
+	python -m pip install -U pip
+	pip install -e .[all]
 
 engine-dev:
 	./scripts/dev_engine.sh
 
-engine-dev:
-	./scripts/dev_engine.sh
-
-engine-dev:
-	./scripts/dev_engine.sh
-
-engine-dev:
-	./scripts/dev_engine.sh
-
-engine-dev:
-	./scripts/dev_engine.sh
-
-engine-dev:
-	./scripts/dev_engine.sh
-
-engine-dev:
-	./scripts/dev_engine.sh
-
-engine-dev:
-	./scripts/dev_engine.sh
-
-engine-dev:
-	./scripts/dev_engine.sh
-
-engine-dev:
-	./scripts/dev_engine.sh
-
-engine-dev:
-	./scripts/dev_engine.sh
-
-engine-dev:
-	./scripts/dev_engine.sh
+engine-runner:
+	python -m engine.runner
 
 install:
-        pip install .
+	pip install .
 
 build:
 	python -m build
