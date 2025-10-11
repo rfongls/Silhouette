@@ -5,6 +5,7 @@ REM If this file lives in scripts\, go up one level to the repo root
 if exist "..\server.py" pushd ..
 echo Running from: %CD%
 set PYTHONPATH=%CD%
+if not defined ENGINE_V2 set ENGINE_V2=1
 python run_dynamic.py --app server:app --host 127.0.0.1 --port 8000 --reload
 popd
 endlocal
