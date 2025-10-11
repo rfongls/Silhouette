@@ -3,12 +3,12 @@ from __future__ import annotations
 import asyncio
 import importlib
 import sys
+from datetime import datetime, timedelta
 from pathlib import Path
-
 import pytest
-
+from engine.contracts import Issue, Message, Result
 from engine.spec import dump_pipeline_spec, load_pipeline_spec
-from insights.models import AgentActionRecord
+from insights.models import AgentActionRecord, RunRecord
 from insights.store import get_store, reset_store
 
 PIPELINE_YAML = """
@@ -117,6 +117,70 @@ def test_generate_and_deidentify(tmp_path: Path, monkeypatch: pytest.MonkeyPatch
         summary = action.result.get("summary") if action.result else None
         assert summary is not None
         assert summary.get("canceled_job") == job.id
+
+
+def test_assist_anomalies(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("AGENT_DATA_ROOT", str(tmp_path / "agent"))
+
+    reset_store()
+    store = get_store()
+    store.ensure_schema()
+
+    orchestrator = _reload_orchestrator()
+
+    spec = load_pipeline_spec(PIPELINE_YAML)
+    pipeline = store.save_pipeline(
+        name="anomaly-pipe",
+        yaml=PIPELINE_YAML,
+        spec=dump_pipeline_spec(spec),
+    )
+
+    now = datetime.utcnow()
+
+    baseline_run = store.start_run(pipeline.name)
+    store.record_result(
+        run_id=baseline_run.id,
+        result=Result(
+            message=Message(id="baseline", raw=b"BASE"),
+            issues=[Issue(severity="warning", code="demo.code", segment="PV1")],
+        ),
+    )
+    with store.session() as session:
+        rec = session.get(RunRecord, baseline_run.id)
+        assert rec is not None
+        rec.created_at = now - timedelta(days=20)
+        session.add(rec)
+
+    recent_run = store.start_run(pipeline.name)
+    for idx in range(4):
+        store.record_result(
+            run_id=recent_run.id,
+            result=Result(
+                message=Message(id=f"recent-{idx}", raw=b"RECENT"),
+                issues=[Issue(severity="warning", code="demo.code", segment="PV1")],
+            ),
+        )
+
+    plan = orchestrator.interpret(f"assist anomalies {pipeline.id} recent 7 baseline 30 minrate 0.01")
+    assert plan.intent == "assist_anomalies"
+
+    result = asyncio.run(orchestrator.execute(store, plan))
+    step = result["report"][-1]
+    assert step["step"] == "assist_anomalies"
+    assert step["status"] == "succeeded"
+    assert step["items"]
+    assert any(item["code"] == "demo.code" for item in step["items"])
+
+    with store.session() as session:
+        action = session.query(AgentActionRecord).order_by(AgentActionRecord.id.desc()).first()
+        assert action is not None
+        summary = action.result.get("summary") if action.result else None
+        assert summary is not None
+        assert summary.get("anomalies") == len(step["items"])
+        assert summary.get("recent_days") == 7
+        assert summary.get("baseline_days") == 30
+        assert "top_deviation" in summary
+        assert summary.get("min_rate") == pytest.approx(0.01, rel=0, abs=1e-6)
 
 
 def test_wildcard_bind_guard(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:

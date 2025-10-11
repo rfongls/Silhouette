@@ -15,7 +15,7 @@ from insights.store import InsightsStore
 from engine.net.endpoints import get_manager
 from engine.runtime import EngineRuntime
 from engine.spec import dump_pipeline_spec, load_pipeline_spec
-from engine.ml_assist import suggest_allowlist, render_draft_yaml
+from engine.ml_assist import compute_anomalies, suggest_allowlist, render_draft_yaml
 from agent.fs_utils import (
     in_folder,
     out_folder,
@@ -108,6 +108,21 @@ def interpret(text: str) -> IntentPlan:
         pid, look = m.groups()
         params = {"pipeline_id": int(pid), "lookback_days": int(look or 14)}
         return IntentPlan("assist_preview", params, [PlanStep("assist_preview", params)])
+
+    # assist anomalies ID [recent D] [baseline B] [minrate R]
+    m = re.match(
+        r"^assist anomalies (\S+)(?: recent (\d+))?(?: baseline (\d+))?(?: minrate ([0-9]*\.?[0-9]+))?$",
+        t,
+    )
+    if m:
+        ident, recent, baseline, minrate = m.groups()
+        params = {
+            "pipeline": ident,
+            "recent_days": int(recent or 7),
+            "baseline_days": int(baseline or 30),
+            "min_rate": float(minrate or 0.1),
+        }
+        return IntentPlan("assist_anomalies", params, [PlanStep("assist_anomalies", params)])
 
     # cancel job N
     m = re.match(r"^cancel job (\d+)$", t)
@@ -301,6 +316,67 @@ async def execute(
                             "severity_rules_count": len(suggestion.severity_rules or []),
                         }
                     )
+
+                elif step.action == "assist_anomalies":
+                    pipeline_identifier = step.args.get("pipeline") or step.args.get("pipeline_id")
+                    pipeline_id = _resolve_pipeline_id(pipeline_identifier)
+                    recent_days = int(step.args.get("recent_days") or 7)
+                    baseline_days = int(step.args.get("baseline_days") or 30)
+                    min_rate = float(step.args.get("min_rate") or 0.1)
+
+                    if not (1 <= recent_days <= 60):
+                        raise ValueError("recent_days must be between 1 and 60")
+                    if not (7 <= baseline_days <= 120):
+                        raise ValueError("baseline_days must be between 7 and 120")
+                    if min_rate < 0:
+                        raise ValueError("min_rate must be >= 0.0")
+
+                    anomalies = compute_anomalies(
+                        store,
+                        pipeline_id,
+                        now=datetime.utcnow(),
+                        recent_days=recent_days,
+                        baseline_days=baseline_days,
+                        min_rate=min_rate,
+                    )
+
+                    items: List[Dict[str, Any]] = []
+                    for anomaly in anomalies[:50]:
+                        items.append(
+                            {
+                                "code": anomaly.code,
+                                "segment": anomaly.segment,
+                                "count": anomaly.count,
+                                "baseline": anomaly.baseline,
+                                "deviation": anomaly.deviation,
+                                "window_start": anomaly.window_start.isoformat(),
+                                "window_end": anomaly.window_end.isoformat(),
+                            }
+                        )
+
+                    top = sorted(items, key=lambda entry: abs(entry.get("deviation", 0.0)), reverse=True)[:5]
+                    top_codes = [
+                        f"{entry['code']}({abs(entry['deviation']):.2f})"
+                        for entry in top
+                        if entry.get("code")
+                    ]
+
+                    s["pipeline_id"] = pipeline_id
+                    s["recent_days"] = recent_days
+                    s["baseline_days"] = baseline_days
+                    s["min_rate"] = min_rate
+                    s["items"] = items
+
+                    summary.update(
+                        {
+                            "anomalies": len(items),
+                            "recent_days": recent_days,
+                            "baseline_days": baseline_days,
+                            "min_rate": float(f"{min_rate:.3g}"),
+                        }
+                    )
+                    if top_codes:
+                        summary["top_deviation"] = ", ".join(top_codes)
 
                 elif step.action == "cancel_job":
                     job_id = int(step.args.get("job_id") or 0)
