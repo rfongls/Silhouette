@@ -93,12 +93,21 @@ class EndpointManager:
                 await server.stop()
             self.store.update_endpoint(endpoint_id, status="stopped", last_error=None)
 
+    async def reprocess_incoming(
+        self,
+        endpoint_id: int,
+        payload: bytes,
+        meta: dict[str, str] | None = None,
+    ) -> None:
+        """Public hook used by APIs to replay failed messages."""
+
+        await self._process_incoming(endpoint_id, payload, dict(meta or {}))
+
     async def _process_incoming(self, endpoint_id: int, payload: bytes, meta: dict[str, str]) -> None:
         meta = dict(meta or {})
         record = self.store.get_endpoint(endpoint_id)
         if record is None:
             raise RuntimeError("endpoint not found")
-
         runtime: EngineRuntime | None = None
         if record.pipeline_id is not None:
             runtime = self._resolve_runtime(record.pipeline_id)

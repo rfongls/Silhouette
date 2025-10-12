@@ -53,7 +53,7 @@ async def requeue_failed(failed_id: int) -> dict[str, bool]:
 
     manager = get_manager(store)
     try:
-        await manager._process_incoming(  # pylint: disable=protected-access
+        await manager.reprocess_incoming(
             record.endpoint_id,
             record.raw,
             dict(record.meta or {}),
