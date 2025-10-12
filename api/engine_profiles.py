@@ -1,13 +1,10 @@
 """Profile management endpoints for engine modules."""
 
 from __future__ import annotations
-
 from typing import Any
-
 from fastapi import APIRouter, HTTPException
 from sqlalchemy.exc import IntegrityError
 from pydantic import BaseModel, Field
-
 from insights.store import get_store
 from ._pydantic_compat import compat_validator
 from .types import PROFILE_KIND_VALUES, ProfileKind
