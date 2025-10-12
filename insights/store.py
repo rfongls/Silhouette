@@ -24,6 +24,7 @@ from .models import (
     EndpointMessageRecord,
     EndpointRecord,
     EngineModuleProfile,
+    FailedMessageRecord,
     IssueRecord,
     JobRecord,
     MessageRecord,
@@ -438,6 +439,57 @@ class InsightsStore:
                 .offset(offset)
                 .all()
             )
+
+    # --- Failed message queue ----------------------------------------------
+
+    def save_failed_message(
+        self,
+        *,
+        endpoint_id: int | None,
+        pipeline_id: int | None,
+        raw: bytes,
+        error: str | None,
+        meta: dict[str, Any] | None = None,
+    ) -> FailedMessageRecord:
+        with self.session() as session:
+            record = FailedMessageRecord(
+                endpoint_id=endpoint_id,
+                pipeline_id=pipeline_id,
+                raw=raw,
+                error=error,
+                meta=dict(meta or {}),
+            )
+            session.add(record)
+            session.flush()
+            session.refresh(record)
+            return record
+
+    def get_failed_message(self, failed_id: int) -> FailedMessageRecord | None:
+        with self.session() as session:
+            return session.get(FailedMessageRecord, failed_id)
+
+    def list_failed_messages(
+        self,
+        *,
+        endpoint_id: int | None = None,
+        limit: int = 50,
+        offset: int = 0,
+    ) -> list[FailedMessageRecord]:
+        with self.session() as session:
+            query = session.query(FailedMessageRecord).order_by(
+                FailedMessageRecord.received_at.desc()
+            )
+            if endpoint_id is not None:
+                query = query.filter(FailedMessageRecord.endpoint_id == endpoint_id)
+            return query.limit(limit).offset(offset).all()
+
+    def delete_failed_message(self, failed_id: int) -> bool:
+        with self.session() as session:
+            record = session.get(FailedMessageRecord, failed_id)
+            if record is None:
+                return False
+            session.delete(record)
+            return True
 
     def delete_endpoint(self, endpoint_id: int) -> bool:
         with self.session() as session:

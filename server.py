@@ -75,6 +75,7 @@ if _ENGINE_V2_ENABLED:
     from api.engine_messages import router as engine_messages_router
     from api.engine_pipelines import router as engine_pipelines_router
     from api.engine_profiles import router as engine_profiles_router
+    from api.engine_failed import router as engine_failed_router
     from api.mllp_send import router as mllp_send_router
     from api.insights import router as insights_router
     from api.ui_engine import router as ui_engine_router
@@ -85,6 +86,7 @@ if _ENGINE_V2_ENABLED:
         engine_profiles_router,
         engine_pipelines_router,
         engine_messages_router,
+        engine_failed_router,
         agent_router,
         endpoints_router,
         mllp_send_router,

@@ -229,3 +229,21 @@ class EndpointMessageRecord(Base):
     endpoint: Mapped[EndpointRecord] = relationship(
         EndpointRecord, back_populates="messages"
     )
+
+
+class FailedMessageRecord(Base):
+    __tablename__ = "engine_failed_messages"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    endpoint_id: Mapped[int | None] = mapped_column(
+        Integer, ForeignKey("engine_endpoints.id", ondelete="SET NULL"), nullable=True
+    )
+    pipeline_id: Mapped[int | None] = mapped_column(
+        Integer, ForeignKey("pipelines.id", ondelete="SET NULL"), nullable=True
+    )
+    received_at: Mapped[datetime] = mapped_column(
+        DateTime, default=datetime.utcnow, nullable=False
+    )
+    raw: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)
+    error: Mapped[str | None] = mapped_column(Text)
+    meta: Mapped[dict[str, Any] | None] = mapped_column(JSON)

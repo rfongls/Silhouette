@@ -94,6 +94,7 @@ class EndpointManager:
             self.store.update_endpoint(endpoint_id, status="stopped", last_error=None)
 
     async def _process_incoming(self, endpoint_id: int, payload: bytes, meta: dict[str, str]) -> None:
+        meta = dict(meta or {})
         record = self.store.get_endpoint(endpoint_id)
         if record is None:
             raise RuntimeError("endpoint not found")
@@ -114,17 +115,34 @@ class EndpointManager:
             return
 
         processed = payload
-        if runtime is not None:
-            processed = await runtime.run_on_message(payload)
+        try:
+            if runtime is not None:
+                processed = await runtime.run_on_message(payload)
 
-        self._persist_message(
-            endpoint_id=record.id,
-            sink_kind=record.sink_kind,
-            sink_config=record.sink_config,
-            raw=payload,
-            processed=processed,
-            meta=meta,
-        )
+            self._persist_message(
+                endpoint_id=record.id,
+                sink_kind=record.sink_kind,
+                sink_config=record.sink_config,
+                raw=payload,
+                processed=processed,
+                meta=meta,
+            )
+        except Exception as exc:  # noqa: BLE001 - capture and store failure context
+            logger.exception(
+                "endpoint.pipeline.failure",
+                extra={
+                    "endpoint_id": record.id,
+                    "pipeline_id": record.pipeline_id,
+                },
+            )
+            self.store.save_failed_message(
+                endpoint_id=record.id,
+                pipeline_id=record.pipeline_id,
+                raw=payload,
+                error=str(exc),
+                meta=meta,
+            )
+            return
 
     def _persist_message(
         self,
