@@ -261,6 +261,12 @@ def _root():
     return RedirectResponse("/ui/home", status_code=307)
 
 
+@app.get("/ping", include_in_schema=False)
+def _ping() -> PlainTextResponse:
+    """Lightweight health check used by local launch scripts."""
+    return PlainTextResponse("ok", status_code=200)
+
+
 @app.get("/healthz")
 def healthz():
     return {"ok": True}
