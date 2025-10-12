@@ -1,16 +1,29 @@
-<!doctype html>
-<html>
-<head><meta charset="utf-8"><title>LLM Chat</title></head>
-<body>
-  <nav><a href="/ui">← Home</a></nav>
-  <h2>LLM Chat (Demo Placeholder)</h2>
-  <p>This is a placeholder UI for the demo. We’ll wire this to your chat backend later.</p>
-  <div style="border:1px solid #ddd;border-radius:8px;padding:12px;max-width:800px">
-    <div id="chat-log" style="height:300px;overflow:auto;margin-bottom:8px;background:#fafafa"></div>
-    <form>
-      <input type="text" placeholder="Type a message…" style="width:70%">
-      <button type="button">Send</button>
-    </form>
+{% extends "layout.html" %}
+{% block content %}
+<section class="dashboard">
+  <div class="dashboard-container">
+    <nav class="breadcrumbs"><a href="{{ root }}/ui">Home</a> / <span>Chat</span></nav>
+
+    <article class="card" aria-labelledby="chat-demo-heading">
+      <header class="row" style="justify-content:space-between; align-items:center;">
+        <div>
+          <h1 id="chat-demo-heading" class="text-h1">LLM Chat (Preview)</h1>
+          <p class="text-body muted" style="max-width:48rem;">A placeholder conversation surface that we will connect to the agent runtime.</p>
+        </div>
+        <a class="button ghost" href="{{ root }}/ui">Back to Home</a>
+      </header>
+
+      <div class="card mt" style="background:rgba(15,23,42,.45); border:1px solid rgba(148,163,184,.2);">
+        <div id="chat-log" style="height:18rem; overflow:auto; padding:.75rem; background:rgba(15,23,42,.55); border-radius:.5rem; font-family:ui-monospace, Menlo, monospace;"></div>
+        <form class="row small mt" style="align-items:flex-end;">
+          <label style="flex:1; display:flex; flex-direction:column; gap:.35rem;">
+            <span class="text-body muted">Message</span>
+            <input class="input" type="text" placeholder="Type a message…" />
+          </label>
+          <button type="button" class="button">Send</button>
+        </form>
+      </div>
+    </article>
   </div>
-</body>
-</html>
+</section>
+{% endblock %}

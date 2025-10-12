@@ -1,16 +1,18 @@
-<!doctype html>
-<html>
-<head><meta charset="utf-8"><title>Cybersecurity Skill</title></head>
-<body>
-  <nav>
-    <a href="/ui">← Home</a> &nbsp;|&nbsp;
-    <a href="/ui/skills">← Skills</a>
-  </nav>
+{% extends "layout.html" %}
+{% block content %}
+<section class="dashboard">
+  <div class="dashboard-container">
+    <nav class="breadcrumbs"><a href="{{ root }}/ui">Home</a> / <a href="{{ root }}/ui/skills">Skills</a> / <span>Cybersecurity</span></nav>
+    <header class="dashboard-header">
+      <h1 class="text-h1">Cybersecurity</h1>
+      <p class="text-body muted">Foundational automations and monitoring (roadmap).</p>
+    </header>
 
-  <h2>Cybersecurity Skill</h2>
-  <p>Landing hub for the cybersecurity capability.</p>
-  <ul>
-    <li><a href="#" onclick="alert('Settings coming soon')">Settings (coming soon)</a></li>
-  </ul>
-</body>
-</html>
+    <article class="card">
+      <h2 class="text-h2">Settings</h2>
+      <p class="text-body muted">Skill-scoped configuration will arrive soon.</p>
+      <button class="button" type="button" onclick="alert('Coming soon')">Preview Settings</button>
+    </article>
+  </div>
+</section>
+{% endblock %}
