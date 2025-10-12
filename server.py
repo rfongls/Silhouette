@@ -99,6 +99,13 @@ install_http_logging(app, log_path=_HTTP_LOG_PATH)
 ensure_diagnostics(app, http_log_path=_HTTP_LOG_PATH)
 
 
+@app.get("/", include_in_schema=False)
+async def _root_redirect():
+    if app.state.engine_v2_enabled:
+        return RedirectResponse(url="/ui/engine")
+    return RedirectResponse(url="/ui")
+
+
 @app.on_event("startup")
 async def _bootstrap_insights_schema() -> None:
     """Ensure the Insights schema exists before serving requests."""
