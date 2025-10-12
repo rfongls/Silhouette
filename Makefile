@@ -1,6 +1,12 @@
 # Common development and CI convenience targets
 .PHONY: dev engine-dev engine-runner install build wheel sdist clean repl test eval lint fmt quant-int8 quant-onnx quant-gguf latency latency-edge selfcheck selfcheck-student runtime-fastapi runtime-ml runtime-web runtime-python runtime-cpp runtime-java-ext runtime-dotnet-ext runtime-android-ext lint-cpp scoreboard scoreboard-phase scoreboard-phase6 promote-skill traces traces-promote security-scan gates research-index research-eval
 
+ifeq ($(OS),Windows_NT)
+RUN_UI := cmd /c run.ui.bat
+else
+RUN_UI := ./scripts/run_ui.sh
+endif
+
 dev:
 	python -m pip install -U pip
 	pip install -e .[all]
@@ -156,7 +162,21 @@ setup:
 	pip install pytest ruff
 
 docs:
-	python scripts/export_mermaid.py docs/
+        python scripts/export_mermaid.py docs/
+
+.PHONY: install-shortcuts uninstall-shortcuts run-ui run-api
+
+install-shortcuts:
+        python scripts/install_shortcuts.py
+
+uninstall-shortcuts:
+	python scripts/uninstall_shortcuts.py
+
+run-ui:
+        $(RUN_UI)
+
+run-api:
+        python -m uvicorn main:app --reload --host 127.0.0.1 --port 8000
 
 schemas:
 	@echo "JSON Schemas located in schemas/fhir/uscore/"

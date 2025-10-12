@@ -67,6 +67,7 @@ for r in (
 if _ENGINE_V2_ENABLED:
     from api.engine import router as engine_router
     from api.engine_jobs import router as engine_jobs_router
+    from api.agent import router as agent_router
     from api.endpoints import router as endpoints_router
     from api.engine_assist import router as engine_assist_router
     from api.mllp_send import router as mllp_send_router
@@ -76,6 +77,7 @@ if _ENGINE_V2_ENABLED:
     for feature_router in (
         engine_router,
         engine_jobs_router,
+        agent_router,
         endpoints_router,
         mllp_send_router,
         engine_assist_router,
@@ -89,6 +91,21 @@ app.mount("/static", StaticFiles(directory=_STATIC_DIR), name="static")
 # to console-only logging if file access fails.
 install_http_logging(app, log_path=_HTTP_LOG_PATH)
 ensure_diagnostics(app, http_log_path=_HTTP_LOG_PATH)
+
+
+@app.on_event("startup")
+async def _bootstrap_insights_schema() -> None:
+    """Ensure the Insights schema exists before serving requests."""
+    try:
+        from insights.store import get_store
+
+        store = get_store()
+        store.ensure_schema()
+        db_url = os.getenv("INSIGHTS_DB_URL", "sqlite:///data/insights.db")
+        logger.info("Insights DB ready: %s (ENGINE_V2=%s)", db_url, app.state.engine_v2_enabled)
+    except Exception:
+        logger.exception("Failed to ensure Insights schema on startup")
+        raise
 
 def _preview_bytes(data: bytes | None, limit: int = 160) -> str:
     if not data:
@@ -239,7 +256,15 @@ async def _log_unhandled_exception(request: Request, exc: Exception):
 
 @app.get("/", include_in_schema=False)
 def _root():
+    if getattr(app.state, "engine_v2_enabled", False):
+        return RedirectResponse("/ui/landing", status_code=307)
     return RedirectResponse("/ui/home", status_code=307)
+
+
+@app.get("/ping", include_in_schema=False)
+def _ping() -> PlainTextResponse:
+    """Lightweight health check used by local launch scripts."""
+    return PlainTextResponse("ok", status_code=200)
 
 
 @app.get("/healthz")

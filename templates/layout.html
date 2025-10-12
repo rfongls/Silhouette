@@ -10,12 +10,14 @@
 {% set interop_url = link_for(req, 'interop_skills', '/ui/interop/skills') %}
 {% set reports_url = link_for(req, 'ui_reports', '/reports') %}
 {% set settings_url = link_for(req, 'ui_settings_index', '/ui/settings') %}
+{% set agent_url = link_for(req, 'landing', '/ui/landing') %}
 {% set engine_url = link_for(req, 'ui_engine_index', '/ui/engine') %}
 {% set home_path = root ~ '/ui/home' %}
 {% set skills_path = root ~ '/ui/skills' %}
 {% set interop_path = root ~ '/ui/interop' %}
 {% set reports_path = root ~ '/reports' %}
 {% set settings_path = root ~ '/ui/settings' %}
+{% set agent_path = root ~ '/ui/landing' %}
 {% set engine_path = root ~ '/ui/engine' %}
 {% set engine_enabled = engine_v2_enabled if engine_v2_enabled is defined else False %}
 <head>
@@ -180,6 +182,7 @@
         <a href="{{ skills_url }}" class="nav-link {% if current_path.startswith(skills_path) %}active{% endif %}">Skills</a>
         <a href="{{ interop_url }}" class="nav-link {% if current_path.startswith(interop_path) %}active{% endif %}">Interoperability</a>
         {% if engine_enabled %}
+        <a href="{{ agent_url }}" class="nav-link {% if current_path.startswith(agent_path) %}active{% endif %}">Agent (Beta)</a>
         <a href="{{ engine_url }}" class="nav-link {% if current_path.startswith(engine_path) %}active{% endif %}">Engine (Beta)</a>
         {% endif %}
         <a href="{{ reports_url }}" class="nav-link {% if current_path.startswith(reports_path) %}active{% endif %}">Reports</a>
