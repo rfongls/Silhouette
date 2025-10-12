@@ -13,24 +13,31 @@ from typing import Any, Dict, Iterable, Iterator, Sequence
 from sqlalchemy import and_, create_engine, func, or_, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.engine import Engine
-from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy.orm import Session, joinedload, sessionmaker
 
 from engine.contracts import Issue, Result
 from api.sql_logging import install_sql_logging
 
 from .models import (
-    Base,
-    EndpointRecord,
     AgentActionRecord,
+    Base,
+    EndpointMessageRecord,
+    EndpointRecord,
+    EngineModuleProfile,
+    FailedMessageRecord,
     IssueRecord,
     JobRecord,
     MessageRecord,
     PipelineRecord,
+    PipelineStepRecord,
     RunRecord,
 )
 
 _DEFAULT_DB = Path("data") / "insights.db"
 _GLOBAL_STORE: "InsightsStore" | None = None
+
+
+_UNSET = object()
 
 
 class QueueFullError(RuntimeError):
@@ -185,6 +192,8 @@ class InsightsStore:
         spec: dict[str, Any],
         description: str | None = None,
         pipeline_id: int | None = None,
+        scope: str | None = None,
+        endpoint_id: object = _UNSET,
     ) -> PipelineRecord:
         with self.session() as session:
             if pipeline_id is not None:
@@ -195,6 +204,10 @@ class InsightsStore:
                 record.description = description
                 record.yaml = yaml
                 record.spec = spec
+                if scope is not None:
+                    record.scope = scope
+                if endpoint_id is not _UNSET:
+                    record.endpoint_id = endpoint_id  # may be None
                 session.add(record)
                 session.flush()
                 session.refresh(record)
@@ -205,6 +218,8 @@ class InsightsStore:
                 description=description,
                 yaml=yaml,
                 spec=spec,
+                scope=scope or "engine",
+                endpoint_id=None if endpoint_id is _UNSET else endpoint_id,
             )
             session.add(record)
             session.flush()
@@ -259,6 +274,8 @@ class InsightsStore:
         name: str,
         pipeline_id: int | None,
         config: dict[str, Any],
+        sink_kind: str = "folder",
+        sink_config: dict[str, Any] | None = None,
     ) -> EndpointRecord:
         now = datetime.utcnow()
         with self.session() as session:
@@ -274,6 +291,8 @@ class InsightsStore:
                 status="stopped",
                 created_at=now,
                 updated_at=now,
+                sink_kind=sink_kind,
+                sink_config=dict(sink_config or {}),
             )
             session.add(record)
             session.flush()
@@ -291,6 +310,185 @@ class InsightsStore:
                 setattr(record, key, value)
             record.updated_at = datetime.utcnow()
             session.add(record)
+            return True
+
+    # --- Profile helpers ----------------------------------------------------
+
+    def create_profile(
+        self,
+        *,
+        kind: str,
+        name: str,
+        description: str | None,
+        config: dict[str, Any],
+    ) -> EngineModuleProfile:
+        with self.session() as session:
+            profile = EngineModuleProfile(
+                kind=kind,
+                name=name,
+                description=description,
+                config=dict(config or {}),
+            )
+            session.add(profile)
+            session.flush()
+            session.refresh(profile)
+            return profile
+
+    def update_profile(
+        self,
+        profile_id: int,
+        *,
+        name: str | None = None,
+        description: str | None = None,
+        config: dict[str, Any] | None = None,
+    ) -> bool:
+        with self.session() as session:
+            profile = session.get(EngineModuleProfile, profile_id)
+            if profile is None:
+                return False
+            if name is not None:
+                profile.name = name
+            if description is not None:
+                profile.description = description
+            if config is not None:
+                profile.config = dict(config)
+            session.add(profile)
+            return True
+
+    def delete_profile(self, profile_id: int) -> bool:
+        with self.session() as session:
+            in_use = (
+                session.query(PipelineStepRecord)
+                .filter(PipelineStepRecord.module_profile_id == profile_id)
+                .first()
+            )
+            if in_use:
+                raise RuntimeError("profile is in use by a pipeline step")
+            profile = session.get(EngineModuleProfile, profile_id)
+            if profile is None:
+                return False
+            session.delete(profile)
+            return True
+
+    def list_profiles(self, kind: str | None = None) -> list[EngineModuleProfile]:
+        with self.session() as session:
+            query = session.query(EngineModuleProfile)
+            if kind:
+                query = query.filter(EngineModuleProfile.kind == kind)
+            return query.order_by(EngineModuleProfile.name.asc()).all()
+
+    # --- Pipeline steps -----------------------------------------------------
+
+    def set_pipeline_steps(
+        self, pipeline_id: int, step_profile_ids: Sequence[int]
+    ) -> None:
+        with self.session() as session:
+            session.query(PipelineStepRecord).filter(
+                PipelineStepRecord.pipeline_id == pipeline_id
+            ).delete()
+            for order, profile_id in enumerate(step_profile_ids, start=1):
+                session.add(
+                    PipelineStepRecord(
+                        pipeline_id=pipeline_id,
+                        step_order=order,
+                        module_profile_id=profile_id,
+                    )
+                )
+
+    def list_pipeline_steps(self, pipeline_id: int) -> list[PipelineStepRecord]:
+        with self.session() as session:
+            return (
+                session.query(PipelineStepRecord)
+                .options(joinedload(PipelineStepRecord.profile))
+                .filter(PipelineStepRecord.pipeline_id == pipeline_id)
+                .order_by(PipelineStepRecord.step_order.asc())
+                .all()
+            )
+
+    # --- Endpoint message storage ------------------------------------------
+
+    def save_endpoint_message(
+        self,
+        *,
+        endpoint_id: int,
+        raw: bytes | None,
+        processed: bytes | None,
+        meta: dict[str, Any] | None = None,
+    ) -> EndpointMessageRecord:
+        with self.session() as session:
+            record = EndpointMessageRecord(
+                endpoint_id=endpoint_id,
+                raw=raw,
+                processed=processed,
+                meta=dict(meta or {}),
+            )
+            session.add(record)
+            session.flush()
+            session.refresh(record)
+            return record
+
+    def list_endpoint_messages(
+        self, *, endpoint_id: int, limit: int = 50, offset: int = 0
+    ) -> list[EndpointMessageRecord]:
+        with self.session() as session:
+            return (
+                session.query(EndpointMessageRecord)
+                .filter(EndpointMessageRecord.endpoint_id == endpoint_id)
+                .order_by(EndpointMessageRecord.received_at.desc())
+                .limit(limit)
+                .offset(offset)
+                .all()
+            )
+
+    # --- Failed message queue ----------------------------------------------
+
+    def save_failed_message(
+        self,
+        *,
+        endpoint_id: int | None,
+        pipeline_id: int | None,
+        raw: bytes,
+        error: str | None,
+        meta: dict[str, Any] | None = None,
+    ) -> FailedMessageRecord:
+        with self.session() as session:
+            record = FailedMessageRecord(
+                endpoint_id=endpoint_id,
+                pipeline_id=pipeline_id,
+                raw=raw,
+                error=error,
+                meta=dict(meta or {}),
+            )
+            session.add(record)
+            session.flush()
+            session.refresh(record)
+            return record
+
+    def get_failed_message(self, failed_id: int) -> FailedMessageRecord | None:
+        with self.session() as session:
+            return session.get(FailedMessageRecord, failed_id)
+
+    def list_failed_messages(
+        self,
+        *,
+        endpoint_id: int | None = None,
+        limit: int = 50,
+        offset: int = 0,
+    ) -> list[FailedMessageRecord]:
+        with self.session() as session:
+            query = session.query(FailedMessageRecord).order_by(
+                FailedMessageRecord.received_at.desc()
+            )
+            if endpoint_id is not None:
+                query = query.filter(FailedMessageRecord.endpoint_id == endpoint_id)
+            return query.limit(limit).offset(offset).all()
+
+    def delete_failed_message(self, failed_id: int) -> bool:
+        with self.session() as session:
+            record = session.get(FailedMessageRecord, failed_id)
+            if record is None:
+                return False
+            session.delete(record)
             return True
 
     def delete_endpoint(self, endpoint_id: int) -> bool:
@@ -608,6 +806,20 @@ class InsightsStore:
             if job is None:
                 return False
             if job.status not in {"dead", "canceled"}:
+                return False
+            job.status = "queued"
+            job.attempts = 0
+            job.leased_by = None
+            job.lease_expires_at = None
+            job.scheduled_at = (now or datetime.utcnow())
+            job.updated_at = datetime.utcnow()
+            session.add(job)
+            return True
+
+    def requeue_job(self, job_id: int, *, now: datetime | None = None) -> bool:
+        with self.session() as session:
+            job = session.get(JobRecord, job_id)
+            if job is None:
                 return False
             job.status = "queued"
             job.attempts = 0
