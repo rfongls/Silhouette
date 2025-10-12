@@ -6,6 +6,7 @@ import asyncio
 import base64
 import logging
 import os
+from pathlib import Path
 from datetime import datetime
 from typing import Dict
 
@@ -29,6 +30,43 @@ class EndpointManager:
         self._servers: Dict[int, MLLPServer] = {}
         self._runtime_cache: Dict[int, EngineRuntime | None] = {}
         self._lock = asyncio.Lock()
+
+    def _next_daily_seq(self, directory: Path) -> tuple[str, int]:
+        """Return the next YYYYMMDD sequence tuple for the provided directory."""
+
+        today = datetime.utcnow().strftime("%Y%m%d")
+        seq_file = directory / f".seq_{today}"
+        lock_file = directory / f".seq_{today}.lock"
+
+        fd: int | None = None
+        try:
+            fd = os.open(lock_file, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+        except FileExistsError:
+            fd = None
+
+        try:
+            current = 0
+            if seq_file.exists():
+                try:
+                    current = int(seq_file.read_text(encoding="utf-8").strip() or "0")
+                except Exception:
+                    current = 0
+            next_seq = current + 1
+            try:
+                seq_file.write_text(str(next_seq), encoding="utf-8")
+            except Exception:
+                pass
+            return today, next_seq
+        finally:
+            if fd is not None:
+                try:
+                    os.close(fd)
+                except OSError:
+                    pass
+                try:
+                    os.remove(lock_file)
+                except OSError:
+                    pass
 
     async def start_endpoint(self, endpoint_id: int) -> None:
         async with self._lock:
@@ -177,9 +215,9 @@ class EndpointManager:
             folder = str(sink_config.get("folder") or "")
         if not folder:
             folder = f"endpoint_{endpoint_id}"
-        directory = out_folder(folder)
-        timestamp = int(datetime.utcnow().timestamp() * 1000)
-        filename = f"msg_{endpoint_id}_{timestamp}.hl7"
+        directory = Path(out_folder(folder))
+        date_str, seq = self._next_daily_seq(directory)
+        filename = f"{date_str}_{seq}.hl7"
         write_bytes(directory, filename, processed)
 
     def _resolve_runtime(self, pipeline_id: int) -> EngineRuntime | None:
