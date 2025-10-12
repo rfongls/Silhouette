@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Any
+from typing import Any, Literal
 
 from fastapi import APIRouter, HTTPException, Query, status
 from fastapi.encoders import jsonable_encoder
@@ -25,7 +25,7 @@ router = APIRouter(tags=["engine"])
 
 class JobEnqueueRequest(BaseModel):
     pipeline_id: int = Field(..., ge=1)
-    kind: str = Field("run", pattern="^(run|replay)$")
+    kind: Literal["run", "replay"] = "run"
     payload: dict[str, Any] | None = None
     priority: int = Field(0, ge=-10, le=10)
     scheduled_at: datetime | None = None

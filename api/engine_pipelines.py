@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Literal
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
@@ -15,7 +15,7 @@ router = APIRouter(tags=["engine-pipelines"])
 class PipelineCreateRequest(BaseModel):
     name: str = Field(..., min_length=1, max_length=200)
     description: str | None = Field(None, max_length=500)
-    scope: str = Field("engine", pattern=r"^(engine|endpoint)$")
+    scope: Literal["engine", "endpoint"] = "engine"
     endpoint_id: int | None = Field(None, ge=1)
     steps: list[int] = Field(default_factory=list)
 
@@ -24,7 +24,7 @@ class PipelineItem(BaseModel):
     id: int
     name: str
     description: str | None
-    scope: str
+    scope: Literal["engine", "endpoint"]
     endpoint_id: int | None
     steps: list[dict[str, Any]]
 
@@ -80,7 +80,7 @@ def list_pipelines() -> PipelineListResponse:
 class PipelineUpdateRequest(BaseModel):
     name: str | None = Field(None, min_length=1, max_length=200)
     description: str | None = Field(None, max_length=500)
-    scope: str | None = Field(None, pattern=r"^(engine|endpoint)$")
+    scope: Literal["engine", "endpoint"] | None = None
     endpoint_id: int | None = Field(None, ge=1)
     steps: list[int] | None = None
 

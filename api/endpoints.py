@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Literal
 
 from fastapi import APIRouter, HTTPException, Query, status
 from pydantic import BaseModel, Field, validator
@@ -15,11 +15,11 @@ router = APIRouter(tags=["engine"])
 
 
 class EndpointCreateRequest(BaseModel):
-    kind: str = Field(..., pattern="^(mllp_in|mllp_out)$")
+    kind: Literal["mllp_in", "mllp_out"]
     name: str = Field(..., min_length=1, max_length=200)
     pipeline_id: int | None = Field(None, ge=1)
     config: dict[str, Any]
-    sink_kind: str = Field("folder", pattern="^(folder|db)$")
+    sink_kind: Literal["folder", "db"] = "folder"
     sink_config: dict[str, Any] = Field(default_factory=dict)
 
     @validator("sink_config", pre=True, always=True)
@@ -114,7 +114,7 @@ def get_endpoint(endpoint_id: int) -> EndpointInfo:
 class EndpointUpdateRequest(BaseModel):
     pipeline_id: int | None = Field(None, ge=1)
     config: dict[str, Any] | None = None
-    sink_kind: str | None = Field(None, pattern="^(folder|db)$")
+    sink_kind: Literal["folder", "db"] | None = None
     sink_config: dict[str, Any] | None = None
 
     @validator("config")

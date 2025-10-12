@@ -1,6 +1,6 @@
 {% extends "layout.html" %}
 {% block content %}
-<section class="dashboard">
+<section class="dashboard" data-transform-profile="{{ transform_profile_id or '' }}">
   <div class="dashboard-container">
     <nav class="breadcrumbs"><a href="{{ root }}/ui">Home</a> / <a href="{{ root }}/ui/skills">Skills</a> / <a href="{{ root }}/ui/skills/interop">Interop</a> / <span>Settings</span></nav>
     <header class="dashboard-header">
@@ -93,7 +93,8 @@
 <script>
   const _appRootEl = document.querySelector('meta[name="app-root"]');
   const ROOT_PATH = _appRootEl ? (_appRootEl.getAttribute('content') || '') : '';
-  const preselectedProfileId = {{ transform_profile_id|tojson }};
+  const dashboardSection = document.querySelector('section.dashboard');
+  const preselectedProfileId = dashboardSection ? (dashboardSection.dataset.transformProfile || '') : '';
 
   function escapeHtml(text) {
     return (text || '').replace(/[&<>"]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch] || ch));

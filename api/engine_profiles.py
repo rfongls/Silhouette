@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Literal
 
 from fastapi import APIRouter, HTTPException
 from sqlalchemy.exc import IntegrityError
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, validator
 
 from insights.store import get_store
 
@@ -14,15 +14,23 @@ router = APIRouter(tags=["engine-profiles"])
 
 
 class ProfileCreateRequest(BaseModel):
-    kind: str = Field(..., pattern=r"^(transform|deid|validate)$")
+    kind: Literal["transform", "deid", "validate"]
     name: str = Field(..., min_length=1, max_length=200)
     description: str | None = Field(None, max_length=500)
     config: dict[str, Any] = Field(default_factory=dict)
 
+    @validator("config", pre=True, always=True)
+    def _ensure_dict(cls, value: Any) -> dict[str, Any]:
+        if value is None:
+            return {}
+        if not isinstance(value, dict):
+            raise ValueError("config must be an object")
+        return value
+
 
 class ProfileItem(BaseModel):
     id: int
-    kind: str
+    kind: Literal["transform", "deid", "validate"]
     name: str
     description: str | None
     config: dict[str, Any]
@@ -69,6 +77,12 @@ class ProfileUpdateRequest(BaseModel):
     name: str | None = Field(None, min_length=1, max_length=200)
     description: str | None = Field(None, max_length=500)
     config: dict[str, Any] | None = None
+
+    @validator("config")
+    def _ensure_dict(cls, value: dict[str, Any] | None) -> dict[str, Any] | None:
+        if value is not None and not isinstance(value, dict):
+            raise ValueError("config must be an object")
+        return value
 
 
 @router.put("/api/engine/profiles/{profile_id}")
