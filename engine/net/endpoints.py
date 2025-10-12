@@ -3,10 +3,15 @@
 from __future__ import annotations
 
 import asyncio
+import base64
 import logging
 import os
+from datetime import datetime
 from typing import Dict
 
+from agent.fs_utils import out_folder, write_bytes
+from engine.operators.transform import TransformOperator
+from engine.runtime import EngineRuntime
 from insights.store import InsightsStore
 
 from .mllp_server import MLLPServer
@@ -22,6 +27,7 @@ class EndpointManager:
     def __init__(self, store: InsightsStore) -> None:
         self.store = store
         self._servers: Dict[int, MLLPServer] = {}
+        self._runtime_cache: Dict[int, EngineRuntime | None] = {}
         self._lock = asyncio.Lock()
 
     async def start_endpoint(self, endpoint_id: int) -> None:
@@ -31,8 +37,6 @@ class EndpointManager:
                 raise KeyError("endpoint not found")
             if record.kind != "mllp_in":
                 raise KeyError("unsupported endpoint type")
-            if record.pipeline_id is None:
-                raise ValueError("inbound endpoint missing pipeline_id")
 
             host = str(record.config.get("host") or "").strip()
             port = int(record.config.get("port") or 0)
@@ -47,12 +51,20 @@ class EndpointManager:
                 return
 
             self.store.update_endpoint(endpoint_id, status="starting", last_error=None)
+
+            if record.pipeline_id is not None:
+                self._runtime_cache.pop(record.pipeline_id, None)
+
+            async def _handler(payload: bytes, meta: dict[str, str]) -> None:
+                await self._process_incoming(endpoint_id, payload, meta)
+
             server = MLLPServer(
                 host=host,
                 port=port,
                 allow_cidrs=allow_cidrs,
                 pipeline_id=record.pipeline_id,
                 store=self.store,
+                message_handler=_handler,
             )
             try:
                 await server.start()
@@ -80,6 +92,99 @@ class EndpointManager:
             if server is not None:
                 await server.stop()
             self.store.update_endpoint(endpoint_id, status="stopped", last_error=None)
+
+    async def _process_incoming(self, endpoint_id: int, payload: bytes, meta: dict[str, str]) -> None:
+        record = self.store.get_endpoint(endpoint_id)
+        if record is None:
+            raise RuntimeError("endpoint not found")
+
+        runtime: EngineRuntime | None = None
+        if record.pipeline_id is not None:
+            runtime = self._resolve_runtime(record.pipeline_id)
+
+        if runtime is None and record.pipeline_id is not None:
+            encoded = base64.b64encode(payload).decode("ascii")
+            self.store.enqueue_job(
+                pipeline_id=record.pipeline_id,
+                kind="ingest",
+                payload={"message_b64": encoded, "meta": meta},
+                priority=0,
+                max_attempts=3,
+            )
+            return
+
+        processed = payload
+        if runtime is not None:
+            processed = await runtime.run_on_message(payload)
+
+        self._persist_message(
+            endpoint_id=record.id,
+            sink_kind=record.sink_kind,
+            sink_config=record.sink_config,
+            raw=payload,
+            processed=processed,
+            meta=meta,
+        )
+
+    def _persist_message(
+        self,
+        *,
+        endpoint_id: int,
+        sink_kind: str,
+        sink_config: dict[str, object] | None,
+        raw: bytes,
+        processed: bytes,
+        meta: dict[str, str],
+    ) -> None:
+        if sink_kind == "db":
+            self.store.save_endpoint_message(
+                endpoint_id=endpoint_id,
+                raw=raw,
+                processed=processed,
+                meta=dict(meta),
+            )
+            return
+
+        folder = ""
+        if sink_config and isinstance(sink_config, dict):
+            folder = str(sink_config.get("folder") or "")
+        if not folder:
+            folder = f"endpoint_{endpoint_id}"
+        directory = out_folder(folder)
+        timestamp = int(datetime.utcnow().timestamp() * 1000)
+        filename = f"msg_{endpoint_id}_{timestamp}.hl7"
+        write_bytes(directory, filename, processed)
+
+    def _resolve_runtime(self, pipeline_id: int) -> EngineRuntime | None:
+        if pipeline_id in self._runtime_cache:
+            return self._runtime_cache[pipeline_id]
+
+        steps = self.store.list_pipeline_steps(pipeline_id)
+        if not steps:
+            self._runtime_cache[pipeline_id] = None
+            return None
+
+        operators = []
+        for step in steps:
+            profile = step.profile
+            if profile.kind == "transform":
+                operators.append(TransformOperator(profile.config))
+            else:
+                logger.warning(
+                    "endpoint.pipeline.unsupported_step",
+                    extra={
+                        "pipeline_id": pipeline_id,
+                        "step_id": step.id,
+                        "profile_kind": profile.kind,
+                    },
+                )
+        if not operators:
+            self._runtime_cache[pipeline_id] = None
+            return None
+
+        runtime = EngineRuntime(spec=None, operators=operators)
+        self._runtime_cache[pipeline_id] = runtime
+        return runtime
 
 
 _MANAGER: EndpointManager | None = None
