@@ -6,9 +6,9 @@ from pathlib import Path
 import silhouette_core.compat.forwardref_shim  # noqa: F401  # ensure ForwardRef shim loads before FastAPI imports
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import JSONResponse, PlainTextResponse
+from fastapi.responses import JSONResponse, PlainTextResponse, RedirectResponse
 from fastapi.exceptions import RequestValidationError
-from starlette.responses import RedirectResponse, Response as StarletteResponse
+from starlette.responses import Response as StarletteResponse
 from api.interop import router as interop_router
 from api.interop_gen import router as interop_gen_router, try_generate_on_validation_error
 from api.security import router as security_router
