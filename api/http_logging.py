@@ -12,6 +12,7 @@ from typing import Any, Tuple
 from fastapi import FastAPI, Request
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import Response as StarletteResponse
+from starlette.requests import ClientDisconnect
 
 from api.debug_log import (
     consume_http_force_token,
@@ -245,7 +246,10 @@ class HttpLoggerMiddleware(BaseHTTPMiddleware):
         raw_body: bytes | None = None
         replayable_request: Request = request
         if log_request:
-            raw_body = await request.body()
+            try:
+                raw_body = await request.body()
+            except ClientDisconnect:
+                raw_body = b""
 
             async def receive() -> dict[str, Any]:
                 return {"type": "http.request", "body": raw_body or b"", "more_body": False}

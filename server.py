@@ -9,6 +9,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import JSONResponse, PlainTextResponse, RedirectResponse
 from fastapi.exceptions import RequestValidationError
 from starlette.responses import Response as StarletteResponse
+from starlette.requests import ClientDisconnect
 from api.interop import router as interop_router
 from api.interop_gen import router as interop_gen_router, try_generate_on_validation_error
 from api.security import router as security_router
@@ -107,10 +108,21 @@ install_http_logging(app, log_path=_HTTP_LOG_PATH)
 ensure_diagnostics(app, http_log_path=_HTTP_LOG_PATH)
 
 
-@app.get("/", include_in_schema=False)
-async def _root_redirect():
-    # Always land on the shell (home) so users can pick Chat vs Skills
-    return RedirectResponse(url="/ui")
+def _run_alembic_migrations_if_present() -> None:
+    """Best-effort Alembic upgrade; silently skip if config missing."""
+
+    try:
+        from alembic import command
+        from alembic.config import Config
+
+        cfg_path = Path(__file__).with_name("alembic.ini")
+        if not cfg_path.exists():
+            return
+        cfg = Config(str(cfg_path))
+        command.upgrade(cfg, "head")
+        logger.info("Alembic migrations applied (head).")
+    except Exception as exc:
+        logger.warning("Alembic migration step skipped: %s", exc, exc_info=True)
 
 
 # Lightweight health probe for startup checks and monitors
@@ -126,6 +138,7 @@ async def _bootstrap_insights_schema() -> None:
     try:
         from insights.store import get_store
 
+        _run_alembic_migrations_if_present()
         store = get_store()
         store.ensure_schema()
         db_url = os.getenv("INSIGHTS_DB_URL", "sqlite:///data/insights.db")
@@ -245,7 +258,10 @@ async def _log_request_validation(request: Request, exc: RequestValidationError)
     fallback = await try_generate_on_validation_error(request, exc)
     if fallback is not None:
         return fallback
-    body = await request.body()
+    try:
+        body = await request.body()
+    except ClientDisconnect:
+        body = b""
     logger.warning(
         "validation error: path=%s ctype=%s body=%r errors=%s",
         request.url.path,
@@ -283,9 +299,9 @@ async def _log_unhandled_exception(request: Request, exc: Exception):
 
 @app.get("/", include_in_schema=False)
 def _root():
-    if getattr(app.state, "engine_v2_enabled", False):
-        return RedirectResponse("/ui/landing", status_code=307)
-    return RedirectResponse("/ui/home", status_code=307)
+    """Default landing for the combined shell experience."""
+
+    return RedirectResponse("/ui", status_code=307)
 
 
 @app.get("/ping", include_in_schema=False)

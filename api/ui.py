@@ -141,6 +141,13 @@ def ui_home(request: Request):
     return _render_ui_home(request)
 
 
+@router.get("/ui/settings", include_in_schema=False)
+def redirect_settings() -> RedirectResponse:
+    """Legacy settings entrypoint → new skills/interop settings hub."""
+
+    return RedirectResponse(url="/ui/skills/interop/settings", status_code=307)
+
+
 @router.get("/reports", response_class=HTMLResponse, name="ui_reports")
 def ui_reports(request: Request):
     return templates.TemplateResponse("reports/index.html", {"request": request})
