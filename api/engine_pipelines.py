@@ -8,6 +8,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
 from insights.store import get_store
+from ._pydantic_compat import fields_set
 
 router = APIRouter(tags=["engine-pipelines"])
 
@@ -93,7 +94,7 @@ def update_pipeline(pipeline_id: int, payload: PipelineUpdateRequest) -> dict[st
         raise HTTPException(status_code=404, detail="pipeline not found")
 
     endpoint_update = record.endpoint_id
-    if "endpoint_id" in payload.__fields_set__:
+    if "endpoint_id" in fields_set(payload):
         endpoint_update = payload.endpoint_id
 
     updated = store.save_pipeline(

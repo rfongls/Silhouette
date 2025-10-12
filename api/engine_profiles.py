@@ -6,9 +6,10 @@ from typing import Any, Literal
 
 from fastapi import APIRouter, HTTPException
 from sqlalchemy.exc import IntegrityError
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field
 
 from insights.store import get_store
+from ._pydantic_compat import compat_validator
 
 router = APIRouter(tags=["engine-profiles"])
 
@@ -19,7 +20,7 @@ class ProfileCreateRequest(BaseModel):
     description: str | None = Field(None, max_length=500)
     config: dict[str, Any] = Field(default_factory=dict)
 
-    @validator("config", pre=True, always=True)
+    @compat_validator("config", pre=True, always=True)
     def _ensure_dict(cls, value: Any) -> dict[str, Any]:
         if value is None:
             return {}
@@ -78,7 +79,7 @@ class ProfileUpdateRequest(BaseModel):
     description: str | None = Field(None, max_length=500)
     config: dict[str, Any] | None = None
 
-    @validator("config")
+    @compat_validator("config")
     def _ensure_dict(cls, value: dict[str, Any] | None) -> dict[str, Any] | None:
         if value is not None and not isinstance(value, dict):
             raise ValueError("config must be an object")

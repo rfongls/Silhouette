@@ -10,6 +10,7 @@ from sqlalchemy.exc import IntegrityError
 
 from engine.net.endpoints import get_manager
 from insights.store import get_store
+from ._pydantic_compat import compat_validator, fields_set
 
 router = APIRouter(tags=["engine"])
 
@@ -22,7 +23,7 @@ class EndpointCreateRequest(BaseModel):
     sink_kind: Literal["folder", "db"] = "folder"
     sink_config: dict[str, Any] = Field(default_factory=dict)
 
-    @validator("sink_config", pre=True, always=True)
+    @compat_validator("sink_config", pre=True, always=True)
     def _ensure_sink_config_dict(cls, value: Any) -> dict[str, Any]:  # noqa: D401
         """Validate that the sink configuration is a JSON object/dict."""
         if value is None:
@@ -117,13 +118,13 @@ class EndpointUpdateRequest(BaseModel):
     sink_kind: Literal["folder", "db"] | None = None
     sink_config: dict[str, Any] | None = None
 
-    @validator("config")
+    @compat_validator("config")
     def _validate_config(cls, value: dict[str, Any] | None) -> dict[str, Any] | None:
         if value is not None and not isinstance(value, dict):
             raise ValueError("config must be an object")
         return value
 
-    @validator("sink_config")
+    @compat_validator("sink_config")
     def _validate_sink_config(
         cls, value: dict[str, Any] | None
     ) -> dict[str, Any] | None:
@@ -140,7 +141,7 @@ def update_endpoint(endpoint_id: int, payload: EndpointUpdateRequest) -> dict[st
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="endpoint not found")
 
     updates: dict[str, Any] = {}
-    if "pipeline_id" in payload.__fields_set__:
+    if "pipeline_id" in fields_set(payload):
         if payload.pipeline_id is not None:
             pipeline = store.get_pipeline(payload.pipeline_id)
             if pipeline is None:
