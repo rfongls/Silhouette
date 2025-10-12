@@ -49,6 +49,8 @@ def _is_truthy(value: str | None) -> bool:
 _ENGINE_V2_ENABLED = _is_truthy(os.getenv("ENGINE_V2"))
 app.state.engine_v2_enabled = _ENGINE_V2_ENABLED
 ui_templates.env.globals["engine_v2_enabled"] = _ENGINE_V2_ENABLED
+# Base URL prefix for templates; override if deployed under a subpath.
+ui_templates.env.globals["root"] = ""
 
 app.include_router(ui_home_router)
 for r in (
