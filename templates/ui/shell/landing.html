@@ -1,0 +1,29 @@
+{% extends "layout.html" %}
+{% block content %}
+<section class="dashboard">
+  <div class="dashboard-container">
+    <header class="dashboard-header">
+      <h1 class="text-h1">Silhouette Core</h1>
+      <p class="text-body">Choose how you want to work:</p>
+    </header>
+
+    <div class="grid two" style="gap:1rem; align-items:stretch;">
+      <article class="card" aria-labelledby="shell-landing-chat">
+        <h2 id="shell-landing-chat" class="text-h2">Chat (LLM)</h2>
+        <p class="text-body muted">Use the conversational assistant to run Silhouette workflows.</p>
+        <div class="row small mt" style="justify-content:flex-start;">
+          <a class="button" href="{{ root }}/ui/chat">Open Chat</a>
+        </div>
+      </article>
+
+      <article class="card" aria-labelledby="shell-landing-skills">
+        <h2 id="shell-landing-skills" class="text-h2">Skills</h2>
+        <p class="text-body muted">Navigate to Interop and Cybersecurity capabilities.</p>
+        <div class="row small mt" style="justify-content:flex-start;">
+          <a class="button secondary" href="{{ root }}/ui/skills">Go to Skills</a>
+        </div>
+      </article>
+    </div>
+  </div>
+</section>
+{% endblock %}
