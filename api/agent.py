@@ -4,18 +4,7 @@ import json
 from datetime import datetime
 from typing import Any, Dict, List, Optional
 from fastapi import APIRouter, HTTPException, Request
-
-# Compat: prefer Starlette's EventSourceResponse if available; fall back to
-# sse-starlette for older releases.
-try:  # pragma: no cover - import path varies across versions
-    from starlette.responses import EventSourceResponse  # type: ignore
-except Exception:  # pragma: no cover
-    try:
-        from sse_starlette.sse import EventSourceResponse  # type: ignore
-    except Exception as exc:  # pragma: no cover
-        raise RuntimeError(
-            "EventSourceResponse is unavailable. Install sse-starlette or upgrade starlette."
-        ) from exc
+from starlette.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
 from agent.orchestrator import (
@@ -183,7 +172,14 @@ async def stream_actions(request: Request, since: int = 0):
                 yield f"event: action\ndata: {json.dumps(ev)}\n\n"
             await asyncio.sleep(1.0)
 
-    return EventSourceResponse(gen(), media_type="text/event-stream")
+    return StreamingResponse(
+        gen(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+        },
+    )
 
 
 @router.post("/api/agent/demo")
