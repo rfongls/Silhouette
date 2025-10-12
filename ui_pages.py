@@ -47,6 +47,12 @@ def _first_existing_template(page: str) -> str | None:
     return None
 
 
+@router.get("/ui/landing", response_class=HTMLResponse)
+def landing(request: Request):
+    # Directly render landing; template path: templates/ui/landing.html
+    return _templates.TemplateResponse("ui/landing.html", {"request": request})
+
+
 @router.get("/ui/{page:path}", response_class=HTMLResponse)
 async def ui_page(page: str, request: Request) -> HTMLResponse:
     rel = _first_existing_template(page)
