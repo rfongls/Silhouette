@@ -1,10 +1,8 @@
 from __future__ import annotations
-
 import asyncio
 import json
 from datetime import datetime
 from typing import Any, Dict, List, Optional
-
 from fastapi import APIRouter, HTTPException, Request
 
 # Compat: prefer Starlette's EventSourceResponse if available; fall back to
