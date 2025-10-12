@@ -771,7 +771,6 @@ class InsightsStore:
                 return False
             job.status = "queued"
             job.attempts = 0
-            job.last_error = None
             job.leased_by = None
             job.lease_expires_at = None
             job.scheduled_at = (now or datetime.utcnow())
