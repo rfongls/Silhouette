@@ -156,15 +156,6 @@ def ui_reports_validate(request: Request):
     return templates.TemplateResponse("reports/validate.html", {"request": request})
 
 
-@router.get("/ui/skills", response_class=HTMLResponse)
-def ui_skills_index(request: Request):
-    """Skills Index — navigate to skill dashboards (Interop, Security, etc.)."""
-    return templates.TemplateResponse(
-        "ui/skills_index.html",
-        {"request": request, "skills": _load_skills()},
-    )
-
-
 def _sanitize_target_id(value: str | None) -> str:
     if not value:
         return "home-debug-log"
