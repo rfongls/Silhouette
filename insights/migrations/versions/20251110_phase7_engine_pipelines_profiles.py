@@ -73,6 +73,11 @@ def upgrade() -> None:
         "pipeline_steps",
         ["pipeline_id", "step_order"],
     )
+    op.create_index(
+        "ix_pipeline_steps_pipeline",
+        "pipeline_steps",
+        ["pipeline_id"],
+    )
 
     op.add_column(
         "pipelines",
@@ -140,6 +145,10 @@ def downgrade() -> None:
     op.drop_column("pipelines", "scope")
     op.drop_index(
         "ix_pipeline_steps_order",
+        table_name="pipeline_steps",
+    )
+    op.drop_index(
+        "ix_pipeline_steps_pipeline",
         table_name="pipeline_steps",
     )
     op.drop_table("pipeline_steps")

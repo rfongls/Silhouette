@@ -307,6 +307,8 @@ class InsightsStore:
             for key, value in fields.items():
                 if not hasattr(record, key):
                     continue
+                if key in {"config", "sink_config"} and value is not None:
+                    value = dict(value)
                 setattr(record, key, value)
             record.updated_at = datetime.utcnow()
             session.add(record)
@@ -430,6 +432,8 @@ class InsightsStore:
     def list_endpoint_messages(
         self, *, endpoint_id: int, limit: int = 50, offset: int = 0
     ) -> list[EndpointMessageRecord]:
+        limit = max(0, min(int(limit), 1000))
+        offset = max(0, int(offset))
         with self.session() as session:
             return (
                 session.query(EndpointMessageRecord)
@@ -475,6 +479,8 @@ class InsightsStore:
         limit: int = 50,
         offset: int = 0,
     ) -> list[FailedMessageRecord]:
+        limit = max(0, min(int(limit), 1000))
+        offset = max(0, int(offset))
         with self.session() as session:
             query = session.query(FailedMessageRecord).order_by(
                 FailedMessageRecord.received_at.desc()

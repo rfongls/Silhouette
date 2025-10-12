@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from fastapi import APIRouter, HTTPException, Query, status
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, validator
 from sqlalchemy.exc import IntegrityError
 
 from engine.net.endpoints import get_manager
@@ -21,6 +21,15 @@ class EndpointCreateRequest(BaseModel):
     config: dict[str, Any]
     sink_kind: str = Field("folder", pattern="^(folder|db)$")
     sink_config: dict[str, Any] = Field(default_factory=dict)
+
+    @validator("sink_config", pre=True, always=True)
+    def _ensure_sink_config_dict(cls, value: Any) -> dict[str, Any]:  # noqa: D401
+        """Validate that the sink configuration is a JSON object/dict."""
+        if value is None:
+            return {}
+        if not isinstance(value, dict):
+            raise ValueError("sink_config must be an object")
+        return value
 
 
 class EndpointInfo(BaseModel):
@@ -107,6 +116,20 @@ class EndpointUpdateRequest(BaseModel):
     config: dict[str, Any] | None = None
     sink_kind: str | None = Field(None, pattern="^(folder|db)$")
     sink_config: dict[str, Any] | None = None
+
+    @validator("config")
+    def _validate_config(cls, value: dict[str, Any] | None) -> dict[str, Any] | None:
+        if value is not None and not isinstance(value, dict):
+            raise ValueError("config must be an object")
+        return value
+
+    @validator("sink_config")
+    def _validate_sink_config(
+        cls, value: dict[str, Any] | None
+    ) -> dict[str, Any] | None:
+        if value is not None and not isinstance(value, dict):
+            raise ValueError("sink_config must be an object")
+        return value
 
 
 @router.put("/api/engine/endpoints/{endpoint_id}")

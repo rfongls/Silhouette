@@ -38,8 +38,14 @@ def upgrade() -> None:
         "engine_failed_messages",
         ["endpoint_id", "received_at"],
     )
+    op.create_index(
+        "ix_failed_pipeline_time",
+        "engine_failed_messages",
+        ["pipeline_id", "received_at"],
+    )
 
 
 def downgrade() -> None:
+    op.drop_index("ix_failed_pipeline_time", table_name="engine_failed_messages")
     op.drop_index("ix_failed_endpoint_time", table_name="engine_failed_messages")
     op.drop_table("engine_failed_messages")
