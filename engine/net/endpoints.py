@@ -6,6 +6,7 @@ import asyncio
 import base64
 import logging
 import os
+import time
 from pathlib import Path
 from datetime import datetime
 from typing import Dict
@@ -39,9 +40,13 @@ class EndpointManager:
         lock_file = directory / f".seq_{today}.lock"
 
         fd: int | None = None
-        try:
-            fd = os.open(lock_file, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
-        except FileExistsError:
+        for _ in range(20):
+            try:
+                fd = os.open(lock_file, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+                break
+            except FileExistsError:
+                time.sleep(0.05)
+        else:
             fd = None
 
         try:
