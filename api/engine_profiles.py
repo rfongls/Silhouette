@@ -7,7 +7,7 @@ from sqlalchemy.exc import IntegrityError
 from pydantic import BaseModel, Field
 from insights.store import get_store
 from ._pydantic_compat import compat_validator
-from .types import PROFILE_KIND_VALUES, ProfileKind
+from .types import ProfileKind
 
 router = APIRouter(tags=["engine-profiles"])
 
@@ -56,8 +56,6 @@ def create_profile(payload: ProfileCreateRequest) -> dict[str, int]:
 
 @router.get("/api/engine/profiles", response_model=ProfileListResponse)
 def list_profiles(kind: ProfileKind | None = None) -> ProfileListResponse:
-    if kind and kind not in PROFILE_KIND_VALUES:
-        raise HTTPException(status_code=400, detail="unknown profile kind")
     store = get_store()
     items = [
         ProfileItem(

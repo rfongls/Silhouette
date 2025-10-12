@@ -1,8 +1,7 @@
 """Shared type aliases and helpers for API request/response schemas."""
 
 from __future__ import annotations
-
-from typing import Literal, Set, Tuple, get_args
+from typing import Literal, Tuple, get_args
 
 EndpointKind = Literal["mllp_in", "mllp_out"]
 SinkKind = Literal["folder", "db"]
@@ -11,7 +10,7 @@ ProfileKind = Literal["transform", "deid", "validate"]
 JobKind = Literal["run", "replay"]
 
 
-def _literal_values(lit: object) -> Set[str]:
+def _literal_values(lit: object) -> set[str]:
     """Return the runtime set of valid values for a ``Literal`` type."""
 
     return set(get_args(lit))  # type: ignore[arg-type]

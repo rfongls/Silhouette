@@ -11,7 +11,7 @@ from sqlalchemy.exc import IntegrityError
 from engine.net.endpoints import get_manager
 from insights.store import get_store
 from ._pydantic_compat import compat_validator, fields_set
-from .types import ENDPOINT_KIND_VALUES, EndpointKind, SinkKind
+from .types import EndpointKind, SinkKind
 
 router = APIRouter(tags=["engine"])
 
@@ -72,11 +72,7 @@ def create_endpoint(payload: EndpointCreateRequest) -> dict[str, int]:
 @router.get("/api/engine/endpoints", response_model=EndpointListResponse)
 def list_endpoints(kind: EndpointKind | None = Query(None)) -> EndpointListResponse:
     store = get_store()
-    kinds = None
-    if kind:
-        if kind not in ENDPOINT_KIND_VALUES:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="unknown kind")
-        kinds = [kind]
+    kinds = [kind] if kind else None
     items = [
         EndpointInfo(
             id=record.id,

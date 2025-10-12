@@ -37,7 +37,7 @@ class JobEnqueueRequest(BaseModel):
 class JobInfo(BaseModel):
     id: int
     pipeline_id: int
-    kind: str
+    kind: JobKind
     status: str
     priority: int
     attempts: int
