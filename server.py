@@ -241,6 +241,8 @@ async def _log_unhandled_exception(request: Request, exc: Exception):
 
 @app.get("/", include_in_schema=False)
 def _root():
+    if getattr(app.state, "engine_v2_enabled", False):
+        return RedirectResponse("/ui/landing", status_code=307)
     return RedirectResponse("/ui/home", status_code=307)
 
 
