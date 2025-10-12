@@ -6,9 +6,9 @@ from pathlib import Path
 import silhouette_core.compat.forwardref_shim  # noqa: F401  # ensure ForwardRef shim loads before FastAPI imports
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import JSONResponse, PlainTextResponse
+from fastapi.responses import JSONResponse, PlainTextResponse, RedirectResponse
 from fastapi.exceptions import RequestValidationError
-from starlette.responses import RedirectResponse, Response as StarletteResponse
+from starlette.responses import Response as StarletteResponse
 from api.interop import router as interop_router
 from api.interop_gen import router as interop_gen_router, try_generate_on_validation_error
 from api.security import router as security_router
@@ -49,6 +49,8 @@ def _is_truthy(value: str | None) -> bool:
 _ENGINE_V2_ENABLED = _is_truthy(os.getenv("ENGINE_V2"))
 app.state.engine_v2_enabled = _ENGINE_V2_ENABLED
 ui_templates.env.globals["engine_v2_enabled"] = _ENGINE_V2_ENABLED
+# Base URL prefix for templates; override if deployed under a subpath.
+ui_templates.env.globals["root"] = ""
 
 app.include_router(ui_home_router)
 for r in (
@@ -70,6 +72,10 @@ if _ENGINE_V2_ENABLED:
     from api.agent import router as agent_router
     from api.endpoints import router as endpoints_router
     from api.engine_assist import router as engine_assist_router
+    from api.engine_messages import router as engine_messages_router
+    from api.engine_pipelines import router as engine_pipelines_router
+    from api.engine_profiles import router as engine_profiles_router
+    from api.engine_failed import router as engine_failed_router
     from api.mllp_send import router as mllp_send_router
     from api.insights import router as insights_router
     from api.ui_engine import router as ui_engine_router
@@ -77,6 +83,10 @@ if _ENGINE_V2_ENABLED:
     for feature_router in (
         engine_router,
         engine_jobs_router,
+        engine_profiles_router,
+        engine_pipelines_router,
+        engine_messages_router,
+        engine_failed_router,
         agent_router,
         endpoints_router,
         mllp_send_router,
@@ -85,12 +95,29 @@ if _ENGINE_V2_ENABLED:
         ui_engine_router,
     ):
         app.include_router(feature_router)
+# Shell / skill hubs (always available)
+from api.ui_shell import router as ui_shell_router
+
+app.include_router(ui_shell_router)
 app.mount("/static", StaticFiles(directory=_STATIC_DIR), name="static")
 # Keep the registration near the bottom so it is easy to toggle during local
 # investigations. The middleware ensures the log directory exists and degrades
 # to console-only logging if file access fails.
 install_http_logging(app, log_path=_HTTP_LOG_PATH)
 ensure_diagnostics(app, http_log_path=_HTTP_LOG_PATH)
+
+
+@app.get("/", include_in_schema=False)
+async def _root_redirect():
+    # Always land on the shell (home) so users can pick Chat vs Skills
+    return RedirectResponse(url="/ui")
+
+
+# Lightweight health probe for startup checks and monitors
+@app.get("/healthz", include_in_schema=False)
+@app.head("/healthz", include_in_schema=False)
+async def _healthz():
+    return PlainTextResponse("ok", status_code=200)
 
 
 @app.on_event("startup")
