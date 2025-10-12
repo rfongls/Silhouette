@@ -34,5 +34,9 @@ python -m pip install "fastapi>=0.110" "uvicorn[standard]>=0.23" "jinja2>=3.1" "
 
 echo
 echo "[4/4] Starting server at http://localhost:8000/"
+export ENGINE_V2="${ENGINE_V2:-1}"
+open "http://localhost:8000/ui/landing" || true
+open "http://localhost:8000/ui/engine" || true
 open "http://localhost:8000/ui/security/dashboard" || true
-exec python -m uvicorn main:app --host 127.0.0.1 --port 8000
+open "http://localhost:8000/ui/interop/dashboard" || true
+exec python -m uvicorn server:app --host 127.0.0.1 --port 8000 --reload
