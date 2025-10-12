@@ -1,0 +1,30 @@
+{% extends "layout.html" %}
+{% block content %}
+<section class="dashboard">
+  <div class="dashboard-container">
+    <nav class="breadcrumbs"><a href="{{ root }}/ui">Home</a> / <span>Skills</span></nav>
+    <header class="dashboard-header">
+      <h1 class="text-h1">Skills</h1>
+      <p class="text-body muted">Pick a capability hub to continue.</p>
+    </header>
+
+    <div class="grid two" style="gap:1rem; align-items:stretch;">
+      <article class="card" aria-labelledby="skills-interop-heading">
+        <h2 id="skills-interop-heading" class="text-h2">Interop</h2>
+        <p class="text-body muted">Healthcare data pipelines, Engine controls, and QA tooling.</p>
+        <div class="row small mt">
+          <a class="button" href="{{ root }}/ui/skills/interop">Open Interop</a>
+        </div>
+      </article>
+
+      <article class="card" aria-labelledby="skills-cyber-heading">
+        <h2 id="skills-cyber-heading" class="text-h2">Cybersecurity</h2>
+        <p class="text-body muted">Security automations and evidence capture (coming soon).</p>
+        <div class="row small mt">
+          <a class="button secondary" href="{{ root }}/ui/skills/cyber">Open Cybersecurity</a>
+        </div>
+      </article>
+    </div>
+  </div>
+</section>
+{% endblock %}
