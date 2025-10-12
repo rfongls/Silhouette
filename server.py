@@ -67,6 +67,7 @@ for r in (
 if _ENGINE_V2_ENABLED:
     from api.engine import router as engine_router
     from api.engine_jobs import router as engine_jobs_router
+    from api.agent import router as agent_router
     from api.endpoints import router as endpoints_router
     from api.engine_assist import router as engine_assist_router
     from api.mllp_send import router as mllp_send_router
@@ -76,6 +77,7 @@ if _ENGINE_V2_ENABLED:
     for feature_router in (
         engine_router,
         engine_jobs_router,
+        agent_router,
         endpoints_router,
         mllp_send_router,
         engine_assist_router,
@@ -239,6 +241,8 @@ async def _log_unhandled_exception(request: Request, exc: Exception):
 
 @app.get("/", include_in_schema=False)
 def _root():
+    if getattr(app.state, "engine_v2_enabled", False):
+        return RedirectResponse("/ui/landing", status_code=307)
     return RedirectResponse("/ui/home", status_code=307)
 
 
