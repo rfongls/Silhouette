@@ -1,0 +1,38 @@
+{% extends "layout.html" %}
+{% block content %}
+<section class="dashboard">
+  <div class="dashboard-container">
+    <nav class="breadcrumbs"><a href="{{ root }}/ui">Home</a> / <a href="{{ root }}/ui/skills">Skills</a> / <span>Interop</span></nav>
+    <header class="dashboard-header">
+      <h1 class="text-h1">Interop</h1>
+      <p class="text-body muted">Choose a module to continue.</p>
+    </header>
+
+    <div class="grid three" style="gap:1rem; align-items:stretch;">
+      <article class="card" aria-labelledby="interop-settings">
+        <h2 id="interop-settings" class="text-h2">Settings</h2>
+        <p class="text-body muted">Manage transform, de-identify, and validate profiles.</p>
+        <div class="row small mt">
+          <a class="button" href="{{ root }}/ui/skills/interop/settings">Open Settings</a>
+        </div>
+      </article>
+
+      <article class="card" aria-labelledby="interop-engine">
+        <h2 id="interop-engine" class="text-h2">Engine</h2>
+        <p class="text-body muted">Control endpoints, pipelines, and storage sinks.</p>
+        <div class="row small mt">
+          <a class="button secondary" href="{{ root }}/ui/engine">Open Engine</a>
+        </div>
+      </article>
+
+      <article class="card" aria-labelledby="interop-manual">
+        <h2 id="interop-manual" class="text-h2">Manual Pipeline</h2>
+        <p class="text-body muted">Generate, transform, and validate sample HL7/FHIR messages.</p>
+        <div class="row small mt">
+          <a class="button secondary" href="{{ root }}/ui/interop">Open Manual Pipeline</a>
+        </div>
+      </article>
+    </div>
+  </div>
+</section>
+{% endblock %}
