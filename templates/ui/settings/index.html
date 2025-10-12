@@ -8,7 +8,14 @@
     </header>
 
     <div class="grid two">
-      <div class="card">
+      <div class="card" id="transform">
+        <h2 class="text-h2">Transform Profiles</h2>
+        <p class="text-body">Configure copy/move rules for HL7 segments.</p>
+        <p class="text-body">Manage transform rules from the Interop settings hub.</p>
+        <a class="button secondary" href="/ui/skills/interop/settings">Open Interop Settings</a>
+      </div>
+
+      <div class="card" id="deid">
         <h2 class="text-h2">De-identify Templates</h2>
 
         <form hx-post="{{ request.url_for('ui_settings_deid_create') }}" hx-target="#deid-select-wrap" class="row gap small mb">
@@ -21,7 +28,7 @@
         </div>
       </div>
 
-      <div class="card">
+      <div class="card" id="validate">
         <h2 class="text-h2">Validation Templates</h2>
         {% include "ui/settings/_val_list.html" %}
       </div>

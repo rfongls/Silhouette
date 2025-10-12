@@ -67,12 +67,21 @@ class PipelineRuntime:
 
 
 class EngineRuntime:
-    """Helper to construct ``PipelineRuntime`` instances from specs."""
+    """Helper to construct ``PipelineRuntime`` instances from specs or operator chains."""
 
-    def __init__(self, spec: PipelineSpec, persist_result: ResultWriter | None = None) -> None:
+    def __init__(
+        self,
+        spec: PipelineSpec | None = None,
+        persist_result: ResultWriter | None = None,
+        *,
+        operators: Iterable[Any] | None = None,
+    ) -> None:
+        if spec is None and not operators:
+            raise ValueError("spec or operators must be provided")
         self.spec = spec
         self.persist_result = persist_result
-        self.pipeline = self._build_pipeline()
+        self.pipeline = self._build_pipeline() if spec is not None else None
+        self._operators = list(operators or [])
 
     def _build_pipeline(self) -> PipelineRuntime:
         adapter = _instantiate_component(self.spec.adapter, create_adapter)
@@ -87,7 +96,24 @@ class EngineRuntime:
         )
 
     async def run(self, *, max_messages: int | None = 1) -> list[Result]:
+        if not self.pipeline:
+            raise RuntimeError("runtime does not have a pipeline spec configured")
         return await self.pipeline.run(max_messages=max_messages)
+
+    async def run_on_message(self, message_bytes: bytes) -> bytes:
+        if not self._operators:
+            return message_bytes
+
+        class _Message:
+            __slots__ = ("raw",)
+
+            def __init__(self, data: bytes) -> None:
+                self.raw = data
+
+        msg = _Message(message_bytes)
+        for operator in self._operators:
+            msg = operator.apply(msg)
+        return msg.raw
 
 
 def _instantiate_component(
