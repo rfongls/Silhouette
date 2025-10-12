@@ -92,6 +92,21 @@ app.mount("/static", StaticFiles(directory=_STATIC_DIR), name="static")
 install_http_logging(app, log_path=_HTTP_LOG_PATH)
 ensure_diagnostics(app, http_log_path=_HTTP_LOG_PATH)
 
+
+@app.on_event("startup")
+async def _bootstrap_insights_schema() -> None:
+    """Ensure the Insights schema exists before serving requests."""
+    try:
+        from insights.store import get_store
+
+        store = get_store()
+        store.ensure_schema()
+        db_url = os.getenv("INSIGHTS_DB_URL", "sqlite:///data/insights.db")
+        logger.info("Insights DB ready: %s (ENGINE_V2=%s)", db_url, app.state.engine_v2_enabled)
+    except Exception:
+        logger.exception("Failed to ensure Insights schema on startup")
+        raise
+
 def _preview_bytes(data: bytes | None, limit: int = 160) -> str:
     if not data:
         return ""
