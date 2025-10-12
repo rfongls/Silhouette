@@ -1,7 +1,6 @@
 """Shared type aliases and helpers for API request/response schemas."""
 
 from __future__ import annotations
-
 from typing import Literal, Tuple, get_args
 
 EndpointKind = Literal["mllp_in", "mllp_out"]
