@@ -106,6 +106,13 @@ async def _root_redirect():
     return RedirectResponse(url="/ui")
 
 
+# Lightweight health probe for startup checks and monitors
+@app.get("/healthz", include_in_schema=False)
+@app.head("/healthz", include_in_schema=False)
+async def _healthz():
+    return PlainTextResponse("ok", status_code=200)
+
+
 @app.on_event("startup")
 async def _bootstrap_insights_schema() -> None:
     """Ensure the Insights schema exists before serving requests."""
