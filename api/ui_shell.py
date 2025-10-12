@@ -40,9 +40,10 @@ async def ui_skills_interop(request: Request) -> HTMLResponse:
     name="ui_skills_interop_settings",
 )
 async def ui_skills_interop_settings(request: Request) -> HTMLResponse:
+    transform_profile_id = request.query_params.get("transform_profile_id")
     return ui_templates.TemplateResponse(
         "ui/skills/interop/settings.html",
-        {"request": request},
+        {"request": request, "transform_profile_id": transform_profile_id},
     )
 
 

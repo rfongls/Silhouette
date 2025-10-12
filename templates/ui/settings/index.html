@@ -10,9 +10,23 @@
     <div class="grid two">
       <div class="card" id="transform">
         <h2 class="text-h2">Transform Profiles</h2>
-        <p class="text-body">Configure copy/move rules for HL7 segments.</p>
-        <p class="text-body">Manage transform rules from the Interop settings hub.</p>
-        <a class="button secondary" href="/ui/skills/interop/settings">Open Interop Settings</a>
+        <p class="text-body">Configure copy/move rules for HL7 segments and reuse them in pipelines.</p>
+
+        <form id="transform-create-form" class="row gap small mb" autocomplete="off">
+          <input class="input" type="text" name="name" placeholder="Profile name (e.g., PID-copy)" required />
+          <input class="input" type="text" name="description" placeholder="Description (optional)" />
+          <button class="button" type="submit">Create</button>
+        </form>
+
+        <form id="transform-open-form" class="row gap small" style="align-items: flex-end; display: none;">
+          <label class="row gap small" style="flex:1; flex-direction: column;">
+            <span class="text-caption muted">Select profile</span>
+            <select id="transform-select" class="input" style="min-width: 16rem;"></select>
+          </label>
+          <button class="button secondary" type="submit" style="align-self: flex-end;">Open</button>
+        </form>
+
+        <p class="text-body muted" id="transform-empty-message" style="margin-top:.5rem;">No transform profiles yet.</p>
       </div>
 
       <div class="card" id="deid">
@@ -35,4 +49,126 @@
     </div>
   </div>
 </section>
+
+<script>
+  (function () {
+    const rootMeta = document.querySelector('meta[name="app-root"]');
+    const ROOT_PATH = rootMeta ? (rootMeta.getAttribute('content') || '') : '';
+    const createForm = document.getElementById('transform-create-form');
+    const openForm = document.getElementById('transform-open-form');
+    const selectEl = document.getElementById('transform-select');
+    const emptyMessage = document.getElementById('transform-empty-message');
+
+    if (!createForm || !openForm || !selectEl) {
+      return;
+    }
+
+    function showEmptyState() {
+      openForm.style.display = 'none';
+      emptyMessage.style.display = 'block';
+    }
+
+    function showSelect() {
+      emptyMessage.style.display = 'none';
+      openForm.style.display = 'flex';
+    }
+
+    function renderOptions(items, focusId) {
+      selectEl.innerHTML = '';
+      if (!items.length) {
+        showEmptyState();
+        return;
+      }
+
+      let selectedId = focusId ? String(focusId) : null;
+      items.forEach((item, index) => {
+        const option = document.createElement('option');
+        option.value = item.id;
+        option.textContent = item.name;
+        if (selectedId) {
+          option.selected = String(item.id) === selectedId;
+        } else if (index === 0) {
+          option.selected = true;
+        }
+        selectEl.appendChild(option);
+      });
+
+      showSelect();
+    }
+
+    async function loadProfiles(focusId = null) {
+      try {
+        const response = await fetch(`${ROOT_PATH}/api/engine/profiles?kind=transform`);
+        if (!response.ok) {
+          throw new Error(`Failed to load transform profiles: ${response.status}`);
+        }
+        const payload = await response.json();
+        const items = Array.isArray(payload?.items) ? payload.items : [];
+        renderOptions(items, focusId);
+      } catch (error) {
+        console.error('Unable to fetch transform profiles', error);
+      }
+    }
+
+    createForm.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const formData = new FormData(createForm);
+      const name = (formData.get('name') || '').toString().trim();
+      const description = (formData.get('description') || '').toString().trim();
+
+      if (!name) {
+        alert('Name is required.');
+        return;
+      }
+
+      const payload = {
+        kind: 'transform',
+        name,
+        description: description || null,
+        config: { rules: [] },
+      };
+
+      try {
+        const response = await fetch(`${ROOT_PATH}/api/engine/profiles`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Accept: 'application/json',
+          },
+          body: JSON.stringify(payload),
+        });
+
+        if (response.status === 409) {
+          alert('A transform profile with that name already exists.');
+          return;
+        }
+
+        if (!response.ok) {
+          const message = await response.text();
+          throw new Error(`Create failed: ${response.status} ${message}`);
+        }
+
+        const result = await response.json();
+        createForm.reset();
+        await loadProfiles(result?.id ?? null);
+      } catch (error) {
+        console.error('Failed to create transform profile', error);
+        alert('Unable to create transform profile.');
+      }
+    });
+
+    openForm.addEventListener('submit', (event) => {
+      event.preventDefault();
+      if (!selectEl.value) {
+        alert('Select a transform profile to open.');
+        return;
+      }
+
+      const targetUrl = `${ROOT_PATH}/ui/skills/interop/settings?transform_profile_id=${encodeURIComponent(selectEl.value)}`;
+      window.location.href = targetUrl;
+    });
+
+    loadProfiles();
+  })();
+</script>
 {% endblock %}
