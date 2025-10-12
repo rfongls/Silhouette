@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from fastapi import APIRouter, HTTPException
+from sqlalchemy.exc import IntegrityError
 from pydantic import BaseModel, Field
 
 from insights.store import get_store
@@ -34,12 +35,15 @@ class ProfileListResponse(BaseModel):
 @router.post("/api/engine/profiles", status_code=201)
 def create_profile(payload: ProfileCreateRequest) -> dict[str, int]:
     store = get_store()
-    record = store.create_profile(
-        kind=payload.kind,
-        name=payload.name.strip(),
-        description=payload.description,
-        config=payload.config,
-    )
+    try:
+        record = store.create_profile(
+            kind=payload.kind,
+            name=payload.name.strip(),
+            description=payload.description,
+            config=payload.config,
+        )
+    except IntegrityError as exc:
+        raise HTTPException(status_code=409, detail="profile name already exists") from exc
     return {"id": record.id}
 
 
