@@ -70,3 +70,19 @@ The orchestrator enforces confinement to this root.
 
 - **De-identify details**
   Timeline summaries report counts and collapsed failure lists (up to five filenames) so operators can expand and triage without leaving the page.
+
+## Run demo (one click)
+
+- On `/ui/landing`, click **Run demo** to queue a short workflow:
+  1. `assist preview` against the newest pipeline (or specify one via API).
+  2. `generate` a few ADT messages into `data/agent/out/demo-adt/`.
+- API equivalent:
+
+```bash
+POST /api/agent/demo
+{
+  "pipeline": "demo-pipeline",  # optional, defaults to most recently updated pipeline
+  "count": 3,
+  "out_folder": "demo-adt"
+}
+```

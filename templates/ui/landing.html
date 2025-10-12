@@ -43,6 +43,7 @@
         <div class="row small" style="gap:.5rem;margin-top:.5rem">
           <button class="btn btn-secondary btn-sm" id="agent-preview">Preview steps</button>
           <button class="btn btn-primary btn-sm" id="agent-run">Run</button>
+          <button class="btn btn-outline btn-sm" id="agent-demo">Run demo</button>
         </div>
         <div style="margin-top:.75rem">
           <h3 class="text-h3">Planned steps</h3>
@@ -246,6 +247,24 @@
   $('#agent-run')?.addEventListener('click', async () => {
     const preview = await interpretCmd();
     await runCmd(preview);
+  });
+
+  $('#agent-demo')?.addEventListener('click', async () => {
+    try {
+      const res = await fetch('/api/agent/demo', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ count: 3, out_folder: 'demo-adt' })
+      });
+      if (!res.ok) {
+        const textResp = await res.text();
+        showToast('error', textResp || 'Demo failed');
+        return;
+      }
+      showToast('success', 'Demo started — watch the Activity Timeline →');
+    } catch (err) {
+      showToast('error', 'Demo error');
+    }
   });
 
   // SSE Timeline

@@ -1,14 +1,11 @@
 from __future__ import annotations
-
 import asyncio
 import json
 from datetime import datetime
 from typing import Any, Dict, List, Optional
-
 from fastapi import APIRouter, HTTPException, Request
-from fastapi.responses import EventSourceResponse
+from starlette.responses import EventSourceResponse
 from pydantic import BaseModel, Field
-
 from agent.orchestrator import (
     IntentPlan,
     PlanStep,
@@ -61,6 +58,12 @@ class ActionInfo(BaseModel):
 
 class ActionListResponse(BaseModel):
     items: List[ActionInfo]
+
+
+class DemoRequest(BaseModel):
+    pipeline: Optional[str | int] = None
+    count: int = 3
+    out_folder: str = "demo-adt"
 
 
 # ---------- Registry ----------
@@ -169,3 +172,42 @@ async def stream_actions(request: Request, since: int = 0):
             await asyncio.sleep(1.0)
 
     return EventSourceResponse(gen(), media_type="text/event-stream")
+
+
+@router.post("/api/agent/demo")
+async def run_demo(payload: DemoRequest) -> Dict[str, Any]:
+    store = get_store()
+
+    pipeline_id: Optional[int] = None
+    if payload.pipeline is not None:
+        if isinstance(payload.pipeline, int) or str(payload.pipeline).isdigit():
+            pipeline_id = int(payload.pipeline)
+        else:
+            pipeline = store.get_pipeline_by_name(str(payload.pipeline))
+            if pipeline is None:
+                raise HTTPException(status_code=404, detail=f"pipeline {payload.pipeline!r} not found")
+            pipeline_id = pipeline.id
+    else:
+        pipelines = store.list_pipelines()
+        if not pipelines:
+            raise HTTPException(status_code=400, detail="no pipelines found; create one first")
+        pipeline_id = pipelines[0].id
+
+    actions: List[int] = []
+
+    plan1 = _interpret(f"assist preview {pipeline_id} lookback 7")
+    result1 = await _execute(store, plan1, actor="demo-agent", dry_run=False)
+    actions.append(result1["activity"]["action_id"])
+
+    count = max(1, min(50, int(payload.count)))
+    plan2 = _interpret(f"generate {count} ADT messages to {payload.out_folder}")
+    result2 = await _execute(store, plan2, actor="demo-agent", dry_run=False)
+    actions.append(result2["activity"]["action_id"])
+
+    return {
+        "ok": True,
+        "pipeline_id": pipeline_id,
+        "count": count,
+        "out_folder": payload.out_folder,
+        "actions": actions,
+    }
