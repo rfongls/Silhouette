@@ -1,14 +1,12 @@
 """Pipeline builder endpoints for engine endpoints."""
 
 from __future__ import annotations
-
-from typing import Any, Literal
-
+from typing import Any, cast
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
-
 from insights.store import get_store
 from ._pydantic_compat import fields_set
+from .types import PIPELINE_SCOPE_VALUES, PipelineScope
 
 router = APIRouter(tags=["engine-pipelines"])
 
@@ -16,7 +14,7 @@ router = APIRouter(tags=["engine-pipelines"])
 class PipelineCreateRequest(BaseModel):
     name: str = Field(..., min_length=1, max_length=200)
     description: str | None = Field(None, max_length=500)
-    scope: Literal["engine", "endpoint"] = "engine"
+    scope: PipelineScope = "engine"
     endpoint_id: int | None = Field(None, ge=1)
     steps: list[int] = Field(default_factory=list)
 
@@ -25,7 +23,7 @@ class PipelineItem(BaseModel):
     id: int
     name: str
     description: str | None
-    scope: Literal["engine", "endpoint"]
+    scope: PipelineScope
     endpoint_id: int | None
     steps: list[dict[str, Any]]
 
@@ -56,12 +54,16 @@ def list_pipelines() -> PipelineListResponse:
     items: list[PipelineItem] = []
     for record in store.list_pipelines():
         steps = store.list_pipeline_steps(record.id)
+        scope_value = getattr(record, "scope", "engine")
+        if scope_value not in PIPELINE_SCOPE_VALUES:
+            scope_value = "engine"
+        scope_literal = cast(PipelineScope, scope_value)
         items.append(
             PipelineItem(
                 id=record.id,
                 name=record.name,
                 description=record.description,
-                scope=getattr(record, "scope", "engine"),
+                scope=scope_literal,
                 endpoint_id=getattr(record, "endpoint_id", None),
                 steps=[
                     {
@@ -81,7 +83,7 @@ def list_pipelines() -> PipelineListResponse:
 class PipelineUpdateRequest(BaseModel):
     name: str | None = Field(None, min_length=1, max_length=200)
     description: str | None = Field(None, max_length=500)
-    scope: Literal["engine", "endpoint"] | None = None
+    scope: PipelineScope | None = None
     endpoint_id: int | None = Field(None, ge=1)
     steps: list[int] | None = None
 

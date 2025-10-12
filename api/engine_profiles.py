@@ -1,21 +1,19 @@
 """Profile management endpoints for engine modules."""
 
 from __future__ import annotations
-
-from typing import Any, Literal
-
+from typing import Any
 from fastapi import APIRouter, HTTPException
 from sqlalchemy.exc import IntegrityError
 from pydantic import BaseModel, Field
-
 from insights.store import get_store
 from ._pydantic_compat import compat_validator
+from .types import PROFILE_KIND_VALUES, ProfileKind
 
 router = APIRouter(tags=["engine-profiles"])
 
 
 class ProfileCreateRequest(BaseModel):
-    kind: Literal["transform", "deid", "validate"]
+    kind: ProfileKind
     name: str = Field(..., min_length=1, max_length=200)
     description: str | None = Field(None, max_length=500)
     config: dict[str, Any] = Field(default_factory=dict)
@@ -31,7 +29,7 @@ class ProfileCreateRequest(BaseModel):
 
 class ProfileItem(BaseModel):
     id: int
-    kind: Literal["transform", "deid", "validate"]
+    kind: ProfileKind
     name: str
     description: str | None
     config: dict[str, Any]
@@ -57,8 +55,8 @@ def create_profile(payload: ProfileCreateRequest) -> dict[str, int]:
 
 
 @router.get("/api/engine/profiles", response_model=ProfileListResponse)
-def list_profiles(kind: str | None = None) -> ProfileListResponse:
-    if kind and kind not in {"transform", "deid", "validate"}:
+def list_profiles(kind: ProfileKind | None = None) -> ProfileListResponse:
+    if kind and kind not in PROFILE_KIND_VALUES:
         raise HTTPException(status_code=400, detail="unknown profile kind")
     store = get_store()
     items = [

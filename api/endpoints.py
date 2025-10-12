@@ -11,16 +11,17 @@ from sqlalchemy.exc import IntegrityError
 from engine.net.endpoints import get_manager
 from insights.store import get_store
 from ._pydantic_compat import compat_validator, fields_set
+from .types import ENDPOINT_KIND_VALUES, EndpointKind, SinkKind
 
 router = APIRouter(tags=["engine"])
 
 
 class EndpointCreateRequest(BaseModel):
-    kind: Literal["mllp_in", "mllp_out"]
+    kind: EndpointKind
     name: str = Field(..., min_length=1, max_length=200)
     pipeline_id: int | None = Field(None, ge=1)
     config: dict[str, Any]
-    sink_kind: Literal["folder", "db"] = "folder"
+    sink_kind: SinkKind = "folder"
     sink_config: dict[str, Any] = Field(default_factory=dict)
 
     @compat_validator("sink_config", pre=True, always=True)
@@ -35,12 +36,12 @@ class EndpointCreateRequest(BaseModel):
 
 class EndpointInfo(BaseModel):
     id: int
-    kind: str
+    kind: EndpointKind
     name: str
     pipeline_id: int | None
     status: str
     config: dict[str, Any]
-    sink_kind: str
+    sink_kind: SinkKind
     sink_config: dict[str, Any]
     last_error: str | None
 
@@ -69,11 +70,11 @@ def create_endpoint(payload: EndpointCreateRequest) -> dict[str, int]:
 
 
 @router.get("/api/engine/endpoints", response_model=EndpointListResponse)
-def list_endpoints(kind: str | None = Query(None)) -> EndpointListResponse:
+def list_endpoints(kind: EndpointKind | None = Query(None)) -> EndpointListResponse:
     store = get_store()
     kinds = None
     if kind:
-        if kind not in {"mllp_in", "mllp_out"}:
+        if kind not in ENDPOINT_KIND_VALUES:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="unknown kind")
         kinds = [kind]
     items = [
@@ -115,7 +116,7 @@ def get_endpoint(endpoint_id: int) -> EndpointInfo:
 class EndpointUpdateRequest(BaseModel):
     pipeline_id: int | None = Field(None, ge=1)
     config: dict[str, Any] | None = None
-    sink_kind: Literal["folder", "db"] | None = None
+    sink_kind: SinkKind | None = None
     sink_config: dict[str, Any] | None = None
 
     @compat_validator("config")

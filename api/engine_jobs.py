@@ -19,13 +19,14 @@ from insights.store import (
     QueueFullError,
     get_store,
 )
+from .types import JobKind
 
 router = APIRouter(tags=["engine"])
 
 
 class JobEnqueueRequest(BaseModel):
     pipeline_id: int = Field(..., ge=1)
-    kind: Literal["run", "replay"] = "run"
+    kind: JobKind = "run"
     payload: dict[str, Any] | None = None
     priority: int = Field(0, ge=-10, le=10)
     scheduled_at: datetime | None = None
