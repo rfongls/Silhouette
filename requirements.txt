@@ -1,6 +1,7 @@
 fastapi==0.95.2
 uvicorn==0.23.2
 starlette==0.27.0
+sse-starlette==1.6.1
 
 # Use Pydantic v1 with fhir.resources 6.x for compatibility
 pydantic==1.10.13

@@ -25,6 +25,7 @@
       .st-dead, .st-canceled { background:#9b1c1c; color:#fee2e2; }
       .st-failed { background:#b45309; color:#fffbeb; }
       .chart-wrap { width: 100%; overflow: auto; }
+      .focus-highlight { outline:2px solid #38bdf8; background:rgba(56,189,248,.12); }
     </style>
     <div id="toast-root" class="toasts" aria-live="polite" aria-atomic="true"></div>
 
@@ -269,7 +270,7 @@
       const summary = await response.json();
       badge.textContent = `Runs: ${summary.totals.runs} • Messages: ${summary.totals.messages} • Issues: ${summary.totals.issues}`;
       const rows = summary.by_run.map((run) => (
-        `<tr>
+        `<tr data-run-row="${run.run_id}">
           <td><span class="badge mono">#${run.run_id}</span> ${escapeHtml(run.pipeline)}</td>
           <td>${run.messages}</td>
           <td>${run.issues.error}</td>
@@ -279,6 +280,7 @@
         </tr>`
       )).join('');
       target.innerHTML = rows || '<tr><td colspan="6">No runs recorded. Execute the seed script to populate demo data.</td></tr>';
+      applyFocus('run');
       if (summary.by_rule.length) {
         const ruleList = summary.by_rule.slice(0, 6).map((item) => (
           `<span class="badge">${escapeHtml(item.code)} (${escapeHtml(item.severity)} · ${item.count})</span>`
@@ -299,6 +301,8 @@
   const ENDPOINTS = { items: [] };
   const TEMPLATE_ROOT = "{{ root }}";
   const ROOT_PATH = (document.body?.dataset?.root ?? TEMPLATE_ROOT) || '';
+  const FOCUS_TARGET = parseFocusToken();
+  const FOCUS_APPLIED = { endpoint: false, job: false, run: false };
 
   function currentPipelineId() {
     if (PLS.currentId) return PLS.currentId;
@@ -308,6 +312,44 @@
       if (!Number.isNaN(id)) return id;
     }
     return null;
+  }
+
+  function parseFocusToken() {
+    try {
+      const params = new URLSearchParams(window.location.search || '');
+      const raw = params.get('focus');
+      if (!raw) return null;
+      const [kind, idRaw] = raw.split(':');
+      if (!kind || !idRaw) return null;
+      if (!['endpoint', 'job', 'run'].includes(kind)) return null;
+      const id = Number(idRaw);
+      if (!Number.isFinite(id) || id <= 0) return null;
+      return { kind, id };
+    } catch (err) {
+      console.warn('Failed to parse focus token', err);
+      return null;
+    }
+  }
+
+  function applyFocus(kind) {
+    if (!FOCUS_TARGET || FOCUS_TARGET.kind !== kind || FOCUS_APPLIED[kind]) return;
+    const idStr = String(FOCUS_TARGET.id);
+    let row = null;
+    if (kind === 'endpoint') {
+      row = document.querySelector(`#endpoints-table tbody tr[data-endpoint-row="${idStr}"]`);
+    } else if (kind === 'job') {
+      row = document.querySelector(`#jobs-table tbody tr[data-job-row="${idStr}"]`);
+    } else if (kind === 'run') {
+      row = document.querySelector(`#insights-table tbody tr[data-run-row="${idStr}"]`);
+    }
+    if (!row) return;
+    row.classList.add('focus-highlight');
+    try {
+      row.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    } catch (err) {
+      row.scrollIntoView({ block: 'center' });
+    }
+    FOCUS_APPLIED[kind] = true;
   }
 
   function renderEndpointPipelineOptions() {
@@ -611,7 +653,7 @@
           actionHtml = `<button class="btn btn-secondary btn-xs" data-job-action="retry" data-job-id="${job.id}">Retry</button>`;
         }
         return `
-          <tr>
+          <tr data-job-row="${job.id}">
             <td>${job.id}</td>
             <td>#${job.pipeline_id}</td>
             <td>${escapeHtml(job.kind)}</td>
@@ -624,6 +666,7 @@
         `;
       }).join('');
       tbody.innerHTML = rows || '<tr><td colspan="8">No jobs.</td></tr>';
+      applyFocus('job');
     } catch (err) {
       console.error(err);
       tbody.innerHTML = '<tr><td colspan="8">Failed to load jobs.</td></tr>';
@@ -690,7 +733,7 @@
           ? (allow ? `Allow: ${escapeHtml(allow)}` : 'Allowlist required')
           : '';
         return `
-          <tr>
+          <tr data-endpoint-row="${endpoint.id}">
             <td>${escapeHtml(endpoint.name)}</td>
             <td>${escapeHtml(endpoint.kind)}</td>
             <td>${escapeHtml(host)}</td>
@@ -702,6 +745,7 @@
         `;
       }).join('');
       tbody.innerHTML = rows || '<tr><td colspan="7">No endpoints.</td></tr>';
+      applyFocus('endpoint');
     } catch (err) {
       console.error(err);
       tbody.innerHTML = '<tr><td colspan="7">Failed to load endpoints.</td></tr>';
