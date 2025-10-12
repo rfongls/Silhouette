@@ -91,6 +91,10 @@ if _ENGINE_V2_ENABLED:
         ui_engine_router,
     ):
         app.include_router(feature_router)
+# Shell / skill hubs (always available)
+from api.ui_shell import router as ui_shell_router
+
+app.include_router(ui_shell_router)
 app.mount("/static", StaticFiles(directory=_STATIC_DIR), name="static")
 # Keep the registration near the bottom so it is easy to toggle during local
 # investigations. The middleware ensures the log directory exists and degrades
@@ -101,8 +105,7 @@ ensure_diagnostics(app, http_log_path=_HTTP_LOG_PATH)
 
 @app.get("/", include_in_schema=False)
 async def _root_redirect():
-    if app.state.engine_v2_enabled:
-        return RedirectResponse(url="/ui/engine")
+    # Always land on the shell (home) so users can pick Chat vs Skills
     return RedirectResponse(url="/ui")
 
 
