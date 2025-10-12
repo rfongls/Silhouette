@@ -70,6 +70,9 @@ if _ENGINE_V2_ENABLED:
     from api.agent import router as agent_router
     from api.endpoints import router as endpoints_router
     from api.engine_assist import router as engine_assist_router
+    from api.engine_messages import router as engine_messages_router
+    from api.engine_pipelines import router as engine_pipelines_router
+    from api.engine_profiles import router as engine_profiles_router
     from api.mllp_send import router as mllp_send_router
     from api.insights import router as insights_router
     from api.ui_engine import router as ui_engine_router
@@ -77,6 +80,9 @@ if _ENGINE_V2_ENABLED:
     for feature_router in (
         engine_router,
         engine_jobs_router,
+        engine_profiles_router,
+        engine_pipelines_router,
+        engine_messages_router,
         agent_router,
         endpoints_router,
         mllp_send_router,
@@ -91,6 +97,13 @@ app.mount("/static", StaticFiles(directory=_STATIC_DIR), name="static")
 # to console-only logging if file access fails.
 install_http_logging(app, log_path=_HTTP_LOG_PATH)
 ensure_diagnostics(app, http_log_path=_HTTP_LOG_PATH)
+
+
+@app.get("/", include_in_schema=False)
+async def _root_redirect():
+    if app.state.engine_v2_enabled:
+        return RedirectResponse(url="/ui/engine")
+    return RedirectResponse(url="/ui")
 
 
 @app.on_event("startup")
