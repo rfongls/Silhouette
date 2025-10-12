@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Any
+from typing import Any, Literal
 
 from fastapi import APIRouter, HTTPException, Query, status
 from fastapi.encoders import jsonable_encoder
@@ -25,7 +25,7 @@ router = APIRouter(tags=["engine"])
 
 class JobEnqueueRequest(BaseModel):
     pipeline_id: int = Field(..., ge=1)
-    kind: str = Field("run", pattern="^(run|replay)$")
+    kind: Literal["run", "replay"] = "run"
     payload: dict[str, Any] | None = None
     priority: int = Field(0, ge=-10, le=10)
     scheduled_at: datetime | None = None
@@ -181,3 +181,15 @@ def jobs_retry(job_id: int) -> dict[str, bool]:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="job not retryable")
     enqueued = store.retry_job(job_id, now=datetime.utcnow())
     return {"enqueued": enqueued}
+
+
+@router.post("/api/engine/jobs/{job_id}/requeue", response_model=dict)
+def jobs_requeue(job_id: int) -> dict[str, bool]:
+    store = _store()
+    job = store.get_job(job_id)
+    if job is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="job not found")
+    if job.status not in {"failed", "dead", "canceled"}:
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="job not requeueable")
+    queued = store.requeue_job(job_id, now=datetime.utcnow())
+    return {"queued": queued}

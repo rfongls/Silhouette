@@ -8,7 +8,44 @@
     </header>
 
     <div class="grid two">
-      <div class="card">
+      <div class="card" id="transform">
+        <h2 class="text-h2">Transform Templates</h2>
+
+        <form
+          id="transform-create-form"
+          class="row gap small mb"
+          autocomplete="off"
+          hx-post="{{ root }}/api/engine/profiles"
+          hx-target="#transform-select-wrap"
+          hx-trigger="submit"
+          hx-swap="none"
+        >
+          <input class="input" type="text" name="name" placeholder="Template name (e.g., default)" required />
+          <button class="button" type="submit">Create</button>
+        </form>
+
+        <div id="transform-select-wrap">
+          <div class="row gap small items-center">
+            <select
+              id="transform-select"
+              class="input"
+              hx-get="{{ root }}/api/engine/profiles?kind=transform"
+              hx-trigger="load, refresh from:body"
+              hx-swap="none"
+            ></select>
+            <a
+              class="button"
+              role="button"
+              href="#"
+              onclick="(function(){const select=document.getElementById('transform-select');if(select&&select.value){window.location.href='{{ root }}/ui/skills/interop/settings?transform_profile_id='+encodeURIComponent(select.value);}})(); return false;"
+            >
+              Open
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" id="deid">
         <h2 class="text-h2">De-identify Templates</h2>
 
         <form hx-post="{{ request.url_for('ui_settings_deid_create') }}" hx-target="#deid-select-wrap" class="row gap small mb">
@@ -21,11 +58,122 @@
         </div>
       </div>
 
-      <div class="card">
+      <div class="card" id="validate">
         <h2 class="text-h2">Validation Templates</h2>
         {% include "ui/settings/_val_list.html" %}
       </div>
     </div>
   </div>
 </section>
+
+<script>
+  (function () {
+    const rootMeta = document.querySelector('meta[name="app-root"]');
+    const ROOT_PATH = rootMeta ? (rootMeta.getAttribute('content') || '') : '';
+    const createForm = document.getElementById('transform-create-form');
+    const selectWrap = document.getElementById('transform-select-wrap');
+    const selectEl = document.getElementById('transform-select');
+
+    if (!createForm || !selectEl || !selectWrap) {
+      return;
+    }
+
+    selectEl.disabled = true;
+    const loadingOption = document.createElement('option');
+    loadingOption.value = '';
+    loadingOption.textContent = 'Loading…';
+    selectEl.appendChild(loadingOption);
+
+    let nextFocusId = null;
+
+    function populateSelect(items, focusId) {
+      selectEl.innerHTML = '';
+      if (!items.length) {
+        const option = document.createElement('option');
+        option.value = '';
+        option.textContent = 'No transform templates yet';
+        selectEl.appendChild(option);
+        selectEl.disabled = true;
+        return;
+      }
+
+      selectEl.disabled = false;
+      items.forEach((item, index) => {
+        const option = document.createElement('option');
+        option.value = item.id;
+        option.textContent = item.name;
+        if (focusId && String(item.id) === String(focusId)) {
+          option.selected = true;
+        } else if (!focusId && index === 0) {
+          option.selected = true;
+        }
+        selectEl.appendChild(option);
+      });
+    }
+
+    document.body.addEventListener('htmx:configRequest', (event) => {
+      if (event.target === createForm) {
+        const nameInput = createForm.querySelector('input[name="name"]');
+        const name = (nameInput?.value || '').trim();
+        if (!name) {
+          event.preventDefault();
+          return;
+        }
+
+        const payload = {
+          kind: 'transform',
+          name,
+          description: null,
+          config: { rules: [] },
+        };
+
+        event.detail.headers['Content-Type'] = 'application/json';
+        event.detail.headers['Accept'] = 'application/json';
+        event.detail.body = JSON.stringify(payload);
+        event.detail.parameters = {};
+      }
+    });
+
+    document.body.addEventListener('htmx:afterRequest', (event) => {
+      if (event.target === createForm) {
+        const xhr = event.detail.xhr;
+        if (xhr.status === 201 || xhr.status === 200) {
+          try {
+            const payload = JSON.parse(xhr.responseText || '{}');
+            if (payload && payload.id) {
+              nextFocusId = payload.id;
+            }
+          } catch (error) {
+            console.debug('Unable to parse transform profile response', error);
+          }
+          createForm.reset();
+          if (window.htmx) {
+            window.htmx.trigger(selectEl, 'refresh');
+          }
+        } else if (xhr.status === 409) {
+          alert('A transform profile with that name already exists.');
+        }
+      }
+    });
+
+    document.body.addEventListener('htmx:beforeSwap', (event) => {
+      if (event.target === selectEl && event.detail.xhr) {
+        event.detail.shouldSwap = false;
+      }
+    });
+
+    document.body.addEventListener('htmx:afterOnLoad', (event) => {
+        if (event.target === selectEl) {
+          try {
+            const data = JSON.parse(event.detail.xhr.responseText || '{}');
+            const items = Array.isArray(data.items) ? data.items : [];
+            populateSelect(items, nextFocusId);
+            nextFocusId = null;
+        } catch (error) {
+          console.error('Failed to populate transform templates', error);
+        }
+      }
+    });
+  })();
+</script>
 {% endblock %}
