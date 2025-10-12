@@ -1,0 +1,262 @@
+{% extends "layout.html" %}
+{% block content %}
+<section class="dashboard">
+  <div class="dashboard-container">
+    <nav class="breadcrumbs"><a href="{{ root }}/ui">Home</a> / <a href="{{ root }}/ui/skills">Skills</a> / <a href="{{ root }}/ui/skills/interop">Interop</a> / <span>Settings</span></nav>
+    <header class="dashboard-header">
+      <h1 class="text-h1">Interop Settings</h1>
+      <p class="text-body muted">Manage module profiles for the Interop skill.</p>
+    </header>
+
+    <div class="grid three" style="gap:1rem; align-items:start;">
+      <section class="card" aria-labelledby="interop-settings-transform">
+        <h2 id="interop-settings-transform" class="text-h2">Transform Profiles</h2>
+        <p class="text-body muted">Copy or move HL7 fields with reusable rules.</p>
+        <form class="row gap small mb" data-profile-create data-kind="transform"
+              hx-post="{{ root }}/api/engine/profiles" hx-trigger="submit" hx-target="this" hx-swap="none"
+              hx-on::after-request="this.reset(); htmx.trigger('#transform-list','refresh')">
+          <input class="input" type="text" name="name" placeholder="Name" required />
+          <input class="input" type="text" name="description" placeholder="Description (optional)" />
+          <input type="hidden" name="config" value='{"rules":[]}' />
+          <button class="button" type="submit">Create</button>
+        </form>
+        <div id="transform-list"
+             hx-get="{{ root }}/api/engine/profiles?kind=transform"
+             hx-trigger="load, refresh from:body"
+             hx-swap="innerHTML">
+        </div>
+      </section>
+
+      <section class="card" aria-labelledby="interop-settings-deid">
+        <h2 id="interop-settings-deid" class="text-h2">De-Identification Profiles</h2>
+        <p class="text-body muted">Persist reusable scrubbing and masking policies.</p>
+        <form class="row gap small mb" data-profile-create data-kind="deid"
+              hx-post="{{ root }}/api/engine/profiles" hx-trigger="submit" hx-target="this" hx-swap="none"
+              hx-on::after-request="this.reset(); htmx.trigger('#deid-list','refresh')">
+          <input class="input" type="text" name="name" placeholder="Name" required />
+          <input class="input" type="text" name="description" placeholder="Description (optional)" />
+          <input type="hidden" name="config" value='{}' />
+          <button class="button" type="submit">Create</button>
+        </form>
+        <div id="deid-list"
+             hx-get="{{ root }}/api/engine/profiles?kind=deid"
+             hx-trigger="load, refresh from:body"
+             hx-swap="innerHTML">
+        </div>
+      </section>
+
+      <section class="card" aria-labelledby="interop-settings-validate">
+        <h2 id="interop-settings-validate" class="text-h2">Validation Profiles</h2>
+        <p class="text-body muted">Capture validation suites for inbound traffic.</p>
+        <form class="row gap small mb" data-profile-create data-kind="validate"
+              hx-post="{{ root }}/api/engine/profiles" hx-trigger="submit" hx-target="this" hx-swap="none"
+              hx-on::after-request="this.reset(); htmx.trigger('#validate-list','refresh')">
+          <input class="input" type="text" name="name" placeholder="Name" required />
+          <input class="input" type="text" name="description" placeholder="Description (optional)" />
+          <input type="hidden" name="config" value='{}' />
+          <button class="button" type="submit">Create</button>
+        </form>
+        <div id="validate-list"
+             hx-get="{{ root }}/api/engine/profiles?kind=validate"
+             hx-trigger="load, refresh from:body"
+             hx-swap="innerHTML">
+        </div>
+      </section>
+    </div>
+  </div>
+</section>
+
+<script>
+  const ROOT_PATH = document.querySelector('meta[name="app-root"]').getAttribute('content') || '';
+
+  function escapeHtml(text) {
+    return (text || '').replace(/[&<>"]/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[ch] || ch));
+  }
+
+  function renderProfileList(container, items) {
+    container.innerHTML = '';
+    const listWrapper = document.createElement('div');
+    listWrapper.style.display = 'flex';
+    listWrapper.style.flexDirection = 'column';
+    listWrapper.style.gap = '0.75rem';
+
+    if (!items.length) {
+      const empty = document.createElement('p');
+      empty.className = 'text-body muted';
+      empty.textContent = 'No profiles yet.';
+      container.appendChild(empty);
+      return;
+    }
+
+    const refreshTarget = `#${container.id}`;
+
+    items.forEach((profile) => {
+      const form = document.createElement('form');
+      form.className = 'card';
+      form.style.display = 'flex';
+      form.style.flexDirection = 'column';
+      form.style.gap = '0.65rem';
+      form.dataset.profileForm = 'true';
+      form.dataset.jsonConfig = JSON.stringify(profile.config || {});
+      form.dataset.profileKind = profile.kind;
+      form.setAttribute('hx-put', `${ROOT_PATH}/api/engine/profiles/${profile.id}`);
+      form.setAttribute('hx-trigger', 'submit');
+      form.setAttribute('hx-target', 'this');
+      form.setAttribute('hx-swap', 'none');
+      form.setAttribute('hx-on::after-request', `htmx.trigger('${refreshTarget}','refresh')`);
+
+      const header = document.createElement('div');
+      header.className = 'row';
+      header.style.justifyContent = 'space-between';
+      header.style.alignItems = 'center';
+      header.innerHTML = `<span class="badge mono">${escapeHtml(profile.kind)}</span>`;
+      form.appendChild(header);
+
+      const nameLabel = document.createElement('label');
+      nameLabel.style.display = 'flex';
+      nameLabel.style.flexDirection = 'column';
+      nameLabel.style.gap = '.35rem';
+      nameLabel.innerHTML = '<span class="text-caption muted">Name</span>';
+      const nameInput = document.createElement('input');
+      nameInput.className = 'input';
+      nameInput.name = 'name';
+      nameInput.value = profile.name || '';
+      nameLabel.appendChild(nameInput);
+      form.appendChild(nameLabel);
+
+      const descLabel = document.createElement('label');
+      descLabel.style.display = 'flex';
+      descLabel.style.flexDirection = 'column';
+      descLabel.style.gap = '.35rem';
+      descLabel.innerHTML = '<span class="text-caption muted">Description</span>';
+      const descInput = document.createElement('input');
+      descInput.className = 'input';
+      descInput.name = 'description';
+      descInput.value = profile.description || '';
+      descLabel.appendChild(descInput);
+      form.appendChild(descLabel);
+
+      const configNote = document.createElement('p');
+      configNote.className = 'text-caption muted';
+      configNote.textContent = profile.kind === 'transform'
+        ? 'Rules editable via advanced editor (coming soon).'
+        : 'Configuration stored as JSON.';
+      form.appendChild(configNote);
+
+      const actions = document.createElement('div');
+      actions.className = 'row small';
+      actions.style.justifyContent = 'flex-end';
+
+      const saveButton = document.createElement('button');
+      saveButton.type = 'submit';
+      saveButton.className = 'button small';
+      saveButton.textContent = 'Save';
+      actions.appendChild(saveButton);
+
+      const deleteButton = document.createElement('button');
+      deleteButton.type = 'button';
+      deleteButton.className = 'button danger small';
+      deleteButton.textContent = 'Delete';
+      deleteButton.dataset.profileDelete = 'true';
+      deleteButton.setAttribute('hx-delete', `${ROOT_PATH}/api/engine/profiles/${profile.id}`);
+      deleteButton.setAttribute('hx-trigger', 'click');
+      deleteButton.setAttribute('hx-target', 'this');
+      deleteButton.setAttribute('hx-swap', 'none');
+      deleteButton.setAttribute('hx-on::after-request', `htmx.trigger('${refreshTarget}','refresh')`);
+      actions.appendChild(deleteButton);
+
+      form.appendChild(actions);
+      listWrapper.appendChild(form);
+    });
+
+    container.appendChild(listWrapper);
+  }
+
+  document.body.addEventListener('htmx:afterOnLoad', (event) => {
+    const pathInfo = event.detail.pathInfo;
+    const finalPath = pathInfo ? pathInfo.finalRequestPath : '';
+    if (!finalPath || !finalPath.startsWith(`${ROOT_PATH}/api/engine/profiles`)) {
+      return;
+    }
+    const responseText = event.detail.xhr.responseText;
+    if (!responseText) {
+      return;
+    }
+    try {
+      const data = JSON.parse(responseText);
+      const container = event.detail.elt;
+      if (!container || !Array.isArray(data.items)) {
+        return;
+      }
+      renderProfileList(container, data.items);
+    } catch (error) {
+      console.error('Failed to render profiles', error);
+    }
+  });
+
+  document.body.addEventListener('submit', (event) => {
+    const form = event.target;
+    if (!form.matches('form[data-profile-create], form[data-profile-form]')) {
+      return;
+    }
+    const isCreate = form.matches('form[data-profile-create]');
+    const kind = isCreate ? form.getAttribute('data-kind') : form.dataset.profileKind;
+    const configSource = isCreate ? form.querySelector('input[name="config"]').value : form.dataset.jsonConfig || '{}';
+
+    let config;
+    try {
+      config = JSON.parse(configSource || '{}');
+    } catch (error) {
+      console.error('Invalid config JSON', error);
+      event.preventDefault();
+      return;
+    }
+
+    const nameField = form.querySelector('input[name="name"]');
+    const descriptionField = form.querySelector('input[name="description"]');
+
+    const payload = {
+      kind,
+      name: (nameField ? nameField.value : '').trim(),
+      description: (descriptionField ? descriptionField.value : '').trim() || null,
+      config
+    };
+
+    if (!payload.name) {
+      event.preventDefault();
+      return;
+    }
+
+    form.dataset.jsonBody = JSON.stringify(payload);
+  });
+
+  document.body.addEventListener('click', (event) => {
+    const button = event.target.closest('button[data-profile-delete]');
+    if (!button) {
+      return;
+    }
+    const shouldDelete = confirm('Delete this profile? This cannot be undone.');
+    if (!shouldDelete) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+  });
+
+  document.body.addEventListener('htmx:configRequest', (event) => {
+    const element = event.target;
+    if (element.dataset && element.dataset.jsonBody) {
+      event.detail.headers['Content-Type'] = 'application/json';
+      event.detail.headers['Accept'] = 'application/json';
+      event.detail.body = element.dataset.jsonBody;
+      event.detail.parameters = {};
+    }
+  });
+
+  document.body.addEventListener('htmx:afterRequest', (event) => {
+    const element = event.target;
+    if (element.dataset && element.dataset.jsonBody) {
+      delete element.dataset.jsonBody;
+    }
+  });
+</script>
+{% endblock %}
