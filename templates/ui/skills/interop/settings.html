@@ -66,6 +66,24 @@
   </div>
 </section>
 
+<div id="transform-rules-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:1000; align-items:center; justify-content:center;">
+  <div class="card" style="width:min(900px, 95vw); max-height:90vh; overflow:auto; padding:1rem;">
+    <header class="row" style="justify-content:space-between; align-items:center;">
+      <h3 class="text-h2">Edit Transform Rules</h3>
+      <button class="button ghost" type="button" onclick="closeTransformRulesModal()">Close</button>
+    </header>
+
+    <p class="text-body muted">Each rule copies or moves an HL7 value from <code>from_path</code> to <code>to_path</code>. Example: <code>PID-5.1</code> → <code>PID-3.1</code></p>
+
+    <div id="rules-table-wrap"></div>
+
+    <footer class="row mt" style="justify-content:flex-end; gap:.5rem;">
+      <button class="button secondary" type="button" onclick="addRuleRow()">Add Rule</button>
+      <button class="button" type="button" onclick="saveTransformRules()">Save Rules</button>
+    </footer>
+  </div>
+</div>
+
 <script>
   const _appRootEl = document.querySelector('meta[name="app-root"]');
   const ROOT_PATH = _appRootEl ? (_appRootEl.getAttribute('content') || '') : '';
@@ -140,13 +158,33 @@
       const configNote = document.createElement('p');
       configNote.className = 'text-caption muted';
       configNote.textContent = profile.kind === 'transform'
-        ? 'Rules editable via advanced editor (coming soon).'
+        ? 'Use "Edit Rules" to manage copy/move paths.'
         : 'Configuration stored as JSON.';
       form.appendChild(configNote);
 
       const actions = document.createElement('div');
       actions.className = 'row small';
       actions.style.justifyContent = 'flex-end';
+
+      if (profile.kind === 'transform') {
+        const editRulesBtn = document.createElement('button');
+        editRulesBtn.type = 'button';
+        editRulesBtn.className = 'button secondary small';
+        editRulesBtn.textContent = 'Edit Rules';
+        editRulesBtn.dataset.profileId = profile.id;
+        editRulesBtn.dataset.profileConfig = JSON.stringify(profile.config || { rules: [] });
+        editRulesBtn.addEventListener('click', () => {
+          let config;
+          try {
+            config = JSON.parse(editRulesBtn.dataset.profileConfig || '{"rules":[]}');
+          } catch (error) {
+            console.warn('Failed to parse transform config; defaulting to empty rules.', error);
+            config = { rules: [] };
+          }
+          openTransformRulesModal(profile.id, config);
+        });
+        actions.appendChild(editRulesBtn);
+      }
 
       const saveButton = document.createElement('button');
       saveButton.type = 'submit';
@@ -259,5 +297,171 @@
       delete element.dataset.jsonBody;
     }
   });
+
+  // --- Transform rules modal helpers ---
+  let _editingProfileId = null;
+  let _rules = [];
+
+  function openTransformRulesModal(profileId, config) {
+    _editingProfileId = profileId;
+    _rules = Array.isArray(config?.rules)
+      ? JSON.parse(JSON.stringify(config.rules))
+      : [];
+    renderRulesTable();
+    document.getElementById('transform-rules-modal').style.display = 'flex';
+  }
+
+  function closeTransformRulesModal() {
+    _editingProfileId = null;
+    _rules = [];
+    document.getElementById('transform-rules-modal').style.display = 'none';
+  }
+
+  function addRuleRow() {
+    _rules.push({ op: 'copy', from_path: '', to_path: '' });
+    renderRulesTable();
+  }
+
+  function removeRuleRow(idx) {
+    _rules.splice(idx, 1);
+    renderRulesTable();
+  }
+
+  function updateRule(idx, field, value) {
+    _rules[idx][field] = value;
+  }
+
+  function renderRulesTable() {
+    const wrap = document.getElementById('rules-table-wrap');
+    const table = document.createElement('table');
+    table.className = 'table';
+    table.innerHTML = `
+      <thead>
+        <tr><th style="width:8rem;">Op</th><th>From Path</th><th>To Path</th><th style="width:6rem;">&nbsp;</th></tr>
+      </thead>
+      <tbody></tbody>
+    `;
+    const tbody = table.querySelector('tbody');
+
+    _rules.forEach((rule, idx) => {
+      const tr = document.createElement('tr');
+
+      const opTd = document.createElement('td');
+      const opSelect = document.createElement('select');
+      opSelect.className = 'input';
+      ['copy', 'move'].forEach((op) => {
+        const opt = document.createElement('option');
+        opt.value = op;
+        opt.textContent = op;
+        if (rule.op === op) {
+          opt.selected = true;
+        }
+        opSelect.appendChild(opt);
+      });
+      opSelect.addEventListener('change', (event) => updateRule(idx, 'op', event.target.value));
+      opTd.appendChild(opSelect);
+
+      const fromTd = document.createElement('td');
+      const fromInput = document.createElement('input');
+      fromInput.className = 'input';
+      fromInput.placeholder = 'e.g., PID-5.1';
+      fromInput.value = rule.from_path || '';
+      fromInput.addEventListener('input', (event) => updateRule(idx, 'from_path', event.target.value));
+      fromTd.appendChild(fromInput);
+
+      const toTd = document.createElement('td');
+      const toInput = document.createElement('input');
+      toInput.className = 'input';
+      toInput.placeholder = 'e.g., PID-3.1';
+      toInput.value = rule.to_path || '';
+      toInput.addEventListener('input', (event) => updateRule(idx, 'to_path', event.target.value));
+      toTd.appendChild(toInput);
+
+      const actionTd = document.createElement('td');
+      const removeButton = document.createElement('button');
+      removeButton.type = 'button';
+      removeButton.className = 'button danger small';
+      removeButton.textContent = 'Remove';
+      removeButton.addEventListener('click', () => removeRuleRow(idx));
+      actionTd.appendChild(removeButton);
+
+      tr.appendChild(opTd);
+      tr.appendChild(fromTd);
+      tr.appendChild(toTd);
+      tr.appendChild(actionTd);
+      tbody.appendChild(tr);
+    });
+
+    wrap.innerHTML = '';
+    wrap.appendChild(table);
+  }
+
+  function isValidHl7Path(value) {
+    return /^[A-Z0-9]{3}-\d+(?:\.\d+)?$/.test((value || '').toUpperCase());
+  }
+
+  async function saveTransformRules() {
+    if (_editingProfileId == null) {
+      return;
+    }
+
+    for (let i = 0; i < _rules.length; i += 1) {
+      const rule = _rules[i];
+      if (!['copy', 'move'].includes(rule.op)) {
+        alert(`Rule ${i + 1}: op must be copy or move.`);
+        return;
+      }
+      if (!isValidHl7Path(rule.from_path)) {
+        alert(`Rule ${i + 1}: invalid from_path.`);
+        return;
+      }
+      if (!isValidHl7Path(rule.to_path)) {
+        alert(`Rule ${i + 1}: invalid to_path.`);
+        return;
+      }
+    }
+
+    const payload = {
+      name: null,
+      description: null,
+      config: {
+        rules: _rules.map((rule) => ({
+          op: rule.op,
+          from_path: (rule.from_path || '').toUpperCase(),
+          to_path: (rule.to_path || '').toUpperCase(),
+        })),
+      },
+    };
+
+    try {
+      const response = await fetch(`${ROOT_PATH}/api/engine/profiles/${_editingProfileId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        const message = await response.text();
+        alert(`Save failed: ${response.status} ${message}`);
+        return;
+      }
+
+      if (window.htmx) {
+        htmx.trigger('#transform-list', 'refresh');
+      }
+      closeTransformRulesModal();
+    } catch (error) {
+      console.error('Failed to save rules', error);
+      alert('Network error saving rules.');
+    }
+  }
+
+  window.openTransformRulesModal = openTransformRulesModal;
+  window.closeTransformRulesModal = closeTransformRulesModal;
+  window.addRuleRow = addRuleRow;
+  window.saveTransformRules = saveTransformRules;
 </script>
 {% endblock %}
