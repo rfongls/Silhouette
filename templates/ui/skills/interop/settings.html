@@ -69,7 +69,13 @@
 <div id="transform-rules-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:1000; align-items:center; justify-content:center;">
   <div class="card" style="width:min(900px, 95vw); max-height:90vh; overflow:auto; padding:1rem;">
     <header class="row" style="justify-content:space-between; align-items:center;">
-      <h3 class="text-h2">Edit Transform Rules</h3>
+      <div class="row" style="gap:.5rem; align-items:center;">
+        <h3 class="text-h2">Edit Transform Rules</h3>
+        <button class="button secondary small" type="button" onclick="exportTransformRules()">Export JSON</button>
+        <label class="button ghost small" for="transform-import-file">Import JSON</label>
+        <input id="transform-import-file" type="file" accept="application/json" style="display:none" onchange="importTransformRulesFromFile(this)" />
+        <button class="button danger small" type="button" onclick="deleteTransformProfile()">Delete template</button>
+      </div>
       <button class="button ghost" type="button" onclick="closeTransformRulesModal()">Close</button>
     </header>
 
@@ -460,10 +466,140 @@
     }
   }
 
+  function downloadBlob(filename, data, mimetype = 'application/json') {
+    const blob = new Blob([data], { type: mimetype });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  }
+
+  function exportTransformRules() {
+    if (_editingProfileId == null) {
+      return;
+    }
+    const payload = {
+      kind: 'transform',
+      config: {
+        rules: _rules.map((rule) => ({
+          op: rule.op,
+          from_path: (rule.from_path || '').toUpperCase(),
+          to_path: (rule.to_path || '').toUpperCase(),
+        })),
+      },
+    };
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '');
+    downloadBlob(`transform_rules_${_editingProfileId}_${timestamp}.json`, JSON.stringify(payload, null, 2));
+  }
+
+  async function importTransformRulesFromFile(inputEl) {
+    if (!inputEl?.files?.length || _editingProfileId == null) {
+      return;
+    }
+    try {
+      const text = await inputEl.files[0].text();
+      const data = JSON.parse(text);
+      const source = Array.isArray(data?.rules) ? data : data?.config;
+      const incoming = Array.isArray(source?.rules) ? source.rules : null;
+      if (!incoming) {
+        alert('Invalid JSON: expected { rules: [...] }');
+        return;
+      }
+
+      const normalised = incoming.map((rule, idx) => {
+        const op = String(rule?.op || 'copy').toLowerCase();
+        if (!['copy', 'move'].includes(op)) {
+          throw new Error(`Rule ${idx + 1}: invalid op`);
+        }
+        const fromPath = String(rule?.from_path || '').toUpperCase();
+        const toPath = String(rule?.to_path || '').toUpperCase();
+        if (!isValidHl7Path(fromPath)) {
+          throw new Error(`Rule ${idx + 1}: invalid from_path`);
+        }
+        if (!isValidHl7Path(toPath)) {
+          throw new Error(`Rule ${idx + 1}: invalid to_path`);
+        }
+        return { op, from_path: fromPath, to_path: toPath };
+      });
+
+      _rules = normalised;
+      renderRulesTable();
+
+      const payload = {
+        name: null,
+        description: null,
+        config: { rules: normalised },
+      };
+
+      const response = await fetch(`${ROOT_PATH}/api/engine/profiles/${_editingProfileId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        const message = await response.text();
+        alert(`Import failed: ${response.status} ${message}`);
+        return;
+      }
+
+      if (window.htmx) {
+        htmx.trigger('#transform-list', 'refresh');
+      }
+      alert('Import successful.');
+    } catch (error) {
+      console.error('Failed to import rules', error);
+      alert(error?.message ? `Import failed: ${error.message}` : 'Import failed.');
+    } finally {
+      inputEl.value = '';
+    }
+  }
+
+  async function deleteTransformProfile() {
+    if (_editingProfileId == null) {
+      return;
+    }
+    if (!confirm('Delete this transform template? This cannot be undone.')) {
+      return;
+    }
+    try {
+      const response = await fetch(`${ROOT_PATH}/api/engine/profiles/${_editingProfileId}`, {
+        method: 'DELETE',
+        headers: {
+          Accept: 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        const message = await response.text();
+        alert(`Delete failed: ${response.status} ${message}`);
+        return;
+      }
+
+      if (window.htmx) {
+        htmx.trigger('#transform-list', 'refresh');
+      }
+      closeTransformRulesModal();
+    } catch (error) {
+      console.error('Failed to delete transform profile', error);
+      alert('Delete failed.');
+    }
+  }
+
   window.openTransformRulesModal = openTransformRulesModal;
   window.closeTransformRulesModal = closeTransformRulesModal;
   window.addRuleRow = addRuleRow;
   window.saveTransformRules = saveTransformRules;
+  window.exportTransformRules = exportTransformRules;
+  window.importTransformRulesFromFile = importTransformRulesFromFile;
+  window.deleteTransformProfile = deleteTransformProfile;
 
   document.addEventListener('DOMContentLoaded', () => {
     if (!preselectedProfileId) {
