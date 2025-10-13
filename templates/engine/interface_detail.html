@@ -59,6 +59,17 @@
           <h2 class="text-h2" style="margin:0;">Actions</h2>
           <p class="text-body muted" style="margin:0;">Control interface lifecycle and run quick probes.</p>
         </div>
+        <form method="post"
+              action="{{ root }}/ui/engine/interfaces/attach_pipeline"
+              hx-post="{{ root }}/ui/engine/interfaces/attach_pipeline"
+              hx-target="#interface-status"
+              hx-swap="outerHTML"
+              class="row wrap"
+              style="gap:0.5rem;">
+          <input type="hidden" name="interface_id" value="{{ interface.id }}" />
+          <input class="input" type="text" name="pipeline_id" value="{{ interface.pipeline_id or '' }}" placeholder="Pipeline ID (blank to clear)" style="flex:1 1 220px;" />
+          <button class="button secondary" type="submit">Attach Pipeline</button>
+        </form>
         <form hx-post="{{ root }}/ui/engine/interfaces/toggle" hx-target="#interface-status" hx-swap="outerHTML" class="row" style="gap:0.5rem;">
           <input type="hidden" name="interface_id" value="{{ interface.id }}" />
           <input type="hidden" name="action" value="start" />

@@ -273,6 +273,35 @@ def toggle_interface(
     return RedirectResponse("/ui/engine/interfaces", status_code=303)
 
 
+@router.post("/ui/engine/interfaces/attach_pipeline")
+def attach_pipeline(
+    request: Request,
+    interface_id: int = Form(...),
+    pipeline_id: str | None = Form(None),
+):
+    """Attach or clear a pipeline binding for an interface."""
+
+    pipeline_value = _normalize_optional(pipeline_id)
+
+    with _session_scope() as db:
+        record = db.get(EngineInterface, interface_id)
+        if record is None:
+            raise HTTPException(status_code=404, detail="Interface not found")
+        record.pipeline_id = pipeline_value
+        db.commit()
+        interface_view = _get_interface(db, interface_id)
+
+    message = "Pipeline attached." if pipeline_value else "Pipeline cleared."
+
+    if request.headers.get("HX-Request"):
+        return templates.TemplateResponse(
+            "engine/partials/interface_status.html",
+            {"request": request, "interface": interface_view, "message": message},
+        )
+
+    return RedirectResponse(f"/ui/engine/interfaces/view/{interface_id}", status_code=303)
+
+
 @router.post("/ui/engine/interfaces/test")
 def test_interface(request: Request, interface_id: int = Form(...)):
     hx_target = request.headers.get("HX-Target", "")

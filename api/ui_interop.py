@@ -63,48 +63,8 @@ def load_validation_template(name: str) -> dict:
     except json.JSONDecodeError as exc:  # pragma: no cover - malformed template
         raise HTTPException(status_code=400, detail=f"Invalid template JSON: {exc}") from exc
 
-# ---------------- Server-side pipeline presets ----------------
-PIPELINE_PRESETS = {
-    "local-2575": {
-        "label": "Local MLLP (127.0.0.1:2575)",
-        "host": "127.0.0.1",
-        "port": 2575,
-        "timeout": 5,
-        "fhir_endpoint": "http://127.0.0.1:8080/fhir",
-        "post_fhir": False,
-    },
-    "docker-2575": {
-        "label": "Docker MLLP (localhost:2575)",
-        "host": "localhost",
-        "port": 2575,
-        "timeout": 5,
-        "fhir_endpoint": "http://localhost:8080/fhir",
-        "post_fhir": False,
-    },
-    "partner-a": {
-        "label": "Partner Sandbox A (+FHIR)",
-        "host": "10.0.0.10",
-        "port": 2575,
-        "timeout": 10,
-        "fhir_endpoint": "https://sandbox.partner-a.example/fhir",
-        "post_fhir": True,
-    },
-}
-
-
 def _template_lists() -> tuple[list[str], list[str]]:
     return list_deid_templates(), list_validation_templates()
-
-
-def _pipeline_defaults(preset_key: str | None) -> dict:
-    preset = PIPELINE_PRESETS.get((preset_key or "").strip()) or {}
-    return {
-        "host": preset.get("host", ""),
-        "port": preset.get("port", ""),
-        "timeout": preset.get("timeout", 5),
-        "fhir_endpoint": preset.get("fhir_endpoint", ""),
-        "post_fhir": bool(preset.get("post_fhir", False)),
-    }
 
 
 def _maybe_load_deid_template(name: str | None) -> dict | None:
@@ -170,21 +130,10 @@ async def interop_skills(request: Request):
 
 
 @router.get("/ui/interop/pipeline", response_class=HTMLResponse)
-async def interop_pipeline(request: Request, preset: str | None = None):
-    defaults = _pipeline_defaults(preset)
-    deid, val = _template_lists()
-    return templates.TemplateResponse(
-        "ui/interop/pipeline.html",
-        {
-            "request": request,
-            "urls": _ui_urls(request),
-            "presets": PIPELINE_PRESETS,
-            "preset_key": preset or "",
-            "defaults": defaults,
-            "deid_templates": deid,
-            "val_templates": val,
-        },
-    )
+async def interop_pipeline(request: Request):
+    """Manual pipeline bench for generating, de-identifying, validating, and testing."""
+
+    return templates.TemplateResponse("ui/interop/pipeline.html", {"request": request})
 
 
 @router.get("/ui/interop/history", response_class=HTMLResponse)
