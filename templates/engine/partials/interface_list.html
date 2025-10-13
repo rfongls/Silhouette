@@ -1,0 +1,41 @@
+<div class="grid" style="gap:1rem;">
+  {% if message is defined and message %}
+    <div class="card" role="status" style="padding:0.75rem; background:rgba(34,197,94,.12); border:1px solid rgba(34,197,94,.35); color:#bbf7d0;">
+      {{ message }}
+    </div>
+  {% endif %}
+  {% if items %}
+    {% for item in items %}
+      <article class="card" style="display:flex; flex-direction:column; gap:0.75rem;">
+        <header class="row" style="justify-content:space-between; align-items:center;">
+          <div>
+            <h2 class="text-h3" style="margin:0;">{{ item.name }}</h2>
+            <p class="text-caption muted" style="margin:0;">{{ item.direction_label }} · {{ item.pipeline_id or "No pipeline" }}</p>
+          </div>
+          <span class="badge {% if not item.is_active %}muted{% endif %}">{{ "Active" if item.is_active else "Stopped" }}</span>
+        </header>
+        {% if item.description %}
+          <p class="text-body muted" style="margin:0;">{{ item.description }}</p>
+        {% endif %}
+        <footer class="row wrap" style="justify-content:space-between; gap:0.5rem;">
+          <div class="row small" style="gap:0.5rem;">
+            <form hx-post="{{ root }}/ui/engine/interfaces/toggle" hx-target="#iface-list" hx-swap="outerHTML">
+              <input type="hidden" name="interface_id" value="{{ item.id }}" />
+              <input type="hidden" name="action" value="{{ 'stop' if item.is_active else 'start' }}" />
+              <button class="button secondary" type="submit">{{ 'Stop' if item.is_active else 'Start' }}</button>
+            </form>
+            <form hx-post="{{ root }}/ui/engine/interfaces/delete" hx-target="#iface-list" hx-swap="outerHTML" onsubmit="return confirm('Delete interface {{ item.name }}?');">
+              <input type="hidden" name="interface_id" value="{{ item.id }}" />
+              <button class="button danger" type="submit">Delete</button>
+            </form>
+          </div>
+          <a class="button" href="{{ root }}/ui/engine/interfaces/view/{{ item.id }}">Open</a>
+        </footer>
+      </article>
+    {% endfor %}
+  {% else %}
+    <div class="card" style="padding:1.5rem;">
+      <p class="text-body muted" style="margin:0;">No interfaces yet. Create one above to get started.</p>
+    </div>
+  {% endif %}
+</div>
