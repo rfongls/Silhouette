@@ -131,6 +131,25 @@ def _run_alembic_migrations_if_present() -> None:
         logger.warning("Alembic migration step skipped: %s", exc, exc_info=True)
 
 
+def _ensure_engine_tables() -> None:
+    """Provision Engine interface tables if ENGINE_V2 is enabled."""
+
+    if not app.state.engine_v2_enabled:
+        return
+
+    db_url = os.getenv("INSIGHTS_DB_URL", "sqlite:///data/insights.db")
+    try:
+        from sqlalchemy import create_engine
+
+        from engine.models import Base
+
+        engine = create_engine(db_url, future=True)
+        Base.metadata.create_all(engine)
+        logger.info("Engine interface tables ensured at %s", db_url)
+    except Exception:
+        logger.exception("Failed to ensure Engine interface tables")
+
+
 # Lightweight health probe for startup checks and monitors
 @app.get("/healthz", include_in_schema=False)
 @app.head("/healthz", include_in_schema=False)
@@ -176,6 +195,7 @@ async def _bootstrap_insights_schema() -> None:
         store.ensure_schema()
         db_url = os.getenv("INSIGHTS_DB_URL", "sqlite:///data/insights.db")
         logger.info("Insights DB ready: %s (ENGINE_V2=%s)", db_url, app.state.engine_v2_enabled)
+        _ensure_engine_tables()
     except Exception:
         logger.exception("Failed to ensure Insights schema on startup")
         raise
