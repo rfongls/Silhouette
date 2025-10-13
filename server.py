@@ -2,6 +2,10 @@ import json
 import logging
 import os
 import sys
+import threading
+import time
+import urllib.request
+import webbrowser
 from pathlib import Path
 import silhouette_core.compat.forwardref_shim  # noqa: F401  # ensure ForwardRef shim loads before FastAPI imports
 from fastapi import FastAPI, Request, HTTPException
@@ -16,6 +20,7 @@ from api.security import router as security_router
 from api.ui import router as ui_router, templates as ui_templates
 from api.ui_interop import router as ui_interop_router
 from api.ui_settings import router as ui_settings_router
+from api.ui_agents import router as ui_agents_router
 from api.ui_security import router as ui_security_router
 from api.diag import router as diag_router
 from api.http_logging import install_http_logging
@@ -59,6 +64,7 @@ for r in (
     ui_interop_router,
     ui_settings_router,
     ui_security_router,
+    ui_agents_router,
     interop_gen_router,  # specific generator endpoint
     interop_router,      # generic tools (now under /api/interop/exec/{tool})
     security_router,
@@ -125,11 +131,139 @@ def _run_alembic_migrations_if_present() -> None:
         logger.warning("Alembic migration step skipped: %s", exc, exc_info=True)
 
 
+ENGINE_SCHEMA_VERSION = 1  # bump when Engine table definitions change
+
+
+def _ensure_engine_tables() -> None:
+    """Provision or repair Engine interface tables when ENGINE_V2 is enabled."""
+
+    if not app.state.engine_v2_enabled:
+        return
+
+    db_url = os.getenv("INSIGHTS_DB_URL", "sqlite:///data/insights.db")
+    try:
+        from sqlalchemy import create_engine, inspect, text
+
+        from engine.models import Base
+
+        engine = create_engine(db_url, future=True)
+        inspector = inspect(engine)
+
+        with engine.begin() as conn:
+            conn.execute(
+                text(
+                    """
+                    CREATE TABLE IF NOT EXISTS engine_meta (
+                        key TEXT PRIMARY KEY,
+                        value TEXT
+                    )
+                    """
+                )
+            )
+            version_row = conn.execute(
+                text("SELECT value FROM engine_meta WHERE key='engine_schema_version'")
+            ).fetchone()
+            current_version = int(version_row[0]) if version_row and version_row[0].isdigit() else 0
+
+        def _interfaces_ok() -> bool:
+            if "engine_interfaces" not in inspector.get_table_names():
+                return False
+            cols = {col["name"] for col in inspector.get_columns("engine_interfaces")}
+            required = {
+                "id",
+                "name",
+                "direction",
+                "description",
+                "pipeline_id",
+                "is_active",
+                "created_at",
+            }
+            return required.issubset(cols)
+
+        def _endpoints_ok() -> bool:
+            if "engine_endpoints" not in inspector.get_table_names():
+                return False
+            cols = {col["name"] for col in inspector.get_columns("engine_endpoints")}
+            required = {"id", "interface_id", "protocol", "host", "port", "path", "notes"}
+            return required.issubset(cols)
+
+        needs_reinit = (
+            current_version < ENGINE_SCHEMA_VERSION
+            or not _interfaces_ok()
+            or not _endpoints_ok()
+        )
+
+        if needs_reinit:
+            with engine.begin() as conn:
+                conn.execute(text("DROP TABLE IF EXISTS engine_endpoints"))
+                conn.execute(text("DROP TABLE IF EXISTS engine_interfaces"))
+            logger.info(
+                "Engine tables dropped for rebuild (schema %s -> %s)",
+                current_version,
+                ENGINE_SCHEMA_VERSION,
+            )
+
+        Base.metadata.create_all(engine)
+
+        if needs_reinit:
+            with engine.begin() as conn:
+                conn.execute(
+                    text(
+                        """
+                        INSERT INTO engine_meta(key, value)
+                        VALUES('engine_schema_version', :version)
+                        ON CONFLICT(key) DO UPDATE SET value=:version
+                        """
+                    ),
+                    {"version": str(ENGINE_SCHEMA_VERSION)},
+                )
+            logger.info(
+                "Engine interface tables ensured at %s (schema=%s)",
+                db_url,
+                ENGINE_SCHEMA_VERSION,
+            )
+        else:
+            logger.info(
+                "Engine interface tables verified at %s (schema=%s)",
+                db_url,
+                ENGINE_SCHEMA_VERSION,
+            )
+    except Exception:
+        logger.exception("Failed to ensure or repair Engine interface tables")
+
+
 # Lightweight health probe for startup checks and monitors
 @app.get("/healthz", include_in_schema=False)
 @app.head("/healthz", include_in_schema=False)
 async def _healthz():
     return PlainTextResponse("ok", status_code=200)
+
+
+@app.on_event("startup")
+async def _open_ui_on_startup() -> None:
+    """Best-effort attempt to launch the UI in a browser when the server starts."""
+
+    if os.environ.get("SIL_OPEN_ON_START", "1") != "1":
+        return
+    if os.environ.get("SIL_OPENED_FLAG") == "1":
+        return
+
+    os.environ["SIL_OPENED_FLAG"] = "1"
+    url = os.environ.get("SIL_OPENURL", "http://127.0.0.1:8000/ui/agents")
+
+    def _worker() -> None:
+        for _ in range(60):
+            try:
+                with urllib.request.urlopen(url, timeout=1):
+                    break
+            except Exception:
+                time.sleep(0.25)
+        try:
+            webbrowser.open(url, new=1, autoraise=True)
+        except Exception:
+            pass
+
+    threading.Thread(target=_worker, daemon=True).start()
 
 
 @app.on_event("startup")
@@ -143,6 +277,7 @@ async def _bootstrap_insights_schema() -> None:
         store.ensure_schema()
         db_url = os.getenv("INSIGHTS_DB_URL", "sqlite:///data/insights.db")
         logger.info("Insights DB ready: %s (ENGINE_V2=%s)", db_url, app.state.engine_v2_enabled)
+        _ensure_engine_tables()
     except Exception:
         logger.exception("Failed to ensure Insights schema on startup")
         raise
