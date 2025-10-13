@@ -12,6 +12,8 @@ const endpointInput = document.getElementById('engine-pl-endpoint');
 let currentPipelineId = null;
 let pipelines = [];
 let steps = [];
+let dragIndex = null;
+let dropIndex = null;
 const profileCache = new Map();
 
 function escapeHtml(value) {
@@ -60,6 +62,8 @@ function renderSteps() {
     const item = document.createElement('li');
     item.className = 'row small';
     item.dataset.profileId = String(step.profileId);
+    item.dataset.index = String(index);
+    item.setAttribute('draggable', 'true');
 
     const label = document.createElement('span');
     label.className = 'text-body';
@@ -101,6 +105,58 @@ function renderSteps() {
     });
 
     item.append(label, up, down, remove);
+
+    item.addEventListener('dragstart', (event) => {
+      dragIndex = Number(item.dataset.index);
+      item.classList.add('dnd-dragging');
+      try {
+        event.dataTransfer?.setData('text/plain', String(dragIndex));
+      } catch (err) {
+        // Ignore inability to set data (e.g., Firefox + file://)
+      }
+      if (event.dataTransfer) {
+        event.dataTransfer.effectAllowed = 'move';
+      }
+    });
+
+    item.addEventListener('dragend', () => {
+      item.classList.remove('dnd-dragging');
+      document.querySelectorAll('#engine-pl-steps li.dnd-over').forEach((el) => el.classList.remove('dnd-over'));
+      dragIndex = null;
+      dropIndex = null;
+    });
+
+    item.addEventListener('dragover', (event) => {
+      event.preventDefault();
+      const targetIndex = Number(item.dataset.index);
+      if (!Number.isFinite(targetIndex)) return;
+      document.querySelectorAll('#engine-pl-steps li.dnd-over').forEach((el) => el.classList.remove('dnd-over'));
+      item.classList.add('dnd-over');
+      dropIndex = targetIndex;
+      if (event.dataTransfer) {
+        event.dataTransfer.dropEffect = 'move';
+      }
+    });
+
+    item.addEventListener('dragleave', () => {
+      item.classList.remove('dnd-over');
+    });
+
+    item.addEventListener('drop', (event) => {
+      event.preventDefault();
+      item.classList.remove('dnd-over');
+      if (dragIndex == null || dropIndex == null || dragIndex === dropIndex) {
+        dragIndex = null;
+        dropIndex = null;
+        return;
+      }
+      const moved = steps.splice(dragIndex, 1)[0];
+      steps.splice(dropIndex, 0, moved);
+      dragIndex = null;
+      dropIndex = null;
+      renderSteps();
+    });
+
     stepsListEl.appendChild(item);
   });
 }

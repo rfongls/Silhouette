@@ -8,6 +8,13 @@
       <p class="text-body muted">Build pipelines by choosing saved Transform, De-identify, and Validate profiles. No YAML required.</p>
     </header>
 
+    <style>
+      /* Drag and drop affordances for selected steps */
+      #engine-pl-steps li[draggable="true"] { cursor: grab; }
+      #engine-pl-steps li.dnd-dragging { opacity: 0.6; }
+      #engine-pl-steps li.dnd-over { outline: 2px dashed rgba(56, 189, 248, 0.9); outline-offset: 2px; }
+    </style>
+
     <div class="grid two" style="gap:1rem; align-items:start;">
       <aside class="card" style="min-height:18rem;">
         <div class="row" style="justify-content:space-between; align-items:center;">
