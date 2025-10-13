@@ -1,10 +1,8 @@
 """Lightweight ORM models for Engine interfaces and endpoints (SQLAlchemy 2.x style)."""
 from __future__ import annotations
-
 from datetime import datetime
 from enum import Enum
 from typing import Optional
-
 from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
