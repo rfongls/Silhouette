@@ -1,0 +1,38 @@
+{% extends "layout.html" %}
+{% block content %}
+<section class="dashboard">
+  <div class="dashboard-container">
+    <header class="dashboard-header">
+      <h1 class="text-h1">Silhouette Home</h1>
+      <p class="text-body muted">Launch skills, manage the Engine, and collaborate with agents.</p>
+    </header>
+
+    <div class="grid three" style="gap:1rem; align-items:stretch;">
+      <a class="card" href="{{ root }}/ui/skills/interop" style="text-decoration:none;">
+        <h2 class="text-h2">Interoperability</h2>
+        <p class="text-body muted">Generate HL7, transform to FHIR, validate, de-identify, and send.</p>
+      </a>
+      <a class="card" href="{{ root }}/ui/skills/cyber" style="text-decoration:none;">
+        <h2 class="text-h2">Cybersecurity</h2>
+        <p class="text-body muted">Scanners, evidence capture, control tracking, and approvals.</p>
+      </a>
+      <a class="card" href="{{ root }}/ui/engine" style="text-decoration:none;">
+        <h2 class="text-h2">Engine</h2>
+        <p class="text-body muted">Manage endpoints, pipelines, jobs, and message sinks.</p>
+      </a>
+      <a class="card" href="{{ root }}/ui/agents" style="text-decoration:none;">
+        <h2 class="text-h2">Agents</h2>
+        <p class="text-body muted">Configure task-focused agents, sandboxes, and orchestration.</p>
+      </a>
+      <a class="card" href="{{ root }}/ui/interop" style="text-decoration:none;">
+        <h2 class="text-h2">Manual Pipeline</h2>
+        <p class="text-body muted">Run one-off transformations, validations, and translations.</p>
+      </a>
+      <a class="card" href="{{ root }}/ui/reports" style="text-decoration:none;">
+        <h2 class="text-h2">Reports</h2>
+        <p class="text-body muted">ACKs, latency, validation summaries, and operational metrics.</p>
+      </a>
+    </div>
+  </div>
+</section>
+{% endblock %}
