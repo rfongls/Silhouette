@@ -131,23 +131,105 @@ def _run_alembic_migrations_if_present() -> None:
         logger.warning("Alembic migration step skipped: %s", exc, exc_info=True)
 
 
+ENGINE_SCHEMA_VERSION = 1  # bump when Engine table definitions change
+
+
 def _ensure_engine_tables() -> None:
-    """Provision Engine interface tables if ENGINE_V2 is enabled."""
+    """Provision or repair Engine interface tables when ENGINE_V2 is enabled."""
 
     if not app.state.engine_v2_enabled:
         return
 
     db_url = os.getenv("INSIGHTS_DB_URL", "sqlite:///data/insights.db")
     try:
-        from sqlalchemy import create_engine
+        from sqlalchemy import create_engine, inspect, text
 
         from engine.models import Base
 
         engine = create_engine(db_url, future=True)
+        inspector = inspect(engine)
+
+        with engine.begin() as conn:
+            conn.execute(
+                text(
+                    """
+                    CREATE TABLE IF NOT EXISTS engine_meta (
+                        key TEXT PRIMARY KEY,
+                        value TEXT
+                    )
+                    """
+                )
+            )
+            version_row = conn.execute(
+                text("SELECT value FROM engine_meta WHERE key='engine_schema_version'")
+            ).fetchone()
+            current_version = int(version_row[0]) if version_row and version_row[0].isdigit() else 0
+
+        def _interfaces_ok() -> bool:
+            if "engine_interfaces" not in inspector.get_table_names():
+                return False
+            cols = {col["name"] for col in inspector.get_columns("engine_interfaces")}
+            required = {
+                "id",
+                "name",
+                "direction",
+                "description",
+                "pipeline_id",
+                "is_active",
+                "created_at",
+            }
+            return required.issubset(cols)
+
+        def _endpoints_ok() -> bool:
+            if "engine_endpoints" not in inspector.get_table_names():
+                return False
+            cols = {col["name"] for col in inspector.get_columns("engine_endpoints")}
+            required = {"id", "interface_id", "protocol", "host", "port", "path", "notes"}
+            return required.issubset(cols)
+
+        needs_reinit = (
+            current_version < ENGINE_SCHEMA_VERSION
+            or not _interfaces_ok()
+            or not _endpoints_ok()
+        )
+
+        if needs_reinit:
+            with engine.begin() as conn:
+                conn.execute(text("DROP TABLE IF EXISTS engine_endpoints"))
+                conn.execute(text("DROP TABLE IF EXISTS engine_interfaces"))
+            logger.info(
+                "Engine tables dropped for rebuild (schema %s -> %s)",
+                current_version,
+                ENGINE_SCHEMA_VERSION,
+            )
+
         Base.metadata.create_all(engine)
-        logger.info("Engine interface tables ensured at %s", db_url)
+
+        if needs_reinit:
+            with engine.begin() as conn:
+                conn.execute(
+                    text(
+                        """
+                        INSERT INTO engine_meta(key, value)
+                        VALUES('engine_schema_version', :version)
+                        ON CONFLICT(key) DO UPDATE SET value=:version
+                        """
+                    ),
+                    {"version": str(ENGINE_SCHEMA_VERSION)},
+                )
+            logger.info(
+                "Engine interface tables ensured at %s (schema=%s)",
+                db_url,
+                ENGINE_SCHEMA_VERSION,
+            )
+        else:
+            logger.info(
+                "Engine interface tables verified at %s (schema=%s)",
+                db_url,
+                ENGINE_SCHEMA_VERSION,
+            )
     except Exception:
-        logger.exception("Failed to ensure Engine interface tables")
+        logger.exception("Failed to ensure or repair Engine interface tables")
 
 
 # Lightweight health probe for startup checks and monitors
