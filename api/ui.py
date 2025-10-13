@@ -129,8 +129,16 @@ def api_skills_registry():
 
 @router.get("/", include_in_schema=False)
 def root():
-    # Default entry → Reports Home
-    return RedirectResponse("/ui/home", status_code=307)
+    """Default entry redirects to the Agent landing page."""
+
+    return RedirectResponse("/ui/agents", status_code=307)
+
+
+@router.get("/ui", include_in_schema=False)
+def ui_root() -> RedirectResponse:
+    """Ensure ``/ui`` mirrors the default landing experience."""
+
+    return RedirectResponse("/ui/agents", status_code=307)
 
 
 @router.get("/ui/home", response_class=HTMLResponse)
@@ -139,6 +147,13 @@ def ui_home(request: Request):
 
 
     return _render_ui_home(request)
+
+
+@router.get("/ui/interop", response_class=HTMLResponse, name="ui_interop_hub")
+def ui_interop_hub(request: Request) -> HTMLResponse:
+    """Interoperability hub entry point."""
+
+    return templates.TemplateResponse("ui/interop/index.html", {"request": request})
 
 
 @router.get("/ui/settings", include_in_schema=False)

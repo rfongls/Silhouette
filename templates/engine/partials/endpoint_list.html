@@ -1,0 +1,22 @@
+<ul class="list" style="margin:0; padding:0; display:flex; flex-direction:column; gap:0.5rem;">
+  {% if interface.endpoints %}
+    {% for ep in interface.endpoints %}
+      <li class="card" style="padding:0.75rem;">
+        <div class="row" style="justify-content:space-between; align-items:center; gap:0.5rem;">
+          <strong>{{ ep.protocol }}</strong>
+          <span class="text-caption muted">
+            {% if ep.host %}{{ ep.host }}{% if ep.port %}:{{ ep.port }}{% endif %}{% elif ep.port %}port {{ ep.port }}{% endif %}
+            {% if ep.path %} · {{ ep.path }}{% endif %}
+          </span>
+        </div>
+        {% if ep.notes %}
+          <p class="text-caption muted" style="margin:0.5rem 0 0 0;">{{ ep.notes }}</p>
+        {% endif %}
+      </li>
+    {% endfor %}
+  {% else %}
+    <li class="card" style="padding:0.75rem;">
+      <p class="text-body muted" style="margin:0;">No endpoints yet. Add one using the form above.</p>
+    </li>
+  {% endif %}
+</ul>
