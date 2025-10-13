@@ -149,6 +149,13 @@ def ui_home(request: Request):
     return _render_ui_home(request)
 
 
+@router.get("/ui/interop", response_class=HTMLResponse, name="ui_interop_hub")
+def ui_interop_hub(request: Request) -> HTMLResponse:
+    """Interoperability hub entry point."""
+
+    return templates.TemplateResponse("ui/interop/index.html", {"request": request})
+
+
 @router.get("/ui/settings", include_in_schema=False)
 def redirect_settings() -> RedirectResponse:
     """Legacy settings entrypoint → new skills/interop settings hub."""

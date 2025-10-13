@@ -76,14 +76,24 @@ def _normalize_optional(value: str | None) -> str | None:
 
 def _coerce_direction(value: str) -> Direction:
     try:
-        return Direction(value.lower())
+        normalized = value.strip().lower()
+    except AttributeError as exc:  # pragma: no cover - defensive guard
+        raise HTTPException(status_code=400, detail="Invalid direction") from exc
+
+    try:
+        return Direction(normalized)
     except ValueError as exc:  # pragma: no cover - defensive guard
         raise HTTPException(status_code=400, detail="Invalid direction") from exc
 
 
 def _coerce_protocol(value: str) -> Protocol:
     try:
-        return Protocol(value.lower())
+        normalized = value.strip().lower()
+    except AttributeError as exc:  # pragma: no cover - defensive guard
+        raise HTTPException(status_code=400, detail="Invalid protocol") from exc
+
+    try:
+        return Protocol(normalized)
     except ValueError as exc:  # pragma: no cover - defensive guard
         raise HTTPException(status_code=400, detail="Invalid protocol") from exc
 
