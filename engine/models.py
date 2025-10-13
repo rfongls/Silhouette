@@ -1,14 +1,16 @@
-"""Lightweight ORM models for Engine interfaces and endpoints."""
+"""Lightweight ORM models for Engine interfaces and endpoints (SQLAlchemy 2.x style)."""
 from __future__ import annotations
-
 from datetime import datetime
 from enum import Enum
-from typing import List, Optional
+from typing import Optional
+from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, Text
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
-from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, String, Text
-from sqlalchemy.orm import declarative_base, relationship
 
-Base = declarative_base()
+class Base(DeclarativeBase):
+    """Declarative base class for Engine models."""
+
+    pass
 
 
 class Direction(str, Enum):
@@ -31,15 +33,15 @@ class EngineInterface(Base):
 
     __tablename__ = "engine_interfaces"
 
-    id: int = Column(Integer, primary_key=True)
-    name: str = Column(String(120), unique=True, nullable=False)
-    direction: str = Column(String(16), nullable=False)
-    description: Optional[str] = Column(Text, nullable=True)
-    pipeline_id: Optional[str] = Column(String(120), nullable=True)
-    is_active: bool = Column(Boolean, default=False)
-    created_at: datetime = Column(DateTime, default=datetime.utcnow, nullable=False)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    name: Mapped[str] = mapped_column(String(120), unique=True, nullable=False)
+    direction: Mapped[str] = mapped_column(String(16), nullable=False)
+    description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    pipeline_id: Mapped[Optional[str]] = mapped_column(String(120), nullable=True)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
 
-    endpoints: List["Endpoint"] = relationship(
+    endpoints: Mapped[list["Endpoint"]] = relationship(
         "Endpoint",
         back_populates="interface",
         cascade="all, delete-orphan",
@@ -52,12 +54,19 @@ class Endpoint(Base):
 
     __tablename__ = "engine_endpoints"
 
-    id: int = Column(Integer, primary_key=True)
-    interface_id: int = Column(Integer, ForeignKey("engine_interfaces.id", ondelete="CASCADE"), nullable=False)
-    protocol: str = Column(String(16), nullable=False)
-    host: Optional[str] = Column(String(255), nullable=True)
-    port: Optional[int] = Column(Integer, nullable=True)
-    path: Optional[str] = Column(String(512), nullable=True)
-    notes: Optional[str] = Column(Text, nullable=True)
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    interface_id: Mapped[int] = mapped_column(
+        Integer,
+        ForeignKey("engine_interfaces.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    protocol: Mapped[str] = mapped_column(String(16), nullable=False)
+    host: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    port: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    path: Mapped[Optional[str]] = mapped_column(String(512), nullable=True)
+    notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
 
-    interface: EngineInterface = relationship("EngineInterface", back_populates="endpoints")
+    interface: Mapped["EngineInterface"] = relationship(
+        "EngineInterface",
+        back_populates="endpoints",
+    )
