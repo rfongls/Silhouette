@@ -1,27 +1,32 @@
 @echo off
-setlocal ENABLEDELAYEDEXPANSION
-pushd %~dp0\..
+setlocal EnableExtensions
+REM Always start from the repo root (this file lives in /scripts)
+pushd "%~dp0.."
 
-set HOST=127.0.0.1
-set PORT=8000
-set URL=http://%HOST%:%PORT%/ui/landing
-set SENTINEL=%TEMP%\silhouette_ui_browser_opened
+REM --- Feature flags & env defaults ---
+set "ENGINE_V2=1"
+set "INSIGHTS_DB_URL=sqlite:///data/insights.db"
+set "AGENT_DATA_ROOT=%CD%\data\agent"
+set "PYTHONUNBUFFERED=1"
+set "PYTHONPATH=%CD%"
+set "SIL_OPEN_ON_START=1"
+set "SIL_OPENURL=http://127.0.0.1:8000/ui/agents"
 
-if not defined ENGINE_V2 set ENGINE_V2=1
+if not exist "data" mkdir "data"
+if not exist "data\agent" mkdir "data\agent"
 
-REM Optional: activate venv if present
-if exist venv\Scripts\activate.bat call venv\Scripts\activate.bat
-if exist .venv\Scripts\activate.bat call .venv\Scripts\activate.bat
+REM --- Resolve Python interpreter (prefer local venv) ---
+set "PYEXE="
+if exist ".venv\Scripts\python.exe" set "PYEXE=%CD%\.venv\Scripts\python.exe"
+if "%PYEXE%"=="" where py >nul 2>&1 && for /f "delims=" %%P in ('py -3 -c "import sys; print(sys.executable)"') do set "PYEXE=%%P"
+if "%PYEXE%"=="" set "PYEXE=python"
 
-echo Starting Silhouette UI server on http://%HOST%:%PORT%/ ...
-start "Silhouette UI (server)" cmd /k python -m uvicorn server:app --host %HOST% --port %PORT% --reload
-set OPEN_BROWSER=1
-if exist "%SENTINEL%" set OPEN_BROWSER=0
-if "%OPEN_BROWSER%"=="1" (
-  timeout /t 2 >nul
-  start "" %URL%
-  >"%SENTINEL%" echo opened
-)
+REM --- Launch browser helper in parallel using the same interpreter ---
+start "" "%PYEXE%" tools\open_browser.py "%SIL_OPENURL%"
+
+REM --- Run the server in this window ---
+"%PYEXE%" -m uvicorn server:app --host 127.0.0.1 --port 8000 --reload
 
 popd
 endlocal
+exit /b 0
