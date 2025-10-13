@@ -1,0 +1,91 @@
+{% extends "layout.html" %}
+{% block content %}
+<section class="dashboard">
+  <div class="dashboard-container" style="display:flex; flex-direction:column; gap:1.25rem;">
+    <nav class="breadcrumbs"><a href="{{ root }}/ui/interop">Interoperability</a> / <a href="{{ root }}/ui/engine">Engine</a> / <a href="{{ root }}/ui/engine/interfaces">Interfaces</a> / <span>{{ interface.name }}</span></nav>
+
+    <header class="dashboard-header">
+      <h1 class="text-h1">{{ interface.name }}</h1>
+      <p class="text-body muted" style="margin:0;">{{ interface.direction_label }} interface{% if interface.pipeline_id %} · Pipeline {{ interface.pipeline_id }}{% endif %}</p>
+    </header>
+
+    <div id="interface-status">
+      {% include "engine/partials/interface_status.html" %}
+    </div>
+
+    <div class="grid two" style="gap:1rem; align-items:flex-start;">
+      <section class="card" style="display:flex; flex-direction:column; gap:1rem;">
+        <div>
+          <h2 class="text-h2" style="margin:0;">Endpoints</h2>
+          <p class="text-body muted" style="margin:0;">Add connection details for listeners and senders.</p>
+        </div>
+        <form class="grid two" style="gap:0.75rem;" hx-post="{{ root }}/ui/engine/endpoints/add" hx-target="#endpoint-list" hx-swap="outerHTML" autocomplete="off">
+          <input type="hidden" name="interface_id" value="{{ interface.id }}" />
+          <label>
+            <span class="text-caption muted">Protocol</span>
+            <select class="input" name="protocol">
+              <option value="mllp">MLLP</option>
+              <option value="http">HTTP</option>
+              <option value="filedrop">File Drop</option>
+            </select>
+          </label>
+          <label>
+            <span class="text-caption muted">Host</span>
+            <input class="input" type="text" name="host" placeholder="0.0.0.0" />
+          </label>
+          <label>
+            <span class="text-caption muted">Port</span>
+            <input class="input" type="number" name="port" min="1" max="65535" />
+          </label>
+          <label>
+            <span class="text-caption muted">Path / Directory</span>
+            <input class="input" type="text" name="path" placeholder="/hl7/inbound" />
+          </label>
+          <label class="grid two" style="grid-column:1 / -1;">
+            <span class="text-caption muted">Notes</span>
+            <textarea class="input" name="notes" rows="2" placeholder="Optional instructions or context"></textarea>
+          </label>
+          <div style="grid-column:1 / -1; display:flex; justify-content:flex-end;">
+            <button class="button" type="submit">Add endpoint</button>
+          </div>
+        </form>
+        <div id="endpoint-list">
+          {% include "engine/partials/endpoint_list.html" %}
+        </div>
+      </section>
+
+      <section class="card" style="display:flex; flex-direction:column; gap:1rem;">
+        <div>
+          <h2 class="text-h2" style="margin:0;">Actions</h2>
+          <p class="text-body muted" style="margin:0;">Control interface lifecycle and run quick probes.</p>
+        </div>
+        <form method="post"
+              action="{{ root }}/ui/engine/interfaces/attach_pipeline"
+              hx-post="{{ root }}/ui/engine/interfaces/attach_pipeline"
+              hx-target="#interface-status"
+              hx-swap="outerHTML"
+              class="row wrap"
+              style="gap:0.5rem;">
+          <input type="hidden" name="interface_id" value="{{ interface.id }}" />
+          <input class="input" type="text" name="pipeline_id" value="{{ interface.pipeline_id or '' }}" placeholder="Pipeline ID (blank to clear)" style="flex:1 1 220px;" />
+          <button class="button secondary" type="submit">Attach Pipeline</button>
+        </form>
+        <form hx-post="{{ root }}/ui/engine/interfaces/toggle" hx-target="#interface-status" hx-swap="outerHTML" class="row" style="gap:0.5rem;">
+          <input type="hidden" name="interface_id" value="{{ interface.id }}" />
+          <input type="hidden" name="action" value="start" />
+          <button class="button" type="submit">Start</button>
+        </form>
+        <form hx-post="{{ root }}/ui/engine/interfaces/toggle" hx-target="#interface-status" hx-swap="outerHTML" class="row" style="gap:0.5rem;">
+          <input type="hidden" name="interface_id" value="{{ interface.id }}" />
+          <input type="hidden" name="action" value="stop" />
+          <button class="button secondary" type="submit">Stop</button>
+        </form>
+        <form hx-post="{{ root }}/ui/engine/interfaces/test" hx-target="#interface-status" hx-swap="outerHTML" class="row" style="gap:0.5rem;">
+          <input type="hidden" name="interface_id" value="{{ interface.id }}" />
+          <button class="button secondary" type="submit">Test</button>
+        </form>
+      </section>
+    </div>
+  </div>
+</section>
+{% endblock %}
