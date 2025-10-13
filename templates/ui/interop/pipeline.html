@@ -1,89 +1,162 @@
 {% extends "layout.html" %}
+
 {% block extra_head %}
 <link rel="stylesheet" href="{{ request.url_for('static', path='css/interop_extras.css') }}" />
 <script type="module" src="{{ request.url_for('static', path='js/interop_ui.js') }}"></script>
 {% endblock %}
+
 {% block content %}
+{% if urls is not defined %}
+  {% set urls = {} %}
+{% endif %}
 {% set root = request.scope.get('root_path', '') %}
-{% set deid_options = deid_templates if deid_templates is defined and deid_templates else [] %}
-{% set default_deid_template = 'default' if 'default' in deid_options else (deid_options[0] if deid_options else '') %}
-{% set val_options = val_templates if val_templates is defined and val_templates else [] %}
-{% set default_val_template = 'default' if 'default' in val_options else (val_options[0] if val_options else '') %}
-<h2>HL7 → FHIR Pipeline</h2>
-<form method="get" action="{{ root }}/ui/interop/pipeline" class="row gap mb small" autocomplete="off">
-  <label for="pipeline-preset-standalone">Preset</label>
-  <select id="pipeline-preset-standalone" name="preset" class="input" style="max-width:22rem" onchange="this.form.submit()">
-    <option value="">— Select preset —</option>
-    {% for key, preset in presets.items() %}
-      <option value="{{ key }}" {{ 'selected' if key == preset_key else '' }}>{{ preset.label }}</option>
-    {% endfor %}
-  </select>
-  <span class="micro muted">Prefills FHIR endpoint (and POST) below.</span>
-</form>
-<p class="muted">Select or generate HL7, analyze it, translate to FHIR, and optionally POST to an endpoint.</p>
+{% set analysis_rows = rows if rows else [] %}
 
-<section class="card" id="translate-panel">
-  <form id="pipe-form"
-        method="post"
-        action="{{ root }}/api/interop/pipeline/run"
-        hx-post="{{ root }}/api/interop/pipeline/run"
-        hx-trigger="submit"
-        hx-target="#pipe-out"
-        hx-swap="innerHTML">
-    <div class="row gap">
-      <label>Version</label>
-      <select name="version" class="input hl7-version-select" id="pipe-version" data-hx-refresh-target="1"
-              hx-get="{{ root }}/ui/interop/triggers"
-              hx-target="#pipe-trigger-select"
-              hx-vals='{"version": document.getElementById("pipe-version").value}'
-              hx-trigger="load, change"
-              onchange="window.InteropUI.fillDatalist('pipe')">
-        <option value="hl7-v2-3">HL7 v2.3</option>
-        <option value="hl7-v2-4" selected>HL7 v2.4</option>
-        <option value="hl7-v2-5">HL7 v2.5</option>
-      </select>
-      <label>Trigger</label>
-      <select class="input" name="trigger" id="pipe-trigger-select"></select>
-      <input class="input" list="pipe-trigger-datalist" id="pipe-trigger-typed" placeholder="Type trigger" oninput="window.InteropUI.syncTyped('pipe')"/>
-      <datalist id="pipe-trigger-datalist"></datalist>
-      <input class="input" name="template_relpath" placeholder="hl7-v2-4/ADT_A01.hl7" />
-      <textarea class="input grow" name="text" rows="10" placeholder="(optional) paste HL7; overrides trigger/relpath"></textarea>
+<section class="dashboard interop-pipeline">
+  <div class="dashboard-container">
+    <nav class="breadcrumbs"><a href="{{ root }}/ui/interop">Interoperability</a> / <span>Manual Pipeline</span></nav>
+    <header class="dashboard-header">
+      <h1 class="text-h1">Manual Pipeline</h1>
+      <p class="text-body muted">Generate HL7 samples, de-identify data, validate structure, test transports, and run the full interoperability pipeline.</p>
+    </header>
+
+    <div class="module-nav">
+      <a class="module-btn" href="#generate-panel">Generate</a>
+      <a class="module-btn" href="#deid-panel">De-identify</a>
+      <a class="module-btn" href="#validate-panel">Validate</a>
+      <a class="module-btn" href="#pipeline-panel">Pipeline</a>
+      <a class="module-btn" href="#mllp-panel">Transport</a>
+      <a class="module-btn" href="#analyze-panel">Analyze</a>
     </div>
-    <div class="row gap mt">
-      <input class="input" type="number" name="seed" placeholder="seed (optional)"/>
-      <label><input type="checkbox" name="ensure_unique" checked/> Unique IDs</label>
-      <label><input type="checkbox" name="include_clinical"/> Enrich clinical (DG1/AL1)</label>
-      <label><input type="checkbox" name="deidentify"/> De-identify</label>
-      <label><input type="checkbox" name="apply_baseline"/> Apply default de-ID logic</label>
+
+    <div class="grid two" style="gap:1.25rem; align-items:flex-start;">
+      {% include "ui/interop/_generate_panel.html" %}
+      {% include "ui/interop/_deid_panel.html" %}
+      {% include "ui/interop/_validate_panel.html" %}
+      {% include "ui/interop/_mllp_panel.html" %}
+
+      <section id="pipeline-panel" class="interop-panel interop-panel-pipeline card">
+        <div class="module-body">
+          <h3 class="text-h3 mb">Run Full Test Pipeline</h3>
+          <p class="text-body muted" style="margin:0 0 0.75rem 0;">Generate, transform, de-identify, and validate in a single request.</p>
+          <form id="pipeline-form"
+                class="grid two"
+                style="gap:0.75rem;"
+                method="post"
+                action="{{ root }}/api/interop/pipeline/run"
+                hx-post="{{ root }}/api/interop/pipeline/run"
+                hx-target="#pipeline-output"
+                hx-swap="innerHTML"
+                enctype="multipart/form-data"
+                hx-encoding="multipart/form-data">
+            <label>
+              <span class="text-caption muted">Version</span>
+              <select class="input" name="version">
+                <option value="hl7-v2-3">HL7 v2.3</option>
+                <option value="hl7-v2-4" selected>HL7 v2.4</option>
+                <option value="hl7-v2-5">HL7 v2.5</option>
+              </select>
+            </label>
+            <label>
+              <span class="text-caption muted">Trigger</span>
+              <input class="input" type="text" name="trigger" placeholder="ADT_A01" />
+            </label>
+            <label style="grid-column:1 / -1;">
+              <span class="text-caption muted">Or provide HL7 input</span>
+              <textarea class="input" name="text" rows="6" placeholder="MSH|^~\&|..."></textarea>
+            </label>
+            <label>
+              <span class="text-caption muted">De-ID template</span>
+              <input class="input" type="text" name="deid_template" placeholder="template id" />
+            </label>
+            <label>
+              <span class="text-caption muted">Validation template</span>
+              <input class="input" type="text" name="val_template" placeholder="template id" />
+            </label>
+            <label>
+              <span class="text-caption muted">Transform profile</span>
+              <input class="input" type="text" name="transform_profile" placeholder="profile id" />
+            </label>
+            <label class="row small" style="align-items:center;">
+              <input type="checkbox" name="deidentify" />
+              <span class="text-caption">De-identify generated message</span>
+            </label>
+            <label class="row small" style="align-items:center;">
+              <input type="checkbox" name="apply_baseline" />
+              <span class="text-caption">Apply baseline rules</span>
+            </label>
+            <label class="row small" style="align-items:center;">
+              <input type="checkbox" name="post_fhir" />
+              <span class="text-caption">POST FHIR bundle</span>
+            </label>
+            <label>
+              <span class="text-caption muted">FHIR endpoint (optional)</span>
+              <input class="input" type="text" name="fhir_endpoint" placeholder="https://example.org/fhir" />
+            </label>
+            <div class="row gap" style="grid-column:1 / -1; align-items:center;">
+              <label>
+                <span class="text-caption muted">Transport</span>
+                <select class="input" id="pipe-transport" name="transport">
+                  <option value="">None</option>
+                  <option value="mllp">MLLP</option>
+                </select>
+              </label>
+              <div id="pipe-mllp-config" class="row gap" style="display:none; align-items:center;">
+                <label>
+                  <span class="text-caption muted">Host</span>
+                  <input class="input" id="pipe-mllp-host" name="transport_host" type="text" placeholder="127.0.0.1" />
+                </label>
+                <label>
+                  <span class="text-caption muted">Port</span>
+                  <input class="input" id="pipe-mllp-port" name="transport_port" type="number" min="1" max="65535" placeholder="2575" />
+                </label>
+                <label class="row gap small" style="align-items:center;">
+                  <input type="checkbox" id="pipe-mllp-auto" checked />
+                  <span class="text-caption muted">Auto-send after validate</span>
+                </label>
+              </div>
+            </div>
+            <div style="grid-column:1 / -1; display:flex; justify-content:flex-end;">
+              <button class="button" type="submit">Run Pipeline</button>
+            </div>
+          </form>
+          <div id="pipeline-output" class="codepane mt" aria-live="polite">
+            <div class="muted small">Run the pipeline to view output here.</div>
+          </div>
+        </div>
+      </section>
+
+      <section id="debug-panel" class="interop-panel card">
+        <div class="module-body">
+          <h3 class="text-h3 mb">Generator Debug Log</h3>
+          <p class="text-body muted" style="margin:0 0 0.75rem 0;">Follow real-time generator diagnostics while you experiment.</p>
+          {% include "ui/interop/_debug_log_panel.html" %}
+        </div>
+      </section>
+
+      <section id="analyze-panel" class="interop-panel card">
+        <div class="module-body">
+          <h3 class="text-h3 mb">Analyze HL7</h3>
+          <p class="text-body muted" style="margin:0 0 0.75rem 0;">Upload HL7 files to view segment counts and quick validation probes.</p>
+          <form class="row gap"
+                hx-post="{{ root }}/interop/hl7/analyze"
+                hx-target="#analyze-results"
+                hx-swap="innerHTML"
+                enctype="multipart/form-data">
+            <input class="input" type="file" name="hl7_files" accept=".hl7,.txt" multiple required />
+            <button class="btn" type="submit">Analyze</button>
+          </form>
+          <div id="analyze-results" class="mt">
+            {% if analysis_rows %}
+              {% set rows = analysis_rows %}
+              {% include "ui/interop/_analyze_result.html" %}
+            {% else %}
+              <div class="muted small">Upload HL7 data to populate this panel.</div>
+            {% endif %}
+          </div>
+        </div>
+      </section>
     </div>
-    <div class="row gap mt">
-      <label class="grow">
-        <span class="micro muted">De-identify template</span>
-        <select name="deid_template" class="input">
-          {% for name in deid_options %}
-            <option value="{{ name }}" {% if name == default_deid_template %}selected{% endif %}>{{ name }}</option>
-          {% endfor %}
-        </select>
-      </label>
-      <label class="grow">
-        <span class="micro muted">Validation template</span>
-        <select name="val_template" class="input">
-          {% for name in val_options %}
-            <option value="{{ name }}" {% if name == default_val_template %}selected{% endif %}>{{ name }}</option>
-          {% endfor %}
-        </select>
-      </label>
-    </div>
-    <div class="row gap mt">
-      <label><input type="checkbox" id="pipeline-post-fhir" name="post_fhir" {{ 'checked' if defaults.post_fhir else '' }}/> Send FHIR</label>
-      <input class="input grow" id="pipeline-fhir-endpoint" name="fhir_endpoint" value="{{ defaults.fhir_endpoint }}" placeholder="https://example.org/fhir (Bundle/Resource)"/>
-      <button class="btn" type="button" onclick="document.getElementById('pipeline-fhir-endpoint').value='/api/fhir/dummy';">Use dummy</button>
-    </div>
-    <div class="row gap mt">
-      <button class="btn">Run Pipeline</button>
-    </div>
-  </form>
+  </div>
 </section>
-
-<div id="pipe-out" class="mt"></div>
 {% endblock %}

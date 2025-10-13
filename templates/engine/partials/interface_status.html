@@ -1,0 +1,22 @@
+<div class="card" style="display:flex; flex-direction:column; gap:0.5rem;">
+  <div class="row" style="justify-content:space-between; align-items:center;">
+    <div>
+      <span class="text-caption muted">Status</span>
+      <div class="text-h3" style="margin:0;">{{ 'Active' if interface.is_active else 'Stopped' }}</div>
+    </div>
+    <span class="badge {% if not interface.is_active %}muted{% endif %}">{{ 'Running' if interface.is_active else 'Idle' }}</span>
+  </div>
+  <div class="text-caption muted">Direction: {{ interface.direction_label }}</div>
+  {% if interface.pipeline_id %}
+    <div class="text-caption muted">Pipeline: {{ interface.pipeline_id }}</div>
+  {% endif %}
+  {% if message is defined and message %}
+    <div class="text-caption" style="color:#bbf7d0;">{{ message }}</div>
+  {% endif %}
+  {% if test_result is defined and test_result %}
+    <details>
+      <summary class="text-caption">Last test result</summary>
+      <pre class="text-caption muted" style="margin-top:0.5rem; white-space:pre-wrap;">{{ test_result | tojson(indent=2) }}</pre>
+    </details>
+  {% endif %}
+</div>

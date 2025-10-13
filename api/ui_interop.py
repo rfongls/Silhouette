@@ -63,48 +63,8 @@ def load_validation_template(name: str) -> dict:
     except json.JSONDecodeError as exc:  # pragma: no cover - malformed template
         raise HTTPException(status_code=400, detail=f"Invalid template JSON: {exc}") from exc
 
-# ---------------- Server-side pipeline presets ----------------
-PIPELINE_PRESETS = {
-    "local-2575": {
-        "label": "Local MLLP (127.0.0.1:2575)",
-        "host": "127.0.0.1",
-        "port": 2575,
-        "timeout": 5,
-        "fhir_endpoint": "http://127.0.0.1:8080/fhir",
-        "post_fhir": False,
-    },
-    "docker-2575": {
-        "label": "Docker MLLP (localhost:2575)",
-        "host": "localhost",
-        "port": 2575,
-        "timeout": 5,
-        "fhir_endpoint": "http://localhost:8080/fhir",
-        "post_fhir": False,
-    },
-    "partner-a": {
-        "label": "Partner Sandbox A (+FHIR)",
-        "host": "10.0.0.10",
-        "port": 2575,
-        "timeout": 10,
-        "fhir_endpoint": "https://sandbox.partner-a.example/fhir",
-        "post_fhir": True,
-    },
-}
-
-
 def _template_lists() -> tuple[list[str], list[str]]:
     return list_deid_templates(), list_validation_templates()
-
-
-def _pipeline_defaults(preset_key: str | None) -> dict:
-    preset = PIPELINE_PRESETS.get((preset_key or "").strip()) or {}
-    return {
-        "host": preset.get("host", ""),
-        "port": preset.get("port", ""),
-        "timeout": preset.get("timeout", 5),
-        "fhir_endpoint": preset.get("fhir_endpoint", ""),
-        "post_fhir": bool(preset.get("post_fhir", False)),
-    }
 
 
 def _maybe_load_deid_template(name: str | None) -> dict | None:
@@ -127,7 +87,7 @@ def _maybe_load_validation_template(name: str | None) -> dict | None:
 
 def _safe_url_for(request: Request, name: str, fallback: str) -> str:
     try:
-        return request.url_for(name)
+        return str(request.url_for(name))
     except Exception:
         return fallback
 
@@ -141,6 +101,7 @@ def _ui_urls(request: Request) -> dict[str, str]:
         "ui_generate":   _safe_url_for(request, "ui_generate",   "/ui/interop/generate"),
         "ui_deidentify": _safe_url_for(request, "ui_deidentify", "/ui/interop/deidentify"),
         "ui_validate":   _safe_url_for(request, "ui_validate",   "/ui/interop/validate"),
+        "ui_pipeline":   _safe_url_for(request, "ui_interop_pipeline", "/ui/interop/pipeline"),
         # API endpoints (HTMX fast path):
         "api_generate":  _safe_url_for(request, "generate_messages_endpoint", "/api/interop/generate"),
         "api_deidentify": _safe_url_for(request, "api_deidentify", "/api/interop/deidentify"),
@@ -149,6 +110,7 @@ def _ui_urls(request: Request) -> dict[str, str]:
             "api_deidentify_summary",
             "/api/interop/deidentify/summary",
         ),
+        "api_validate": _safe_url_for(request, "api_validate", "/api/interop/validate"),
     }
 
 @router.get("/ui/interop/dashboard", response_class=HTMLResponse)
@@ -169,22 +131,23 @@ async def interop_skills(request: Request):
     )
 
 
-@router.get("/ui/interop/pipeline", response_class=HTMLResponse)
-async def interop_pipeline(request: Request, preset: str | None = None):
-    defaults = _pipeline_defaults(preset)
-    deid, val = _template_lists()
-    return templates.TemplateResponse(
-        "ui/interop/pipeline.html",
-        {
-            "request": request,
-            "urls": _ui_urls(request),
-            "presets": PIPELINE_PRESETS,
-            "preset_key": preset or "",
-            "defaults": defaults,
-            "deid_templates": deid,
-            "val_templates": val,
-        },
-    )
+@router.get("/ui/interop/pipeline", response_class=HTMLResponse, name="ui_interop_pipeline")
+async def interop_pipeline(request: Request):
+    """Manual pipeline bench for generating, de-identifying, validating, and testing."""
+
+    deid_templates, val_templates = _template_lists()
+    urls = _ui_urls(request)
+    ctx = {
+        "request": request,
+        "deid_templates": deid_templates,
+        "val_templates": val_templates,
+        "urls": urls,
+        "log_path": str(LOG_FILE),
+        "limit": 200,
+        "refreshed": "",
+        "rows": [],
+    }
+    return templates.TemplateResponse("ui/interop/pipeline.html", ctx)
 
 
 @router.get("/ui/interop/history", response_class=HTMLResponse)
