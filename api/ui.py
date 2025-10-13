@@ -129,8 +129,16 @@ def api_skills_registry():
 
 @router.get("/", include_in_schema=False)
 def root():
-    # Default entry → Reports Home
-    return RedirectResponse("/ui/home", status_code=307)
+    """Default entry redirects to the Agent landing page."""
+
+    return RedirectResponse("/ui/agents", status_code=307)
+
+
+@router.get("/ui", include_in_schema=False)
+def ui_root() -> RedirectResponse:
+    """Ensure ``/ui`` mirrors the default landing experience."""
+
+    return RedirectResponse("/ui/agents", status_code=307)
 
 
 @router.get("/ui/home", response_class=HTMLResponse)
