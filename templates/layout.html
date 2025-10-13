@@ -7,7 +7,7 @@
 {% set current_path = req.url.path if req and req.url else '' %}
 {% set home_url = link_for(req, 'ui_home', '/ui/home') %}
 {% set skills_url = link_for(req, 'ui_skills_index', '/ui/skills') %}
-{% set interop_url = link_for(req, 'ui_page', '/ui/interop', page='interop') %}
+{% set interop_url = link_for(req, 'ui_interop_hub', '/ui/interop') %}
 {% set reports_url = link_for(req, 'ui_reports', '/reports') %}
 {% set settings_url = link_for(req, 'ui_settings_index', '/ui/settings') %}
 {% set agent_url = link_for(req, 'ui_agents_home', '/ui/agents') %}
