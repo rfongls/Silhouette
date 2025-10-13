@@ -93,6 +93,29 @@
               <span class="text-caption muted">FHIR endpoint (optional)</span>
               <input class="input" type="text" name="fhir_endpoint" placeholder="https://example.org/fhir" />
             </label>
+            <div class="row gap" style="grid-column:1 / -1; align-items:center;">
+              <label>
+                <span class="text-caption muted">Transport</span>
+                <select class="input" id="pipe-transport" name="transport">
+                  <option value="">None</option>
+                  <option value="mllp">MLLP</option>
+                </select>
+              </label>
+              <div id="pipe-mllp-config" class="row gap" style="display:none; align-items:center;">
+                <label>
+                  <span class="text-caption muted">Host</span>
+                  <input class="input" id="pipe-mllp-host" name="transport_host" type="text" placeholder="127.0.0.1" />
+                </label>
+                <label>
+                  <span class="text-caption muted">Port</span>
+                  <input class="input" id="pipe-mllp-port" name="transport_port" type="number" min="1" max="65535" placeholder="2575" />
+                </label>
+                <label class="row gap small" style="align-items:center;">
+                  <input type="checkbox" id="pipe-mllp-auto" checked />
+                  <span class="text-caption muted">Auto-send after validate</span>
+                </label>
+              </div>
+            </div>
             <div style="grid-column:1 / -1; display:flex; justify-content:flex-end;">
               <button class="button" type="submit">Run Pipeline</button>
             </div>
