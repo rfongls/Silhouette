@@ -1,5 +1,6 @@
 {% set root = request.scope.get('root_path', '') %}
 {% set validate_api = urls.api_validate | default(root ~ '/api/interop/validate', true) %}
+{% set validate_api = validate_api | string %}
 {% if '?' in validate_api %}
   {% set validate_api = validate_api ~ '&format=html' %}
 {% else %}

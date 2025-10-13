@@ -87,7 +87,7 @@ def _maybe_load_validation_template(name: str | None) -> dict | None:
 
 def _safe_url_for(request: Request, name: str, fallback: str) -> str:
     try:
-        return request.url_for(name)
+        return str(request.url_for(name))
     except Exception:
         return fallback
 
