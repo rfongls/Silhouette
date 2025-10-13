@@ -8,7 +8,7 @@ import ipaddress
 import logging
 import os
 from dataclasses import dataclass, field
-from typing import Iterable
+from typing import Awaitable, Callable, Iterable
 
 from insights.store import InsightsStore, QueueFullError
 
@@ -54,8 +54,11 @@ class MLLPServer:
     host: str
     port: int
     allow_cidrs: list[str]
-    pipeline_id: int
+    pipeline_id: int | None
     store: InsightsStore
+    message_handler: Callable[[bytes, dict[str, str]], Awaitable[None]] | None = field(
+        default=None
+    )
     _server: asyncio.AbstractServer | None = field(default=None, init=False)
 
     async def start(self) -> None:
@@ -137,18 +140,9 @@ class MLLPServer:
                 if not payload:
                     continue
 
-                encoded = base64.b64encode(payload).decode("ascii")
+                metadata = {"peer_ip": peer_ip, "transport": "mllp"}
                 try:
-                    self.store.enqueue_job(
-                        pipeline_id=self.pipeline_id,
-                        kind="ingest",
-                        payload={
-                            "message_b64": encoded,
-                            "meta": {"peer_ip": peer_ip, "transport": "mllp"},
-                        },
-                        priority=0,
-                        max_attempts=3,
-                    )
+                    await self._dispatch_payload(payload, metadata)
                 except QueueFullError as exc:
                     logger.warning(
                         "mllp.client.backpressure",
@@ -180,3 +174,21 @@ class MLLPServer:
                 "mllp.client.disconnect",
                 extra={"host": self.host, "port": self.port, "peer": peer_ip},
             )
+
+    async def _dispatch_payload(self, payload: bytes, meta: dict[str, str]) -> None:
+        if self.message_handler is not None:
+            await self.message_handler(payload, meta)
+            return
+        if self.pipeline_id is None:
+            raise RuntimeError("no pipeline configured for inbound endpoint")
+        encoded = base64.b64encode(payload).decode("ascii")
+        self.store.enqueue_job(
+            pipeline_id=self.pipeline_id,
+            kind="ingest",
+            payload={
+                "message_b64": encoded,
+                "meta": meta,
+            },
+            priority=0,
+            max_attempts=3,
+        )
