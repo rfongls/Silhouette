@@ -1,0 +1,29 @@
+{% extends "layout.html" %}
+{% block content %}
+<section class="dashboard">
+  <div class="dashboard-container">
+    <header class="dashboard-header">
+      <h1 class="text-h1">Silhouette Agent</h1>
+      <p class="text-body muted">Run guided demos or jump into the manual UI.</p>
+    </header>
+
+    <div class="grid two" style="gap:1rem; align-items:stretch;">
+      <form class="card" method="post" action="{{ root }}/ui/agents/demo" style="text-decoration:none; display:flex; flex-direction:column; gap:.75rem;">
+        <div>
+          <h2 class="text-h2">Run LLM Demo</h2>
+          <p class="text-body muted">Kick off the scripted demonstration of the agent workflow.</p>
+        </div>
+        <button class="button" type="submit" style="align-self:flex-start;">Start Demo</button>
+      </form>
+
+      <a class="card" href="{{ root }}/ui/home" style="text-decoration:none; display:flex; flex-direction:column; gap:.75rem;">
+        <div>
+          <h2 class="text-h2">Use UI</h2>
+          <p class="text-body muted">Open the manual interface to explore skills and tools.</p>
+        </div>
+        <span class="badge muted" style="align-self:flex-start;">Manual workflow</span>
+      </a>
+    </div>
+  </div>
+</section>
+{% endblock %}

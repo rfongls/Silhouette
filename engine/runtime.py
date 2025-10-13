@@ -123,3 +123,45 @@ def _instantiate_component(
     return factory(component.type, component.config)
 
 
+class EngineInterfaceRuntime:
+    """Lightweight runtime helpers for interface lifecycle operations."""
+
+    def start_interface(self, db, interface_id: int) -> bool:
+        """Mark an interface as active."""
+
+        from .models import EngineInterface
+
+        rec = db.get(EngineInterface, interface_id)
+        if rec is None:
+            return False
+        if not rec.is_active:
+            rec.is_active = True
+            db.commit()
+        db.refresh(rec)
+        return True
+
+    def stop_interface(self, db, interface_id: int) -> bool:
+        """Mark an interface as inactive."""
+
+        from .models import EngineInterface
+
+        rec = db.get(EngineInterface, interface_id)
+        if rec is None:
+            return False
+        if rec.is_active:
+            rec.is_active = False
+            db.commit()
+        db.refresh(rec)
+        return True
+
+    def test_interface(self, db, interface_id: int) -> dict[str, Any]:
+        """Stubbed health probe for an interface."""
+
+        from .models import EngineInterface
+
+        rec = db.get(EngineInterface, interface_id)
+        if rec is None:
+            return {"ok": False, "message": "Interface not found."}
+        return {"ok": True, "message": f"Interface '{rec.name}' is reachable."}
+
+
