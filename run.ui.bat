@@ -10,6 +10,8 @@ set "INSIGHTS_DB_URL=sqlite:///data/insights.db"
 set "AGENT_DATA_ROOT=%CD%\data\agent"
 set "PYTHONUNBUFFERED=1"
 set "PYTHONPATH=%CD%"
+set "SIL_OPEN_ON_START=1"
+set "SIL_OPENURL=http://127.0.0.1:8000/ui/agents"
 
 if not exist "data" mkdir "data"
 if not exist "data\agent" mkdir "data\agent"
@@ -21,7 +23,6 @@ if "%PYEXE%"=="" where py >nul 2>&1 && for /f "delims=" %%P in ('py -3 -c "impor
 if "%PYEXE%"=="" set "PYEXE=python"
 
 REM --- Launch browser helper in parallel using the same interpreter ---
-set "SIL_OPENURL=http://127.0.0.1:8000/ui"
 start "" "%PYEXE%" tools\open_browser.py "%SIL_OPENURL%"
 
 REM --- Run the server in this window ---
