@@ -16,6 +16,10 @@ let dragIndex = null;
 let dropIndex = null;
 const profileCache = new Map();
 
+function $$(selector, root = document) {
+  return Array.from(root.querySelectorAll(selector));
+}
+
 function escapeHtml(value) {
   return (value ?? '')
     .toString()
@@ -65,6 +69,11 @@ function renderSteps() {
     item.dataset.index = String(index);
     item.setAttribute('draggable', 'true');
 
+    const handle = document.createElement('span');
+    handle.className = 'dnd-handle';
+    handle.title = 'Drag to reorder';
+    handle.textContent = '⋮⋮';
+
     const label = document.createElement('span');
     label.className = 'text-body';
     label.innerHTML = `<strong>${index + 1}.</strong> ${escapeHtml(step.name || `Profile ${step.profileId}`)} <span class="text-caption muted">(${escapeHtml(step.kind || '')})</span>`;
@@ -104,9 +113,13 @@ function renderSteps() {
       renderSteps();
     });
 
-    item.append(label, up, down, remove);
+    item.append(handle, label, up, down, remove);
 
     item.addEventListener('dragstart', (event) => {
+      if (!event.target?.closest?.('.dnd-handle')) {
+        event.preventDefault();
+        return;
+      }
       dragIndex = Number(item.dataset.index);
       item.classList.add('dnd-dragging');
       try {
@@ -121,7 +134,7 @@ function renderSteps() {
 
     item.addEventListener('dragend', () => {
       item.classList.remove('dnd-dragging');
-      document.querySelectorAll('#engine-pl-steps li.dnd-over').forEach((el) => el.classList.remove('dnd-over'));
+      $$('#engine-pl-steps li.dnd-over').forEach((el) => el.classList.remove('dnd-over'));
       dragIndex = null;
       dropIndex = null;
     });
@@ -130,7 +143,7 @@ function renderSteps() {
       event.preventDefault();
       const targetIndex = Number(item.dataset.index);
       if (!Number.isFinite(targetIndex)) return;
-      document.querySelectorAll('#engine-pl-steps li.dnd-over').forEach((el) => el.classList.remove('dnd-over'));
+      $$('#engine-pl-steps li.dnd-over').forEach((el) => el.classList.remove('dnd-over'));
       item.classList.add('dnd-over');
       dropIndex = targetIndex;
       if (event.dataTransfer) {
@@ -156,6 +169,70 @@ function renderSteps() {
       dropIndex = null;
       renderSteps();
     });
+
+    // Pointer-based drag (touch/pen)
+    let pointerDragging = false;
+    let pointerId = null;
+    let moveFrame = null;
+
+    const onPointerMove = (ev) => {
+      if (!pointerDragging) return;
+      if (moveFrame) cancelAnimationFrame(moveFrame);
+      moveFrame = requestAnimationFrame(() => {
+        const target = document.elementFromPoint(ev.clientX, ev.clientY);
+        const li = target?.closest?.('#engine-pl-steps li');
+        $$('#engine-pl-steps li.dnd-over').forEach((el) => el.classList.remove('dnd-over'));
+        if (li && li.parentElement === stepsListEl) {
+          li.classList.add('dnd-over');
+          const idx = Number(li.dataset.index);
+          dropIndex = Number.isFinite(idx) ? idx : null;
+        } else {
+          dropIndex = null;
+        }
+        moveFrame = null;
+      });
+    };
+
+    const stopPointerDrag = () => {
+      if (!pointerDragging) return;
+      pointerDragging = false;
+      if (pointerId != null) {
+        try { handle.releasePointerCapture(pointerId); } catch (err) { /* ignore */ }
+      }
+      pointerId = null;
+      item.classList.remove('dnd-dragging');
+      $$('#engine-pl-steps li.dnd-over').forEach((el) => el.classList.remove('dnd-over'));
+      if (moveFrame) {
+        cancelAnimationFrame(moveFrame);
+        moveFrame = null;
+      }
+      if (dragIndex != null && dropIndex != null && dragIndex !== dropIndex) {
+        const moved = steps.splice(dragIndex, 1)[0];
+        steps.splice(dropIndex, 0, moved);
+        renderSteps();
+      }
+      dragIndex = null;
+      dropIndex = null;
+      window.removeEventListener('pointermove', onPointerMove);
+      window.removeEventListener('pointerup', stopPointerDrag);
+      window.removeEventListener('pointercancel', stopPointerDrag);
+    };
+
+    handle.addEventListener('pointerdown', (ev) => {
+      if (ev.button !== 0) return;
+      pointerDragging = true;
+      pointerId = ev.pointerId;
+      dragIndex = Number(item.dataset.index);
+      item.classList.add('dnd-dragging');
+      try { handle.setPointerCapture(pointerId); } catch (err) { /* ignore */ }
+      window.addEventListener('pointermove', onPointerMove, { passive: true });
+      window.addEventListener('pointerup', stopPointerDrag, { passive: true });
+      window.addEventListener('pointercancel', stopPointerDrag, { passive: true });
+      ev.preventDefault();
+    }, { passive: false });
+
+    handle.addEventListener('pointerup', stopPointerDrag);
+    handle.addEventListener('pointercancel', stopPointerDrag);
 
     stepsListEl.appendChild(item);
   });

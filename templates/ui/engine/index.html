@@ -10,9 +10,25 @@
 
     <style>
       /* Drag and drop affordances for selected steps */
-      #engine-pl-steps li[draggable="true"] { cursor: grab; }
+      #engine-pl-steps li { cursor: default; }
       #engine-pl-steps li.dnd-dragging { opacity: 0.6; }
       #engine-pl-steps li.dnd-over { outline: 2px dashed rgba(56, 189, 248, 0.9); outline-offset: 2px; }
+      .dnd-handle {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 1.75rem;
+        height: 1.75rem;
+        margin-right: 0.5rem;
+        border-radius: 0.375rem;
+        cursor: grab;
+        user-select: none;
+        color: var(--text-muted, #94a3b8);
+        background: rgba(148, 163, 184, 0.08);
+      }
+      .dnd-handle:active {
+        cursor: grabbing;
+      }
     </style>
 
     <div class="grid two" style="gap:1rem; align-items:start;">
