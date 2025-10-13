@@ -1,0 +1,26 @@
+{% extends "layout.html" %}
+{% block content %}
+<section class="dashboard">
+  <div class="dashboard-container">
+    <header class="dashboard-header">
+      <h1 class="text-h1">Interoperability</h1>
+      <p class="text-body muted">Work with HL7 ↔ FHIR pipelines, transports, and validation tooling.</p>
+    </header>
+
+    <div class="grid three" style="gap:1rem; align-items:stretch;">
+      <a class="card" href="{{ root }}/ui/interop/pipeline" style="text-decoration:none;">
+        <h2 class="text-h2">Manual Pipeline</h2>
+        <p class="text-body muted">Run one-off transforms, validations, and translations.</p>
+      </a>
+      <a class="card" href="{{ root }}/ui/engine" style="text-decoration:none;">
+        <h2 class="text-h2">Engine</h2>
+        <p class="text-body muted">Manage endpoints, jobs, message sinks, and automation.</p>
+      </a>
+      <a class="card" href="{{ root }}/ui/skills/interop/settings" style="text-decoration:none;">
+        <h2 class="text-h2">Settings</h2>
+        <p class="text-body muted">Configure de-identification, validation, and transport profiles.</p>
+      </a>
+    </div>
+  </div>
+</section>
+{% endblock %}

@@ -2,6 +2,10 @@ import json
 import logging
 import os
 import sys
+import threading
+import time
+import urllib.request
+import webbrowser
 from pathlib import Path
 import silhouette_core.compat.forwardref_shim  # noqa: F401  # ensure ForwardRef shim loads before FastAPI imports
 from fastapi import FastAPI, Request, HTTPException
@@ -16,6 +20,7 @@ from api.security import router as security_router
 from api.ui import router as ui_router, templates as ui_templates
 from api.ui_interop import router as ui_interop_router
 from api.ui_settings import router as ui_settings_router
+from api.ui_agents import router as ui_agents_router
 from api.ui_security import router as ui_security_router
 from api.diag import router as diag_router
 from api.http_logging import install_http_logging
@@ -59,6 +64,7 @@ for r in (
     ui_interop_router,
     ui_settings_router,
     ui_security_router,
+    ui_agents_router,
     interop_gen_router,  # specific generator endpoint
     interop_router,      # generic tools (now under /api/interop/exec/{tool})
     security_router,
@@ -130,6 +136,33 @@ def _run_alembic_migrations_if_present() -> None:
 @app.head("/healthz", include_in_schema=False)
 async def _healthz():
     return PlainTextResponse("ok", status_code=200)
+
+
+@app.on_event("startup")
+async def _open_ui_on_startup() -> None:
+    """Best-effort attempt to launch the UI in a browser when the server starts."""
+
+    if os.environ.get("SIL_OPEN_ON_START", "1") != "1":
+        return
+    if os.environ.get("SIL_OPENED_FLAG") == "1":
+        return
+
+    os.environ["SIL_OPENED_FLAG"] = "1"
+    url = os.environ.get("SIL_OPENURL", "http://127.0.0.1:8000/ui/agents")
+
+    def _worker() -> None:
+        for _ in range(60):
+            try:
+                with urllib.request.urlopen(url, timeout=1):
+                    break
+            except Exception:
+                time.sleep(0.25)
+        try:
+            webbrowser.open(url, new=1, autoraise=True)
+        except Exception:
+            pass
+
+    threading.Thread(target=_worker, daemon=True).start()
 
 
 @app.on_event("startup")
