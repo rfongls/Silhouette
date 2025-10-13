@@ -101,6 +101,7 @@ def _ui_urls(request: Request) -> dict[str, str]:
         "ui_generate":   _safe_url_for(request, "ui_generate",   "/ui/interop/generate"),
         "ui_deidentify": _safe_url_for(request, "ui_deidentify", "/ui/interop/deidentify"),
         "ui_validate":   _safe_url_for(request, "ui_validate",   "/ui/interop/validate"),
+        "ui_pipeline":   _safe_url_for(request, "ui_interop_pipeline", "/ui/interop/pipeline"),
         # API endpoints (HTMX fast path):
         "api_generate":  _safe_url_for(request, "generate_messages_endpoint", "/api/interop/generate"),
         "api_deidentify": _safe_url_for(request, "api_deidentify", "/api/interop/deidentify"),
@@ -109,6 +110,7 @@ def _ui_urls(request: Request) -> dict[str, str]:
             "api_deidentify_summary",
             "/api/interop/deidentify/summary",
         ),
+        "api_validate": _safe_url_for(request, "api_validate", "/api/interop/validate"),
     }
 
 @router.get("/ui/interop/dashboard", response_class=HTMLResponse)
@@ -129,11 +131,23 @@ async def interop_skills(request: Request):
     )
 
 
-@router.get("/ui/interop/pipeline", response_class=HTMLResponse)
+@router.get("/ui/interop/pipeline", response_class=HTMLResponse, name="ui_interop_pipeline")
 async def interop_pipeline(request: Request):
     """Manual pipeline bench for generating, de-identifying, validating, and testing."""
 
-    return templates.TemplateResponse("ui/interop/pipeline.html", {"request": request})
+    deid_templates, val_templates = _template_lists()
+    urls = _ui_urls(request)
+    ctx = {
+        "request": request,
+        "deid_templates": deid_templates,
+        "val_templates": val_templates,
+        "urls": urls,
+        "log_path": str(LOG_FILE),
+        "limit": 200,
+        "refreshed": "",
+        "rows": [],
+    }
+    return templates.TemplateResponse("ui/interop/pipeline.html", ctx)
 
 
 @router.get("/ui/interop/history", response_class=HTMLResponse)
