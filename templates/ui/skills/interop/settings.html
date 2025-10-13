@@ -1,0 +1,393 @@
+{% extends "layout.html" %}
+{% block content %}
+<section class="dashboard" data-transform-profile="{{ transform_profile_id or '' }}">
+  <div class="dashboard-container">
+    <nav class="breadcrumbs"><a href="{{ root }}/ui">Home</a> / <a href="{{ root }}/ui/skills">Skills</a> / <a href="{{ root }}/ui/skills/interop">Interop</a> / <span>Settings</span></nav>
+    <header class="dashboard-header">
+      <h1 class="text-h1">Interop Settings</h1>
+      <p class="text-body muted">Manage reusable profiles for transform, de-identification, and validation modules.</p>
+    </header>
+
+    <div class="grid three" style="gap:1rem; align-items:flex-start;">
+      <section class="card" aria-labelledby="interop-settings-transform">
+        <h2 id="interop-settings-transform" class="text-h2">Transform Profiles</h2>
+        <p class="text-body muted">Copy or move HL7 fields with reusable rules.</p>
+        <form
+          class="col gap-sm mb"
+          hx-post="{{ root }}/ui/skills/interop/settings/transform/create"
+          hx-target="#transform-list"
+          hx-swap="outerHTML"
+        >
+          <label class="col gap-xs">
+            <span class="text-caption muted">Name</span>
+            <input class="input" type="text" name="name" placeholder="e.g., default" required />
+          </label>
+          <label class="col gap-xs">
+            <span class="text-caption muted">Description</span>
+            <input class="input" type="text" name="description" placeholder="Optional" />
+          </label>
+          <button class="button" type="submit">Create</button>
+        </form>
+        <div id="transform-list">
+          {% include "ui/skills/interop/partials/transform_list.html" with context={"items": transform_items} %}
+        </div>
+      </section>
+
+      <section class="card" aria-labelledby="interop-settings-deid">
+        <h2 id="interop-settings-deid" class="text-h2">De-Identification Profiles</h2>
+        <p class="text-body muted">Persist reusable scrubbing and masking policies.</p>
+        <form
+          class="col gap-sm mb"
+          hx-post="{{ root }}/ui/skills/interop/settings/deid/create"
+          hx-target="#deid-list"
+          hx-swap="outerHTML"
+        >
+          <label class="col gap-xs">
+            <span class="text-caption muted">Name</span>
+            <input class="input" type="text" name="name" placeholder="e.g., remove_phi" required />
+          </label>
+          <label class="col gap-xs">
+            <span class="text-caption muted">Description</span>
+            <input class="input" type="text" name="description" placeholder="Optional" />
+          </label>
+          <button class="button" type="submit">Create</button>
+        </form>
+        <div id="deid-list">
+          {% include "ui/skills/interop/partials/deid_list.html" with context={"items": deid_items} %}
+        </div>
+      </section>
+
+      <section class="card" aria-labelledby="interop-settings-validate">
+        <h2 id="interop-settings-validate" class="text-h2">Validation Profiles</h2>
+        <p class="text-body muted">Capture validation suites for inbound traffic.</p>
+        <form
+          class="col gap-sm mb"
+          hx-post="{{ root }}/ui/skills/interop/settings/validate/create"
+          hx-target="#validate-list"
+          hx-swap="outerHTML"
+        >
+          <label class="col gap-xs">
+            <span class="text-caption muted">Name</span>
+            <input class="input" type="text" name="name" placeholder="e.g., inbound_adt" required />
+          </label>
+          <label class="col gap-xs">
+            <span class="text-caption muted">Description</span>
+            <input class="input" type="text" name="description" placeholder="Optional" />
+          </label>
+          <button class="button" type="submit">Create</button>
+        </form>
+        <div id="validate-list">
+          {% include "ui/skills/interop/partials/validate_list.html" with context={"items": validate_items} %}
+        </div>
+      </section>
+    </div>
+  </div>
+</section>
+
+<div id="transform-rules-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:1000; align-items:center; justify-content:center;">
+  <div class="card" style="width:min(900px, 95vw); max-height:90vh; overflow:auto; padding:1rem;">
+    <header class="row" style="justify-content:space-between; align-items:center;">
+      <div class="row" style="gap:.5rem; align-items:center;">
+        <h3 class="text-h2">Edit Transform Rules</h3>
+        <button class="button secondary small" type="button" onclick="exportTransformRules()">Export JSON</button>
+        <label class="button ghost small" for="transform-import-file">Import JSON</label>
+        <input id="transform-import-file" type="file" accept="application/json" style="display:none" onchange="importTransformRulesFromFile(this)" />
+        <button class="button danger small" type="button" onclick="deleteTransformProfile()">Delete template</button>
+      </div>
+      <button class="button ghost" type="button" onclick="closeTransformRulesModal()">Close</button>
+    </header>
+
+    <p class="text-body muted">Each rule copies or moves an HL7 value from <code>from_path</code> to <code>to_path</code>. Example: <code>PID-5.1</code> → <code>PID-3.1</code></p>
+
+    <div id="rules-table-wrap"></div>
+
+    <footer class="row mt" style="justify-content:flex-end; gap:.5rem;">
+      <button class="button secondary" type="button" onclick="addRuleRow()">Add Rule</button>
+      <button class="button" type="button" onclick="saveTransformRules()">Save Rules</button>
+    </footer>
+  </div>
+</div>
+
+<script>
+  const _appRootEl = document.querySelector('meta[name="app-root"]');
+  const ROOT_PATH = _appRootEl ? (_appRootEl.getAttribute('content') || '') : '';
+  const dashboardSection = document.querySelector('section.dashboard');
+  const preselectedProfileId = dashboardSection ? (dashboardSection.dataset.transformProfile || '') : '';
+
+  let _editingProfileId = null;
+  let _rules = [];
+
+  function escapeHtml(text) {
+    return (text || '').replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch] || ch));
+  }
+
+  function openTransformRulesModal(profileId, config) {
+    _editingProfileId = profileId;
+    _rules = Array.isArray(config?.rules) ? JSON.parse(JSON.stringify(config.rules)) : [];
+    renderRulesTable();
+    document.getElementById('transform-rules-modal').style.display = 'flex';
+  }
+
+  function closeTransformRulesModal() {
+    _editingProfileId = null;
+    _rules = [];
+    document.getElementById('transform-rules-modal').style.display = 'none';
+  }
+
+  function addRuleRow() {
+    _rules.push({ op: 'copy', from_path: '', to_path: '' });
+    renderRulesTable();
+  }
+
+  function removeRuleRow(index) {
+    _rules.splice(index, 1);
+    renderRulesTable();
+  }
+
+  function updateRule(index, field, value) {
+    _rules[index][field] = value;
+  }
+
+  function renderRulesTable() {
+    const wrap = document.getElementById('rules-table-wrap');
+    const table = document.createElement('table');
+    table.className = 'table';
+    table.innerHTML = `
+      <thead>
+        <tr><th style="width:8rem;">Op</th><th>From Path</th><th>To Path</th><th style="width:6rem;">&nbsp;</th></tr>
+      </thead>
+      <tbody></tbody>
+    `;
+    const tbody = table.querySelector('tbody');
+
+    _rules.forEach((rule, index) => {
+      const tr = document.createElement('tr');
+
+      const opCell = document.createElement('td');
+      const opSelect = document.createElement('select');
+      opSelect.className = 'input';
+      ['copy', 'move'].forEach((option) => {
+        const opt = document.createElement('option');
+        opt.value = option;
+        opt.textContent = option;
+        if (rule.op === option) opt.selected = true;
+        opSelect.appendChild(opt);
+      });
+      opSelect.addEventListener('change', (event) => updateRule(index, 'op', event.target.value));
+      opCell.appendChild(opSelect);
+
+      const fromCell = document.createElement('td');
+      const fromInput = document.createElement('input');
+      fromInput.className = 'input';
+      fromInput.placeholder = 'PID-5.1';
+      fromInput.value = rule.from_path || '';
+      fromInput.addEventListener('input', (event) => updateRule(index, 'from_path', event.target.value));
+      fromCell.appendChild(fromInput);
+
+      const toCell = document.createElement('td');
+      const toInput = document.createElement('input');
+      toInput.className = 'input';
+      toInput.placeholder = 'PID-3.1';
+      toInput.value = rule.to_path || '';
+      toInput.addEventListener('input', (event) => updateRule(index, 'to_path', event.target.value));
+      toCell.appendChild(toInput);
+
+      const actionCell = document.createElement('td');
+      const removeButton = document.createElement('button');
+      removeButton.type = 'button';
+      removeButton.className = 'button danger small';
+      removeButton.textContent = 'Remove';
+      removeButton.addEventListener('click', () => removeRuleRow(index));
+      actionCell.appendChild(removeButton);
+
+      tr.append(opCell, fromCell, toCell, actionCell);
+      tbody.appendChild(tr);
+    });
+
+    wrap.innerHTML = '';
+    wrap.appendChild(table);
+  }
+
+  function _isValidPath(path) {
+    return /^[A-Z0-9]{3}-\d+(?:\.\d+)?$/.test((path || '').toUpperCase());
+  }
+
+  async function saveTransformRules() {
+    if (_editingProfileId == null) return;
+    for (const [index, rule] of _rules.entries()) {
+      if (!['copy', 'move'].includes(rule.op)) {
+        alert(`Rule ${index + 1}: op must be copy or move`);
+        return;
+      }
+      if (!_isValidPath(rule.from_path)) {
+        alert(`Rule ${index + 1}: invalid from_path`);
+        return;
+      }
+      if (!_isValidPath(rule.to_path)) {
+        alert(`Rule ${index + 1}: invalid to_path`);
+        return;
+      }
+    }
+
+    const payload = {
+      name: null,
+      description: null,
+      config: {
+        rules: _rules.map((rule) => ({
+          op: rule.op,
+          from_path: rule.from_path.toUpperCase(),
+          to_path: rule.to_path.toUpperCase(),
+        })),
+      },
+    };
+
+    try {
+      const response = await fetch(`${ROOT_PATH}/api/engine/profiles/${_editingProfileId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      if (!response.ok) {
+        const message = await response.text();
+        alert(`Save failed: ${response.status} ${message}`);
+        return;
+      }
+      await refreshTransformList();
+      closeTransformRulesModal();
+    } catch (error) {
+      console.error(error);
+      alert('Network error while saving transform rules.');
+    }
+  }
+
+  async function refreshTransformList() {
+    try {
+      const response = await fetch(`${ROOT_PATH}/ui/skills/interop/settings/transform/list`, {
+        headers: { 'HX-Request': 'true' },
+      });
+      if (!response.ok) return;
+      const html = await response.text();
+      const container = document.getElementById('transform-list');
+      if (container) {
+        container.outerHTML = html;
+      }
+    } catch (error) {
+      console.error('Failed to refresh transform list', error);
+    }
+  }
+
+  function downloadBlob(filename, data, type = 'application/json') {
+    const blob = new Blob([data], { type });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = filename;
+    document.body.appendChild(anchor);
+    anchor.click();
+    document.body.removeChild(anchor);
+    URL.revokeObjectURL(url);
+  }
+
+  function exportTransformRules() {
+    if (_editingProfileId == null) return;
+    const payload = {
+      kind: 'transform',
+      config: {
+        rules: _rules.map((rule) => ({
+          op: rule.op,
+          from_path: (rule.from_path || '').toUpperCase(),
+          to_path: (rule.to_path || '').toUpperCase(),
+        })),
+      },
+    };
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '');
+    downloadBlob(`transform_rules_${_editingProfileId}_${timestamp}.json`, JSON.stringify(payload, null, 2));
+  }
+
+  async function importTransformRulesFromFile(input) {
+    if (!input.files?.length || _editingProfileId == null) return;
+    try {
+      const text = await input.files[0].text();
+      const json = JSON.parse(text);
+      const rules = Array.isArray(json?.rules) ? json.rules : json?.config?.rules;
+      if (!Array.isArray(rules)) {
+        alert('Invalid JSON: expected { rules: [...] }');
+        input.value = '';
+        return;
+      }
+      const normalized = rules.map((rule, index) => {
+        const op = (rule.op || 'copy').toLowerCase();
+        if (!['copy', 'move'].includes(op)) throw new Error(`Rule ${index + 1}: invalid op`);
+        const fromPath = String(rule.from_path || '').toUpperCase();
+        const toPath = String(rule.to_path || '').toUpperCase();
+        if (!_isValidPath(fromPath)) throw new Error(`Rule ${index + 1}: invalid from_path`);
+        if (!_isValidPath(toPath)) throw new Error(`Rule ${index + 1}: invalid to_path`);
+        return { op, from_path: fromPath, to_path: toPath };
+      });
+      _rules = normalized;
+      renderRulesTable();
+      await saveTransformRules();
+      input.value = '';
+    } catch (error) {
+      console.error(error);
+      alert('Import failed: ' + (error?.message || 'Unknown error'));
+    }
+  }
+
+  async function deleteTransformProfile() {
+    if (_editingProfileId == null) return;
+    if (!confirm('Delete this transform template? This cannot be undone.')) return;
+    try {
+      const response = await fetch(`${ROOT_PATH}/ui/skills/interop/settings/transform/delete`, {
+        method: 'POST',
+        headers: { 'HX-Request': 'true', 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({ profile_id: String(_editingProfileId) }),
+      });
+      if (!response.ok) {
+        const message = await response.text();
+        alert(`Delete failed: ${response.status} ${message}`);
+        return;
+      }
+      const html = await response.text();
+      const container = document.getElementById('transform-list');
+      if (container) {
+        container.outerHTML = html;
+      }
+      closeTransformRulesModal();
+    } catch (error) {
+      console.error(error);
+      alert('Delete failed.');
+    }
+  }
+
+  document.addEventListener('click', (event) => {
+    const trigger = event.target.closest('[data-action="edit-transform"]');
+    if (!trigger) return;
+    const profileId = trigger.dataset.profileId;
+    if (!profileId) return;
+    let config;
+    try {
+      config = JSON.parse(trigger.dataset.profileConfig || '{"rules":[]}');
+    } catch (error) {
+      console.warn('Failed to parse transform config; defaulting to empty rules.', error);
+      config = { rules: [] };
+    }
+    openTransformRulesModal(profileId, config);
+  });
+
+  document.body.addEventListener('htmx:afterSwap', (event) => {
+    if (!event.detail || !event.detail.target) return;
+    if (event.detail.target.id === 'transform-list') {
+      if (preselectedProfileId) {
+        const button = document.querySelector(`[data-action="edit-transform"][data-profile-id="${preselectedProfileId}"]`);
+        if (button) button.click();
+      }
+    }
+  });
+
+  if (preselectedProfileId) {
+    const existingButton = document.querySelector(`[data-action="edit-transform"][data-profile-id="${preselectedProfileId}"]`);
+    if (existingButton) existingButton.click();
+  }
+</script>
+{% endblock %}

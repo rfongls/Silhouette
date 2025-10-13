@@ -6,9 +6,10 @@ from pathlib import Path
 import silhouette_core.compat.forwardref_shim  # noqa: F401  # ensure ForwardRef shim loads before FastAPI imports
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import JSONResponse, PlainTextResponse
+from fastapi.responses import JSONResponse, PlainTextResponse, RedirectResponse
 from fastapi.exceptions import RequestValidationError
-from starlette.responses import RedirectResponse, Response as StarletteResponse
+from starlette.responses import Response as StarletteResponse
+from starlette.requests import ClientDisconnect
 from api.interop import router as interop_router
 from api.interop_gen import router as interop_gen_router, try_generate_on_validation_error
 from api.security import router as security_router
@@ -49,6 +50,8 @@ def _is_truthy(value: str | None) -> bool:
 _ENGINE_V2_ENABLED = _is_truthy(os.getenv("ENGINE_V2"))
 app.state.engine_v2_enabled = _ENGINE_V2_ENABLED
 ui_templates.env.globals["engine_v2_enabled"] = _ENGINE_V2_ENABLED
+# Base URL prefix for templates; override if deployed under a subpath.
+ui_templates.env.globals["root"] = ""
 
 app.include_router(ui_home_router)
 for r in (
@@ -70,6 +73,10 @@ if _ENGINE_V2_ENABLED:
     from api.agent import router as agent_router
     from api.endpoints import router as endpoints_router
     from api.engine_assist import router as engine_assist_router
+    from api.engine_messages import router as engine_messages_router
+    from api.engine_pipelines import router as engine_pipelines_router
+    from api.engine_profiles import router as engine_profiles_router
+    from api.engine_failed import router as engine_failed_router
     from api.mllp_send import router as mllp_send_router
     from api.insights import router as insights_router
     from api.ui_engine import router as ui_engine_router
@@ -77,6 +84,10 @@ if _ENGINE_V2_ENABLED:
     for feature_router in (
         engine_router,
         engine_jobs_router,
+        engine_profiles_router,
+        engine_pipelines_router,
+        engine_messages_router,
+        engine_failed_router,
         agent_router,
         endpoints_router,
         mllp_send_router,
@@ -85,6 +96,10 @@ if _ENGINE_V2_ENABLED:
         ui_engine_router,
     ):
         app.include_router(feature_router)
+# Shell / skill hubs (always available)
+from api.ui_shell import router as ui_shell_router
+
+app.include_router(ui_shell_router)
 app.mount("/static", StaticFiles(directory=_STATIC_DIR), name="static")
 # Keep the registration near the bottom so it is easy to toggle during local
 # investigations. The middleware ensures the log directory exists and degrades
@@ -93,12 +108,37 @@ install_http_logging(app, log_path=_HTTP_LOG_PATH)
 ensure_diagnostics(app, http_log_path=_HTTP_LOG_PATH)
 
 
+def _run_alembic_migrations_if_present() -> None:
+    """Best-effort Alembic upgrade; silently skip if config missing."""
+
+    try:
+        from alembic import command
+        from alembic.config import Config
+
+        cfg_path = Path(__file__).with_name("alembic.ini")
+        if not cfg_path.exists():
+            return
+        cfg = Config(str(cfg_path))
+        command.upgrade(cfg, "head")
+        logger.info("Alembic migrations applied (head).")
+    except Exception as exc:
+        logger.warning("Alembic migration step skipped: %s", exc, exc_info=True)
+
+
+# Lightweight health probe for startup checks and monitors
+@app.get("/healthz", include_in_schema=False)
+@app.head("/healthz", include_in_schema=False)
+async def _healthz():
+    return PlainTextResponse("ok", status_code=200)
+
+
 @app.on_event("startup")
 async def _bootstrap_insights_schema() -> None:
     """Ensure the Insights schema exists before serving requests."""
     try:
         from insights.store import get_store
 
+        _run_alembic_migrations_if_present()
         store = get_store()
         store.ensure_schema()
         db_url = os.getenv("INSIGHTS_DB_URL", "sqlite:///data/insights.db")
@@ -218,7 +258,10 @@ async def _log_request_validation(request: Request, exc: RequestValidationError)
     fallback = await try_generate_on_validation_error(request, exc)
     if fallback is not None:
         return fallback
-    body = await request.body()
+    try:
+        body = await request.body()
+    except ClientDisconnect:
+        body = b""
     logger.warning(
         "validation error: path=%s ctype=%s body=%r errors=%s",
         request.url.path,
@@ -256,9 +299,9 @@ async def _log_unhandled_exception(request: Request, exc: Exception):
 
 @app.get("/", include_in_schema=False)
 def _root():
-    if getattr(app.state, "engine_v2_enabled", False):
-        return RedirectResponse("/ui/landing", status_code=307)
-    return RedirectResponse("/ui/home", status_code=307)
+    """Default landing for the combined shell experience."""
+
+    return RedirectResponse("/ui", status_code=307)
 
 
 @app.get("/ping", include_in_schema=False)

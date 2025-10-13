@@ -1,0 +1,51 @@
+<div class="profile-list" data-kind="transform">
+  {% if items %}
+  <ul class="list">
+    {% for profile in items %}
+    <li class="card" data-profile-id="{{ profile.id }}" data-profile-kind="transform">
+      <form
+        class="col gap-sm"
+        hx-post="{{ root }}/ui/skills/interop/settings/transform/update"
+        hx-target="#transform-list"
+        hx-swap="outerHTML"
+      >
+        <input type="hidden" name="profile_id" value="{{ profile.id }}" />
+        <label class="col gap-xs">
+          <span class="text-caption muted">Name</span>
+          <input class="input" type="text" name="name" value="{{ profile.name }}" required />
+        </label>
+        <label class="col gap-xs">
+          <span class="text-caption muted">Description</span>
+          <input class="input" type="text" name="description" value="{{ profile.description }}" />
+        </label>
+        <div class="row small" style="justify-content:flex-end;">
+          <button
+            type="button"
+            class="button secondary small"
+            data-action="edit-transform"
+            data-profile-id="{{ profile.id }}"
+            data-profile-config='{{ profile.config_json | e }}'
+            data-profile-name="{{ profile.name }}"
+          >
+            Edit Rules
+          </button>
+          <button class="button small" type="submit">Save</button>
+          <button
+            class="button danger small"
+            type="button"
+            hx-post="{{ root }}/ui/skills/interop/settings/transform/delete"
+            hx-target="#transform-list"
+            hx-swap="outerHTML"
+            hx-vals='{"profile_id": "{{ profile.id }}"}'
+          >
+            Delete
+          </button>
+        </div>
+      </form>
+    </li>
+    {% endfor %}
+  </ul>
+  {% else %}
+  <p class="text-body muted">No transform profiles yet.</p>
+  {% endif %}
+</div>
