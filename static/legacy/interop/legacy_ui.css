@@ -1,0 +1,14 @@
+/* Scoped legacy styles so nothing bleeds into V2 */
+.interop-legacy .row.gap { display:flex; gap:.75rem; align-items:center; flex-wrap:wrap; }
+.interop-legacy .grid.two { display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:1rem; }
+.interop-legacy .mb { margin-bottom:1rem; }
+.interop-legacy .mt { margin-top:1rem; }
+.interop-legacy .small { font-size:.9rem; }
+.interop-legacy .micro { font-size:.8rem; }
+.interop-legacy .muted { opacity:.8; }
+.interop-legacy .card { padding:1rem; border:1px solid var(--border,#333); border-radius:8px; background:var(--card,#0b0b0b); }
+.interop-legacy .module-body { display:flex; flex-direction:column; gap:.75rem; }
+.interop-legacy .codepane { background:var(--bg-weak,#0e0e0e); border:1px solid var(--border,#222); padding:.75rem; border-radius:6px; color:var(--text,#e5e7eb); }
+.interop-legacy .btn.btn-sm { font-size:.85rem; padding:.35rem .6rem; border-radius:6px; }
+.interop-legacy .logbox { border:1px dashed var(--border,#333); padding:.5rem; border-radius:6px; }
+.interop-legacy .limit10 { max-height:13.5em; overflow:auto; }
