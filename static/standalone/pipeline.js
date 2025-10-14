@@ -202,6 +202,68 @@
     config.style.display = shouldShow ? 'flex' : 'none';
   }
 
+  function getSourceText(selector) {
+    const node = selector ? $1(document, selector) : null;
+    if (!node) return '';
+    if (node.tagName === 'PRE') {
+      return (node.textContent || '').trim();
+    }
+    const pre = node.querySelector?.('pre');
+    if (pre) {
+      return (pre.textContent || '').trim();
+    }
+    if (typeof node.value === 'string') {
+      return node.value.trim();
+    }
+    return (node.textContent || '').trim();
+  }
+
+  function submitForm(form, textarea, text) {
+    if (!form || !textarea) return;
+    textarea.value = text;
+    textarea.dispatchEvent(new Event('input', { bubbles: true }));
+    try {
+      form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } catch (err) {
+      console.debug('standalone-pipeline: scroll failed', err);
+    }
+    if (window.htmx) {
+      window.htmx.trigger(form, 'submit');
+    }
+  }
+
+  function attachActionTrayHandlers() {
+    document.body?.addEventListener('click', (event) => {
+      const button = event.target.closest?.('.action-tray .action-card');
+      if (!button) return;
+      const tray = button.closest('.action-tray');
+      const action = button.getAttribute('data-action');
+      const source = tray?.getAttribute('data-source') || '#gen-output';
+      const text = getSourceText(source);
+      if (!text) return;
+
+      if (action === 'validate') {
+        const form = $1(document, '#validate-form');
+        const textarea = form?.querySelector('textarea[name="message"]');
+        submitForm(form, textarea, text);
+        return;
+      }
+
+      if (action === 'mllp') {
+        const form = $1(document, '#mllp-form');
+        const textarea = $1(document, '#mllp-msg');
+        submitForm(form, textarea, text);
+        return;
+      }
+
+      if (action === 'pipeline') {
+        const form = $1(document, '#pipeline-form');
+        const textarea = form?.querySelector('textarea[name="text"]');
+        submitForm(form, textarea, text);
+      }
+    });
+  }
+
   function onReady() {
     ensureInteropHelpers();
     fillTriggers();
@@ -215,6 +277,7 @@
     $1(document, '#pipe-transport')?.addEventListener('change', updateTransportVisibility);
 
     updateTransportVisibility();
+    attachActionTrayHandlers();
   }
 
   if (document.readyState === 'loading') {
