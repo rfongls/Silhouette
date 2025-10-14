@@ -1,0 +1,104 @@
+{% extends "layout.html" %}
+{% block content %}
+<section class="dashboard" data-root="{{ root }}">
+  <div class="dashboard-container">
+    <nav class="breadcrumbs"><a href="{{ root }}/ui/interop">Interoperability</a> / <a href="{{ root }}/ui/engine">Engine</a> / <span>Pipelines</span></nav>
+    <header class="dashboard-header">
+      <h1 class="text-h1">Engine Pipelines</h1>
+      <p class="text-body muted">Build pipelines by choosing saved Transform, De-identify, and Validate profiles. No YAML required.</p>
+    </header>
+
+    <style>
+      /* Drag and drop affordances for selected steps */
+      #engine-pl-steps li { cursor: default; }
+      #engine-pl-steps li.dnd-dragging { opacity: 0.6; }
+      #engine-pl-steps li.dnd-over { outline: 2px dashed rgba(56, 189, 248, 0.9); outline-offset: 2px; }
+      .dnd-handle {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 1.75rem;
+        height: 1.75rem;
+        margin-right: 0.5rem;
+        border-radius: 0.375rem;
+        cursor: grab;
+        user-select: none;
+        color: var(--text-muted, #94a3b8);
+        background: rgba(148, 163, 184, 0.08);
+      }
+      .dnd-handle:active {
+        cursor: grabbing;
+      }
+    </style>
+
+    <div class="grid two" style="gap:1rem; align-items:start;">
+      <aside class="card" style="min-height:18rem;">
+        <div class="row" style="justify-content:space-between; align-items:center;">
+          <h2 class="text-h2">Pipelines</h2>
+          <button class="button small" type="button" id="engine-pl-new">New</button>
+        </div>
+        <div id="engine-pl-list" class="mt">
+          <p class="text-body muted">Loading pipelines…</p>
+        </div>
+      </aside>
+
+      <main class="card">
+        <h2 class="text-h2">Pipeline editor</h2>
+        <form id="engine-pl-form" class="col" autocomplete="off">
+          <div class="grid two" style="gap:0.75rem;">
+            <label>
+              <span class="text-caption muted">Name</span>
+              <input class="input" type="text" id="engine-pl-name" required />
+            </label>
+            <label>
+              <span class="text-caption muted">Description</span>
+              <input class="input" type="text" id="engine-pl-desc" />
+            </label>
+          </div>
+
+          <div class="grid two" style="gap:0.75rem;">
+            <label>
+              <span class="text-caption muted">Scope</span>
+              <select class="input" id="engine-pl-scope">
+                <option value="engine" selected>Engine</option>
+                <option value="endpoint">Endpoint</option>
+              </select>
+            </label>
+            <label>
+              <span class="text-caption muted">Endpoint (optional)</span>
+              <input class="input" type="number" id="engine-pl-endpoint" min="1" placeholder="endpoint_id" />
+            </label>
+          </div>
+
+          <div class="grid two" style="gap:1rem;">
+            <section>
+              <div class="row" style="gap:0.5rem; align-items:center;">
+                <h3 class="text-h3" style="margin:0;">Profiles</h3>
+                <div class="row small" role="tablist">
+                  <button class="button small" type="button" data-prof-kind="transform">Transform</button>
+                  <button class="button small" type="button" data-prof-kind="deid">De-identify</button>
+                  <button class="button small" type="button" data-prof-kind="validate">Validate</button>
+                </div>
+              </div>
+              <div id="engine-profile-list" class="mt text-body muted">Select a profile type.</div>
+            </section>
+
+            <section>
+              <div class="row" style="justify-content:space-between; align-items:center;">
+                <h3 class="text-h3" style="margin:0;">Selected steps</h3>
+                <button class="button secondary small" type="button" id="engine-pl-clear">Clear</button>
+              </div>
+              <ol id="engine-pl-steps" class="list" style="margin-top:0.5rem;"></ol>
+            </section>
+          </div>
+
+          <footer class="row" style="justify-content:flex-end; gap:0.5rem; margin-top:1rem;">
+            <button class="button" type="button" id="engine-pl-save">Save pipeline</button>
+          </footer>
+        </form>
+      </main>
+    </div>
+  </div>
+</section>
+<script type="module" src="{{ static_base }}js/engine_editor.js"></script>
+{% endblock %}

@@ -230,6 +230,78 @@
   InteropUI.onMllpComplete = function(){};
 
   // ------------------------------
+  // Pipeline transport helpers (MLLP auto-send)
+  // ------------------------------
+  function updatePipelineTransportVisibility(){
+    const select = $1(document, '#pipe-transport');
+    const config = $1(document, '#pipe-mllp-config');
+    if (!select || !config) return;
+    config.style.display = select.value === 'mllp' ? '' : 'none';
+  }
+
+  document.addEventListener('change', event => {
+    if (event?.target?.id === 'pipe-transport') {
+      updatePipelineTransportVisibility();
+    }
+  });
+
+  InteropUI.copyFrom = function(fromSelector, toSelector){
+    try {
+      const src = typeof fromSelector === 'string' ? $1(document, fromSelector) : fromSelector;
+      const dest = typeof toSelector === 'string' ? $1(document, toSelector) : toSelector;
+      if (!src || !dest) return;
+      const text = src.tagName === 'PRE' ? src.textContent : (src.value ?? src.textContent ?? '');
+      dest.value = (text || '').trim();
+      dest.dispatchEvent(new Event('input', { bubbles: true }));
+    } catch (err) {
+      console.warn('InteropUI.copyFrom failed', err);
+    }
+  };
+
+  InteropUI.extractPipelineText = function(container){
+    if (!container) return '';
+    const pre = container.querySelector('pre');
+    if (pre && pre.textContent) return pre.textContent.trim();
+    return (container.textContent || '').trim();
+  };
+
+  function autoSendPipelineResult(evt){
+    if (!evt || !evt.target || evt.target.id !== 'pipeline-output') return;
+    const transport = $1(document, '#pipe-transport');
+    if (!transport || transport.value !== 'mllp') return;
+    const auto = $1(document, '#pipe-mllp-auto');
+    if (auto && !auto.checked) return;
+
+    const textRaw = InteropUI.extractPipelineText(evt.target);
+    const text = (textRaw || '').trim();
+    if (!text || !text.startsWith('MSH')) return;
+
+    const msgField = $1(document, '#mllp-messages');
+    if (msgField) {
+      msgField.value = text;
+      msgField.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+
+    const cfgHost = $1(document, '#pipe-mllp-host');
+    const cfgPort = $1(document, '#pipe-mllp-port');
+    const hostField = $1(document, '#mllp-host');
+    const portField = $1(document, '#mllp-port');
+    if (hostField && cfgHost && cfgHost.value) hostField.value = cfgHost.value;
+    if (portField && cfgPort && cfgPort.value) portField.value = cfgPort.value;
+
+    const form = $1(document, '#mllp-form');
+    if (form && window.htmx) {
+      const panel = $1(document, '#mllp-panel');
+      try {
+        if (panel?.scrollIntoView) panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      } catch (_) {
+        /* ignore scroll errors */
+      }
+      window.htmx.trigger(form, 'submit');
+    }
+  }
+
+  // ------------------------------
   // De-identification report filtering
   // ------------------------------
   function initDeidCoverage(context){
@@ -628,12 +700,14 @@
   function prime(context){
     try { initDeidCoverage(context || document); } catch (_) {}
     try { initValidateReport(context || document); } catch (_) {}
+    try { updatePipelineTransportVisibility(); } catch (_) {}
   }
 
   function onReady(){
     prime(document);
     fillDatalist('gen');
     fillDatalist('pipe');
+    updatePipelineTransportVisibility();
   }
 
   if (document.readyState === 'loading') {
@@ -650,5 +724,6 @@
     document.body.addEventListener('htmx:afterSwap', handler);
     document.body.addEventListener('htmx:oobAfterSwap', handler);
     document.body.addEventListener('htmx:afterSettle', handler);
+    document.body.addEventListener('htmx:afterSwap', autoSendPipelineResult);
   }
 })();

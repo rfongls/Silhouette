@@ -1,10 +1,31 @@
-<div>
-  <h4>Quickstart Pipeline — {{ trigger }}</h4>
-  <p class="muted">HL7 saved: <code>{{ hl7_path }}</code></p>
-  <h5>Translate</h5>
-  <p>rc: {{ translate.rc }}</p>
-  <details><summary>stdout/stderr</summary><pre>{{ translate.stdout }}\n----\n{{ translate.stderr }}</pre></details>
-  <h5>Validate</h5>
-  <p>rc: {{ validate.rc }}</p>
-  <details><summary>stdout/stderr</summary><pre>{{ validate.stdout }}\n----\n{{ validate.stderr }}</pre></details>
-</div>
+{% set text = result_text if result_text is defined else None %}
+{% if text %}
+<section class="card">
+  <h3 class="text-h3 mb">Pipeline Result</h3>
+  <pre class="codepane" style="white-space:pre-wrap;">{{ text | e }}</pre>
+</section>
+{% else %}
+<section class="card">
+  <h3 class="text-h3 mb">Pipeline Result</h3>
+  {% if trigger %}
+    <p class="muted">Trigger: <strong>{{ trigger }}</strong></p>
+  {% endif %}
+  {% if hl7_path %}
+    <p class="muted">HL7 saved: <code>{{ hl7_path }}</code></p>
+  {% endif %}
+  {% if translate %}
+    <h4 class="text-h4">Translate</h4>
+    <p>rc: {{ translate.rc }}</p>
+    {% if translate.stdout or translate.stderr %}
+      <details><summary>stdout/stderr</summary><pre>{{ translate.stdout }}{% if translate.stderr %}\n----\n{{ translate.stderr }}{% endif %}</pre></details>
+    {% endif %}
+  {% endif %}
+  {% if validate %}
+    <h4 class="text-h4">Validate</h4>
+    <p>rc: {{ validate.rc }}</p>
+    {% if validate.stdout or validate.stderr %}
+      <details><summary>stdout/stderr</summary><pre>{{ validate.stdout }}{% if validate.stderr %}\n----\n{{ validate.stderr }}{% endif %}</pre></details>
+    {% endif %}
+  {% endif %}
+</section>
+{% endif %}

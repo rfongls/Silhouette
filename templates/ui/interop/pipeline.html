@@ -1,89 +1,42 @@
 {% extends "layout.html" %}
+
 {% block extra_head %}
 <link rel="stylesheet" href="{{ request.url_for('static', path='css/interop_extras.css') }}" />
 <script type="module" src="{{ request.url_for('static', path='js/interop_ui.js') }}"></script>
 {% endblock %}
+
 {% block content %}
 {% set root = request.scope.get('root_path', '') %}
-{% set deid_options = deid_templates if deid_templates is defined and deid_templates else [] %}
-{% set default_deid_template = 'default' if 'default' in deid_options else (deid_options[0] if deid_options else '') %}
-{% set val_options = val_templates if val_templates is defined and val_templates else [] %}
-{% set default_val_template = 'default' if 'default' in val_options else (val_options[0] if val_options else '') %}
-<h2>HL7 → FHIR Pipeline</h2>
-<form method="get" action="{{ root }}/ui/interop/pipeline" class="row gap mb small" autocomplete="off">
-  <label for="pipeline-preset-standalone">Preset</label>
-  <select id="pipeline-preset-standalone" name="preset" class="input" style="max-width:22rem" onchange="this.form.submit()">
-    <option value="">— Select preset —</option>
-    {% for key, preset in presets.items() %}
-      <option value="{{ key }}" {{ 'selected' if key == preset_key else '' }}>{{ preset.label }}</option>
-    {% endfor %}
-  </select>
-  <span class="micro muted">Prefills FHIR endpoint (and POST) below.</span>
-</form>
-<p class="muted">Select or generate HL7, analyze it, translate to FHIR, and optionally POST to an endpoint.</p>
+{% set presets = presets or {} %}
+{% set preset_key = preset_key or '' %}
+{% set defaults = defaults or {} %}
+<section class="dashboard">
+  <div class="dashboard-container">
+    <nav class="breadcrumbs"><a href="{{ root }}/ui/interop">Interoperability</a> / <span>Manual Pipeline</span></nav>
+    <header class="dashboard-header">
+      <h1 class="text-h1">HL7 Test Bench</h1>
+      <p class="text-body muted">Generate messages, de-identify, validate, and send over transport — exactly like the legacy QA bench.</p>
+    </header>
 
-<section class="card" id="translate-panel">
-  <form id="pipe-form"
-        method="post"
-        action="{{ root }}/api/interop/pipeline/run"
-        hx-post="{{ root }}/api/interop/pipeline/run"
-        hx-trigger="submit"
-        hx-target="#pipe-out"
-        hx-swap="innerHTML">
-    <div class="row gap">
-      <label>Version</label>
-      <select name="version" class="input hl7-version-select" id="pipe-version" data-hx-refresh-target="1"
-              hx-get="{{ root }}/ui/interop/triggers"
-              hx-target="#pipe-trigger-select"
-              hx-vals='{"version": document.getElementById("pipe-version").value}'
-              hx-trigger="load, change"
-              onchange="window.InteropUI.fillDatalist('pipe')">
-        <option value="hl7-v2-3">HL7 v2.3</option>
-        <option value="hl7-v2-4" selected>HL7 v2.4</option>
-        <option value="hl7-v2-5">HL7 v2.5</option>
+    <form class="row gap mb small" method="get" action="{{ urls.ui_pipeline | default(root ~ '/ui/interop/pipeline', true) }}">
+      <label for="pipeline-preset" class="sr-only">Pipeline preset</label>
+      <select id="pipeline-preset" name="preset" class="input" onchange="this.form.submit()">
+        <option value="">— Select transport preset —</option>
+        {% for key, preset in presets.items() %}
+          <option value="{{ key }}" {% if key == preset_key %}selected{% endif %}>{{ preset.label }}</option>
+        {% endfor %}
       </select>
-      <label>Trigger</label>
-      <select class="input" name="trigger" id="pipe-trigger-select"></select>
-      <input class="input" list="pipe-trigger-datalist" id="pipe-trigger-typed" placeholder="Type trigger" oninput="window.InteropUI.syncTyped('pipe')"/>
-      <datalist id="pipe-trigger-datalist"></datalist>
-      <input class="input" name="template_relpath" placeholder="hl7-v2-4/ADT_A01.hl7" />
-      <textarea class="input grow" name="text" rows="10" placeholder="(optional) paste HL7; overrides trigger/relpath"></textarea>
-    </div>
-    <div class="row gap mt">
-      <input class="input" type="number" name="seed" placeholder="seed (optional)"/>
-      <label><input type="checkbox" name="ensure_unique" checked/> Unique IDs</label>
-      <label><input type="checkbox" name="include_clinical"/> Enrich clinical (DG1/AL1)</label>
-      <label><input type="checkbox" name="deidentify"/> De-identify</label>
-      <label><input type="checkbox" name="apply_baseline"/> Apply default de-ID logic</label>
-    </div>
-    <div class="row gap mt">
-      <label class="grow">
-        <span class="micro muted">De-identify template</span>
-        <select name="deid_template" class="input">
-          {% for name in deid_options %}
-            <option value="{{ name }}" {% if name == default_deid_template %}selected{% endif %}>{{ name }}</option>
-          {% endfor %}
-        </select>
-      </label>
-      <label class="grow">
-        <span class="micro muted">Validation template</span>
-        <select name="val_template" class="input">
-          {% for name in val_options %}
-            <option value="{{ name }}" {% if name == default_val_template %}selected{% endif %}>{{ name }}</option>
-          {% endfor %}
-        </select>
-      </label>
-    </div>
-    <div class="row gap mt">
-      <label><input type="checkbox" id="pipeline-post-fhir" name="post_fhir" {{ 'checked' if defaults.post_fhir else '' }}/> Send FHIR</label>
-      <input class="input grow" id="pipeline-fhir-endpoint" name="fhir_endpoint" value="{{ defaults.fhir_endpoint }}" placeholder="https://example.org/fhir (Bundle/Resource)"/>
-      <button class="btn" type="button" onclick="document.getElementById('pipeline-fhir-endpoint').value='/api/fhir/dummy';">Use dummy</button>
-    </div>
-    <div class="row gap mt">
-      <button class="btn">Run Pipeline</button>
-    </div>
-  </form>
-</section>
+      <span class="micro muted">Presets prefill the pipeline transport host, port, timeout, and FHIR endpoint.</span>
+    </form>
 
-<div id="pipe-out" class="mt"></div>
+    <div class="grid two" style="gap:1rem; align-items:flex-start;">
+      {% include "ui/interop/_generate_panel.html" %}
+      {% include "ui/interop/_deid_panel.html" %}
+      {% include "ui/interop/_validate_panel.html" %}
+      {% include "ui/interop/_mllp_panel.html" %}
+      {% include "ui/interop/_debug_log_panel.html" %}
+      {% include "ui/interop/_analyze_result.html" %}
+    </div>
+  </div>
+</section>
 {% endblock %}

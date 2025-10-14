@@ -1,0 +1,43 @@
+{% extends "layout.html" %}
+{% block content %}
+<section class="dashboard">
+  <div class="dashboard-container">
+    <nav class="breadcrumbs"><a href="{{ root }}/ui/interop">Interoperability</a> / <a href="{{ root }}/ui/engine">Engine</a> / <span>Interfaces</span></nav>
+    <header class="dashboard-header">
+      <h1 class="text-h1">Interfaces</h1>
+      <p class="text-body muted">Create inbound/outbound interfaces, attach endpoints, and manage activation.</p>
+    </header>
+
+    <form class="card" hx-post="{{ root }}/ui/engine/interfaces/create" hx-target="#iface-list" hx-swap="outerHTML" autocomplete="off">
+      <div class="grid" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(180px, 1fr)); gap:0.75rem;">
+        <label>
+          <span class="text-caption muted">Name</span>
+          <input class="input" type="text" name="name" required />
+        </label>
+        <label>
+          <span class="text-caption muted">Direction</span>
+          <select class="input" name="direction">
+            <option value="inbound">Inbound</option>
+            <option value="outbound">Outbound</option>
+          </select>
+        </label>
+        <label>
+          <span class="text-caption muted">Pipeline (optional)</span>
+          <input class="input" type="text" name="pipeline_id" placeholder="pipeline id" />
+        </label>
+        <label>
+          <span class="text-caption muted">Description</span>
+          <input class="input" type="text" name="description" placeholder="short summary" />
+        </label>
+      </div>
+      <div class="row" style="justify-content:flex-end; margin-top:0.75rem;">
+        <button class="button" type="submit">Create interface</button>
+      </div>
+    </form>
+
+    <div id="iface-list">
+      {% include "engine/partials/interface_list.html" %}
+    </div>
+  </div>
+</section>
+{% endblock %}
