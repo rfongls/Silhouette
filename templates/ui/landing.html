@@ -6,7 +6,7 @@
       <h1 class="text-h1">Welcome</h1>
       <p class="text-body">Drive the Engine via <strong>Chat (beta)</strong>, jump into the manual UI, or skim examples in <code>docs/v2/README-agent.md</code>.</p>
       <div class="row small" style="gap:.5rem">
-        <a class="btn btn-secondary btn-sm" href="/ui/engine">Open Engine (manual)</a>
+        <a class="btn btn-secondary btn-sm" href="/ui/engine/pipelines">Open Engine (manual)</a>
       </div>
     </header>
 
@@ -123,7 +123,7 @@
     if (data.endpoint_id) {
       const endpointId = Number(data.endpoint_id);
       if (!Number.isNaN(endpointId) && endpointId > 0) {
-        const href = `/ui/engine?focus=${encodeURIComponent(`endpoint:${endpointId}`)}`;
+        const href = `/ui/engine/pipelines?focus=${encodeURIComponent(`endpoint:${endpointId}`)}`;
         noteParts.push(linkHtml(href, `endpoint #${endpointId}`));
       } else {
         noteParts.push(`endpoint #${esc(data.endpoint_id)}`);
@@ -132,7 +132,7 @@
     if (data.job_id) {
       const jobId = Number(data.job_id);
       if (!Number.isNaN(jobId) && jobId > 0) {
-        const href = `/ui/engine?focus=${encodeURIComponent(`job:${jobId}`)}`;
+        const href = `/ui/engine/pipelines?focus=${encodeURIComponent(`job:${jobId}`)}`;
         noteParts.push(linkHtml(href, `job #${jobId}`));
       } else {
         noteParts.push(`job #${esc(data.job_id)}`);
@@ -141,7 +141,7 @@
     if (data.run_id) {
       const runId = Number(data.run_id);
       if (!Number.isNaN(runId) && runId > 0) {
-        const href = `/ui/engine?focus=${encodeURIComponent(`run:${runId}`)}`;
+        const href = `/ui/engine/pipelines?focus=${encodeURIComponent(`run:${runId}`)}`;
         noteParts.push(linkHtml(href, `run #${runId}`));
       } else {
         noteParts.push(`run #${esc(data.run_id)}`);

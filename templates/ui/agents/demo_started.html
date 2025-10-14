@@ -1,0 +1,16 @@
+{% extends "layout.html" %}
+{% block content %}
+<section class="dashboard">
+  <div class="dashboard-container" style="max-width:720px;">
+    <header class="dashboard-header">
+      <h1 class="text-h1">LLM Demo Running</h1>
+      <p class="text-body muted">This placeholder confirms the scripted demo has started.</p>
+    </header>
+
+    <div class="card" style="display:flex; flex-direction:column; gap:1rem;">
+      <p class="text-body muted">Wire this route to your agent orchestration workflow to stream updates or redirect once the demo completes.</p>
+      <a class="button" href="{{ root }}/ui/agents" style="align-self:flex-start;">Back to Agent</a>
+    </div>
+  </div>
+</section>
+{% endblock %}
