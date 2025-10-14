@@ -1,6 +1,7 @@
 (function () {
   const urls = window.STANDALONE_PIPELINE_URLS || {};
   const $1 = (root, selector) => (root || document).querySelector(selector);
+  const $$ = (root, selector) => Array.from((root || document).querySelectorAll(selector));
 
   function escapeHtml(value) {
     return String(value)
@@ -129,6 +130,7 @@
     } catch (err) {
       console.warn('standalone-pipeline: sample fetch failed', err);
     }
+    toggleAllActionTrays();
   }
 
   function ensureInteropHelpers() {
@@ -168,6 +170,37 @@
     const pre = container.querySelector('pre');
     if (pre?.textContent) return pre.textContent.trim();
     return (container.textContent || '').trim();
+  }
+
+  function hasMessageLike(text) {
+    const value = (text || '').trim();
+    return value.startsWith('MSH');
+  }
+
+  function toggleActionTrayFor(trayEl) {
+    if (!trayEl) return;
+    const sourceSelector = trayEl.getAttribute('data-source') || '#gen-output';
+    const sourceNode = $1(document, sourceSelector);
+    const text = extractMessage(sourceNode);
+    if (hasMessageLike(text)) {
+      trayEl.classList.add('visible');
+    } else {
+      trayEl.classList.remove('visible');
+    }
+  }
+
+  function toggleAllActionTrays() {
+    $$(document, '.action-tray').forEach((tray) => toggleActionTrayFor(tray));
+  }
+
+  function attachOutputObservers() {
+    const observe = (selector) => {
+      const node = $1(document, selector);
+      if (!node) return;
+      const observer = new MutationObserver(() => toggleAllActionTrays());
+      observer.observe(node, { childList: true, subtree: true, characterData: true });
+    };
+    ['#gen-output', '#deid-output', '#pipeline-output'].forEach(observe);
   }
 
   function autoSendPipelineResult(evt) {
@@ -240,7 +273,7 @@
       const action = button.getAttribute('data-action');
       const source = tray?.getAttribute('data-source') || '#gen-output';
       const text = getSourceText(source);
-      if (!text) return;
+      if (!hasMessageLike(text)) return;
 
       if (action === 'validate') {
         const form = $1(document, '#validate-form');
@@ -277,6 +310,8 @@
     $1(document, '#pipe-transport')?.addEventListener('change', updateTransportVisibility);
 
     updateTransportVisibility();
+    toggleAllActionTrays();
+    attachOutputObservers();
     attachActionTrayHandlers();
   }
 
@@ -286,5 +321,8 @@
     onReady();
   }
 
-  document.body?.addEventListener('htmx:afterSwap', autoSendPipelineResult);
+  document.body?.addEventListener('htmx:afterSwap', (evt) => {
+    toggleAllActionTrays();
+    autoSendPipelineResult(evt);
+  });
 })();

@@ -147,7 +147,6 @@
 
 /* Action tray */
 .standalone-pipeline .action-tray {
-  display:flex;
   flex-direction:column;
   gap:1rem;
   margin-top:1rem;
@@ -190,3 +189,7 @@
   box-shadow:0 4px 12px rgba(124,144,255,.15);
   transform:translateY(-2px);
 }
+
+/* Action tray visibility */
+.standalone-pipeline .action-tray { display:none; }
+.standalone-pipeline .action-tray.visible { display:flex; }
