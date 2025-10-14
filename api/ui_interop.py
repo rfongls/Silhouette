@@ -32,7 +32,7 @@ def _ensure_dirs() -> None:
 
 
 # ---------------------------------------------------------------------------
-# Legacy Manual Pipeline presets & helpers
+# Manual Pipeline presets & helpers
 # ---------------------------------------------------------------------------
 PIPELINE_PRESETS: dict[str, dict[str, object]] = {
     "local-2575": {
@@ -168,8 +168,7 @@ async def interop_skills(request: Request):
 
 @router.get("/ui/interop/pipeline", response_class=HTMLResponse, name="ui_interop_pipeline")
 async def interop_pipeline(request: Request, preset: str | None = None):
-    """Legacy manual pipeline QA bench (generate → de-identify → validate → transport)."""
-
+    """Modern Manual Pipeline experience with generate/deid/validate/transport panels."""
     deid_templates, val_templates = _template_lists()
     defaults = _pipeline_defaults(preset)
     ctx = {

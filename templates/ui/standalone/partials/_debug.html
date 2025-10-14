@@ -1,0 +1,15 @@
+<section class="card">
+  <div class="module-body">
+    <h3 class="text-h3 mb">Debug Log</h3>
+    <div id="std-debug"
+         hx-get="{{ urls.logs_content }}?limit={{ limit }}"
+         hx-trigger="load, every 4s"
+         hx-target="#std-debug"
+         hx-swap="outerHTML">
+      <div class="logbox">
+        <p class="micro muted">Log file tail · refreshes every few seconds</p>
+        <pre class="codepane limit10">Loading…</pre>
+      </div>
+    </div>
+  </div>
+</section>
