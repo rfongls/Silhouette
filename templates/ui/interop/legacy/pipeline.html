@@ -1,0 +1,38 @@
+{% extends "layout.html" %}
+{% block extra_head %}
+<link rel="stylesheet" href="{{ request.url_for('static', path='legacy/interop/legacy_ui.css') }}" />
+<script type="module" src="{{ request.url_for('static', path='legacy/interop/legacy_ui.js') }}"></script>
+{% endblock %}
+{% block content %}
+<div class="interop-legacy">
+  <section class="dashboard">
+    <div class="dashboard-container">
+      <nav class="breadcrumbs">
+        <a href="{{ request.scope.get('root_path','') }}/ui/interop">Interoperability</a> / <span>Manual Pipeline</span>
+      </nav>
+      <header class="dashboard-header">
+        <h1 class="text-h1">HL7 Test Bench</h1>
+        <p class="text-body muted">Generate → De-identify → Validate → Send (legacy QA bench).</p>
+      </header>
+      <form class="row gap mb small" method="get" action="{{ legacy_urls.ui_pipeline }}">
+        <label for="pipeline-preset" class="sr-only">Preset</label>
+        <select id="pipeline-preset" name="preset" class="input" onchange="this.form.submit()">
+          <option value="">— Select preset —</option>
+          {% for key, preset in presets.items() %}
+            <option value="{{ key }}" {% if key == preset_key %}selected{% endif %}>{{ preset.label }}</option>
+          {% endfor %}
+        </select>
+        <span class="micro muted">Prefills MLLP & FHIR options.</span>
+      </form>
+      <div class="grid two" style="gap:1rem; align-items:flex-start;">
+        {% include "ui/interop/legacy/_generate_panel.html" %}
+        {% include "ui/interop/legacy/_deid_panel.html" %}
+        {% include "ui/interop/legacy/_validate_panel.html" %}
+        {% include "ui/interop/legacy/_mllp_panel.html" %}
+        {% include "ui/interop/legacy/_debug_log_panel.html" %}
+        {% include "ui/interop/legacy/_analyze_result.html" %}
+      </div>
+    </div>
+  </section>
+</div>
+{% endblock %}
