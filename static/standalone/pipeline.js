@@ -3,12 +3,106 @@
   const $1 = (root, selector) => (root || document).querySelector(selector);
   const $$ = (root, selector) => Array.from((root || document).querySelectorAll(selector));
 
+  const PANEL_IDS = {
+    generate: 'generate-panel',
+    deid: 'deid-panel',
+    validate: 'validate-panel',
+    mllp: 'mllp-panel',
+    pipeline: 'pipeline-panel',
+  };
+
   const TRIGGER_INPUT_ID = 'std-trigger-input';
   const TRIGGER_LIST_ID = 'std-trigger-list';
   const VERSION_SELECT_ID = 'std-version';
 
+  const ACTION_TARGETS = {
+    validate: { panel: PANEL_IDS.validate, textarea: '#validate-form textarea[name="message"]' },
+    mllp: { panel: PANEL_IDS.mllp, textarea: '#mllp-msg' },
+    pipeline: { panel: PANEL_IDS.pipeline, textarea: '#pipeline-form textarea[name="text"]' },
+  };
+
   const triggerSampleMap = new Map();
   let lastTriggerVersion = '';
+
+  const panelEntries = Object.entries(PANEL_IDS);
+
+  function panelKeyFromId(id) {
+    if (!id) return null;
+    const match = panelEntries.find(([, value]) => value === id);
+    return match ? match[0] : null;
+  }
+
+  function expandPanel(id) {
+    if (!id) return;
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (el.tagName.toLowerCase() === 'details') {
+      el.setAttribute('open', '');
+    } else {
+      el.classList.add('panel-open');
+    }
+  }
+
+  function collapsePanel(id) {
+    if (!id) return;
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (el.tagName.toLowerCase() === 'details') {
+      el.removeAttribute('open');
+    } else {
+      el.classList.remove('panel-open');
+    }
+  }
+
+  function collapseAllExcept(idToKeep) {
+    panelEntries.forEach(([, panelId]) => {
+      if (panelId !== idToKeep) {
+        collapsePanel(panelId);
+      }
+    });
+  }
+
+  function scrollPanelIntoView(id) {
+    if (!id) return;
+    const el = document.getElementById(id);
+    if (!el) return;
+    try {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } catch (err) {
+      console.debug('standalone-pipeline: scroll failed', err);
+    }
+  }
+
+  function prefill(selector, text) {
+    if (!selector) return;
+    const el = $1(document, selector);
+    if (!el) return;
+    if (typeof el.value === 'string') {
+      el.value = text;
+    } else {
+      el.textContent = text;
+    }
+    try {
+      el.dispatchEvent(new Event('input', { bubbles: true }));
+      el.dispatchEvent(new Event('change', { bubbles: true }));
+    } catch (err) {
+      console.debug('standalone-pipeline: prefill dispatch failed', err);
+    }
+  }
+
+  function activateModule(action, text, opts = {}) {
+    const target = ACTION_TARGETS[action];
+    if (!target) return;
+    if (opts.collapseFrom && PANEL_IDS[opts.collapseFrom]) {
+      collapsePanel(PANEL_IDS[opts.collapseFrom]);
+    }
+    collapseAllExcept(target.panel);
+    expandPanel(target.panel);
+    if (text) {
+      prefill(target.textarea, text);
+    }
+    scrollPanelIntoView(target.panel);
+  }
 
   function escapeHtml(value) {
     return String(value)
@@ -296,9 +390,15 @@
       if (!button) return;
       const tray = button.closest('.action-tray');
       const action = button.getAttribute('data-action');
+      if (!action) return;
       const source = tray?.getAttribute('data-source') || '#gen-output';
       const text = getSourceText(source);
       if (!hasMessageLike(text)) return;
+
+      const fromPanelId = tray?.closest('[id]')?.id;
+      const fromKey = panelKeyFromId(fromPanelId);
+
+      activateModule(action, text, { collapseFrom: fromKey });
 
       if (action === 'validate') {
         const form = $1(document, '#validate-form');
@@ -323,6 +423,24 @@
   }
 
   let navHandlersBound = false;
+  let moduleNavBound = false;
+
+  function attachModuleNavHandlers() {
+    if (moduleNavBound) return;
+    document.addEventListener('click', (event) => {
+      const nav = event.target.closest?.('.module-btn');
+      if (!nav) return;
+      const href = nav.getAttribute('href') || '';
+      if (!href.startsWith('#')) return;
+      const targetId = href.slice(1);
+      if (!panelEntries.some(([, id]) => id === targetId)) return;
+      event.preventDefault();
+      collapseAllExcept(targetId);
+      expandPanel(targetId);
+      scrollPanelIntoView(targetId);
+    });
+    moduleNavBound = true;
+  }
 
   function attachStandaloneCardNavigation() {
     if (navHandlersBound) return;
@@ -331,27 +449,9 @@
       if (!button) return;
       if (button.closest('.action-tray')) return;
       const action = button.dataset?.action;
-      if (!action) return;
-      if (action === 'validate') {
-        const target = urlFor('ui_validate');
-        if (target) {
-          window.location.href = target;
-        }
-        return;
-      }
-      if (action === 'mllp') {
-        const target = urlFor('ui_mllp');
-        if (target) {
-          window.location.href = target;
-        }
-        return;
-      }
-      if (action === 'pipeline') {
-        const target = urlFor('ui_pipeline_full');
-        if (target) {
-          window.location.href = target;
-        }
-      }
+      if (!action || !ACTION_TARGETS[action]) return;
+      event.preventDefault();
+      activateModule(action, '', {});
     });
     navHandlersBound = true;
   }
@@ -377,6 +477,7 @@
     updateTransportVisibility();
     toggleAllActionTrays();
     attachOutputObservers();
+    attachModuleNavHandlers();
     attachActionTrayHandlers();
     attachStandaloneCardNavigation();
   }
