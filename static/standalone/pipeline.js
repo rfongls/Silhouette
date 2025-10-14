@@ -184,8 +184,10 @@
     const text = extractMessage(sourceNode);
     if (hasMessageLike(text)) {
       trayEl.classList.add('visible');
+      trayEl.classList.remove('awaiting-message');
     } else {
       trayEl.classList.remove('visible');
+      trayEl.classList.add('awaiting-message');
     }
   }
 
@@ -297,6 +299,40 @@
     });
   }
 
+  let navHandlersBound = false;
+
+  function attachStandaloneCardNavigation() {
+    if (navHandlersBound) return;
+    document.addEventListener('click', (event) => {
+      const button = event.target.closest?.('.action-card');
+      if (!button) return;
+      if (button.closest('.action-tray')) return;
+      const action = button.dataset?.action;
+      if (!action) return;
+      if (action === 'validate') {
+        const target = urlFor('ui_validate');
+        if (target) {
+          window.location.href = target;
+        }
+        return;
+      }
+      if (action === 'mllp') {
+        const target = urlFor('ui_mllp');
+        if (target) {
+          window.location.href = target;
+        }
+        return;
+      }
+      if (action === 'pipeline') {
+        const target = urlFor('ui_pipeline_full');
+        if (target) {
+          window.location.href = target;
+        }
+      }
+    });
+    navHandlersBound = true;
+  }
+
   function onReady() {
     ensureInteropHelpers();
     fillTriggers();
@@ -313,7 +349,17 @@
     toggleAllActionTrays();
     attachOutputObservers();
     attachActionTrayHandlers();
+    attachStandaloneCardNavigation();
   }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    try {
+      toggleAllActionTrays();
+      attachOutputObservers();
+    } catch (err) {
+      console.warn('standalone-pipeline: init failed', err);
+    }
+  });
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', onReady);
