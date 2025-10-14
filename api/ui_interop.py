@@ -33,7 +33,7 @@ def _ensure_dirs() -> None:
 
 
 # ---------------------------------------------------------------------------
-# Legacy Manual Pipeline presets & helpers
+# Manual Pipeline presets & helpers
 # ---------------------------------------------------------------------------
 PIPELINE_PRESETS: dict[str, dict[str, object]] = {
     "local-2575": {
@@ -168,20 +168,8 @@ async def interop_skills(request: Request):
 
 
 @router.get("/ui/interop/pipeline", response_class=HTMLResponse, name="ui_interop_pipeline")
-async def interop_pipeline(request: Request, preset: str | None = None, skin: str | None = None):
-    """
-    Dispatcher for Manual Pipeline:
-    - Legacy skin (default): SIL_INTEROP_LEGACY=1 or ?skin=legacy
-    - V2 skin: ?skin=v2 or SIL_INTEROP_LEGACY=0
-    """
-
-    prefer_legacy = os.getenv("SIL_INTEROP_LEGACY", "1") == "1"
-    use_legacy = (skin or "").lower() != "v2" if prefer_legacy else (skin or "").lower() == "legacy"
-    if use_legacy:
-        from api.ui_legacy_pipeline import ui_legacy_pipeline
-
-        return await ui_legacy_pipeline(request, preset=preset)
-
+async def interop_pipeline(request: Request, preset: str | None = None):
+    """Modern Manual Pipeline experience with generate/deid/validate/transport panels."""
     deid_templates, val_templates = _template_lists()
     defaults = _pipeline_defaults(preset)
     ctx = {

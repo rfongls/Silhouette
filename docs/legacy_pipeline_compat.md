@@ -1,38 +1,23 @@
-# Legacy Manual Pipeline Compatibility Skin
+# Standalone Manual Pipeline (Classic QA Bench)
 
-This project includes a compatibility "legacy skin" for the Manual Pipeline (QA bench) so teams that rely on the original interface can keep their workflows while Engine V2 remains enabled.
+The classic Manual Pipeline (QA bench) now lives on its own dedicated page at `/ui/standalonepipeline`. It preserves the pre-V2 look and flow—Generate → De-identify → Validate → Send—without toggles or environment variables, while the modern `/ui/interop/pipeline` page stays unchanged for V2 work.
 
-## Switching between skins
+## Routing and adapter
 
-* The `/ui/interop/pipeline` route defaults to the legacy skin.
-* Append `?skin=v2` to the URL to reach the new V2 interface without changing defaults.
-* Set the `SIL_INTEROP_LEGACY` environment variable to `0` to make the V2 interface the default (set it to `1` to keep the legacy skin as default).
+* `api/ui_standalone.py` builds the context expected by the classic templates. It provides safe URL lookups, preset defaults, and template listings.
+* The router is mounted from `server.py`, so navigating to `/ui/standalonepipeline` works without extra configuration.
 
-## Legacy adapter
+## Templates and static assets
 
-The adapter defined in `api/ui_legacy_pipeline.py` builds the context expected by the legacy templates. It provides:
+All standalone assets are namespaced so styles do not leak into other pages:
 
-* String URLs resolved through `url_for` with safe fallbacks.
-* Preset connection values and defaults for MLLP and FHIR endpoints.
-* Template listings for de-identification and validation dropdowns.
-
-## Legacy assets and templates
-
-Legacy-specific templates and static assets live under:
-
-* `templates/ui/interop/legacy/`
-* `static/legacy/interop/`
-
-The CSS scopes styles under the `.interop-legacy` class so that the V2 interface remains unaffected.
-
-## Registration
-
-The FastAPI router from `api/ui_legacy_pipeline.py` is mounted in `server.py`, ensuring that the legacy skin remains available when requested.
+* Templates: `templates/ui/standalone/`
+* Static assets: `static/standalone/`
 
 ## Manual verification checklist
 
 1. Start the UI server (for example with `scripts/run_ui.bat`).
-2. Navigate to **Interoperability → Manual Pipeline** and confirm the legacy layout is shown.
-3. Run the Generate, De-identify, Validate, and Send panels in sequence; each panel should populate its corresponding output area.
-4. Trigger the compat page with `/ui/interop/pipeline?skin=v2` to confirm the new interface still works.
-5. Visit Engine pages (e.g., `/ui/engine`) to ensure they are unaffected.
+2. Navigate to **Interoperability → Manual Pipeline** and confirm it opens `/ui/standalonepipeline` with the classic layout.
+3. Exercise the Generate, De-identify, Validate, and MLLP panels; each should populate its respective output area.
+4. Run the full pipeline form and confirm validated HL7 output auto-fills and sends via the MLLP panel when enabled.
+5. Visit `/ui/interop/pipeline` to confirm the V2 interface still loads normally.
