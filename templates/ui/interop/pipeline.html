@@ -6,6 +6,9 @@
 {% endblock %}
 
 {% block content %}
+{% if urls is not defined %}
+  {% set urls = {} %}
+{% endif %}
 {% set root = request.scope.get('root_path', '') %}
 {% set presets = presets or {} %}
 {% set preset_key = preset_key or '' %}
