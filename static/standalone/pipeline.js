@@ -184,8 +184,10 @@
     const text = extractMessage(sourceNode);
     if (hasMessageLike(text)) {
       trayEl.classList.add('visible');
+      trayEl.classList.remove('awaiting-message');
     } else {
       trayEl.classList.remove('visible');
+      trayEl.classList.add('awaiting-message');
     }
   }
 
