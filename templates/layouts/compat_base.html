@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="legacy">
+{% set static_base = request.url_for('static', path='') if request is defined else '/static/' %}
+{% set req = request if request is defined else none %}
+{% set root = req.scope.get('root_path', '') if req else '' %}
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Silhouette – Manual Pipeline</title>
+  <meta name="root-path" content="{{ root }}" />
+  <meta name="app-root" content="{{ root }}" />
+  <link rel="stylesheet" href="{{ static_base }}legacy/compat-base.css" />
+  {% block extra_head %}{% endblock %}
+  <script src="{{ static_base }}vendor/htmx.min.js?v=1.9.12" defer></script>
+  <script type="module" src="{{ static_base }}js/examples.js"></script>
+</head>
+<body class="legacy-compat">
+  <main class="legacy-shell">
+    {% block content %}{% endblock %}
+  </main>
+</body>
+</html>

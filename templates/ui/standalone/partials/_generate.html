@@ -1,5 +1,8 @@
 <details id="generate-panel" class="card collapsible" open>
-  <summary>⚡ Generate <span class="minimax"></span></summary>
+  <summary>
+    <span class="text-h3">⚡ Generate</span>
+    <span class="minimax"></span>
+  </summary>
   <div class="module-body">
     <form id="gen-form"
           hx-post="{{ urls.api_generate }}"
@@ -7,31 +10,28 @@
           hx-target="#gen-output"
           hx-swap="textContent"
           hx-headers='{"Accept":"text/plain"}'>
-      <div class="row gap">
-        <label>Version
-          <select class="input" id="std-version" name="version" data-trigger-datalist="std-trigger-dl">
-            <option value="hl7-v2-3">HL7 v2.3</option>
-            <option value="hl7-v2-4" selected>HL7 v2.4</option>
-            <option value="hl7-v2-5">HL7 v2.5</option>
-          </select>
-        </label>
-        <label>Trigger
-          <input class="input" id="std-trigger" name="trigger" placeholder="ADT_A01 / ORU_R01" list="std-trigger-dl" />
-          <datalist id="std-trigger-dl"></datalist>
-        </label>
-        <label>Count
-          <input class="input" type="number" name="count" value="1" min="1" />
-        </label>
-        <button class="btn" type="submit">Generate</button>
-      </div>
-      <div class="row gap small mt">
-        <label for="std-sample" class="sr-only">Sample message</label>
-        <select class="input" id="std-sample">
-          <option value="">— Select a sample —</option>
+      <div class="row gap small">
+        <label class="sr-only" for="std-version">HL7 version</label>
+        <select class="input" id="std-version" name="version" data-trigger-datalist="std-trigger-list">
+          <option value="hl7-v2-3">HL7 v2.3</option>
+          <option value="hl7-v2-4" selected>HL7 v2.4</option>
+          <option value="hl7-v2-5">HL7 v2.5</option>
         </select>
-        <button class="btn btn-sm" type="button" id="std-load-sample">Load sample</button>
+
+        <label class="sr-only" for="std-trigger-input">Trigger</label>
+        <input class="input"
+               id="std-trigger-input"
+               name="trigger"
+               placeholder="e.g., ADT^A01"
+               list="std-trigger-list"
+               autocomplete="off" />
+        <datalist id="std-trigger-list"></datalist>
+
+        <button class="btn" type="submit">Generate</button>
+        <button class="btn" type="button" id="std-load-sample">Load Sample</button>
       </div>
     </form>
+
     <pre id="gen-output" class="codepane mt" style="min-height:9rem; white-space:pre-wrap;"></pre>
     {% include "ui/standalone/partials/_action_tray.html" %}
   </div>
