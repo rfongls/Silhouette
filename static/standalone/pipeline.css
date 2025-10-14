@@ -204,3 +204,21 @@
   box-shadow:0 4px 12px rgba(124,144,255,.15);
   transform:translateY(-2px);
 }
+
+/* ---- Legacy palette mapping (scoped) ---- */
+.legacy-interop-skin {
+  --border: var(--legacy-border);
+  --card: var(--legacy-surface);
+  --color-background: var(--legacy-surface);
+  --color-surface: var(--legacy-surface);
+  --color-border: var(--legacy-border);
+  --color-text-primary: var(--legacy-text);
+  --color-text-secondary: var(--legacy-muted);
+  --color-primary: var(--legacy-accent);
+}
+
+/* ---- Backward-compat: old .visible toggle ---- */
+.standalone-pipeline .action-tray.visible {
+  opacity: 1;
+  pointer-events: auto;
+}
