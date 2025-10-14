@@ -1,6 +1,8 @@
-{% extends "layout.html" %}
+{% extends "layouts/compat_base.html" %}
 
 {% block extra_head %}
+{{ super() }}
+<link rel="stylesheet" href="{{ request.url_for('static', path='legacy/interop/legacy_ui.css') }}" />
 <link rel="stylesheet" href="{{ request.url_for('static', path='standalone/pipeline.css') }}" />
 <script type="module" src="{{ request.url_for('static', path='standalone/pipeline.js') }}"></script>
 <script>
@@ -13,7 +15,7 @@
 {% set presets = presets or {} %}
 {% set preset_key = preset_key or '' %}
 {% set defaults = defaults or {} %}
-<div class="standalone-pipeline">
+<div class="legacy-interop-skin standalone-pipeline">
   <section class="dashboard">
     <div class="dashboard-container">
       <nav class="breadcrumbs">
@@ -24,16 +26,19 @@
         <p class="text-body muted">Generate • De-identify • Validate • Send over MLLP or run the full pipeline.</p>
       </header>
 
-      <form class="row gap mb small" method="get" action="{{ urls.ui_pipeline }}">
-        <label for="pipeline-preset" class="sr-only">Transport preset</label>
-        <select id="pipeline-preset" name="preset" class="input" onchange="this.form.submit()">
-          <option value="">— Select transport preset —</option>
-          {% for key, preset in presets.items() %}
-            <option value="{{ key }}" {% if key == preset_key %}selected{% endif %}>{{ preset.label }}</option>
-          {% endfor %}
-        </select>
-        <span class="micro muted">Presets prefill MLLP + FHIR options for the pipeline + transport panels.</span>
-      </form>
+      {# Only show the preset form when explicitly requested to avoid cluttering the bench by default. #}
+      {% if request.query_params.get('show_presets') %}
+        <form class="row gap mb small" method="get" action="{{ urls.ui_pipeline }}">
+          <label for="pipeline-preset" class="sr-only">Transport preset</label>
+          <select id="pipeline-preset" name="preset" class="input" onchange="this.form.submit()">
+            <option value="">— Select transport preset —</option>
+            {% for key, preset in presets.items() %}
+              <option value="{{ key }}" {% if key == preset_key %}selected{% endif %}>{{ preset.label }}</option>
+            {% endfor %}
+          </select>
+          <span class="micro muted">Presets prefill MLLP + FHIR options for the pipeline + transport panels.</span>
+        </form>
+      {% endif %}
 
       <div class="module-nav">
         <a class="module-btn" href="#generate-panel">⚡ Generate</a>
@@ -52,7 +57,7 @@
         {% include "ui/standalone/partials/_analyze.html" %}
       </div>
 
-      <section class="card mt">
+      <section class="card mt" id="pipeline-panel">
         <div class="module-body">
           <h3 class="text-h3 mb">Run Full Pipeline</h3>
           <form id="pipeline-form"

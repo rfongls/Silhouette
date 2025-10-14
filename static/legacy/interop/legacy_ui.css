@@ -12,3 +12,23 @@
 .interop-legacy .btn.btn-sm { font-size:.85rem; padding:.35rem .6rem; border-radius:6px; }
 .interop-legacy .logbox { border:1px dashed var(--border,#333); padding:.5rem; border-radius:6px; }
 .interop-legacy .limit10 { max-height:13.5em; overflow:auto; }
+
+/* Minimal legacy control sizing to match the classic bench */
+.legacy-interop-skin .input {
+  background: var(--legacy-surface);
+  color: var(--legacy-text);
+  border: 1px solid var(--legacy-border);
+  border-radius: 10px;
+  padding: .55rem .75rem;
+}
+.legacy-interop-skin select.input { min-width: 14rem; }
+.legacy-interop-skin .btn,
+.legacy-interop-skin button {
+  background: var(--legacy-surface);
+  color: var(--legacy-text);
+  border: 1px solid var(--legacy-border);
+  border-radius: 10px;
+  padding: .55rem .9rem;
+  font-weight: 500;
+  cursor: pointer;
+}

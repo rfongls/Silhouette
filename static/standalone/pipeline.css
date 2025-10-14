@@ -1,5 +1,8 @@
 /* ===== 10/06 Classic Manual Pipeline Skin (scoped) ===== */
-.standalone-pipeline .row.gap { display:flex; gap:.75rem; align-items:center; flex-wrap:wrap; }
+.standalone-pipeline .row { display:flex; gap:.5rem; align-items:center; flex-wrap:wrap; }
+.standalone-pipeline .row.gap { gap:.75rem; }
+.standalone-pipeline .row.small { gap:.35rem; }
+.standalone-pipeline .row.small .text-caption { font-size:.82rem; }
 .standalone-pipeline .grid.two { display:grid; grid-template-columns:repeat(auto-fit, minmax(320px,1fr)); gap:1rem; align-items:start; }
 .standalone-pipeline .mt { margin-top:1rem; }
 .standalone-pipeline .mb { margin-bottom:1rem; }
@@ -29,6 +32,12 @@
 .standalone-pipeline details.card.collapsible:not([open]) > summary .minimax::before { content:"◥ expand"; }
 .standalone-pipeline details.card.collapsible .module-body {
   padding:0 1.1rem 1.1rem;
+  display:flex;
+  flex-direction:column;
+  gap:.75rem;
+}
+
+.standalone-pipeline .module-body {
   display:flex;
   flex-direction:column;
   gap:.75rem;
@@ -147,6 +156,7 @@
 
 /* Action tray */
 .standalone-pipeline .action-tray {
+  display:flex;
   flex-direction:column;
   gap:1rem;
   margin-top:1rem;
@@ -154,6 +164,11 @@
   background:linear-gradient(135deg, rgba(139,92,246,.05) 0%, rgba(168,85,247,.05) 100%);
   border:2px dashed var(--color-primary,#7c93ff);
   border-radius:12px;
+  transition:opacity .2s ease;
+}
+.standalone-pipeline .action-tray.awaiting-message {
+  opacity:.55;
+  pointer-events:none;
 }
 .standalone-pipeline .action-tray-header h4 {
   color:var(--color-primary,#9ab0ff);
@@ -190,6 +205,20 @@
   transform:translateY(-2px);
 }
 
-/* Action tray visibility */
-.standalone-pipeline .action-tray { display:none; }
-.standalone-pipeline .action-tray.visible { display:flex; }
+/* ---- Legacy palette mapping (scoped) ---- */
+.legacy-interop-skin {
+  --border: var(--legacy-border);
+  --card: var(--legacy-surface);
+  --color-background: var(--legacy-surface);
+  --color-surface: var(--legacy-surface);
+  --color-border: var(--legacy-border);
+  --color-text-primary: var(--legacy-text);
+  --color-text-secondary: var(--legacy-muted);
+  --color-primary: var(--legacy-accent);
+}
+
+/* ---- Backward-compat: old .visible toggle ---- */
+.standalone-pipeline .action-tray.visible {
+  opacity: 1;
+  pointer-events: auto;
+}
