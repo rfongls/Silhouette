@@ -1,0 +1,33 @@
+<section id="mllp-panel" class="card">
+  <div class="module-body">
+    <h3 class="text-h3 mb">Send via MLLP</h3>
+    <form id="mllp-form"
+          hx-post="{{ urls.mllp_send }}"
+          hx-encoding="multipart/form-data"
+          hx-target="#mllp-output"
+          hx-swap="innerHTML">
+      <div class="row gap">
+        <label>Host <input class="input" id="mllp-host" type="text" name="host" placeholder="127.0.0.1" value="{{ defaults.host }}" required /></label>
+        <label>Port <input class="input" id="mllp-port" type="number" name="port" min="1" max="65535" placeholder="2575" value="{{ defaults.port }}" required /></label>
+        <label>Timeout (sec) <input class="input" type="number" name="timeout" min="1" value="{{ defaults.timeout or 5 }}" /></label>
+        <label class="row gap small" style="align-items:center;">
+          <input type="checkbox" name="expect_ack" checked /><span class="text-caption muted">Expect ACK</span>
+        </label>
+      </div>
+      <div class="row gap mt">
+        <button class="btn btn-sm" type="button" onclick="InteropUI.copyFrom('#gen-output','#mllp-msg')">Use Generated</button>
+        <button class="btn btn-sm" type="button" onclick="InteropUI.copyFrom('#deid-output','#mllp-msg')">Use De-identified</button>
+      </div>
+      <label class="mt">HL7 Message (paste)
+        <textarea id="mllp-msg" class="input" name="message" rows="8" placeholder="MSH|^~\&|..."></textarea>
+      </label>
+      <div class="row gap mt">
+        <label>Or upload .hl7
+          <input class="input" type="file" id="mllp-file" name="file" accept=".hl7,.txt" onchange="InteropUI.loadFileIntoTextarea('mllp-file','mllp-msg')" />
+        </label>
+        <button class="btn" type="submit">Send</button>
+      </div>
+    </form>
+    <div id="mllp-output" class="mt"><div class="muted micro">ACK / response will appear here.</div></div>
+  </div>
+</section>
