@@ -3,6 +3,13 @@
   const $1 = (root, selector) => (root || document).querySelector(selector);
   const $$ = (root, selector) => Array.from((root || document).querySelectorAll(selector));
 
+  const TRIGGER_INPUT_ID = 'std-trigger-input';
+  const TRIGGER_LIST_ID = 'std-trigger-list';
+  const VERSION_SELECT_ID = 'std-version';
+
+  const triggerSampleMap = new Map();
+  let lastTriggerVersion = '';
+
   function escapeHtml(value) {
     return String(value)
       .replace(/&/g, '&amp;')
@@ -44,88 +51,104 @@
     return resp.text();
   }
 
+  function normalizeTrigger(value) {
+    return (value || '')
+      .toString()
+      .trim()
+      .toUpperCase()
+      .replace(/\s+/g, '')
+      .replace(/\^/g, '_');
+  }
+
   async function fillTriggers() {
-    const select = $1(document, '#std-version');
-    const datalist = $1(document, '#std-trigger-dl');
+    const select = $1(document, `#${VERSION_SELECT_ID}`);
+    const datalist = $1(document, `#${TRIGGER_LIST_ID}`);
     if (!select || !datalist) return;
     const version = select.value || 'hl7-v2-4';
     try {
       const data = await fetchJSON(urlFor('triggers', { version }));
-      const items = (data?.items || [])
-        .map((item) => (typeof item === 'string' ? item : item?.trigger || ''))
-        .filter(Boolean);
-      datalist.innerHTML = items.map((item) => `<option value="${escapeHtml(item)}"></option>`).join('');
+      const items = Array.isArray(data?.items) ? data.items : [];
+      triggerSampleMap.clear();
+      const options = items
+        .map((item) => ({
+          trigger: (item?.trigger || '').trim(),
+          description: (item?.description || '').trim(),
+          relpath: item?.relpath || '',
+        }))
+        .filter((item) => item.trigger);
+      datalist.innerHTML = options
+        .map((item) => {
+          const normalized = normalizeTrigger(item.trigger);
+          if (normalized) {
+            triggerSampleMap.set(normalized, item.relpath || '');
+          }
+          triggerSampleMap.set(item.trigger.toUpperCase(), item.relpath || '');
+          const label = item.description ? `${item.trigger} — ${item.description}` : item.trigger;
+          return `<option value="${escapeHtml(item.trigger)}" label="${escapeHtml(label)}"></option>`;
+        })
+        .join('');
+      lastTriggerVersion = version;
     } catch (err) {
       console.warn('standalone-pipeline: trigger load failed', err);
     }
   }
 
-  async function fillSamples() {
-    const select = $1(document, '#std-sample');
-    const versionEl = $1(document, '#std-version');
-    if (!select) return;
-    const version = versionEl?.value || 'hl7-v2-4';
-    try {
-      const data = await fetchJSON(urlFor('samples', { version }));
-      const items = data?.items || [];
-      const options = items.map((item) => {
-        if (typeof item === 'string') {
-          return { value: item, label: item, relpath: item, name: item };
-        }
-        const relpath = item?.relpath || '';
-        const name = item?.name || '';
-        const label = item?.trigger
-          ? `${item.trigger}${item.description ? ' — ' + item.description : ''}`
-          : name || relpath;
-        return {
-          value: relpath || name,
-          label: label || relpath || name,
-          relpath,
-          name,
-        };
-      });
-      select.innerHTML = ['<option value="">— Select a sample —</option>']
-        .concat(
-          options.map((opt) =>
-            `<option value="${escapeHtml(opt.value)}" data-relpath="${escapeHtml(opt.relpath)}" data-name="${escapeHtml(opt.name)}">${escapeHtml(opt.label)}</option>`,
-          ),
-        )
-        .join('');
-    } catch (err) {
-      console.warn('standalone-pipeline: sample list failed', err);
+  async function resolveSampleRelpath(version, triggerValue) {
+    const normalized = normalizeTrigger(triggerValue);
+    if (!normalized) return '';
+    if (triggerSampleMap.has(normalized)) {
+      return triggerSampleMap.get(normalized) || '';
     }
+    try {
+      const data = await fetchJSON(urlFor('samples', { version, q: triggerValue }));
+      const items = Array.isArray(data?.items) ? data.items : [];
+      for (const item of items) {
+        const trig = (item?.trigger || '').trim();
+        const relpath = item?.relpath || '';
+        if (!trig || !relpath) continue;
+        const norm = normalizeTrigger(trig);
+        if (norm) {
+          triggerSampleMap.set(norm, relpath);
+          triggerSampleMap.set(trig.toUpperCase(), relpath);
+        }
+        if (norm === normalized) {
+          return relpath;
+        }
+      }
+      const fallback = items[0]?.relpath;
+      if (fallback) {
+        return fallback;
+      }
+    } catch (err) {
+      console.warn('standalone-pipeline: sample lookup failed', err);
+    }
+    return '';
   }
 
   async function loadSample() {
-    const select = $1(document, '#std-sample');
-    if (!select) return;
-    const option = select.selectedOptions?.[0];
-    const relpath = option?.dataset?.relpath || select.value || '';
-    const name = option?.dataset?.name || '';
-    if (!relpath && !name) return;
+    const versionSelect = $1(document, `#${VERSION_SELECT_ID}`);
+    const version = versionSelect?.value || 'hl7-v2-4';
+    const triggerInput = $1(document, `#${TRIGGER_INPUT_ID}`);
+    const triggerValue = triggerInput?.value || '';
+    if (!triggerValue) {
+      return;
+    }
+    if (lastTriggerVersion !== version) {
+      await fillTriggers();
+    }
+    if (!triggerSampleMap.size) {
+      await fillTriggers();
+    }
+    const relpath = (await resolveSampleRelpath(version, triggerValue)) || '';
+    if (!relpath) {
+      console.warn('standalone-pipeline: no sample for trigger', triggerValue, 'version', version);
+      return;
+    }
     try {
-      let text = '';
-      let lastError = null;
-      if (relpath) {
-        try {
-          text = await fetchText(urlFor('sample', { relpath }));
-        } catch (err) {
-          lastError = err;
-        }
-      }
-      if ((!text || !text.trim()) && name) {
-        try {
-          text = await fetchText(urlFor('sample', { name }));
-        } catch (err) {
-          lastError = err;
-        }
-      }
+      const text = await fetchText(urlFor('sample', { relpath }));
       const output = $1(document, '#gen-output');
       if (output) {
         output.textContent = text || '';
-      }
-      if (!text && lastError) {
-        throw lastError;
       }
     } catch (err) {
       console.warn('standalone-pipeline: sample fetch failed', err);
@@ -336,12 +359,18 @@
   function onReady() {
     ensureInteropHelpers();
     fillTriggers();
-    fillSamples();
 
     $1(document, '#std-version')?.addEventListener('change', () => {
       fillTriggers();
-      fillSamples();
     });
+    const triggerInputEl = $1(document, `#${TRIGGER_INPUT_ID}`);
+    if (triggerInputEl) {
+      triggerInputEl.addEventListener('change', () => {
+        if (!triggerSampleMap.size) {
+          fillTriggers();
+        }
+      });
+    }
     $1(document, '#std-load-sample')?.addEventListener('click', loadSample);
     $1(document, '#pipe-transport')?.addEventListener('change', updateTransportVisibility);
 
