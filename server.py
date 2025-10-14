@@ -19,6 +19,7 @@ from api.interop_gen import router as interop_gen_router, try_generate_on_valida
 from api.security import router as security_router
 from api.ui import router as ui_router, templates as ui_templates
 from api.ui_interop import router as ui_interop_router
+from api.ui_legacy_pipeline import router as ui_legacy_router
 from api.ui_settings import router as ui_settings_router
 from api.ui_agents import router as ui_agents_router
 from api.ui_security import router as ui_security_router
@@ -62,6 +63,7 @@ app.include_router(ui_home_router)
 for r in (
     ui_router,
     ui_interop_router,
+    ui_legacy_router,
     ui_settings_router,
     ui_security_router,
     ui_agents_router,
