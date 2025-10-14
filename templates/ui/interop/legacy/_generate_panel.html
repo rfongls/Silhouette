@@ -1,0 +1,26 @@
+<section id="generate-panel" class="interop-panel interop-panel-generate card">
+  <div class="module-body">
+    <h3 class="text-h3 mb">Generate</h3>
+    <form id="gen-form"
+          method="post" autocomplete="off" novalidate
+          hx-post="{{ legacy_urls.api_generate }}"
+          hx-encoding="application/x-www-form-urlencoded"
+          hx-target="#gen-output"
+          hx-swap="textContent"
+          hx-headers='{"Accept":"text/plain"}'>
+      <div class="row gap">
+        <label>Trigger
+          <input class="input" name="trigger" placeholder="A01 / ORU^R01 / VXU^V04" required />
+        </label>
+        <label>Version
+          <input class="input" name="version" placeholder="2.3 / 2.4 / 2.5" />
+        </label>
+        <label>Count
+          <input class="input" type="number" name="count" value="1" min="1" />
+        </label>
+        <button class="btn" type="submit">Generate</button>
+      </div>
+    </form>
+    <pre id="gen-output" class="codepane mt" style="min-height:9rem; white-space:pre-wrap;"></pre>
+  </div>
+</section>

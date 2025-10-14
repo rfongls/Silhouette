@@ -1,0 +1,12 @@
+<section id="debug-panel" class="interop-panel card">
+  <div class="module-body">
+    <h3 class="text-h3 mb">Debug Log</h3>
+    <div id="debug-log"
+         hx-get="{{ legacy_urls.logs_content }}?limit={{ 200 }}"
+         hx-trigger="load, every 4s"
+         hx-target="#debug-log"
+         hx-swap="outerHTML">
+      {% include "ui/interop/legacy/_debug_log_content.html" %}
+    </div>
+  </div>
+</section>
