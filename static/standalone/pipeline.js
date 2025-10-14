@@ -50,7 +50,9 @@
     const version = select.value || 'hl7-v2-4';
     try {
       const data = await fetchJSON(urlFor('triggers', { version }));
-      const items = (data?.items || []).map((item) => item.trigger || '').filter(Boolean);
+      const items = (data?.items || [])
+        .map((item) => (typeof item === 'string' ? item : item?.trigger || ''))
+        .filter(Boolean);
       datalist.innerHTML = items.map((item) => `<option value="${escapeHtml(item)}"></option>`).join('');
     } catch (err) {
       console.warn('standalone-pipeline: trigger load failed', err);
@@ -65,13 +67,27 @@
     try {
       const data = await fetchJSON(urlFor('samples', { version }));
       const items = data?.items || [];
+      const options = items.map((item) => {
+        if (typeof item === 'string') {
+          return { value: item, label: item, relpath: item, name: item };
+        }
+        const relpath = item?.relpath || '';
+        const name = item?.name || '';
+        const label = item?.trigger
+          ? `${item.trigger}${item.description ? ' — ' + item.description : ''}`
+          : name || relpath;
+        return {
+          value: relpath || name,
+          label: label || relpath || name,
+          relpath,
+          name,
+        };
+      });
       select.innerHTML = ['<option value="">— Select a sample —</option>']
         .concat(
-          items.map((item) => {
-            const rel = item.relpath || '';
-            const label = item.trigger ? `${item.trigger}${item.description ? ' — ' + item.description : ''}` : rel;
-            return `<option value="${escapeHtml(rel)}">${escapeHtml(label)}</option>`;
-          }),
+          options.map((opt) =>
+            `<option value="${escapeHtml(opt.value)}" data-relpath="${escapeHtml(opt.relpath)}" data-name="${escapeHtml(opt.name)}">${escapeHtml(opt.label)}</option>`,
+          ),
         )
         .join('');
     } catch (err) {
@@ -82,13 +98,33 @@
   async function loadSample() {
     const select = $1(document, '#std-sample');
     if (!select) return;
-    const relpath = select.value;
-    if (!relpath) return;
+    const option = select.selectedOptions?.[0];
+    const relpath = option?.dataset?.relpath || select.value || '';
+    const name = option?.dataset?.name || '';
+    if (!relpath && !name) return;
     try {
-      const text = await fetchText(urlFor('sample', { relpath }));
+      let text = '';
+      let lastError = null;
+      if (relpath) {
+        try {
+          text = await fetchText(urlFor('sample', { relpath }));
+        } catch (err) {
+          lastError = err;
+        }
+      }
+      if ((!text || !text.trim()) && name) {
+        try {
+          text = await fetchText(urlFor('sample', { name }));
+        } catch (err) {
+          lastError = err;
+        }
+      }
       const output = $1(document, '#gen-output');
       if (output) {
         output.textContent = text || '';
+      }
+      if (!text && lastError) {
+        throw lastError;
       }
     } catch (err) {
       console.warn('standalone-pipeline: sample fetch failed', err);
