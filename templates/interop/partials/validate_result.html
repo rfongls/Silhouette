@@ -1,24 +1,19 @@
-{% set r = result %}
-<div>
-  <h4>Validate Result</h4>
-  <p>
-    Return Code: <strong>{{ r.get('rc') }}</strong>
-    {% if r.get('rc') == 0 %} — <span style="color:green">OK</span>{% else %} — <span style="color:#b00">Error</span>{% endif %}
-  </p>
-  {% if r.get('out') %}
-    <p>Checked folder: <code>{{ r.get('out') }}/uploads</code></p>
+{% set res = result or {} %}
+<section class="card">
+  <h3 class="text-h3 mb">Validation Result</h3>
+  {% if res.rc is not none %}
+    <p>Return Code: <strong>{{ res.rc }}</strong>{% if res.rc == 0 %} — <span style="color:green">OK</span>{% else %} — <span style="color:#b00">Error</span>{% endif %}</p>
   {% endif %}
-  {% if r.get('stderr') %}
-    <details>
-      <summary>stderr</summary>
-      <pre>{{ r.get('stderr') }}</pre>
-    </details>
+  {% if res.out %}
+    <p>Output folder: <code>{{ res.out }}</code></p>
   {% endif %}
-  {% if r.get('stdout') %}
-    <details>
-      <summary>stdout</summary>
-      <pre>{{ r.get('stdout') }}</pre>
-    </details>
+  {% if res.stderr %}
+    <details><summary>stderr</summary><pre>{{ res.stderr }}</pre></details>
   {% endif %}
-</div>
-
+  {% if res.stdout %}
+    <details><summary>stdout</summary><pre>{{ res.stdout }}</pre></details>
+  {% endif %}
+  {% if res.html %}
+    <div class="mt">{{ res.html | safe }}</div>
+  {% endif %}
+</section>

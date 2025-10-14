@@ -1,87 +1,105 @@
 {% set root = request.scope.get('root_path', '') %}
-{% if urls is not defined %}{% set urls = {} %}{% endif %}
-{% set api_deidentify = (urls.api_deidentify | default(root ~ '/api/interop/deidentify', true)) | string %}
-{% set deid_options = deid_templates if deid_templates is defined and deid_templates else [] %}
-{% set default_deid_template = 'default' if 'default' in deid_options else (deid_options[0] if deid_options else '') %}
-{% if '?' in api_deidentify %}
-  {% set api_deidentify_plain = api_deidentify ~ '&format=txt' %}
-{% else %}
-  {% set api_deidentify_plain = api_deidentify ~ '?format=txt' %}
-{% endif %}
-
-<section id="deid-panel" class="interop-panel interop-panel-deid">
-  <div class="module-body" data-acc-body>
-    <h3 class="text-h3 mb">De‑identify</h3>
+{% set defaults = defaults or {} %}
+<section id="deid-panel" class="interop-panel interop-panel-deid card">
+  <div class="module-body">
+    <h3 class="text-h3 mb">De-identify</h3>
     <form id="deid-form"
-          class="mt"
-          method="post"
-          action="{{ urls.ui_deidentify | default(root ~ '/ui/interop/deidentify', true) }}"
-          hx-post="{{ api_deidentify_plain }}"
-          hx-encoding="application/x-www-form-urlencoded"
-          hx-headers='{"Accept":"text/plain"}'
+          hx-post="{{ urls.api_deidentify | default(root ~ '/api/interop/deidentify', true) }}"
+          hx-encoding="multipart/form-data"
           hx-target="#deid-output"
           hx-swap="textContent"
+          hx-headers='{"Accept":"text/plain"}'
           hx-on::afterSwap="window.InteropUI.onDeidentifyComplete(event)">
-      <div class="grid two">
-        <label>Template
-          <select id="deid-template" name="deid_template" class="input">
-            {% for name in deid_options %}
-              <option value="{{ name }}" {% if name == default_deid_template %}selected{% endif %}>{{ name }}</option>
-            {% endfor %}
-          </select>
-        </label>
-        <label class="row gap small" style="align-items:center">
-          <input type="checkbox" id="deid-apply-baseline" name="apply_baseline" />
-          <span>Use default rules (baseline)</span>
-        </label>
-      </div>
-
-      <textarea id="deid-text"
-                name="text"
-                class="input textarea-output mt"
-                rows="8"
-                placeholder="Paste HL7 to de-identify"></textarea>
-
+      <label class="mt">HL7 Message (paste)
+        <textarea class="input" name="message" rows="7" placeholder="MSH|^~\&|..."></textarea>
+      </label>
       <div class="row gap mt">
-        <input class="input" id="deid-seed" name="seed" placeholder="seed (optional)" />
-        <button id="deid-run" class="button" type="submit" data-action="deidentify">Run De-identify</button>
+        <label>De-ID Template
+          <input class="input" name="profile_id" placeholder="template id (optional)" />
+        </label>
+        <label>Or upload .hl7
+          <input class="input" type="file" name="file" accept=".hl7,.txt" />
+        </label>
+        <button class="btn" type="submit">Run De-identify</button>
       </div>
     </form>
+    <pre id="deid-output" class="codepane" style="min-height:8rem; white-space:pre-wrap;"></pre>
 
-    <pre id="deid-output" class="codepane limit10 scrollbox mt" aria-live="polite"></pre>
-
-    <!-- REPORT BELOW OUTPUT -->
-    <!-- Custom event fired from JS after the form successfully swaps its output. -->
-    <div id="deid-report"
-         class="card mt"
-         hx-post="{{ urls.api_deidentify_summary | default(root ~ '/api/interop/deidentify/summary', true) }}"
-         hx-include="#deid-text,#deid-seed,#deid-template,#deid-apply-baseline"
-         hx-trigger="htmx:afterRequest from:#deid-form, deid:complete from:body"
-         hx-headers='{"Accept":"text/html"}'
-         hx-target="#deid-report"
-         hx-swap="innerHTML">
-      {% include 'ui/interop/_deid_report_placeholder.html' %}
-    </div>
-
-    <div id="deid-run-tray" class="action-tray mt" hidden>
-      <div class="action-tray-header">
-        <h4>Next steps after De‑ID</h4>
-        <p>Choose what to do with the de‑identified message.</p>
+    <hr class="mt mb" />
+    <h4 class="text-h4">Run Full Test Pipeline</h4>
+    <form id="pipeline-form"
+          hx-post="{{ urls.api_pipeline_run | default(root ~ '/api/interop/pipeline/run', true) }}"
+          hx-encoding="multipart/form-data"
+          hx-target="#pipeline-output"
+          hx-swap="innerHTML">
+      <div class="row gap">
+        <label>Trigger
+          <input class="input" name="trigger" placeholder="A01 / ORU^R01" />
+        </label>
+        <label>Version
+          <input class="input" name="version" placeholder="2.4" />
+        </label>
       </div>
-      <div class="action-cards">
-        <button class="action-card pipeline-run" type="button" data-run-to="validate" title="Open Validate with this message">
-          <strong>✓ Validate</strong>
-          <small>Ensure structural correctness.</small>
-        </button>
-        <button class="action-card pipeline-run" type="button" data-run-to="mllp">
-          <strong>📤 Send via MLLP</strong>
-          <small>Deliver and view ACK.</small>
-        </button>
-        <button class="action-card pipeline-run" type="button" data-run-to="translate">
-          <strong>🔄 HL7 → FHIR</strong>
-          <small>Translate for downstream apps.</small>
-        </button>
+      <label class="mt">Or provide HL7 input (paste)
+        <textarea class="input" name="text" rows="6" placeholder="MSH|^~\&|..."></textarea>
+      </label>
+      <div class="row gap mt">
+        <label>Transform Profile
+          <input class="input" name="transform_profile" placeholder="profile id" />
+        </label>
+        <label>De-ID Template
+          <input class="input" name="deid_template" placeholder="template id" />
+        </label>
+        <label>Validation Template
+          <input class="input" name="val_template" placeholder="template id" />
+        </label>
       </div>
+      <div class="row gap mt">
+        <label class="row small" style="align-items:center; gap:.5rem;">
+          <input type="checkbox" name="deidentify" />
+          <span class="text-caption muted">De-identify generated message</span>
+        </label>
+        <label class="row small" style="align-items:center; gap:.5rem;">
+          <input type="checkbox" name="apply_baseline" />
+          <span class="text-caption muted">Apply baseline rules</span>
+        </label>
+        <label class="row small" style="align-items:center; gap:.5rem;">
+          <input type="checkbox" name="post_fhir" {% if defaults.post_fhir %}checked{% endif %} />
+          <span class="text-caption muted">POST FHIR bundle</span>
+        </label>
+      </div>
+      <div class="row gap mt">
+        <label>FHIR endpoint
+          <input class="input" name="fhir_endpoint" placeholder="https://example.org/fhir" value="{{ defaults.fhir_endpoint }}" />
+        </label>
+        <label>Transport
+          <select class="input" id="pipe-transport" name="transport">
+            <option value="">None</option>
+            <option value="mllp">MLLP</option>
+          </select>
+        </label>
+      </div>
+      <div id="pipe-mllp-config" class="row gap mt" style="display:none;">
+        <label>Host
+          <input class="input" id="pipe-mllp-host" name="transport_host" type="text" placeholder="127.0.0.1" value="{{ defaults.host }}" />
+        </label>
+        <label>Port
+          <input class="input" id="pipe-mllp-port" name="transport_port" type="number" min="1" max="65535" placeholder="2575" value="{{ defaults.port }}" />
+        </label>
+        <label>Timeout (sec)
+          <input class="input" type="number" id="pipe-mllp-timeout" name="transport_timeout" min="1" value="{{ defaults.timeout or 5 }}" />
+        </label>
+        <label class="row gap small" style="align-items:center;">
+          <input type="checkbox" id="pipe-mllp-auto" checked />
+          <span class="text-caption muted">Auto-send after validate</span>
+        </label>
+      </div>
+      <div style="display:flex; justify-content:flex-end; margin-top:1rem;">
+        <button class="btn" type="submit">Run Pipeline</button>
+      </div>
+    </form>
+    <div id="pipeline-output" class="codepane mt" style="min-height:8rem; white-space:pre-wrap;">
+      <div class="muted small">Run the pipeline to view output here.</div>
     </div>
   </div>
 </section>

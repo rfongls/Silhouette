@@ -1,9 +1,10 @@
-{% if not enabled %}
-<div class="muted small">Debug logging is currently off. Use the Home dashboard toggle to enable it, then try generating a message.</div>
-{% endif %}
-{% if lines %}
-<pre class="codepane small" data-count="{{ lines|length }}">{{ lines|join('\n') }}</pre>
-{% else %}
-<div class="muted small">No generator debug logs captured yet. Trigger message generation to populate this view.</div>
-{% endif %}
-<p class="muted micro mt">Log file: {{ log_path }} • showing last {{ lines|length }} (limit {{ limit }}) • refreshed {{ refreshed }}</p>
+<div class="logbox">
+  <p class="micro muted">Log file: {{ log_path }} · showing last {{ limit }} lines {{ refreshed }}</p>
+  {% if enabled is defined and not enabled %}
+    <div class="muted small">Debug logging disabled.</div>
+  {% elif lines %}
+    <pre class="codepane limit10" style="white-space:pre-wrap;">{{ lines | join('\n') }}</pre>
+  {% else %}
+    <div class="muted small">No recent log entries.</div>
+  {% endif %}
+</div>

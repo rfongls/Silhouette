@@ -5,7 +5,6 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from fastapi import APIRouter, Request, HTTPException
-from starlette.routing import NoMatchFound
 from fastapi.responses import HTMLResponse, PlainTextResponse
 from starlette.templating import Jinja2Templates
 from api.ui import install_link_for
@@ -30,6 +29,40 @@ VAL_DIR = Path("configs/interop/validate_templates")
 def _ensure_dirs() -> None:
     DEID_DIR.mkdir(parents=True, exist_ok=True)
     VAL_DIR.mkdir(parents=True, exist_ok=True)
+
+
+# ---------------------------------------------------------------------------
+# Legacy Manual Pipeline presets & helpers
+# ---------------------------------------------------------------------------
+PIPELINE_PRESETS: dict[str, dict[str, object]] = {
+    "local-2575": {
+        "label": "Local MLLP (127.0.0.1:2575)",
+        "host": "127.0.0.1",
+        "port": 2575,
+        "timeout": 5,
+        "fhir_endpoint": "http://127.0.0.1:8080/fhir",
+        "post_fhir": False,
+    },
+    "docker-2575": {
+        "label": "Docker MLLP (localhost:2575)",
+        "host": "localhost",
+        "port": 2575,
+        "timeout": 5,
+        "fhir_endpoint": "http://localhost:8080/fhir",
+        "post_fhir": False,
+    },
+}
+
+
+def _pipeline_defaults(preset_key: str | None) -> dict[str, object]:
+    preset = PIPELINE_PRESETS.get((preset_key or "").strip()) or {}
+    return {
+        "host": preset.get("host", ""),
+        "port": preset.get("port", ""),
+        "timeout": preset.get("timeout", 5),
+        "fhir_endpoint": preset.get("fhir_endpoint", ""),
+        "post_fhir": bool(preset.get("post_fhir", False)),
+    }
 
 
 def list_deid_templates() -> list[str]:
@@ -111,6 +144,8 @@ def _ui_urls(request: Request) -> dict[str, str]:
             "/api/interop/deidentify/summary",
         ),
         "api_validate": _safe_url_for(request, "api_validate", "/api/interop/validate"),
+        "api_validate_view": _safe_url_for(request, "interop_validate_view", "/api/interop/validate/view"),
+        "api_pipeline_run": _safe_url_for(request, "run_pipeline", "/api/interop/pipeline/run"),
     }
 
 @router.get("/ui/interop/dashboard", response_class=HTMLResponse)
@@ -132,16 +167,19 @@ async def interop_skills(request: Request):
 
 
 @router.get("/ui/interop/pipeline", response_class=HTMLResponse, name="ui_interop_pipeline")
-async def interop_pipeline(request: Request):
-    """Manual pipeline bench for generating, de-identifying, validating, and testing."""
+async def interop_pipeline(request: Request, preset: str | None = None):
+    """Legacy manual pipeline QA bench (generate → de-identify → validate → transport)."""
 
     deid_templates, val_templates = _template_lists()
-    urls = _ui_urls(request)
+    defaults = _pipeline_defaults(preset)
     ctx = {
         "request": request,
         "deid_templates": deid_templates,
         "val_templates": val_templates,
-        "urls": urls,
+        "urls": _ui_urls(request),
+        "presets": PIPELINE_PRESETS,
+        "preset_key": preset or "",
+        "defaults": defaults,
         "log_path": str(LOG_FILE),
         "limit": 200,
         "refreshed": "",

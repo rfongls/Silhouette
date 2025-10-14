@@ -1,18 +1,14 @@
 {% set root = request.scope.get('root_path', '') %}
-<p class="muted small">Live tail of the HL7 generator debug output. Useful for tracing request payloads and template resolution.</p>
-<form class="row gap small" id="debug-log-settings"
-      hx-get="{{ root }}/api/diag/debug/log-widget?format=html&target=interop-debug-log"
-      hx-target="#interop-debug-log"
-      hx-trigger="submit">
-  <label class="label small" for="debug-log-limit">Tail</label>
-  <input class="input input-xs" type="number" id="debug-log-limit" name="limit" value="200" min="20" max="2000" step="20" />
-  <button class="btn btn-xs" type="submit">Refresh</button>
-  <a class="btn btn-xs" href="{{ root }}/api/diag/logs?format=html" target="_blank" rel="noopener">Open full log</a>
-</form>
-<div id="interop-debug-log"
-     hx-get="{{ root }}/api/diag/debug/log-widget?format=html&target=interop-debug-log&limit=200&include=%23debug-log-settings"
-     hx-trigger="load"
-     hx-target="this"
-     hx-swap="outerHTML">
-  <div class="muted small">Debug is OFF</div>
-</div>
+<section id="debug-panel" class="interop-panel card">
+  <div class="module-body">
+    <h3 class="text-h3 mb">Debug Log</h3>
+    <div id="debug-log"
+         hx-get="{{ root }}/ui/interop/logs/content?limit={{ limit or 200 }}"
+         hx-trigger="load, every 4s"
+         hx-target="#debug-log"
+         hx-swap="outerHTML">
+      {% include "ui/interop/_debug_log_content.html" %}
+    </div>
+    {% include "ui/interop/_deid_summary.html" %}
+  </div>
+</section>

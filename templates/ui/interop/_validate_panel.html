@@ -1,45 +1,26 @@
 {% set root = request.scope.get('root_path', '') %}
-{% set validate_api = urls.api_validate | default(root ~ '/api/interop/validate', true) %}
-{% set validate_api = validate_api | string %}
-{% if '?' in validate_api %}
-  {% set validate_api = validate_api ~ '&format=html' %}
-{% else %}
-  {% set validate_api = validate_api ~ '?format=html' %}
-{% endif %}
-{% set val_options = val_templates if val_templates is defined and val_templates else [] %}
-{% set default_val_template = 'default' if 'default' in val_options else (val_options[0] if val_options else '') %}
-<section id="validate-panel" class="interop-panel interop-panel-validate">
-  <div class="module-body" data-acc-body>
+<section id="validate-panel" class="interop-panel interop-panel-validate card">
+  <div class="module-body">
     <h3 class="text-h3 mb">Validate</h3>
     <form id="validate-form"
-          method="post"
-          action="{{ urls.ui_validate | default(root ~ '/ui/interop/validate', true) }}"
-          hx-post="{{ validate_api }}"
-          hx-encoding="application/x-www-form-urlencoded"
-          hx-target="#validate-report"
+          hx-post="{{ urls.api_validate_view | default(root ~ '/api/interop/validate/view', true) }}"
+          hx-encoding="multipart/form-data"
+          hx-target="#validate-output"
           hx-swap="innerHTML"
-          hx-headers='{"Accept":"text/html"}'
           hx-on::afterSwap="window.InteropUI.onValidateComplete(event)">
-      <input type="hidden" name="format" value="html" />
-      <label class="row gap small">
-        <span>Template</span>
-        <select name="val_template" id="val-template" class="input">
-          {% for name in val_options %}
-            <option value="{{ name }}" {% if name == default_val_template %}selected{% endif %}>{{ name }}</option>
-          {% endfor %}
-        </select>
+      <label>HL7 Message (paste)
+        <textarea class="input" name="message" rows="7" placeholder="MSH|^~\&|..."></textarea>
       </label>
-      <textarea class="input textarea-output" id="val-text" name="message" placeholder="Paste HL7 to validate"></textarea>
       <div class="row gap mt">
-        <input class="input" type="text" name="profile" placeholder="profile/workbook (optional)" />
-        <button class="btn" id="validate-submit" type="submit" data-action="validate">Validate</button>
+        <label>Validation Template
+          <input class="input" name="profile_id" placeholder="template id (optional)" />
+        </label>
+        <label>Or upload .hl7
+          <input class="input" type="file" name="file" accept=".hl7,.txt" />
+        </label>
+        <button class="btn" type="submit">Run Validate</button>
       </div>
     </form>
-    <div class="form-row mt">
-      <button class="btn btn-secondary btn-sm" id="print-validate-report" type="button">Print report</button>
-    </div>
-    <div id="validate-report" class="mt">
-      <p class="muted">Run validation to see a report.</p>
-    </div>
+    <div id="validate-output" class="mt"></div>
   </div>
 </section>

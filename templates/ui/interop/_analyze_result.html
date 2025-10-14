@@ -1,26 +1,11 @@
-{% for r in rows %}
-  <section class="card">
-    <h4>{{ r.filename }}</h4>
-    <div class="row gap">
-      {% for k, v in (r.segments or {}).items() %}
-        <span class="chip">{{ k }}: <strong>{{ v }}</strong></span>
-      {% endfor %}
-    </div>
-    {% if r.validation %}
-      <div class="mt">
-        <strong>Validation:</strong>
-        {% if r.validation.ok %}
-          <span class="chip">OK</span>
-        {% else %}
-          <span class="chip">Issues</span>
-        {% endif %}
-        {% if r.validation.errors %}
-          <ul>{% for e in r.validation.errors %}<li>{{ e }}</li>{% endfor %}</ul>
-        {% endif %}
-        {% if r.validation.warnings %}
-          <ul class="muted">{% for w in r.validation.warnings %}<li>{{ w }}</li>{% endfor %}</ul>
-        {% endif %}
-      </div>
+{% set rows = rows or [] %}
+<section id="analyze-panel" class="interop-panel card">
+  <div class="module-body">
+    <h3 class="text-h3 mb">Analysis / Results</h3>
+    {% if rows %}
+      <pre class="codepane" style="white-space:pre-wrap;">{{ rows | tojson(indent=2) }}</pre>
+    {% else %}
+      <div class="muted small">Upload HL7 data to populate this panel.</div>
     {% endif %}
-  </section>
-{% endfor %}
+  </div>
+</section>
