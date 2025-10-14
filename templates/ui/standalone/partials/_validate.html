@@ -1,6 +1,6 @@
-<section id="validate-panel" class="card">
+<details id="validate-panel" class="card collapsible" open>
+  <summary>✓ Validate <span class="minimax"></span></summary>
   <div class="module-body">
-    <h3 class="text-h3 mb">Validate</h3>
     <form id="validate-form"
           hx-post="{{ urls.api_validate_view }}"
           hx-encoding="multipart/form-data"
@@ -26,4 +26,4 @@
     </datalist>
     <div id="validate-output" class="mt"></div>
   </div>
-</section>
+</details>

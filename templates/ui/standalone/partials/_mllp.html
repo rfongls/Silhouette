@@ -1,6 +1,6 @@
-<section id="mllp-panel" class="card">
+<details id="mllp-panel" class="card collapsible" open>
+  <summary>📤 MLLP Send <span class="minimax"></span></summary>
   <div class="module-body">
-    <h3 class="text-h3 mb">Send via MLLP</h3>
     <form id="mllp-form"
           hx-post="{{ urls.mllp_send }}"
           hx-encoding="multipart/form-data"
@@ -30,4 +30,4 @@
     </form>
     <div id="mllp-output" class="mt"><div class="muted micro">ACK / response will appear here.</div></div>
   </div>
-</section>
+</details>

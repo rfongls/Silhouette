@@ -35,11 +35,12 @@
         <span class="micro muted">Presets prefill MLLP + FHIR options for the pipeline + transport panels.</span>
       </form>
 
-      <div class="row gap mb">
-        <a class="button btn-sm" href="#generate-panel">⚡ Generate</a>
-        <a class="button btn-sm" href="#deid-panel">🔒 De-identify</a>
-        <a class="button btn-sm" href="#validate-panel">✓ Validate</a>
-        <a class="button btn-sm" href="#mllp-panel">📤 MLLP Send</a>
+      <div class="module-nav">
+        <a class="module-btn" href="#generate-panel">⚡ Generate</a>
+        <a class="module-btn" href="#deid-panel">🔒 De-identify</a>
+        <a class="module-btn" href="#validate-panel">✓ Validate</a>
+        <a class="module-btn" href="#mllp-panel">📤 MLLP Send</a>
+        <a class="module-btn" href="{{ urls.ui_pipeline }}?preset={{ preset_key }}">→ Full Pipeline</a>
       </div>
 
       <div class="grid two" style="gap:1rem; align-items:flex-start;">
