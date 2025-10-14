@@ -1,0 +1,30 @@
+<details id="deid-panel" class="card collapsible" open>
+  <summary>🔒 De-identify <span class="minimax"></span></summary>
+  <div class="module-body">
+    <form id="deid-form"
+          hx-post="{{ urls.api_deidentify }}"
+          hx-encoding="multipart/form-data"
+          hx-target="#deid-output"
+          hx-swap="textContent"
+          hx-headers='{"Accept":"text/plain"}'>
+      <label class="mt">HL7 Message (paste)
+        <textarea class="input" name="message" rows="7" placeholder="MSH|^~\&|..."></textarea>
+      </label>
+      <div class="row gap mt">
+        <label>De-ID Template
+          <input class="input" name="profile_id" placeholder="template id (optional)" list="std-deid-templates" />
+        </label>
+        <label>Or upload .hl7
+          <input class="input" type="file" name="file" accept=".hl7,.txt" />
+        </label>
+        <button class="btn" type="submit">Run De-identify</button>
+      </div>
+    </form>
+    <datalist id="std-deid-templates">
+      {% for template in deid_templates %}
+        <option value="{{ template }}"></option>
+      {% endfor %}
+    </datalist>
+    <pre id="deid-output" class="codepane" style="min-height:8rem; white-space:pre-wrap;"></pre>
+  </div>
+</details>
