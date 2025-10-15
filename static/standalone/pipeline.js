@@ -338,15 +338,74 @@
     const text = extractMessage(sourceNode);
     if (hasMessageLike(text)) {
       trayEl.classList.add('visible');
-      trayEl.classList.remove('awaiting-message');
     } else {
       trayEl.classList.remove('visible');
-      trayEl.classList.add('awaiting-message');
     }
   }
 
   function toggleAllActionTrays() {
     $$(document, '.action-tray').forEach((tray) => toggleActionTrayFor(tray));
+  }
+
+  function setReportPlaceholder(container, text) {
+    if (!container) return;
+    container.innerHTML = '';
+    const note = document.createElement('p');
+    note.className = 'muted small';
+    note.textContent = text;
+    container.appendChild(note);
+  }
+
+  function populateDeidReportForm() {
+    const form = $1(document, '#deid-report-form');
+    if (!form) return null;
+    const message = $1(document, '#deid-msg')?.value || '';
+    const output = $1(document, '#deid-output')?.textContent || '';
+    const template = $1(document, '#deid-template')?.value || '';
+    const textField = form.querySelector('#deid-report-text');
+    const afterField = form.querySelector('#deid-report-after');
+    const tplField = form.querySelector('#deid-report-template');
+    if (textField) textField.value = message;
+    if (afterField) afterField.value = output;
+    if (tplField) tplField.value = template;
+    return { message, output };
+  }
+
+  function refreshDeidReport({ auto = false } = {}) {
+    const form = $1(document, '#deid-report-form');
+    const container = $1(document, '#deid-report');
+    if (!form || !container || !window.htmx) return;
+    const info = populateDeidReportForm();
+    if (!info) return;
+    const hasRequired = info.message.trim() && info.output.trim();
+    if (!hasRequired) {
+      if (!auto) {
+        setReportPlaceholder(container, 'Run De-identify to generate a processed-errors report.');
+      }
+      return;
+    }
+    window.htmx.trigger(form, 'submit');
+  }
+
+  function clearDeidReport() {
+    const container = $1(document, '#deid-report');
+    setReportPlaceholder(container, 'Processed-errors coverage will appear after you run De-identify.');
+  }
+
+  function refreshValidateReport() {
+    const form = $1(document, '#validate-form');
+    if (!form || !window.htmx) return;
+    const message = $1(document, '#validate-msg')?.value || '';
+    if (!message.trim()) {
+      clearValidateReport();
+      return;
+    }
+    window.htmx.trigger(form, 'submit');
+  }
+
+  function clearValidateReport() {
+    const container = $1(document, '#validate-report');
+    setReportPlaceholder(container, 'Validation results will appear here after running Validate.');
   }
 
   function attachOutputObservers() {
@@ -517,6 +576,51 @@
     attachModuleNavHandlers();
     attachActionTrayHandlers();
     attachStandaloneCardNavigation();
+    setupValidateForm();
+    setupReportButtons();
+    clearDeidReport();
+    clearValidateReport();
+  }
+
+  function setupValidateForm() {
+    const form = $1(document, '#validate-form');
+    if (!form) return;
+    form.addEventListener('submit', () => {
+      const message = $1(form, 'textarea[name="message"]')?.value || '';
+      const output = $1(document, '#validate-output');
+      if (output) {
+        output.textContent = message.trim();
+      }
+      toggleAllActionTrays();
+    });
+  }
+
+  function setupReportButtons() {
+    document.body?.addEventListener('click', (event) => {
+      const refreshDeid = event.target.closest?.('[data-role="deid-report-refresh"]');
+      if (refreshDeid) {
+        event.preventDefault();
+        refreshDeidReport();
+        return;
+      }
+      const clearDeid = event.target.closest?.('[data-role="deid-report-clear"]');
+      if (clearDeid) {
+        event.preventDefault();
+        clearDeidReport();
+        return;
+      }
+      const refreshValidate = event.target.closest?.('[data-role="validate-report-refresh"]');
+      if (refreshValidate) {
+        event.preventDefault();
+        refreshValidateReport();
+        return;
+      }
+      const clearValidate = event.target.closest?.('[data-role="validate-report-clear"]');
+      if (clearValidate) {
+        event.preventDefault();
+        clearValidateReport();
+      }
+    });
   }
 
   document.addEventListener('DOMContentLoaded', () => {
@@ -537,5 +641,9 @@
   document.body?.addEventListener('htmx:afterSwap', (evt) => {
     toggleAllActionTrays();
     autoSendPipelineResult(evt);
+    const targetId = evt?.target?.id || '';
+    if (targetId === 'deid-output') {
+      refreshDeidReport({ auto: true });
+    }
   });
 })();
