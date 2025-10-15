@@ -14,6 +14,9 @@
   const TRIGGER_INPUT_ID = 'std-trigger-input';
   const TRIGGER_LIST_ID = 'std-trigger-list';
   const VERSION_SELECT_ID = 'std-version';
+  const COUNT_INPUT_ID = 'std-count';
+  const SEED_CHECK_ID = 'std-seed';
+  const ENRICH_CHECK_ID = 'std-enrich';
 
   const ACTION_TARGETS = {
     validate: { panel: PANEL_IDS.validate, textarea: '#validate-form textarea[name="message"]' },
@@ -154,6 +157,31 @@
       .replace(/\^/g, '_');
   }
 
+  function parseCount() {
+    const input = $1(document, `#${COUNT_INPUT_ID}`);
+    const raw = input?.value;
+    const value = Number.parseInt(raw ?? '1', 10);
+    const clamped = Number.isFinite(value) ? Math.min(Math.max(value, 1), 50) : 1;
+    if (input && String(clamped) !== String(raw ?? '')) {
+      input.value = String(clamped);
+    }
+    return clamped;
+  }
+
+  function repeatMessage(text, count) {
+    const trimmed = (text || '').trim();
+    if (!trimmed || count <= 1) {
+      return trimmed;
+    }
+    return Array.from({ length: count }, () => trimmed).join('\n\n');
+  }
+
+  function getFlags() {
+    const seed = !!$1(document, `#${SEED_CHECK_ID}`)?.checked;
+    const enrich = !!$1(document, `#${ENRICH_CHECK_ID}`)?.checked;
+    return { seed, enrich };
+  }
+
   async function fillTriggers() {
     const select = $1(document, `#${VERSION_SELECT_ID}`);
     const datalist = $1(document, `#${TRIGGER_LIST_ID}`);
@@ -227,6 +255,9 @@
     if (!triggerValue) {
       return;
     }
+    const count = parseCount();
+    const { seed, enrich } = getFlags();
+
     if (lastTriggerVersion !== version) {
       await fillTriggers();
     }
@@ -239,10 +270,16 @@
       return;
     }
     try {
-      const text = await fetchText(urlFor('sample', { relpath }));
+      const text = await fetchText(
+        urlFor('sample', {
+          relpath,
+          seed: seed ? '1' : undefined,
+          enrich: enrich ? '1' : undefined,
+        })
+      );
       const output = $1(document, '#gen-output');
       if (output) {
-        output.textContent = text || '';
+        output.textContent = repeatMessage(text, count);
       }
     } catch (err) {
       console.warn('standalone-pipeline: sample fetch failed', err);
@@ -319,7 +356,7 @@
       const observer = new MutationObserver(() => toggleAllActionTrays());
       observer.observe(node, { childList: true, subtree: true, characterData: true });
     };
-    ['#gen-output', '#deid-output', '#pipeline-output'].forEach(observe);
+    ['#gen-output', '#deid-output', '#validate-output', '#mllp-output', '#pipeline-output'].forEach(observe);
   }
 
   function autoSendPipelineResult(evt) {

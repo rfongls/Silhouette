@@ -15,7 +15,7 @@
 {% set presets = presets or {} %}
 {% set preset_key = preset_key or '' %}
 {% set defaults = defaults or {} %}
-<div class="legacy-interop-skin standalone-pipeline">
+<div class="legacy-interop-skin fullbleed standalone-pipeline">
   <section class="dashboard">
     <div class="dashboard-container">
       <nav class="breadcrumbs">
@@ -48,7 +48,7 @@
         <a class="module-btn" href="{{ urls.ui_pipeline }}?preset={{ preset_key }}">→ Full Pipeline</a>
       </div>
 
-      <div class="grid two" style="gap:1rem; align-items:flex-start;">
+      <div class="cards-stack">
         {% include "ui/standalone/partials/_generate.html" %}
         {% include "ui/standalone/partials/_deid.html" %}
         {% include "ui/standalone/partials/_validate.html" %}

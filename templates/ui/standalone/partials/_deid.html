@@ -26,7 +26,8 @@
       {% endfor %}
     </datalist>
     <pre id="deid-output" class="codepane" style="min-height:8rem; white-space:pre-wrap;"></pre>
-    {% set source_selector = '#deid-output' %}
-    {% include "ui/standalone/partials/_action_tray.html" %}
+    {% with source_selector = '#deid-output' %}
+      {% include "ui/standalone/partials/_action_tray.html" %}
+    {% endwith %}
   </div>
 </details>
