@@ -71,7 +71,7 @@ For more details see [docs/ops/agent_setup.md](docs/ops/agent_setup.md).
 ## 🖥️ UI Quickstart
 
 ### One-click
-- **Windows**: double-click `scripts/run_ui.bat`
+- **Windows**: double-click `run.ui.bat`
 - **macOS**: double-click `scripts/run_ui.command` (first time only, you may need to run `chmod +x scripts/run_ui.command`)
 - **Linux**: double-click `scripts/run_ui.sh` in your file manager (or run `bash scripts/run_ui.sh`). First time only: `chmod +x scripts/run_ui.sh`
 
@@ -148,6 +148,73 @@ Then visit:
 - http://localhost:8000/ui/interop/dashboard
 - http://localhost:8000/ui/security/seeds
 - http://localhost:8000/ui/security/safety
+
+## Standalone Manual Pipeline (Legacy UI)
+
+The repository also ships a **legacy standalone manual pipeline** page that mirrors the 10/06 experience. It remains fully
+isolated from the Engine V2 surfaces and can be toggled on demand.
+
+### Highlights
+
+- Full-width cards for **Generate**, **De-identify**, **Validate**, **MLLP**, and more.
+- Typed controls for **Trigger**, **Count**, **Seed**, and **Enrich** within Generate.
+- Per-card “Next steps” trays that appear only after that module produces output.
+- Rules dropdowns for De-ID and Validate sourced directly from the **Settings** templates in
+  `configs/interop/deid_templates/` and `configs/interop/validate_templates/`.
+- Live **De-ID processed-errors** and **Validate report** fragments rendered via HTMX.
+- Smooth module handoff workflow (collapse current → open target → prefill message payloads).
+
+### URL
+
+- [`/ui/standalone/pipeline`](http://localhost:8000/ui/standalone/pipeline)
+
+### Feature flag
+
+The legacy UI is protected by an environment flag to keep V2-only deployments pristine:
+
+```bash
+# .env or shell
+SILH_STANDALONE_ENABLE=1  # enable (default)
+SILH_STANDALONE_ENABLE=0  # disable
+```
+
+When disabled:
+
+- `/ui/standalone/*` routes are not registered.
+- Legacy CSS/JS stays out of the bundle, preventing style bleed.
+
+### Endpoint contracts
+
+The standalone page relies on the existing interoperability endpoints. Ensure the following handlers are available:
+
+| Purpose             | Method | Path                              | Notes                                                      |
+|---------------------|--------|-----------------------------------|------------------------------------------------------------|
+| Generate sample     | GET    | `/api/interop/sample`             | `version`, `trigger`, optional `seed=1`, `enrich=1`         |
+| De-identify         | POST   | `/api/interop/deidentify`         | `message` or `file`, optional `deid_template`              |
+| De-identify summary | POST   | `/api/interop/deidentify/summary` | **HTML** fragment; fields: `text`, `after_text`, `deid_template` |
+| Validate (report)   | POST   | `/api/interop/validate/report`    | **HTML** fragment; accepts `message`, optional `val_template`    |
+| MLLP send           | POST   | `/api/interop/mllp/send`          | `host`, `port`, `message`                                   |
+| Pipeline run        | POST   | `/api/interop/pipeline/run`       | `text` (HL7) plus preset parameters                         |
+
+The rules dropdowns use small helper routes that simply expose `<datalist>` options:
+
+| Purpose                  | Method | Path                                      | Returns                  |
+|--------------------------|--------|-------------------------------------------|--------------------------|
+| De-ID templates datalist | GET    | `/ui/standalone/deid/templates`           | `<datalist>...</datalist>` |
+| Validate templates list  | GET    | `/ui/standalone/validate/templates`       | `<datalist>...</datalist>` |
+
+Templates live under:
+
+```
+configs/interop/deid_templates/*.json
+configs/interop/validate_templates/*.json
+```
+
+### Dev notes
+
+- Legacy CSS is scoped beneath `.legacy-interop-skin` in `static/legacy/**` and `static/standalone/**`.
+- `static/standalone/pipeline.js` only targets standalone DOM IDs and trays.
+- Tailwind’s safelist keeps legacy-only classes intact during production builds (see `tailwind.config.js`).
 
 ## 🌐 Vision
 
