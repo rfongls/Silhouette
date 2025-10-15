@@ -34,8 +34,12 @@ def _urls(request: Request) -> dict[str, str]:
         "ui_pipeline": _safe_url_for(request, "ui_standalone_pipeline", "/ui/standalonepipeline"),
         "api_generate": _safe_url_for(request, "generate_messages_endpoint", "/api/interop/generate"),
         "api_deidentify": _safe_url_for(request, "api_deidentify", "/api/interop/deidentify"),
+        "api_deidentify_summary": _safe_url_for(
+            request, "api_deidentify_summary", "/api/interop/deidentify/summary"
+        ),
         "api_validate": _safe_url_for(request, "api_validate", "/api/interop/validate"),
         "api_validate_view": _safe_url_for(request, "interop_validate_view", "/api/interop/validate/view"),
+        "api_validate_report": _safe_url_for(request, "api_validate", "/api/interop/validate"),
         "api_pipeline_run": _safe_url_for(request, "run_pipeline", "/api/interop/pipeline/run"),
         "mllp_send": _safe_url_for(request, "api_mllp_send", "/api/interop/mllp/send"),
         "logs_content": _safe_url_for(request, "interop_logs_content", "/ui/interop/logs/content"),

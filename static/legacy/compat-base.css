@@ -44,6 +44,11 @@ a:hover {
   margin: 0 auto;
 }
 
+.legacy-shell .legacy-interop-skin.fullbleed {
+  max-width: none;
+  width: 100%;
+}
+
 .text-h1 {
   font-size: clamp(1.8rem, 2.8vw, 2.4rem);
   font-weight: 700;

@@ -29,5 +29,8 @@
       </div>
     </form>
     <div id="mllp-output" class="mt"><div class="muted micro">ACK / response will appear here.</div></div>
+    {% with source_selector = '#mllp-output' %}
+      {% include "ui/standalone/partials/_action_tray.html" %}
+    {% endwith %}
   </div>
 </details>

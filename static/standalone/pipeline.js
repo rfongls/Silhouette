@@ -14,6 +14,9 @@
   const TRIGGER_INPUT_ID = 'std-trigger-input';
   const TRIGGER_LIST_ID = 'std-trigger-list';
   const VERSION_SELECT_ID = 'std-version';
+  const COUNT_INPUT_ID = 'std-count';
+  const SEED_CHECK_ID = 'std-seed';
+  const ENRICH_CHECK_ID = 'std-enrich';
 
   const ACTION_TARGETS = {
     validate: { panel: PANEL_IDS.validate, textarea: '#validate-form textarea[name="message"]' },
@@ -154,6 +157,31 @@
       .replace(/\^/g, '_');
   }
 
+  function parseCount() {
+    const input = $1(document, `#${COUNT_INPUT_ID}`);
+    const raw = input?.value;
+    const value = Number.parseInt(raw ?? '1', 10);
+    const clamped = Number.isFinite(value) ? Math.min(Math.max(value, 1), 50) : 1;
+    if (input && String(clamped) !== String(raw ?? '')) {
+      input.value = String(clamped);
+    }
+    return clamped;
+  }
+
+  function repeatMessage(text, count) {
+    const trimmed = (text || '').trim();
+    if (!trimmed || count <= 1) {
+      return trimmed;
+    }
+    return Array.from({ length: count }, () => trimmed).join('\n\n');
+  }
+
+  function getFlags() {
+    const seed = !!$1(document, `#${SEED_CHECK_ID}`)?.checked;
+    const enrich = !!$1(document, `#${ENRICH_CHECK_ID}`)?.checked;
+    return { seed, enrich };
+  }
+
   async function fillTriggers() {
     const select = $1(document, `#${VERSION_SELECT_ID}`);
     const datalist = $1(document, `#${TRIGGER_LIST_ID}`);
@@ -227,6 +255,9 @@
     if (!triggerValue) {
       return;
     }
+    const count = parseCount();
+    const { seed, enrich } = getFlags();
+
     if (lastTriggerVersion !== version) {
       await fillTriggers();
     }
@@ -239,10 +270,16 @@
       return;
     }
     try {
-      const text = await fetchText(urlFor('sample', { relpath }));
+      const text = await fetchText(
+        urlFor('sample', {
+          relpath,
+          seed: seed ? '1' : undefined,
+          enrich: enrich ? '1' : undefined,
+        })
+      );
       const output = $1(document, '#gen-output');
       if (output) {
-        output.textContent = text || '';
+        output.textContent = repeatMessage(text, count);
       }
     } catch (err) {
       console.warn('standalone-pipeline: sample fetch failed', err);
@@ -301,15 +338,74 @@
     const text = extractMessage(sourceNode);
     if (hasMessageLike(text)) {
       trayEl.classList.add('visible');
-      trayEl.classList.remove('awaiting-message');
     } else {
       trayEl.classList.remove('visible');
-      trayEl.classList.add('awaiting-message');
     }
   }
 
   function toggleAllActionTrays() {
     $$(document, '.action-tray').forEach((tray) => toggleActionTrayFor(tray));
+  }
+
+  function setReportPlaceholder(container, text) {
+    if (!container) return;
+    container.innerHTML = '';
+    const note = document.createElement('p');
+    note.className = 'muted small';
+    note.textContent = text;
+    container.appendChild(note);
+  }
+
+  function populateDeidReportForm() {
+    const form = $1(document, '#deid-report-form');
+    if (!form) return null;
+    const message = $1(document, '#deid-msg')?.value || '';
+    const output = $1(document, '#deid-output')?.textContent || '';
+    const template = $1(document, '#deid-template')?.value || '';
+    const textField = form.querySelector('#deid-report-text');
+    const afterField = form.querySelector('#deid-report-after');
+    const tplField = form.querySelector('#deid-report-template');
+    if (textField) textField.value = message;
+    if (afterField) afterField.value = output;
+    if (tplField) tplField.value = template;
+    return { message, output };
+  }
+
+  function refreshDeidReport({ auto = false } = {}) {
+    const form = $1(document, '#deid-report-form');
+    const container = $1(document, '#deid-report');
+    if (!form || !container || !window.htmx) return;
+    const info = populateDeidReportForm();
+    if (!info) return;
+    const hasRequired = info.message.trim() && info.output.trim();
+    if (!hasRequired) {
+      if (!auto) {
+        setReportPlaceholder(container, 'Run De-identify to generate a processed-errors report.');
+      }
+      return;
+    }
+    window.htmx.trigger(form, 'submit');
+  }
+
+  function clearDeidReport() {
+    const container = $1(document, '#deid-report');
+    setReportPlaceholder(container, 'Processed-errors coverage will appear after you run De-identify.');
+  }
+
+  function refreshValidateReport() {
+    const form = $1(document, '#validate-form');
+    if (!form || !window.htmx) return;
+    const message = $1(document, '#validate-msg')?.value || '';
+    if (!message.trim()) {
+      clearValidateReport();
+      return;
+    }
+    window.htmx.trigger(form, 'submit');
+  }
+
+  function clearValidateReport() {
+    const container = $1(document, '#validate-report');
+    setReportPlaceholder(container, 'Validation results will appear here after running Validate.');
   }
 
   function attachOutputObservers() {
@@ -319,7 +415,7 @@
       const observer = new MutationObserver(() => toggleAllActionTrays());
       observer.observe(node, { childList: true, subtree: true, characterData: true });
     };
-    ['#gen-output', '#deid-output', '#pipeline-output'].forEach(observe);
+    ['#gen-output', '#deid-output', '#validate-output', '#mllp-output', '#pipeline-output'].forEach(observe);
   }
 
   function autoSendPipelineResult(evt) {
@@ -480,6 +576,51 @@
     attachModuleNavHandlers();
     attachActionTrayHandlers();
     attachStandaloneCardNavigation();
+    setupValidateForm();
+    setupReportButtons();
+    clearDeidReport();
+    clearValidateReport();
+  }
+
+  function setupValidateForm() {
+    const form = $1(document, '#validate-form');
+    if (!form) return;
+    form.addEventListener('submit', () => {
+      const message = $1(form, 'textarea[name="message"]')?.value || '';
+      const output = $1(document, '#validate-output');
+      if (output) {
+        output.textContent = message.trim();
+      }
+      toggleAllActionTrays();
+    });
+  }
+
+  function setupReportButtons() {
+    document.body?.addEventListener('click', (event) => {
+      const refreshDeid = event.target.closest?.('[data-role="deid-report-refresh"]');
+      if (refreshDeid) {
+        event.preventDefault();
+        refreshDeidReport();
+        return;
+      }
+      const clearDeid = event.target.closest?.('[data-role="deid-report-clear"]');
+      if (clearDeid) {
+        event.preventDefault();
+        clearDeidReport();
+        return;
+      }
+      const refreshValidate = event.target.closest?.('[data-role="validate-report-refresh"]');
+      if (refreshValidate) {
+        event.preventDefault();
+        refreshValidateReport();
+        return;
+      }
+      const clearValidate = event.target.closest?.('[data-role="validate-report-clear"]');
+      if (clearValidate) {
+        event.preventDefault();
+        clearValidateReport();
+      }
+    });
   }
 
   document.addEventListener('DOMContentLoaded', () => {
@@ -500,5 +641,9 @@
   document.body?.addEventListener('htmx:afterSwap', (evt) => {
     toggleAllActionTrays();
     autoSendPipelineResult(evt);
+    const targetId = evt?.target?.id || '';
+    if (targetId === 'deid-output') {
+      refreshDeidReport({ auto: true });
+    }
   });
 })();

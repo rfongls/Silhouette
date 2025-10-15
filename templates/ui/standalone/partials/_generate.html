@@ -27,12 +27,27 @@
                autocomplete="off" />
         <datalist id="std-trigger-list"></datalist>
 
+        <label class="sr-only" for="std-count">Count</label>
+        <input class="input" id="std-count" name="count" type="number" min="1" max="50" step="1" value="1" style="max-width:5rem;" placeholder="Count" />
+
+        <label class="row small" style="align-items:center; gap:.35rem;">
+          <input id="std-seed" name="seed" type="checkbox" value="1" />
+          <span class="text-caption muted">Seed</span>
+        </label>
+
+        <label class="row small" style="align-items:center; gap:.35rem;">
+          <input id="std-enrich" name="enrich" type="checkbox" value="1" />
+          <span class="text-caption muted">Enrich data</span>
+        </label>
+
         <button class="btn" type="submit">Generate</button>
         <button class="btn" type="button" id="std-load-sample">Load Sample</button>
       </div>
     </form>
 
     <pre id="gen-output" class="codepane mt" style="min-height:9rem; white-space:pre-wrap;"></pre>
-    {% include "ui/standalone/partials/_action_tray.html" %}
+    {% with source_selector = '#gen-output' %}
+      {% include "ui/standalone/partials/_action_tray.html" %}
+    {% endwith %}
   </div>
 </details>
