@@ -5,6 +5,7 @@ import os
 import sys
 from contextlib import contextmanager
 from types import ModuleType, SimpleNamespace
+
 from fastapi.testclient import TestClient
 
 @contextmanager
@@ -182,3 +183,14 @@ def test_flat_compat_path_redirects_when_enabled():
                 response = client.get("/ui/standalonepipeline", follow_redirects=False)
                 assert response.status_code == 307
                 assert response.headers["location"] == "/ui/standalone/pipeline"
+
+
+def test_flat_path_redirects_even_when_disabled():
+    """The wildcard /ui router should still redirect legacy links when hidden."""
+
+    with set_env(SILH_STANDALONE_ENABLE="0"):
+        with fresh_app() as app:
+            with TestClient(app) as client:
+                legacy = client.get("/ui/standalonepipeline", follow_redirects=False)
+                assert legacy.status_code == 307
+                assert legacy.headers["location"] == "/ui/standalone/pipeline"

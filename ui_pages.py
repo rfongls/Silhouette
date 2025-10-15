@@ -4,7 +4,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from fastapi import APIRouter, HTTPException, Request
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from jinja2 import TemplateNotFound
 
@@ -55,6 +55,9 @@ def landing(request: Request):
 
 @router.get("/ui/{page:path}", response_class=HTMLResponse)
 async def ui_page(page: str, request: Request) -> HTMLResponse:
+    normalized = page.strip().strip("/").lower()
+    if normalized == "standalonepipeline":
+        return RedirectResponse(url="/ui/standalone/pipeline", status_code=307)
     rel = _first_existing_template(page)
     if not rel:
         raise HTTPException(status_code=404, detail=f"UI template not found for '{page}'")

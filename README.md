@@ -71,7 +71,7 @@ For more details see [docs/ops/agent_setup.md](docs/ops/agent_setup.md).
 ## 🖥️ UI Quickstart
 
 ### One-click
-- **Windows**: double-click `scripts/run_ui.bat`
+- **Windows**: double-click `run.ui.bat`
 - **macOS**: double-click `scripts/run_ui.command` (first time only, you may need to run `chmod +x scripts/run_ui.command`)
 - **Linux**: double-click `scripts/run_ui.sh` in your file manager (or run `bash scripts/run_ui.sh`). First time only: `chmod +x scripts/run_ui.sh`
 
