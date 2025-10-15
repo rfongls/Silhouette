@@ -60,7 +60,6 @@ ui_templates.env.globals["root"] = ""
 
 app.include_router(ui_home_router)
 for r in (
-    ui_router,
     ui_interop_router,
     ui_settings_router,
     ui_security_router,
@@ -70,7 +69,6 @@ for r in (
     security_router,
     metrics_router,
     diag_router,         # diagnostics
-    ui_pages_router,
 ):
     app.include_router(r)
 
@@ -81,7 +79,11 @@ _STANDALONE_ENABLED = _is_truthy(os.getenv("SILH_STANDALONE_ENABLE", "1"))
 if _STANDALONE_ENABLED:
     from api import ui_standalone as ui_standalone_module
 
+    # Register standalone first so explicit routes beat generic /ui/{page} patterns.
     app.include_router(ui_standalone_module.router)
+
+app.include_router(ui_router)
+app.include_router(ui_pages_router)
 if _ENGINE_V2_ENABLED:
     from api.engine import router as engine_router
     from api.engine_jobs import router as engine_jobs_router

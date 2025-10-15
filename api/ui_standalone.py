@@ -1,11 +1,8 @@
 from __future__ import annotations
-
 from pathlib import Path
-
 from fastapi import APIRouter, Request
-from fastapi.responses import HTMLResponse, Response
+from fastapi.responses import HTMLResponse, Response, RedirectResponse
 from starlette.templating import Jinja2Templates
-
 from api.ui import install_link_for
 
 router = APIRouter()
@@ -101,6 +98,13 @@ async def ui_standalone_pipeline(request: Request, preset: str | None = None) ->
         "refreshed": "",
     }
     return templates.TemplateResponse("ui/standalone/pipeline.html", ctx)
+
+
+@router.get("/ui/standalonepipeline", include_in_schema=False)
+def _compat_standalone_pipeline() -> RedirectResponse:
+    """Redirect legacy flat URL to the nested standalone pipeline path."""
+
+    return RedirectResponse(url="/ui/standalone/pipeline", status_code=307)
 
 
 @router.get("/ui/standalone/deid/templates", name="ui_deid_templates")

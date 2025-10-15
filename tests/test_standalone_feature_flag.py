@@ -5,6 +5,7 @@ import os
 import sys
 from contextlib import contextmanager
 from types import ModuleType, SimpleNamespace
+from fastapi.testclient import TestClient
 
 @contextmanager
 def set_env(**overrides: str):
@@ -169,3 +170,15 @@ def test_core_v2_routes_unaffected_when_flag_off():
         with fresh_app() as app:
             # Route lookup should succeed regardless of the standalone toggle.
             assert app.url_path_for("ui_interop_hub") == v2_ui_path
+
+
+def test_flat_compat_path_redirects_when_enabled():
+    with set_env(SILH_STANDALONE_ENABLE="1"):
+        with fresh_app() as app:
+            assert app.url_path_for("_compat_standalone_pipeline") == "/ui/standalonepipeline"
+            paths = [getattr(route, "path", None) for route in app.router.routes]
+            assert paths.index("/ui/standalonepipeline") < paths.index("/ui/{page:path}")
+            with TestClient(app) as client:
+                response = client.get("/ui/standalonepipeline", follow_redirects=False)
+                assert response.status_code == 307
+                assert response.headers["location"] == "/ui/standalone/pipeline"
