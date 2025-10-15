@@ -25,5 +25,8 @@
       {% endfor %}
     </datalist>
     <div id="validate-output" class="mt"></div>
+    {% with source_selector = '#validate-output' %}
+      {% include "ui/standalone/partials/_action_tray.html" %}
+    {% endwith %}
   </div>
 </details>

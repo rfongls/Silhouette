@@ -3,7 +3,7 @@
 .standalone-pipeline .row.gap { gap:.75rem; }
 .standalone-pipeline .row.small { gap:.35rem; }
 .standalone-pipeline .row.small .text-caption { font-size:.82rem; }
-.standalone-pipeline .grid.two { display:grid; grid-template-columns:repeat(auto-fit, minmax(320px,1fr)); gap:1rem; align-items:start; }
+.standalone-pipeline .cards-stack { display:flex; flex-direction:column; gap:1rem; }
 .standalone-pipeline .mt { margin-top:1rem; }
 .standalone-pipeline .mb { margin-bottom:1rem; }
 .standalone-pipeline .small { font-size:.9rem; }
@@ -11,7 +11,13 @@
 .standalone-pipeline .muted { opacity:.8; }
 
 /* Cards, collapsible details */
-.standalone-pipeline .card { padding:1rem; border:1px solid var(--border,#2b2f3a); border-radius:12px; background:var(--card,#0b0b0b); }
+.standalone-pipeline .card {
+  padding:1rem;
+  border:1px solid var(--border,#2b2f3a);
+  border-radius:12px;
+  background:var(--card,#0b0b0b);
+  width:100%;
+}
 .standalone-pipeline details.card.collapsible { padding:0; }
 .standalone-pipeline details.card.collapsible > summary {
   list-style:none;
