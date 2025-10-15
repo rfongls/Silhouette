@@ -5,7 +5,6 @@ import os
 import sys
 from contextlib import contextmanager
 from types import ModuleType, SimpleNamespace
-
 from fastapi.testclient import TestClient
 
 @contextmanager
