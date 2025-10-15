@@ -336,7 +336,7 @@
     const sourceSelector = trayEl.getAttribute('data-source') || '#gen-output';
     const sourceNode = $1(document, sourceSelector);
     const text = extractMessage(sourceNode);
-    if (hasMessageLike(text)) {
+    if (hasMessageLike(text) || (text && text.trim().length)) {
       trayEl.classList.add('visible');
     } else {
       trayEl.classList.remove('visible');

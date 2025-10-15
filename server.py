@@ -19,7 +19,6 @@ from api.interop_gen import router as interop_gen_router, try_generate_on_valida
 from api.security import router as security_router
 from api.ui import router as ui_router, templates as ui_templates
 from api.ui_interop import router as ui_interop_router
-from api.ui_standalone import router as ui_standalone_router
 from api.ui_settings import router as ui_settings_router
 from api.ui_agents import router as ui_agents_router
 from api.ui_security import router as ui_security_router
@@ -63,7 +62,6 @@ app.include_router(ui_home_router)
 for r in (
     ui_router,
     ui_interop_router,
-    ui_standalone_router,
     ui_settings_router,
     ui_security_router,
     ui_agents_router,
@@ -75,6 +73,15 @@ for r in (
     ui_pages_router,
 ):
     app.include_router(r)
+
+# Standalone manual pipeline (legacy UI) feature flag. Enabled by default for
+# development environments; disable via SILH_STANDALONE_ENABLE=0 to omit the
+# routes entirely and avoid any chance of stylesheet bleed into V2 surfaces.
+_STANDALONE_ENABLED = _is_truthy(os.getenv("SILH_STANDALONE_ENABLE", "1"))
+if _STANDALONE_ENABLED:
+    from api import ui_standalone as ui_standalone_module
+
+    app.include_router(ui_standalone_module.router)
 if _ENGINE_V2_ENABLED:
     from api.engine import router as engine_router
     from api.engine_jobs import router as engine_jobs_router
