@@ -1,0 +1,56 @@
+<details id="generate-panel" class="card collapsible" open>
+  <summary>
+    <span class="text-h3">Generate</span>
+    <span class="minimax"></span>
+  </summary>
+  <div class="module-body">
+    <form id="gen-form"
+          hx-post="{{ urls.api_generate }}"
+          hx-encoding="application/x-www-form-urlencoded"
+          hx-target="#gen-output"
+          hx-swap="textContent"
+          hx-headers='{"Accept":"text/plain"}'>
+      <div class="row gap small">
+        <label class="sr-only" for="std-version">HL7 version</label>
+        <select id="std-version" name="version" class="input" data-trigger-datalist="std-trigger-list">
+          <option value="2.3">HL7 v2.3</option>
+          <option value="2.4">HL7 v2.4</option>
+          <option value="2.5" selected>HL7 v2.5</option>
+        </select>
+
+        <label class="sr-only" for="std-trigger-input">Trigger</label>
+        <input id="std-trigger-input"
+               name="trigger"
+               class="input"
+               placeholder="e.g., ADT^A01"
+               list="std-trigger-list"
+               autocomplete="off" />
+        <datalist id="std-trigger-list"><!-- filled by JS --></datalist>
+
+        <label class="sr-only" for="std-count">Count</label>
+        <input id="std-count" name="count" class="input" type="number" min="1" max="50" step="1" value="1" />
+        <span class="text-caption muted">messages</span>
+
+        <button class="btn" type="submit">Generate</button>
+        <button class="btn" type="button" id="std-load-sample">Load Sample</button>
+      </div>
+    </form>
+
+    <div class="grid two">
+      <div>
+        <label class="text-caption muted">Output</label>
+        <pre id="gen-output" class="codepane limit10" aria-live="polite"></pre>
+        <div class="row small">
+          <button type="button" class="btn" id="std-copy">Copy</button>
+          <label class="text-caption muted">or drop a .hl7 file to replace</label>
+        </div>
+      </div>
+      <div>
+        <label class="text-caption muted">Or choose a file</label>
+        <input type="file" id="std-file" accept=".hl7,.txt" class="input" />
+      </div>
+    </div>
+
+    {% include "ui/standalone/partials/_action_tray.html" %}
+  </div>
+</details>
