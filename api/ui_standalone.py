@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from fastapi import APIRouter, Request
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, Response, RedirectResponse
 from starlette.templating import Jinja2Templates
 
 from api.ui import install_link_for
@@ -31,7 +31,7 @@ def _safe_url_for(request: Request, name: str, fallback: str) -> str:
 
 def _urls(request: Request) -> dict[str, str]:
     return {
-        "ui_pipeline": _safe_url_for(request, "ui_standalone_pipeline", "/ui/standalonepipeline"),
+        "ui_pipeline": _safe_url_for(request, "ui_standalone_pipeline", "/ui/standalone/pipeline"),
         "api_generate": _safe_url_for(request, "generate_messages_endpoint", "/api/interop/generate"),
         "api_deidentify": _safe_url_for(request, "api_deidentify", "/api/interop/deidentify"),
         "api_deidentify_summary": _safe_url_for(
@@ -39,7 +39,13 @@ def _urls(request: Request) -> dict[str, str]:
         ),
         "api_validate": _safe_url_for(request, "api_validate", "/api/interop/validate"),
         "api_validate_view": _safe_url_for(request, "interop_validate_view", "/api/interop/validate/view"),
-        "api_validate_report": _safe_url_for(request, "api_validate", "/api/interop/validate"),
+        "api_validate_report": _safe_url_for(request, "api_validate_report", "/api/interop/validate/report"),
+        "ui_deid_templates": _safe_url_for(
+            request, "ui_deid_templates", "/ui/standalone/deid/templates"
+        ),
+        "ui_val_templates": _safe_url_for(
+            request, "ui_val_templates", "/ui/standalone/validate/templates"
+        ),
         "api_pipeline_run": _safe_url_for(request, "run_pipeline", "/api/interop/pipeline/run"),
         "mllp_send": _safe_url_for(request, "api_mllp_send", "/api/interop/mllp/send"),
         "logs_content": _safe_url_for(request, "interop_logs_content", "/ui/interop/logs/content"),
@@ -80,7 +86,7 @@ def _defaults(preset: str | None) -> dict[str, object]:
     }
 
 
-@router.get("/ui/standalonepipeline", response_class=HTMLResponse, name="ui_standalone_pipeline")
+@router.get("/ui/standalone/pipeline", response_class=HTMLResponse, name="ui_standalone_pipeline")
 async def ui_standalone_pipeline(request: Request, preset: str | None = None) -> HTMLResponse:
     ctx = {
         "request": request,
@@ -95,3 +101,24 @@ async def ui_standalone_pipeline(request: Request, preset: str | None = None) ->
         "refreshed": "",
     }
     return templates.TemplateResponse("ui/standalone/pipeline.html", ctx)
+
+
+@router.get("/ui/standalonepipeline", include_in_schema=False)
+def _compat_standalone_pipeline() -> RedirectResponse:
+    """Redirect legacy flat URL to the nested standalone pipeline path."""
+
+    return RedirectResponse(url="/ui/standalone/pipeline", status_code=307)
+
+
+@router.get("/ui/standalone/deid/templates", name="ui_deid_templates")
+def ui_deid_templates() -> Response:
+    options = "\n".join(f'<option value="{name}"></option>' for name in _list_templates(DEID_DIR))
+    markup = f"<datalist id=\"std-deid-templates\">{options}</datalist>"
+    return Response(markup, media_type="text/html")
+
+
+@router.get("/ui/standalone/validate/templates", name="ui_val_templates")
+def ui_val_templates() -> Response:
+    options = "\n".join(f'<option value="{name}"></option>' for name in _list_templates(VAL_DIR))
+    markup = f"<datalist id=\"std-val-templates\">{options}</datalist>"
+    return Response(markup, media_type="text/html")

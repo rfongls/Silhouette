@@ -13,7 +13,10 @@
 
       <div class="row gap small mt" role="group" aria-label="Validate options">
         <label class="text-caption muted" for="validate-template" style="min-width:12rem;">Validation template</label>
-        <input class="input" name="val_template" id="validate-template" placeholder="template id (optional)" list="std-val-templates" />
+        <input class="input" name="val_template" id="validate-template"
+               placeholder="template id (optional)" list="std-val-templates"
+               hx-get="{{ urls.ui_val_templates }}" hx-trigger="load"
+               hx-target="#std-val-templates" hx-swap="outerHTML" />
         <span class="text-caption muted">or upload .hl7</span>
         <input class="input" type="file" name="file" accept=".hl7,.txt" />
         <button class="btn" type="submit">Run Validate</button>
