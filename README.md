@@ -187,14 +187,14 @@ When disabled:
 
 The standalone page relies on the existing interoperability endpoints. Ensure the following handlers are available:
 
-| Purpose                 | Method | Path                                   | Notes                                                             |
-|-------------------------|--------|----------------------------------------|-------------------------------------------------------------------|
-| Generate sample         | GET    | `/api/interop/sample`                  | `version`, `trigger`, optional `seed=1`, `enrich=1`                |
-| De-identify             | POST   | `/api/interop/deidentify`              | `message` or `file`, optional `deid_template`                     |
-| De-identify summary     | POST   | `/api/interop/deidentify/summary`      | **HTML** fragment; fields: `text`, `after_text`, `deid_template`  |
-| Validate (report)       | POST   | `/api/interop/validate/report`         | **HTML** fragment; accepts `message`, optional `val_template`     |
-| MLLP send               | POST   | `/api/interop/mllp/send`               | `host`, `port`, `message`                                         |
-| Pipeline run            | POST   | `/api/interop/pipeline/run`            | `text` (HL7) plus preset parameters                               |
+| Purpose             | Method | Path                              | Notes                                                      |
+|---------------------|--------|-----------------------------------|------------------------------------------------------------|
+| Generate sample     | GET    | `/api/interop/sample`             | `version`, `trigger`, optional `seed=1`, `enrich=1`         |
+| De-identify         | POST   | `/api/interop/deidentify`         | `message` or `file`, optional `deid_template`              |
+| De-identify summary | POST   | `/api/interop/deidentify/summary` | **HTML** fragment; fields: `text`, `after_text`, `deid_template` |
+| Validate (report)   | POST   | `/api/interop/validate/report`    | **HTML** fragment; accepts `message`, optional `val_template`    |
+| MLLP send           | POST   | `/api/interop/mllp/send`          | `host`, `port`, `message`                                   |
+| Pipeline run        | POST   | `/api/interop/pipeline/run`       | `text` (HL7) plus preset parameters                         |
 
 The rules dropdowns use small helper routes that simply expose `<datalist>` options:
 
