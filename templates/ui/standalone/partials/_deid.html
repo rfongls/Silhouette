@@ -50,19 +50,18 @@
           <button class="btn btn-sm" type="button" data-role="deid-report-clear">Reset</button>
         </div>
         <form id="deid-report-form" role="form"
-              hx-post="{{ urls.api_deidentify_summary }}"
-              hx-target="#deid-coverage"
+              hx-post="{{ url_for('ui_deidentify') }}"
+              hx-target="#deid-report"
               hx-swap="innerHTML"
               hx-headers='{"Accept":"text/html"}'>
           <input type="hidden" name="text" id="deid-report-text" />
-          <input type="hidden" name="after_text" id="deid-report-after" />
           <input type="hidden" name="deid_template" id="deid-report-template" />
           <input type="hidden" name="segment" id="deid-report-seg" />
           <input type="hidden" name="action" id="deid-report-action" />
           <input type="hidden" name="parameter" id="deid-report-parameter" />
           <input type="hidden" name="status" id="deid-report-status" />
         </form>
-        <section id="deid-coverage" class="codepane limit10" aria-live="polite" data-deid-root></section>
+        <div id="deid-report" class="codepane limit10" aria-live="polite" data-deid-root></div>
       </div>
     </details>
 

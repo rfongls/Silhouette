@@ -361,15 +361,12 @@
     const form = $1(document, '#deid-report-form');
     if (!form) return null;
     const message = $1(document, '#deid-msg')?.value || '';
-    const output = $1(document, '#deid-output')?.textContent || '';
     const template = $1(document, '#deid-template')?.value || '';
     const textField = form.querySelector('#deid-report-text');
-    const afterField = form.querySelector('#deid-report-after');
     const tplField = form.querySelector('#deid-report-template');
     if (textField) textField.value = message;
-    if (afterField) afterField.value = output;
     if (tplField) tplField.value = template;
-    return { message, output };
+    return { message };
   }
 
   function refreshDeidReport({ auto = false } = {}) {
@@ -378,7 +375,7 @@
     if (!form || !container || !window.htmx) return;
     const info = populateDeidReportForm();
     if (!info) return;
-    const hasRequired = info.message.trim() && info.output.trim();
+    const hasRequired = info.message.trim();
     if (!hasRequired) {
       if (!auto) {
         setReportPlaceholder(container, 'Run De-identify to generate a processed-errors report.');

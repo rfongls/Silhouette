@@ -5,7 +5,7 @@
   </summary>
   <div class="module-body">
     <form id="validate-form" role="form"
-          hx-post="{{ urls.api_validate }}"
+          hx-post="{{ url_for('ui_validate') }}"
           hx-encoding="multipart/form-data"
           hx-target="#validate-report"
           hx-swap="innerHTML"
