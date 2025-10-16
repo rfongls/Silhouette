@@ -1,10 +1,10 @@
 <details id="generate-panel" class="card collapsible" open>
   <summary>
-    <span class="text-h3">⚡ Generate</span>
-    <span class="minimax"></span>
+    <div class="summary-title">⚡ Generate</div>
+    <div class="summary-meta"><span class="minimax">collapse</span></div>
   </summary>
   <div class="module-body">
-    <form id="gen-form"
+    <form id="gen-form" role="form"
           hx-post="{{ urls.api_generate }}"
           hx-encoding="application/x-www-form-urlencoded"
           hx-target="#gen-output"
@@ -46,8 +46,6 @@
     </form>
 
     <pre id="gen-output" class="codepane mt" style="min-height:9rem; white-space:pre-wrap;"></pre>
-    {% with source_selector = '#gen-output' %}
-      {% include "ui/standalone/partials/_action_tray.html" %}
-    {% endwith %}
+    {% with source_selector = '#gen-output', stage='gen' %}{% include "ui/standalone/partials/_action_tray.html" %}{% endwith %}
   </div>
 </details>
