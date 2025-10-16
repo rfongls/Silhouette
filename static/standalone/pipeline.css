@@ -227,23 +227,28 @@
   margin:0;
 }
 .standalone-pipeline .action-cards {
-  display:grid;
-  grid-template-columns:repeat(auto-fit, minmax(260px,1fr));
-  gap:1rem;
+  display:flex;
+  flex-wrap:wrap;
+  gap:.75rem;
+  justify-content:flex-start;
+}
+.standalone-pipeline .action-cards.left {
+  justify-content:flex-start;
 }
 .standalone-pipeline .action-card {
-  padding:1rem;
+  padding:.75rem 1rem;
   background:var(--color-background,#0b0b0b);
   border:1px solid var(--color-border,#2b2f3a);
   border-radius:10px;
   cursor:pointer;
   transition:transform .2s ease, box-shadow .2s ease, border-color .2s ease;
-  text-align:center;
+  text-align:left;
+  min-width:220px;
 }
 .standalone-pipeline .action-card strong {
   display:block;
-  color:var(--color-primary,#9ab0ff);
-  margin-bottom:.4rem;
+  color:var(--legacy-text);
+  margin-bottom:.25rem;
 }
 .standalone-pipeline .action-card small {
   color:var(--color-text-secondary,#9aa3b2);
@@ -252,6 +257,11 @@
   border-color:var(--color-primary,#7c93ff);
   box-shadow:0 4px 12px rgba(124,144,255,.15);
   transform:translateY(-2px);
+}
+.standalone-pipeline .action-card[aria-disabled="true"] {
+  opacity:.55;
+  pointer-events:none;
+  border-style:dashed;
 }
 
 /* ---- Legacy palette mapping (scoped) ---- */

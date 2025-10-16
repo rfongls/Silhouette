@@ -344,8 +344,32 @@
     }
   }
 
+  function mllpConfigured() {
+    const host = $1(document, '#mllp-host');
+    const port = $1(document, '#mllp-port');
+    return !!(host && host.value && port && String(port.value).trim());
+  }
+
+  function refreshTrayDisables() {
+    $$(document, '.action-tray [data-action="mllp"]').forEach((button) => {
+      const tray = button.closest('.action-tray');
+      if (!tray) return;
+      const stage = tray.getAttribute('data-stage') || '';
+      if (stage !== 'validate' && stage !== 'pipeline') {
+        button.removeAttribute('aria-disabled');
+        return;
+      }
+      if (mllpConfigured()) {
+        button.removeAttribute('aria-disabled');
+      } else {
+        button.setAttribute('aria-disabled', 'true');
+      }
+    });
+  }
+
   function toggleAllActionTrays() {
     $$(document, '.action-tray').forEach((tray) => toggleActionTrayFor(tray));
+    refreshTrayDisables();
   }
 
   function setReportPlaceholder(container, text) {
@@ -529,6 +553,9 @@
     document.body?.addEventListener('click', (event) => {
       const button = event.target.closest?.('.action-tray .action-card');
       if (!button) return;
+      if (button.getAttribute('aria-disabled') === 'true') {
+        return;
+      }
       event.preventDefault();
       const tray = button.closest('.action-tray');
       const action = button.getAttribute('data-action');
@@ -643,6 +670,13 @@
     const targetId = evt?.target?.id || '';
     if (targetId === 'deid-output') {
       refreshDeidReport({ auto: true });
+    }
+  });
+
+  document.addEventListener('input', (event) => {
+    const targetId = event?.target?.id;
+    if (targetId === 'mllp-host' || targetId === 'mllp-port') {
+      refreshTrayDisables();
     }
   });
 })();
