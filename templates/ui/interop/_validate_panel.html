@@ -1,26 +1,30 @@
-{% set root = request.scope.get('root_path', '') %}
-<section id="validate-panel" class="interop-panel interop-panel-validate card">
-  <div class="module-body">
-    <h3 class="text-h3 mb">Validate</h3>
-    <form id="validate-form"
-          hx-post="{{ urls.api_validate_view | default(root ~ '/api/interop/validate/view', true) }}"
-          hx-encoding="multipart/form-data"
-          hx-target="#validate-output"
-          hx-swap="innerHTML"
-          hx-on::afterSwap="window.InteropUI.onValidateComplete(event)">
-      <label>HL7 Message (paste)
-        <textarea class="input" name="message" rows="7" placeholder="MSH|^~\&|..."></textarea>
-      </label>
-      <div class="row gap mt">
-        <label>Validation Template
-          <input class="input" name="profile_id" placeholder="template id (optional)" />
-        </label>
-        <label>Or upload .hl7
-          <input class="input" type="file" name="file" accept=".hl7,.txt" />
-        </label>
-        <button class="btn" type="submit">Run Validate</button>
+<div class="card">
+  <div class="card-header">
+    <h3>Validate</h3>
+    <button class="btn btn-sm" data-toggle>Toggle</button>
+  </div>
+  <div class="card-body">
+    <form
+      hx-post="/ui/interop/validate"
+      hx-target="#validate_output"
+      hx-swap="innerHTML">
+      <label>Rules</label>
+      <select name="validate_template"
+              hx-get="/ui/standalone/validate/templates"
+              hx-trigger="load"
+              hx-target="this"
+              hx-swap="innerHTML"
+              aria-label="Validation rules">
+      </select>
+      <label>Message</label>
+      <textarea name="message"
+                id="validate_message"
+                class="w-full h-32"
+                placeholder="Paste HL7 here or leave blank to use previous output"></textarea>
+      <div class="flex gap-2">
+        <button class="btn btn-primary" type="submit">Run Validation</button>
+        <button class="btn" type="reset">Reset</button>
       </div>
     </form>
-    <div id="validate-output" class="mt"></div>
   </div>
-</section>
+</div>

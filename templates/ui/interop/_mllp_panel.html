@@ -1,45 +1,18 @@
-{% set root = request.scope.get('root_path', '') %}
-{% set defaults = defaults or {} %}
-<section id="mllp-panel" class="interop-panel interop-panel-mllp card">
-  <div class="module-body">
-    <h3 class="text-h3 mb">Send via MLLP</h3>
-    <form id="mllp-form"
-          hx-post="{{ root }}/api/interop/mllp/send"
-          hx-encoding="multipart/form-data"
-          hx-target="#mllp-output"
-          hx-swap="innerHTML"
-          hx-on::afterSwap="window.InteropUI.onMllpComplete(event)">
-      <div class="row gap">
-        <label>Host
-          <input class="input" id="mllp-host" type="text" name="host" placeholder="127.0.0.1" value="{{ defaults.host or '127.0.0.1' }}" required />
-        </label>
-        <label>Port
-          <input class="input" id="mllp-port" type="number" name="port" min="1" max="65535" placeholder="2575" value="{{ defaults.port or 2575 }}" required />
-        </label>
-        <label>Timeout (sec)
-          <input class="input" type="number" name="timeout" min="1" value="{{ defaults.timeout or 5 }}" />
-        </label>
-        <label class="row gap small" style="align-items:center;">
-          <input type="checkbox" name="expect_ack" checked />
-          <span class="text-caption muted">Expect ACK</span>
-        </label>
-      </div>
-      <div class="row gap mt">
-        <button class="btn btn-sm" type="button" onclick="window.InteropUI.copyFrom('#gen-output', '#mllp-messages')">Use Generated</button>
-        <button class="btn btn-sm" type="button" onclick="window.InteropUI.copyFrom('#deid-output', '#mllp-messages')">Use De-identified</button>
-      </div>
-      <label class="mt">HL7 Message (paste)
-        <textarea id="mllp-messages" class="input" name="message" rows="8" placeholder="MSH|^~\&|..."></textarea>
-      </label>
-      <div class="row gap mt">
-        <label>Or upload .hl7
-          <input class="input" type="file" id="mllp-file" name="file" accept=".hl7,.txt" onchange="window.InteropUI.loadFileIntoTextarea('mllp-file','mllp-messages')" />
-        </label>
-        <button class="btn" type="submit">Send</button>
+<div class="card">
+  <div class="card-header">
+    <h3>MLLP Send</h3>
+    <button class="btn btn-sm" data-toggle>Toggle</button>
+  </div>
+  <div class="card-body">
+    <form hx-post="/api/interop/mllp/send" hx-target="#mllp_result" hx-swap="innerHTML">
+      <label>Host</label><input type="text" name="host" value="127.0.0.1"/>
+      <label>Port</label><input type="number" name="port" value="2575"/>
+      <label>Message</label><textarea name="message" id="mllp_message" class="w-full h-24"></textarea>
+      <div class="flex gap-2">
+        <button class="btn btn-primary" type="submit">Send</button>
+        <button class="btn" type="reset">Reset</button>
       </div>
     </form>
-    <div id="mllp-output" class="mt">
-      <div class="muted micro">ACK / response will appear here.</div>
-    </div>
+    <div id="mllp_result" class="muted"></div>
   </div>
-</section>
+</div>
