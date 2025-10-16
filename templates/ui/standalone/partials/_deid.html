@@ -5,11 +5,11 @@
   </summary>
   <div class="module-body">
     <form id="deid-form" role="form"
-          hx-post="{{ urls.api_deidentify }}"
+          hx-post="{{ urls.ui_deidentify_html }}"
           hx-encoding="multipart/form-data"
-          hx-target="#deid-output"
-          hx-swap="textContent"
-          hx-headers='{"Accept":"text/plain"}'>
+          hx-target="#deid-report"
+          hx-swap="innerHTML"
+          hx-headers='{"Accept":"text/html"}'>
       <label class="text-caption muted" for="deid-msg">HL7 Message (paste)</label>
       <textarea class="codepane limit10" name="message" id="deid-msg" rows="8" placeholder="MSH|^~\&amp;|..."></textarea>
 
@@ -50,7 +50,7 @@
           <button class="btn btn-sm" type="button" data-role="deid-report-clear">Reset</button>
         </div>
         <form id="deid-report-form" role="form"
-              hx-post="{{ url_for('ui_deidentify') }}"
+              hx-post="{{ urls.ui_deidentify_html }}"
               hx-target="#deid-report"
               hx-swap="innerHTML"
               hx-headers='{"Accept":"text/html"}'>

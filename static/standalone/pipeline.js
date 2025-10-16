@@ -665,11 +665,14 @@
     onReady();
   }
 
-  document.body?.addEventListener('htmx:afterSwap', (evt) => {
+  document.body?.addEventListener('htmx:afterSwap', () => {
     toggleAllActionTrays();
-    const targetId = evt?.target?.id || '';
-    if (targetId === 'deid-output') {
-      refreshDeidReport({ auto: true });
+  });
+
+  document.addEventListener('input', (event) => {
+    const targetId = event?.target?.id;
+    if (targetId === 'mllp-host' || targetId === 'mllp-port') {
+      refreshTrayDisables();
     }
   });
 
