@@ -371,7 +371,7 @@
 
   function refreshDeidReport({ auto = false } = {}) {
     const form = $1(document, '#deid-report-form');
-    const container = $1(document, '#deid-report');
+    const container = $1(document, '#deid-coverage');
     if (!form || !container || !window.htmx) return;
     const info = populateDeidReportForm();
     if (!info) return;
@@ -386,7 +386,7 @@
   }
 
   function clearDeidReport() {
-    const container = $1(document, '#deid-report');
+    const container = $1(document, '#deid-coverage');
     setReportPlaceholder(container, 'Processed-errors coverage will appear after you run De-identify.');
     ['#deid-filter-seg', '#deid-filter-action', '#deid-filter-param'].forEach((sel) => {
       const input = $1(document, sel);
