@@ -11,8 +11,8 @@ The classic Standalone Pipeline (QA bench) now lives on its own dedicated page a
 
 All standalone assets are namespaced so styles do not leak into other pages:
 
-* Templates: `templates/ui/standalone/`
-* Static assets: `static/standalone/`
+* Templates: `templates/standalone_1006/`
+* Static assets: `static/standalone_1006.*`
 
 ## Manual verification checklist
 

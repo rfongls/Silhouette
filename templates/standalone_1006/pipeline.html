@@ -3,8 +3,8 @@
 {% block extra_head %}
 {{ super() }}
 <link rel="stylesheet" href="{{ request.url_for('static', path='legacy/interop/legacy_ui.css') }}" />
-<link rel="stylesheet" href="{{ request.url_for('static', path='standalone/pipeline.css') }}" />
-<script type="module" src="{{ request.url_for('static', path='standalone/pipeline.js') }}"></script>
+<link rel="stylesheet" href="{{ request.url_for('static', path='standalone_1006.css') }}" />
+<script type="module" src="{{ request.url_for('static', path='standalone_1006.js') }}"></script>
 <script>
   window.STANDALONE_PIPELINE_URLS = {{ urls | tojson }};
 </script>
@@ -36,13 +36,13 @@
         </div>
 
         <div class="cards-stack">
-          {% include "ui/standalone/partials/_generate.html" %}
-          {% include "ui/standalone/partials/_deid.html" %}
-          {% include "ui/standalone/partials/_validate.html" %}
-          {% include "ui/standalone/partials/_mllp.html" %}
-          {% include "ui/standalone/partials/_pipeline.html" %}
-          {% include "ui/standalone/partials/_debug.html" %}
-          {% include "ui/standalone/partials/_analyze.html" %}
+          {% include "standalone_1006/partials/_generate.html" %}
+          {% include "standalone_1006/partials/_deid.html" %}
+          {% include "standalone_1006/partials/_validate.html" %}
+          {% include "standalone_1006/partials/_mllp.html" %}
+          {% include "standalone_1006/partials/_pipeline.html" %}
+          {% include "standalone_1006/partials/_debug.html" %}
+          {% include "standalone_1006/partials/_analyze.html" %}
         </div>
       </div>
     </div>

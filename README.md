@@ -213,8 +213,8 @@ configs/interop/validate_templates/*.json
 
 ### Dev notes
 
-- Legacy CSS is scoped beneath `.legacy-interop-skin` in `static/legacy/**` and `static/standalone/**`.
-- `static/standalone/pipeline.js` only targets standalone DOM IDs and trays.
+- Legacy CSS is scoped beneath `.legacy-interop-skin` in `static/legacy/**` and `static/standalone_1006.css`.
+- `static/standalone_1006.js` only targets standalone DOM IDs and trays.
 - Tailwind’s safelist keeps legacy-only classes intact during production builds (see `tailwind.config.js`).
 
 ## 🌐 Vision

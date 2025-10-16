@@ -80,10 +80,10 @@ for r in (
 # routes entirely and avoid any chance of stylesheet bleed into V2 surfaces.
 _STANDALONE_ENABLED = _is_truthy(os.getenv("SILH_STANDALONE_ENABLE", "1"))
 if _STANDALONE_ENABLED:
-    from api import ui_standalone as ui_standalone_module
+    from api import ui_standalone
 
     # Register standalone first so explicit routes beat generic /ui/{page} patterns.
-    app.include_router(ui_standalone_module.router)
+    app.include_router(ui_standalone.router)
 
 app.include_router(ui_router)
 app.include_router(ui_pages_router)
