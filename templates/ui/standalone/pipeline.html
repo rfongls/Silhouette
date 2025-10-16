@@ -18,30 +18,32 @@
 <div class="legacy-interop-skin fullbleed standalone-pipeline" data-skin="1006">
   <section class="dashboard">
     <div class="dashboard-container">
-      <nav class="breadcrumbs">
-        <a href="{{ root }}/ui/interop">Interoperability</a> / <span>Standalone Pipeline</span>
-      </nav>
-      <header class="dashboard-header">
-        <h1 class="text-h1">Standalone HL7 Bench</h1>
-        <p class="text-body muted">Generate • De-identify • Validate • Send via MLLP • HL7 → FHIR.</p>
-      </header>
+      <div class="page-frame">
+        <nav class="breadcrumbs">
+          <a href="{{ root }}/ui/interop">Interoperability</a> / <span>Standalone Pipeline</span>
+        </nav>
+        <header class="page-hero">
+          <h1 class="hero-title">HL7 Test Bench</h1>
+          <p class="hero-sub muted">Generate • De-identify • Validate • Send over MLLP or run the full pipeline.</p>
+        </header>
 
-      <div class="module-nav">
-        <a class="module-btn" href="#generate-panel">⚡ Generate</a>
-        <a class="module-btn" href="#deid-panel">🔒 De-identify</a>
-        <a class="module-btn" href="#validate-panel">✓ Validate</a>
-        <a class="module-btn" href="#mllp-panel">📤 MLLP Send</a>
-        <a class="module-btn" href="{{ urls.ui_pipeline }}?preset={{ preset_key }}">🔄 Full Pipeline</a>
-      </div>
+        <div class="module-nav">
+          <a class="module-btn" href="#generate-panel">⚡ Generate</a>
+          <a class="module-btn" href="#deid-panel">🔒 De-identify</a>
+          <a class="module-btn" href="#validate-panel">✓ Validate</a>
+          <a class="module-btn" href="#mllp-panel">📤 MLLP Send</a>
+          <a class="module-btn" href="{{ urls.ui_pipeline }}?preset={{ preset_key }}">→ Full Pipeline</a>
+        </div>
 
-      <div class="cards-stack">
-        {% include "ui/standalone/partials/_generate.html" %}
-        {% include "ui/standalone/partials/_deid.html" %}
-        {% include "ui/standalone/partials/_validate.html" %}
-        {% include "ui/standalone/partials/_mllp.html" %}
-        {% include "ui/standalone/partials/_pipeline.html" %}
-        {% include "ui/standalone/partials/_debug.html" %}
-        {% include "ui/standalone/partials/_analyze.html" %}
+        <div class="cards-stack">
+          {% include "ui/standalone/partials/_generate.html" %}
+          {% include "ui/standalone/partials/_deid.html" %}
+          {% include "ui/standalone/partials/_validate.html" %}
+          {% include "ui/standalone/partials/_mllp.html" %}
+          {% include "ui/standalone/partials/_pipeline.html" %}
+          {% include "ui/standalone/partials/_debug.html" %}
+          {% include "ui/standalone/partials/_analyze.html" %}
+        </div>
       </div>
     </div>
   </section>
