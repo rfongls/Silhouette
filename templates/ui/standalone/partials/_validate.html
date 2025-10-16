@@ -5,7 +5,7 @@
   </summary>
   <div class="module-body">
     <form id="validate-form" role="form"
-          hx-post="{{ urls.api_validate_report }}"
+          hx-post="{{ urls.api_validate }}"
           hx-encoding="multipart/form-data"
           hx-target="#validate-report"
           hx-swap="innerHTML"
@@ -52,7 +52,7 @@
         <input type="hidden" name="segment" id="val-report-seg" form="validate-form" />
         <input type="hidden" name="rule" id="val-report-rule" form="validate-form" />
         <input type="hidden" name="status" id="val-report-status" form="validate-form" />
-        <div id="validate-report" class="codepane limit10" aria-live="polite"></div>
+        <section id="validate-report" class="codepane limit10" aria-live="polite" data-val-root></section>
       </div>
     </details>
 

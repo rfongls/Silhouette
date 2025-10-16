@@ -37,6 +37,8 @@ def _urls(request: Request) -> dict[str, str]:
         "api_validate": _safe_url_for(request, "api_validate", "/api/interop/validate"),
         "api_validate_view": _safe_url_for(request, "interop_validate_view", "/api/interop/validate/view"),
         "api_validate_report": _safe_url_for(request, "api_validate_report", "/api/interop/validate/report"),
+        "ui_deidentify_html": _safe_url_for(request, "ui_deidentify", "/ui/interop/deidentify"),
+        "ui_validate_html": _safe_url_for(request, "ui_validate", "/ui/interop/validate"),
         "ui_deid_templates": _safe_url_for(
             request, "ui_deid_templates", "/ui/standalone/deid/templates"
         ),

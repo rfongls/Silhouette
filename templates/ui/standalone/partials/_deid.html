@@ -51,7 +51,7 @@
         </div>
         <form id="deid-report-form" role="form"
               hx-post="{{ urls.api_deidentify_summary }}"
-              hx-target="#deid-report"
+              hx-target="#deid-coverage"
               hx-swap="innerHTML"
               hx-headers='{"Accept":"text/html"}'>
           <input type="hidden" name="text" id="deid-report-text" />
@@ -62,7 +62,7 @@
           <input type="hidden" name="parameter" id="deid-report-parameter" />
           <input type="hidden" name="status" id="deid-report-status" />
         </form>
-        <div id="deid-report" class="codepane limit10" aria-live="polite"></div>
+        <section id="deid-coverage" class="codepane limit10" aria-live="polite" data-deid-root></section>
       </div>
     </details>
 
