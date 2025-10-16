@@ -5,7 +5,7 @@
   </summary>
   <div class="module-body">
     <form id="deid-form" role="form"
-          hx-post="{{ urls.ui_deidentify_html }}"
+          hx-post="{{ urls.ui_deidentify }}"
           hx-encoding="multipart/form-data"
           hx-target="#deid-report"
           hx-swap="innerHTML"
@@ -50,7 +50,7 @@
           <button class="btn btn-sm" type="button" data-role="deid-report-clear">Reset</button>
         </div>
         <form id="deid-report-form" role="form"
-              hx-post="{{ urls.ui_deidentify_html }}"
+              hx-post="{{ urls.ui_deidentify }}"
               hx-target="#deid-report"
               hx-swap="innerHTML"
               hx-headers='{"Accept":"text/html"}'>

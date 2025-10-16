@@ -18,6 +18,7 @@ from api.interop import router as interop_router
 from api.interop_gen import router as interop_gen_router, try_generate_on_validation_error
 from api.security import router as security_router
 from api.ui import router as ui_router, templates as ui_templates
+from api.interop_reports_compat import router as interop_reports_compat_router
 from api.ui_interop import router as ui_interop_router
 from api.ui_settings import router as ui_settings_router
 from api.ui_agents import router as ui_agents_router
@@ -59,6 +60,8 @@ ui_templates.env.globals["engine_v2_enabled"] = _ENGINE_V2_ENABLED
 ui_templates.env.globals["root"] = ""
 
 app.include_router(ui_home_router)
+# Legacy standalone HTML fragments (10/06 compatibility)
+app.include_router(interop_reports_compat_router)
 for r in (
     ui_interop_router,
     ui_settings_router,

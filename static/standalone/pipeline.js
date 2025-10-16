@@ -675,11 +675,4 @@
       refreshTrayDisables();
     }
   });
-
-  document.addEventListener('input', (event) => {
-    const targetId = event?.target?.id;
-    if (targetId === 'mllp-host' || targetId === 'mllp-port') {
-      refreshTrayDisables();
-    }
-  });
 })();
