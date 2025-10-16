@@ -19,7 +19,7 @@
         <select class="input" name="val_template" id="validate-template"
                 placeholder="template id (optional)"
                 hx-get="{{ urls.ui_val_templates }}" hx-trigger="load"
-                hx-target="#validate-template" hx-swap="innerHTML">
+                hx-target="this" hx-swap="innerHTML">
           <option value="">— choose a rule —</option>
           {% for template in val_templates %}
             <option value="{{ template }}">{{ template }}</option>

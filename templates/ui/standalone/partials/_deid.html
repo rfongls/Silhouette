@@ -18,7 +18,7 @@
         <select class="input" name="deid_template" id="deid-template"
                 placeholder="template id (optional)"
                 hx-get="{{ urls.ui_deid_templates }}" hx-trigger="load"
-                hx-target="#deid-template" hx-swap="innerHTML">
+                hx-target="this" hx-swap="innerHTML">
           <option value="">— choose a rule —</option>
           {% for template in deid_templates %}
             <option value="{{ template }}">{{ template }}</option>
