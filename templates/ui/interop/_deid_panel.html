@@ -1,105 +1,30 @@
-{% set root = request.scope.get('root_path', '') %}
-{% set defaults = defaults or {} %}
-<section id="deid-panel" class="interop-panel interop-panel-deid card">
-  <div class="module-body">
-    <h3 class="text-h3 mb">De-identify</h3>
-    <form id="deid-form"
-          hx-post="{{ urls.api_deidentify | default(root ~ '/api/interop/deidentify', true) }}"
-          hx-encoding="multipart/form-data"
-          hx-target="#deid-output"
-          hx-swap="textContent"
-          hx-headers='{"Accept":"text/plain"}'
-          hx-on::afterSwap="window.InteropUI.onDeidentifyComplete(event)">
-      <label class="mt">HL7 Message (paste)
-        <textarea class="input" name="message" rows="7" placeholder="MSH|^~\&|..."></textarea>
-      </label>
-      <div class="row gap mt">
-        <label>De-ID Template
-          <input class="input" name="profile_id" placeholder="template id (optional)" />
-        </label>
-        <label>Or upload .hl7
-          <input class="input" type="file" name="file" accept=".hl7,.txt" />
-        </label>
-        <button class="btn" type="submit">Run De-identify</button>
-      </div>
-    </form>
-    <pre id="deid-output" class="codepane" style="min-height:8rem; white-space:pre-wrap;"></pre>
-
-    <hr class="mt mb" />
-    <h4 class="text-h4">Run Full Test Pipeline</h4>
-    <form id="pipeline-form"
-          hx-post="{{ urls.api_pipeline_run | default(root ~ '/api/interop/pipeline/run', true) }}"
-          hx-encoding="multipart/form-data"
-          hx-target="#pipeline-output"
-          hx-swap="innerHTML">
-      <div class="row gap">
-        <label>Trigger
-          <input class="input" name="trigger" placeholder="A01 / ORU^R01" />
-        </label>
-        <label>Version
-          <input class="input" name="version" placeholder="2.4" />
-        </label>
-      </div>
-      <label class="mt">Or provide HL7 input (paste)
-        <textarea class="input" name="text" rows="6" placeholder="MSH|^~\&|..."></textarea>
-      </label>
-      <div class="row gap mt">
-        <label>Transform Profile
-          <input class="input" name="transform_profile" placeholder="profile id" />
-        </label>
-        <label>De-ID Template
-          <input class="input" name="deid_template" placeholder="template id" />
-        </label>
-        <label>Validation Template
-          <input class="input" name="val_template" placeholder="template id" />
-        </label>
-      </div>
-      <div class="row gap mt">
-        <label class="row small" style="align-items:center; gap:.5rem;">
-          <input type="checkbox" name="deidentify" />
-          <span class="text-caption muted">De-identify generated message</span>
-        </label>
-        <label class="row small" style="align-items:center; gap:.5rem;">
-          <input type="checkbox" name="apply_baseline" />
-          <span class="text-caption muted">Apply baseline rules</span>
-        </label>
-        <label class="row small" style="align-items:center; gap:.5rem;">
-          <input type="checkbox" name="post_fhir" {% if defaults.post_fhir %}checked{% endif %} />
-          <span class="text-caption muted">POST FHIR bundle</span>
-        </label>
-      </div>
-      <div class="row gap mt">
-        <label>FHIR endpoint
-          <input class="input" name="fhir_endpoint" placeholder="https://example.org/fhir" value="{{ defaults.fhir_endpoint }}" />
-        </label>
-        <label>Transport
-          <select class="input" id="pipe-transport" name="transport">
-            <option value="">None</option>
-            <option value="mllp">MLLP</option>
-          </select>
-        </label>
-      </div>
-      <div id="pipe-mllp-config" class="row gap mt" style="display:none;">
-        <label>Host
-          <input class="input" id="pipe-mllp-host" name="transport_host" type="text" placeholder="127.0.0.1" value="{{ defaults.host }}" />
-        </label>
-        <label>Port
-          <input class="input" id="pipe-mllp-port" name="transport_port" type="number" min="1" max="65535" placeholder="2575" value="{{ defaults.port }}" />
-        </label>
-        <label>Timeout (sec)
-          <input class="input" type="number" id="pipe-mllp-timeout" name="transport_timeout" min="1" value="{{ defaults.timeout or 5 }}" />
-        </label>
-        <label class="row gap small" style="align-items:center;">
-          <input type="checkbox" id="pipe-mllp-auto" checked />
-          <span class="text-caption muted">Auto-send after validate</span>
-        </label>
-      </div>
-      <div style="display:flex; justify-content:flex-end; margin-top:1rem;">
-        <button class="btn" type="submit">Run Pipeline</button>
-      </div>
-    </form>
-    <div id="pipeline-output" class="codepane mt" style="min-height:8rem; white-space:pre-wrap;">
-      <div class="muted small">Run the pipeline to view output here.</div>
-    </div>
+<div class="card">
+  <div class="card-header">
+    <h3>De-identify</h3>
+    <button class="btn btn-sm" data-toggle>Toggle</button>
   </div>
-</section>
+  <div class="card-body">
+    <form
+      hx-post="/ui/interop/deidentify"
+      hx-target="#deid_output"
+      hx-swap="innerHTML">
+      <label>Template</label>
+      <select name="deid_template"
+              hx-get="/ui/standalone/deid/templates"
+              hx-trigger="load"
+              hx-target="this"
+              hx-swap="innerHTML"
+              aria-label="De-ID template">
+      </select>
+      <label>Message</label>
+      <textarea name="message"
+                id="deid_message"
+                class="w-full h-32"
+                placeholder="Paste HL7 here or leave blank to use the generated output"></textarea>
+      <div class="flex gap-2">
+        <button class="btn btn-primary" type="submit">Run De-ID</button>
+        <button class="btn" type="reset">Reset</button>
+      </div>
+    </form>
+  </div>
+</div>

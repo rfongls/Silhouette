@@ -1,28 +1,24 @@
-{% set root = request.scope.get('root_path', '') %}
-<section id="generate-panel" class="interop-panel interop-panel-generate card">
-  <div class="module-body">
-    <h3 class="text-h3 mb">Generate Message</h3>
-    <form id="gen-form"
-          method="post" autocomplete="off" novalidate
-          hx-post="{{ urls.api_generate | default(root ~ '/api/interop/generate', true) }}"
-          hx-encoding="application/x-www-form-urlencoded"
-          hx-target="#gen-output"
-          hx-swap="textContent"
-          hx-headers='{"Accept":"text/plain"}'
-          hx-on::afterRequest="window.InteropUI.onGenerateComplete(event)">
-      <div class="row gap">
-        <label>Trigger
-          <input class="input" name="trigger" placeholder="A01 / ORU^R01 / VXU^V04" required />
-        </label>
-        <label>Version
-          <input class="input" name="version" placeholder="2.3 / 2.4 / 2.5" />
-        </label>
-        <label>Count
-          <input class="input" type="number" name="count" value="1" min="1" />
-        </label>
-        <button class="btn" type="submit">Generate</button>
-      </div>
-    </form>
-    <pre id="gen-output" class="codepane mt" style="min-height:9rem; white-space:pre-wrap;"></pre>
+<div class="card">
+  <div class="card-header">
+    <h3>Generate</h3>
+    <button class="btn btn-sm" data-toggle>Toggle</button>
   </div>
-</section>
+  <div class="card-body">
+    <form
+      hx-get="/api/interop/sample"
+      hx-target="#gen_output"
+      hx-swap="innerHTML">
+      <label>Trigger</label>
+      <select name="trigger" aria-label="HL7 trigger">
+        <option value="A01">A01 — Admit/Visit</option>
+        <option value="ORU">ORU — Results</option>
+        <option value="VXU">VXU — Immunization</option>
+      </select>
+      <label>Count</label>
+      <input type="number" name="count" value="1" min="1" />
+      <label><input type="checkbox" name="seed" value="1" /> Seed</label>
+      <label><input type="checkbox" name="enrich" value="1" /> Enrich values</label>
+      <button class="btn btn-primary" type="submit">Generate</button>
+    </form>
+  </div>
+</div>

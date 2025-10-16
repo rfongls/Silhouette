@@ -1,4 +1,4 @@
-"""Legacy 10/06-style standalone Interop pipeline (isolated shell).
+"""Legacy 10/06-style standalone Interop pipeline (isolated shell, aligned paths).
 
 Enable via env ``SILH_STANDALONE_ENABLE=1``. Routes mount under
 ``/ui/standalone/*`` and are completely optional for deployments that only
@@ -87,15 +87,23 @@ def _template_context(request: Request, preset: str | None) -> dict[str, Any]:
     }
 
 
-@router.get("/ui/standalone/pipeline", response_class=HTMLResponse)
+@router.get(
+    "/ui/standalone/pipeline",
+    response_class=HTMLResponse,
+    name="ui_standalone_pipeline",
+)
 async def standalone_pipeline(request: Request, preset: str | None = None) -> HTMLResponse:
     if not _standalone_enabled():
         return HTMLResponse("Standalone UI is disabled (set SILH_STANDALONE_ENABLE=1).", status_code=404)
     ctx = _template_context(request, preset)
-    return templates.TemplateResponse("standalone_1006/pipeline.html", ctx)
+    return templates.TemplateResponse("ui/standalone/pipeline.html", ctx)
 
 
-@router.get("/ui/standalonepipeline", include_in_schema=False)
+@router.get(
+    "/ui/standalonepipeline",
+    include_in_schema=False,
+    name="_compat_standalone_pipeline",
+)
 async def standalone_redirect(request: Request) -> RedirectResponse:
     if not _standalone_enabled():
         return RedirectResponse(url="/", status_code=302)
@@ -103,7 +111,11 @@ async def standalone_redirect(request: Request) -> RedirectResponse:
     return RedirectResponse(url=target, status_code=307)
 
 
-@router.get("/ui/standalone/deid/templates", response_class=HTMLResponse)
+@router.get(
+    "/ui/standalone/deid/templates",
+    response_class=HTMLResponse,
+    name="ui_deid_templates",
+)
 async def deid_template_options(request: Request) -> HTMLResponse:
     if not _standalone_enabled():
         return HTMLResponse("", status_code=404)
@@ -112,7 +124,11 @@ async def deid_template_options(request: Request) -> HTMLResponse:
     return HTMLResponse("\n".join(options))
 
 
-@router.get("/ui/standalone/validate/templates", response_class=HTMLResponse)
+@router.get(
+    "/ui/standalone/validate/templates",
+    response_class=HTMLResponse,
+    name="ui_val_templates",
+)
 async def validate_template_options(request: Request) -> HTMLResponse:
     if not _standalone_enabled():
         return HTMLResponse("", status_code=404)
@@ -124,3 +140,7 @@ async def validate_template_options(request: Request) -> HTMLResponse:
 def install(app) -> None:
     if _standalone_enabled():
         app.include_router(router)
+
+# NOTE: This module expects templates/ui/standalone/pipeline.html and
+# static/{standalone_1006.css,standalone_1006.js} to exist and be referenced
+# by the template. See patch adding those files.

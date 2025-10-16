@@ -2,7 +2,8 @@
 
 {% block extra_head %}
 <link rel="stylesheet" href="{{ request.url_for('static', path='css/interop_extras.css') }}" />
-<script type="module" src="{{ request.url_for('static', path='js/interop_ui.js') }}"></script>
+<link rel="stylesheet" href="{{ request.url_for('static', path='standalone_1006.css') }}" />
+<script type="module" src="{{ request.url_for('static', path='standalone_1006.js') }}"></script>
 {% endblock %}
 
 {% block content %}
@@ -32,10 +33,50 @@
       <span class="micro muted">Presets prefill the pipeline transport host, port, timeout, and FHIR endpoint.</span>
     </form>
 
-    <div class="grid two" style="gap:1rem; align-items:flex-start;">
+    {% set r = {
+      'rows': [],
+      'data': [],
+      'total_messages': 0,
+      'msg_total': 0,
+      'total': 0,
+      'segment_options': [],
+      'fields_by_segment': {'__all__': []},
+      'action_options': [],
+      'summary': {'rows': []},
+      'summary_rows': [],
+      'issues': [],
+      'counts': {},
+    } %}
+
+    <div class="grid grid-cols-1 gap-4 legacy-interop-skin">
       {% include "ui/interop/_generate_panel.html" %}
+      <div id="gen_output" class="card">
+        <div class="card-body">
+          <textarea id="hl7_text" class="w-full h-48" placeholder="Generated HL7 message will appear here"></textarea>
+        </div>
+      </div>
+      <div class="action-tray" data-tray="gen_output">
+        <button class="btn btn-primary" data-next="deid">Next: De-identify</button>
+        <button class="btn" data-next="validate">Skip to Validate</button>
+      </div>
+
       {% include "ui/interop/_deid_panel.html" %}
+      <div id="deid_output" class="card">
+        <div class="card-body"></div>
+      </div>
+      <div class="action-tray" data-tray="deid_output">
+        <button class="btn btn-primary" data-next="validate">Next: Validate</button>
+        <button class="btn" data-next="mllp">Send via MLLP</button>
+      </div>
+
       {% include "ui/interop/_validate_panel.html" %}
+      <div id="validate_output" class="card">
+        <div class="card-body"></div>
+      </div>
+      <div class="action-tray" data-tray="validate_output">
+        <button class="btn btn-primary" data-next="mllp">Next: Send via MLLP</button>
+      </div>
+
       {% include "ui/interop/_mllp_panel.html" %}
       {% include "ui/interop/_debug_log_panel.html" %}
       {% include "ui/interop/_analyze_result.html" %}
