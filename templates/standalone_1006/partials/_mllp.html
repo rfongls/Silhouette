@@ -1,5 +1,8 @@
 <details id="mllp-panel" class="card collapsible" open>
-  <summary>📤 MLLP Send <span class="minimax"></span></summary>
+  <summary>
+    <div class="summary-title">📤 MLLP Send</div>
+    <div class="summary-meta"><span class="minimax">collapse</span></div>
+  </summary>
   <div class="module-body">
     <form id="mllp-form"
           hx-post="{{ urls.mllp_send }}"
@@ -29,8 +32,8 @@
       </div>
     </form>
     <div id="mllp-output" class="mt"><div class="muted micro">ACK / response will appear here.</div></div>
-    {% with source_selector = '#mllp-output' %}
-      {% include "ui/standalone/partials/_action_tray.html" %}
+    {% with source_selector = '#mllp-output', stage='mllp' %}
+      {% include "standalone_1006/partials/_action_tray.html" %}
     {% endwith %}
   </div>
 </details>

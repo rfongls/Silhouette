@@ -19,6 +19,7 @@
   const ENRICH_CHECK_ID = 'std-enrich';
 
   const ACTION_TARGETS = {
+    deid: { panel: PANEL_IDS.deid, textarea: '#deid-msg' },
     validate: { panel: PANEL_IDS.validate, textarea: '#validate-form textarea[name="message"]' },
     mllp: { panel: PANEL_IDS.mllp, textarea: '#mllp-msg' },
     pipeline: { panel: PANEL_IDS.pipeline, textarea: '#pipeline-form textarea[name="text"]' },
@@ -336,15 +337,39 @@
     const sourceSelector = trayEl.getAttribute('data-source') || '#gen-output';
     const sourceNode = $1(document, sourceSelector);
     const text = extractMessage(sourceNode);
-    if (hasMessageLike(text)) {
+    if (hasMessageLike(text) || (text && text.trim().length)) {
       trayEl.classList.add('visible');
     } else {
       trayEl.classList.remove('visible');
     }
   }
 
+  function mllpConfigured() {
+    const host = $1(document, '#mllp-host');
+    const port = $1(document, '#mllp-port');
+    return !!(host && host.value && port && String(port.value).trim());
+  }
+
+  function refreshTrayDisables() {
+    $$(document, '.action-tray [data-action="mllp"]').forEach((button) => {
+      const tray = button.closest('.action-tray');
+      if (!tray) return;
+      const stage = tray.getAttribute('data-stage') || '';
+      if (stage !== 'validate' && stage !== 'pipeline') {
+        button.removeAttribute('aria-disabled');
+        return;
+      }
+      if (mllpConfigured()) {
+        button.removeAttribute('aria-disabled');
+      } else {
+        button.setAttribute('aria-disabled', 'true');
+      }
+    });
+  }
+
   function toggleAllActionTrays() {
     $$(document, '.action-tray').forEach((tray) => toggleActionTrayFor(tray));
+    refreshTrayDisables();
   }
 
   function setReportPlaceholder(container, text) {
@@ -360,15 +385,12 @@
     const form = $1(document, '#deid-report-form');
     if (!form) return null;
     const message = $1(document, '#deid-msg')?.value || '';
-    const output = $1(document, '#deid-output')?.textContent || '';
     const template = $1(document, '#deid-template')?.value || '';
     const textField = form.querySelector('#deid-report-text');
-    const afterField = form.querySelector('#deid-report-after');
     const tplField = form.querySelector('#deid-report-template');
     if (textField) textField.value = message;
-    if (afterField) afterField.value = output;
     if (tplField) tplField.value = template;
-    return { message, output };
+    return { message };
   }
 
   function refreshDeidReport({ auto = false } = {}) {
@@ -377,7 +399,7 @@
     if (!form || !container || !window.htmx) return;
     const info = populateDeidReportForm();
     if (!info) return;
-    const hasRequired = info.message.trim() && info.output.trim();
+    const hasRequired = info.message.trim();
     if (!hasRequired) {
       if (!auto) {
         setReportPlaceholder(container, 'Run De-identify to generate a processed-errors report.');
@@ -390,6 +412,15 @@
   function clearDeidReport() {
     const container = $1(document, '#deid-report');
     setReportPlaceholder(container, 'Processed-errors coverage will appear after you run De-identify.');
+    ['#deid-filter-seg', '#deid-filter-action', '#deid-filter-param'].forEach((sel) => {
+      const input = $1(document, sel);
+      if (input) input.value = '';
+    });
+    ['#deid-report-seg', '#deid-report-action', '#deid-report-parameter', '#deid-report-status'].forEach((sel) => {
+      const hidden = $1(document, sel);
+      if (hidden) hidden.value = '';
+    });
+    $$(document, '[data-role="deid-filter"]').forEach((chip) => chip.setAttribute('aria-pressed', 'false'));
   }
 
   function refreshValidateReport() {
@@ -406,6 +437,90 @@
   function clearValidateReport() {
     const container = $1(document, '#validate-report');
     setReportPlaceholder(container, 'Validation results will appear here after running Validate.');
+    ['#val-filter-seg', '#val-filter-rule'].forEach((sel) => {
+      const input = $1(document, sel);
+      if (input) input.value = '';
+    });
+    ['#val-report-seg', '#val-report-rule', '#val-report-status'].forEach((sel) => {
+      const hidden = $1(document, sel);
+      if (hidden) hidden.value = '';
+    });
+    $$(document, '[data-role="val-filter"]').forEach((chip) => chip.setAttribute('aria-pressed', 'false'));
+  }
+
+  function wireDeidFilters() {
+    document.addEventListener('click', (event) => {
+      const chip = event.target.closest?.('[data-role="deid-filter"]');
+      if (chip) {
+        const key = chip.dataset.k;
+        const value = chip.dataset.v;
+        const active = chip.getAttribute('aria-pressed') === 'true';
+        $$(document, `[data-role="deid-filter"][data-k="${key}"]`).forEach((node) =>
+          node.setAttribute('aria-pressed', 'false')
+        );
+        chip.setAttribute('aria-pressed', active ? 'false' : 'true');
+        const statusField = $1(document, '#deid-report-status');
+        if (statusField) statusField.value = active ? '' : value || '';
+        event.preventDefault();
+        return;
+      }
+
+      if (event.target.matches('[data-role="deid-report-refresh"]')) {
+        event.preventDefault();
+        const seg = $1(document, '#deid-filter-seg')?.value || '';
+        const action = $1(document, '#deid-filter-action')?.value || '';
+        const param = $1(document, '#deid-filter-param')?.value || '';
+        const segField = $1(document, '#deid-report-seg');
+        if (segField) segField.value = seg;
+        const actionField = $1(document, '#deid-report-action');
+        if (actionField) actionField.value = action;
+        const paramField = $1(document, '#deid-report-parameter');
+        if (paramField) paramField.value = param;
+        refreshDeidReport();
+        return;
+      }
+
+      if (event.target.matches('[data-role="deid-report-clear"]')) {
+        event.preventDefault();
+        clearDeidReport();
+      }
+    });
+  }
+
+  function wireValFilters() {
+    document.addEventListener('click', (event) => {
+      const chip = event.target.closest?.('[data-role="val-filter"]');
+      if (chip) {
+        const key = chip.dataset.k;
+        const value = chip.dataset.v;
+        const active = chip.getAttribute('aria-pressed') === 'true';
+        $$(document, `[data-role="val-filter"][data-k="${key}"]`).forEach((node) =>
+          node.setAttribute('aria-pressed', 'false')
+        );
+        chip.setAttribute('aria-pressed', active ? 'false' : 'true');
+        const statusField = $1(document, '#val-report-status');
+        if (statusField) statusField.value = active ? '' : value || '';
+        event.preventDefault();
+        return;
+      }
+
+      if (event.target.matches('[data-role="validate-report-refresh"]')) {
+        event.preventDefault();
+        const seg = $1(document, '#val-filter-seg')?.value || '';
+        const rule = $1(document, '#val-filter-rule')?.value || '';
+        const segField = $1(document, '#val-report-seg');
+        if (segField) segField.value = seg;
+        const ruleField = $1(document, '#val-report-rule');
+        if (ruleField) ruleField.value = rule;
+        refreshValidateReport();
+        return;
+      }
+
+      if (event.target.matches('[data-role="validate-report-clear"]')) {
+        event.preventDefault();
+        clearValidateReport();
+      }
+    });
   }
 
   function attachOutputObservers() {
@@ -416,38 +531,6 @@
       observer.observe(node, { childList: true, subtree: true, characterData: true });
     };
     ['#gen-output', '#deid-output', '#validate-output', '#mllp-output', '#pipeline-output'].forEach(observe);
-  }
-
-  function autoSendPipelineResult(evt) {
-    if (!evt?.target || evt.target.id !== 'pipeline-output') return;
-    const auto = $1(document, '#pipe-mllp-auto');
-    if (auto && !auto.checked) return;
-    const transport = $1(document, '#pipe-transport');
-    if (transport && (transport.value || '').toLowerCase() !== 'mllp') return;
-    const text = extractMessage(evt.target);
-    if (!text || !text.startsWith('MSH')) return;
-    const textarea = $1(document, '#mllp-msg');
-    if (textarea) {
-      textarea.value = text;
-      textarea.dispatchEvent(new Event('input', { bubbles: true }));
-    }
-    const form = $1(document, '#mllp-form');
-    if (form && window.htmx) {
-      try {
-        $1(document, '#mllp-panel')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      } catch (err) {
-        console.debug('standalone-pipeline: scroll failed', err);
-      }
-      window.htmx.trigger(form, 'submit');
-    }
-  }
-
-  function updateTransportVisibility() {
-    const select = $1(document, '#pipe-transport');
-    const config = $1(document, '#pipe-mllp-config');
-    if (!select || !config) return;
-    const shouldShow = (select.value || '').toLowerCase() === 'mllp';
-    config.style.display = shouldShow ? 'flex' : 'none';
   }
 
   function getSourceText(selector) {
@@ -466,55 +549,29 @@
     return (node.textContent || '').trim();
   }
 
-  function submitForm(form, textarea, text) {
-    if (!form || !textarea) return;
-    textarea.value = text;
-    textarea.dispatchEvent(new Event('input', { bubbles: true }));
-    try {
-      form.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    } catch (err) {
-      console.debug('standalone-pipeline: scroll failed', err);
-    }
-    if (window.htmx) {
-      window.htmx.trigger(form, 'submit');
-    }
-  }
-
   function attachActionTrayHandlers() {
     document.body?.addEventListener('click', (event) => {
       const button = event.target.closest?.('.action-tray .action-card');
       if (!button) return;
+      if (button.getAttribute('aria-disabled') === 'true') {
+        return;
+      }
+      event.preventDefault();
       const tray = button.closest('.action-tray');
       const action = button.getAttribute('data-action');
       if (!action) return;
       const source = tray?.getAttribute('data-source') || '#gen-output';
       const text = getSourceText(source);
-      if (!hasMessageLike(text)) return;
+      if (!text || !text.trim()) return;
 
-      const fromPanelId = tray?.closest('[id]')?.id;
-      const fromKey = panelKeyFromId(fromPanelId);
+      const stage = tray?.getAttribute('data-stage') || '';
+      let collapseFrom = '';
+      if (stage === 'gen') collapseFrom = 'generate';
+      else if (stage === 'deid') collapseFrom = 'deid';
+      else if (stage === 'validate') collapseFrom = 'validate';
+      else if (stage === 'pipeline') collapseFrom = 'pipeline';
 
-      activateModule(action, text, { collapseFrom: fromKey });
-
-      if (action === 'validate') {
-        const form = $1(document, '#validate-form');
-        const textarea = form?.querySelector('textarea[name="message"]');
-        submitForm(form, textarea, text);
-        return;
-      }
-
-      if (action === 'mllp') {
-        const form = $1(document, '#mllp-form');
-        const textarea = $1(document, '#mllp-msg');
-        submitForm(form, textarea, text);
-        return;
-      }
-
-      if (action === 'pipeline') {
-        const form = $1(document, '#pipeline-form');
-        const textarea = form?.querySelector('textarea[name="text"]');
-        submitForm(form, textarea, text);
-      }
+      activateModule(action, text, { collapseFrom });
     });
   }
 
@@ -568,16 +625,14 @@
       });
     }
     $1(document, '#std-load-sample')?.addEventListener('click', loadSample);
-    $1(document, '#pipe-transport')?.addEventListener('change', updateTransportVisibility);
-
-    updateTransportVisibility();
     toggleAllActionTrays();
     attachOutputObservers();
     attachModuleNavHandlers();
     attachActionTrayHandlers();
     attachStandaloneCardNavigation();
     setupValidateForm();
-    setupReportButtons();
+    wireDeidFilters();
+    wireValFilters();
     clearDeidReport();
     clearValidateReport();
   }
@@ -592,34 +647,6 @@
         output.textContent = message.trim();
       }
       toggleAllActionTrays();
-    });
-  }
-
-  function setupReportButtons() {
-    document.body?.addEventListener('click', (event) => {
-      const refreshDeid = event.target.closest?.('[data-role="deid-report-refresh"]');
-      if (refreshDeid) {
-        event.preventDefault();
-        refreshDeidReport();
-        return;
-      }
-      const clearDeid = event.target.closest?.('[data-role="deid-report-clear"]');
-      if (clearDeid) {
-        event.preventDefault();
-        clearDeidReport();
-        return;
-      }
-      const refreshValidate = event.target.closest?.('[data-role="validate-report-refresh"]');
-      if (refreshValidate) {
-        event.preventDefault();
-        refreshValidateReport();
-        return;
-      }
-      const clearValidate = event.target.closest?.('[data-role="validate-report-clear"]');
-      if (clearValidate) {
-        event.preventDefault();
-        clearValidateReport();
-      }
     });
   }
 
@@ -638,12 +665,14 @@
     onReady();
   }
 
-  document.body?.addEventListener('htmx:afterSwap', (evt) => {
+  document.body?.addEventListener('htmx:afterSwap', () => {
     toggleAllActionTrays();
-    autoSendPipelineResult(evt);
-    const targetId = evt?.target?.id || '';
-    if (targetId === 'deid-output') {
-      refreshDeidReport({ auto: true });
+  });
+
+  document.addEventListener('input', (event) => {
+    const targetId = event?.target?.id;
+    if (targetId === 'mllp-host' || targetId === 'mllp-port') {
+      refreshTrayDisables();
     }
   });
 })();
