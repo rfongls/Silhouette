@@ -1,0 +1,51 @@
+{% extends "layouts/compat_base.html" %}
+
+{% block extra_head %}
+{{ super() }}
+<link rel="stylesheet" href="{{ request.url_for('static', path='legacy/interop/legacy_ui.css') }}" />
+<link rel="stylesheet" href="{{ request.url_for('static', path='standalone_1006.css') }}" />
+<script type="module" src="{{ request.url_for('static', path='standalone_1006.js') }}"></script>
+<script>
+  window.STANDALONE_PIPELINE_URLS = {{ urls | tojson }};
+</script>
+{% endblock %}
+
+{% block content %}
+{% set root = request.scope.get('root_path', '') %}
+{% set presets = presets or {} %}
+{% set preset_key = preset_key or '' %}
+{% set defaults = defaults or {} %}
+<div class="legacy-interop-skin fullbleed standalone-pipeline" data-skin="1006">
+  <section class="dashboard">
+    <div class="dashboard-container">
+      <div class="page-frame">
+        <nav class="breadcrumbs">
+          <a href="{{ root }}/ui/interop">Interoperability</a> / <span>Standalone Pipeline</span>
+        </nav>
+        <header class="page-hero">
+          <h1 class="hero-title">HL7 Test Bench</h1>
+          <p class="hero-sub muted">Generate • De-identify • Validate • Send over MLLP or run the full pipeline.</p>
+        </header>
+
+        <div class="module-nav">
+          <a class="module-btn" href="#generate-panel">⚡ Generate</a>
+          <a class="module-btn" href="#deid-panel">🔒 De-identify</a>
+          <a class="module-btn" href="#validate-panel">✓ Validate</a>
+          <a class="module-btn" href="#mllp-panel">📤 MLLP Send</a>
+          <a class="module-btn" href="{{ urls.ui_pipeline }}?preset={{ preset_key }}">→ Full Pipeline</a>
+        </div>
+
+        <div class="cards-stack">
+          {% include "standalone_1006/partials/_generate.html" %}
+          {% include "standalone_1006/partials/_deid.html" %}
+          {% include "standalone_1006/partials/_validate.html" %}
+          {% include "standalone_1006/partials/_mllp.html" %}
+          {% include "standalone_1006/partials/_pipeline.html" %}
+          {% include "standalone_1006/partials/_debug.html" %}
+          {% include "standalone_1006/partials/_analyze.html" %}
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+{% endblock %}

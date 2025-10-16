@@ -18,8 +18,8 @@ from api.interop import router as interop_router
 from api.interop_gen import router as interop_gen_router, try_generate_on_validation_error
 from api.security import router as security_router
 from api.ui import router as ui_router, templates as ui_templates
+from api.interop_reports_compat import router as interop_reports_compat_router
 from api.ui_interop import router as ui_interop_router
-from api.ui_standalone import router as ui_standalone_router
 from api.ui_settings import router as ui_settings_router
 from api.ui_agents import router as ui_agents_router
 from api.ui_security import router as ui_security_router
@@ -60,10 +60,10 @@ ui_templates.env.globals["engine_v2_enabled"] = _ENGINE_V2_ENABLED
 ui_templates.env.globals["root"] = ""
 
 app.include_router(ui_home_router)
+# Legacy standalone HTML fragments (10/06 compatibility)
+app.include_router(interop_reports_compat_router)
 for r in (
-    ui_router,
     ui_interop_router,
-    ui_standalone_router,
     ui_settings_router,
     ui_security_router,
     ui_agents_router,
@@ -72,9 +72,21 @@ for r in (
     security_router,
     metrics_router,
     diag_router,         # diagnostics
-    ui_pages_router,
 ):
     app.include_router(r)
+
+# Standalone pipeline (legacy UI) feature flag. Enabled by default for
+# development environments; disable via SILH_STANDALONE_ENABLE=0 to omit the
+# routes entirely and avoid any chance of stylesheet bleed into V2 surfaces.
+_STANDALONE_ENABLED = _is_truthy(os.getenv("SILH_STANDALONE_ENABLE", "1"))
+if _STANDALONE_ENABLED:
+    from api import ui_standalone_1006 as ui_standalone_1006
+
+    # Register standalone first so explicit routes beat generic /ui/{page} patterns.
+    app.include_router(ui_standalone_1006.router)
+
+app.include_router(ui_router)
+app.include_router(ui_pages_router)
 if _ENGINE_V2_ENABLED:
     from api.engine import router as engine_router
     from api.engine_jobs import router as engine_jobs_router
