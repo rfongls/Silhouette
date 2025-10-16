@@ -1,0 +1,24 @@
+<details id="pipeline-panel" class="card collapsible">
+  <summary>
+    <div class="summary-title">🔄 Run Full Pipeline</div>
+    <div class="summary-meta"><span class="minimax"></span></div>
+  </summary>
+  <div class="module-body">
+    <form id="pipeline-form"
+          hx-post="{{ urls.api_pipeline_run }}"
+          hx-encoding="multipart/form-data"
+          hx-target="#pipeline-output"
+          hx-swap="textContent"
+          hx-headers='{"Accept":"text/plain"}'>
+      <div class="row gap small">
+        <input class="input" name="trigger" placeholder="Trigger (e.g., ADT^A01)" />
+        <input class="input" name="version" placeholder="2.4" />
+        <button class="btn" type="submit">Run</button>
+      </div>
+      <label class="text-caption muted mt" for="pipeline-text">Or provide HL7 input (paste)</label>
+      <textarea class="codepane limit10" name="text" id="pipeline-text" rows="8"></textarea>
+    </form>
+    <pre id="pipeline-output" class="codepane limit10" aria-live="polite"></pre>
+    {% with source_selector = '#pipeline-output', stage='pipeline' %}{% include "ui/standalone/partials/_action_tray.html" %}{% endwith %}
+  </div>
+</details>

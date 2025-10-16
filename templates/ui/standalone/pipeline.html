@@ -15,37 +15,23 @@
 {% set presets = presets or {} %}
 {% set preset_key = preset_key or '' %}
 {% set defaults = defaults or {} %}
-<div class="legacy-interop-skin fullbleed standalone-pipeline">
+<div class="legacy-interop-skin fullbleed standalone-pipeline" data-skin="1006">
   <section class="dashboard">
     <div class="dashboard-container">
       <nav class="breadcrumbs">
-        <a href="{{ root }}/ui/interop">Interoperability</a> / <span>Manual Pipeline</span>
+        <a href="{{ root }}/ui/interop">Interoperability</a> / <span>Standalone Pipeline</span>
       </nav>
       <header class="dashboard-header">
-        <h1 class="text-h1">HL7 Test Bench</h1>
-        <p class="text-body muted">Generate • De-identify • Validate • Send over MLLP or run the full pipeline.</p>
+        <h1 class="text-h1">Standalone HL7 Bench</h1>
+        <p class="text-body muted">Generate • De-identify • Validate • Send via MLLP • HL7 → FHIR.</p>
       </header>
-
-      {# Only show the preset form when explicitly requested to avoid cluttering the bench by default. #}
-      {% if request.query_params.get('show_presets') %}
-        <form class="row gap mb small" method="get" action="{{ urls.ui_pipeline }}">
-          <label for="pipeline-preset" class="sr-only">Transport preset</label>
-          <select id="pipeline-preset" name="preset" class="input" onchange="this.form.submit()">
-            <option value="">— Select transport preset —</option>
-            {% for key, preset in presets.items() %}
-              <option value="{{ key }}" {% if key == preset_key %}selected{% endif %}>{{ preset.label }}</option>
-            {% endfor %}
-          </select>
-          <span class="micro muted">Presets prefill MLLP + FHIR options for the pipeline + transport panels.</span>
-        </form>
-      {% endif %}
 
       <div class="module-nav">
         <a class="module-btn" href="#generate-panel">⚡ Generate</a>
         <a class="module-btn" href="#deid-panel">🔒 De-identify</a>
         <a class="module-btn" href="#validate-panel">✓ Validate</a>
         <a class="module-btn" href="#mllp-panel">📤 MLLP Send</a>
-        <a class="module-btn" href="{{ urls.ui_pipeline }}?preset={{ preset_key }}">→ Full Pipeline</a>
+        <a class="module-btn" href="{{ urls.ui_pipeline }}?preset={{ preset_key }}">🔄 Full Pipeline</a>
       </div>
 
       <div class="cards-stack">
@@ -53,89 +39,10 @@
         {% include "ui/standalone/partials/_deid.html" %}
         {% include "ui/standalone/partials/_validate.html" %}
         {% include "ui/standalone/partials/_mllp.html" %}
+        {% include "ui/standalone/partials/_pipeline.html" %}
         {% include "ui/standalone/partials/_debug.html" %}
         {% include "ui/standalone/partials/_analyze.html" %}
       </div>
-
-      <section class="card mt" id="pipeline-panel">
-        <div class="module-body">
-          <h3 class="text-h3 mb">Run Full Pipeline</h3>
-          <form id="pipeline-form"
-                hx-post="{{ urls.api_pipeline_run }}"
-                hx-encoding="multipart/form-data"
-                hx-target="#pipeline-output"
-                hx-swap="innerHTML">
-            <div class="row gap">
-              <label>Trigger
-                <input class="input" name="trigger" placeholder="A01 / ORU^R01" />
-              </label>
-              <label>Version
-                <input class="input" name="version" placeholder="2.4" />
-              </label>
-            </div>
-            <label class="mt">Or provide HL7 input (paste)
-              <textarea class="input" name="text" rows="6" placeholder="MSH|^~\&|..."></textarea>
-            </label>
-            <div class="row gap mt">
-              <label>Transform Profile
-                <input class="input" name="transform_profile" placeholder="profile id" />
-              </label>
-              <label>De-ID Template
-                <input class="input" name="deid_template" placeholder="template id" />
-              </label>
-              <label>Validation Template
-                <input class="input" name="val_template" placeholder="template id" />
-              </label>
-            </div>
-            <div class="row gap mt">
-              <label class="row small" style="align-items:center; gap:.5rem;">
-                <input type="checkbox" name="deidentify" />
-                <span class="text-caption muted">De-identify generated message</span>
-              </label>
-              <label class="row small" style="align-items:center; gap:.5rem;">
-                <input type="checkbox" name="apply_baseline" />
-                <span class="text-caption muted">Apply baseline rules</span>
-              </label>
-              <label class="row small" style="align-items:center; gap:.5rem;">
-                <input type="checkbox" name="post_fhir" {% if defaults.post_fhir %}checked{% endif %} />
-                <span class="text-caption muted">POST FHIR bundle</span>
-              </label>
-            </div>
-            <div class="row gap mt">
-              <label>FHIR endpoint
-                <input class="input" name="fhir_endpoint" placeholder="https://example.org/fhir" value="{{ defaults.fhir_endpoint }}" />
-              </label>
-              <label>Transport
-                <select class="input" id="pipe-transport" name="transport">
-                  <option value="">None</option>
-                  <option value="mllp">MLLP</option>
-                </select>
-              </label>
-            </div>
-            <div id="pipe-mllp-config" class="row gap mt" data-default-host="{{ defaults.host }}" data-default-port="{{ defaults.port }}" data-default-timeout="{{ defaults.timeout }}" style="display:none;">
-              <label>Host
-                <input class="input" id="pipe-mllp-host" name="transport_host" type="text" placeholder="127.0.0.1" value="{{ defaults.host }}" />
-              </label>
-              <label>Port
-                <input class="input" id="pipe-mllp-port" name="transport_port" type="number" min="1" max="65535" placeholder="2575" value="{{ defaults.port }}" />
-              </label>
-              <label>Timeout (sec)
-                <input class="input" id="pipe-mllp-timeout" name="transport_timeout" type="number" min="1" value="{{ defaults.timeout or 5 }}" />
-              </label>
-              <label class="row gap small" style="align-items:center;">
-                <input type="checkbox" id="pipe-mllp-auto" checked />
-                <span class="text-caption muted">Auto-send after validate</span>
-              </label>
-            </div>
-            <div style="display:flex; justify-content:flex-end; margin-top:1rem;">
-              <button class="btn" type="submit">Run Pipeline</button>
-            </div>
-          </form>
-          <div id="pipeline-output" class="codepane mt" style="min-height:10rem; white-space:pre-wrap;">
-            <div class="muted small">Run the pipeline to view output here. Successful HL7 payloads auto-fill the MLLP sender.</div>
-          </div>
-        </div>
-      </section>
     </div>
   </section>
 </div>

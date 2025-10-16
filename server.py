@@ -72,7 +72,7 @@ for r in (
 ):
     app.include_router(r)
 
-# Standalone manual pipeline (legacy UI) feature flag. Enabled by default for
+# Standalone pipeline (legacy UI) feature flag. Enabled by default for
 # development environments; disable via SILH_STANDALONE_ENABLE=0 to omit the
 # routes entirely and avoid any chance of stylesheet bleed into V2 surfaces.
 _STANDALONE_ENABLED = _is_truthy(os.getenv("SILH_STANDALONE_ENABLE", "1"))

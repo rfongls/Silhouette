@@ -33,7 +33,7 @@ def _ensure_dirs() -> None:
 
 
 # ---------------------------------------------------------------------------
-# Manual Pipeline presets & helpers
+# Standalone pipeline presets & helpers
 # ---------------------------------------------------------------------------
 PIPELINE_PRESETS: dict[str, dict[str, object]] = {
     "local-2575": {
@@ -169,7 +169,7 @@ async def interop_skills(request: Request):
 
 @router.get("/ui/interop/pipeline", response_class=HTMLResponse, name="ui_interop_pipeline")
 async def interop_pipeline(request: Request, preset: str | None = None):
-    """Modern Manual Pipeline experience with generate/deid/validate/transport panels."""
+    """Modern standalone pipeline experience with generate/deid/validate/transport panels."""
     deid_templates, val_templates = _template_lists()
     defaults = _pipeline_defaults(preset)
     ctx = {

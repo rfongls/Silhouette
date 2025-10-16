@@ -149,10 +149,10 @@ Then visit:
 - http://localhost:8000/ui/security/seeds
 - http://localhost:8000/ui/security/safety
 
-## Standalone Manual Pipeline (Legacy UI)
+## Standalone Pipeline (Legacy UI)
 
-The repository also ships a **legacy standalone manual pipeline** page that mirrors the 10/06 experience. It remains fully
-isolated from the Engine V2 surfaces and can be toggled on demand.
+The repository also ships a **legacy standalone pipeline** page that mirrors the 10/06 experience. It stays fully
+isolated from Engine V2 surfaces and can be toggled on demand.
 
 ### Highlights
 
@@ -187,21 +187,21 @@ When disabled:
 
 The standalone page relies on the existing interoperability endpoints. Ensure the following handlers are available:
 
-| Purpose             | Method | Path                              | Notes                                                      |
-|---------------------|--------|-----------------------------------|------------------------------------------------------------|
-| Generate sample     | GET    | `/api/interop/sample`             | `version`, `trigger`, optional `seed=1`, `enrich=1`         |
-| De-identify         | POST   | `/api/interop/deidentify`         | `message` or `file`, optional `deid_template`              |
+| Purpose             | Method | Path                              | Notes |
+|---------------------|--------|-----------------------------------|-------|
+| Generate sample     | GET    | `/api/interop/sample`             | `version`, `trigger`, optional `seed=1`, `enrich=1` |
+| De-identify         | POST   | `/api/interop/deidentify`         | `message` or `file`, optional `deid_template` |
 | De-identify summary | POST   | `/api/interop/deidentify/summary` | **HTML** fragment; fields: `text`, `after_text`, `deid_template` |
-| Validate (report)   | POST   | `/api/interop/validate/report`    | **HTML** fragment; accepts `message`, optional `val_template`    |
-| MLLP send           | POST   | `/api/interop/mllp/send`          | `host`, `port`, `message`                                   |
-| Pipeline run        | POST   | `/api/interop/pipeline/run`       | `text` (HL7) plus preset parameters                         |
+| Validate (report)   | POST   | `/api/interop/validate/report`    | **HTML** fragment; accepts `message`, optional `val_template` |
+| MLLP send           | POST   | `/api/interop/mllp/send`          | `host`, `port`, `message` |
+| Pipeline run        | POST   | `/api/interop/pipeline/run`       | `text` (HL7) plus preset parameters |
 
-The rules dropdowns use small helper routes that simply expose `<datalist>` options:
+The rules dropdowns use small helper routes that serve `<option>` lists for the `<select>` controls:
 
-| Purpose                  | Method | Path                                      | Returns                  |
-|--------------------------|--------|-------------------------------------------|--------------------------|
-| De-ID templates datalist | GET    | `/ui/standalone/deid/templates`           | `<datalist>...</datalist>` |
-| Validate templates list  | GET    | `/ui/standalone/validate/templates`       | `<datalist>...</datalist>` |
+| Purpose                 | Method | Path                                     | Returns                  |
+|-------------------------|--------|------------------------------------------|--------------------------|
+| De-ID templates options | GET    | `/ui/standalone/deid/templates`          | `<option>…</option>` list |
+| Validate templates list | GET    | `/ui/standalone/validate/templates`      | `<option>…</option>` list |
 
 Templates live under:
 

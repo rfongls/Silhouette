@@ -1,6 +1,6 @@
-# Standalone Manual Pipeline (Classic QA Bench)
+# Standalone Pipeline (Classic QA Bench)
 
-The classic Manual Pipeline (QA bench) now lives on its own dedicated page at `/ui/standalone/pipeline`. It preserves the pre-V2 look and flow—Generate → De-identify → Validate → Send—without toggles or environment variables, while the modern `/ui/interop/pipeline` page stays unchanged for V2 work. Legacy bookmarks to `/ui/standalonepipeline` automatically redirect to the new path.
+The classic Standalone Pipeline (QA bench) now lives on its own dedicated page at `/ui/standalone/pipeline`. It preserves the pre-V2 look and flow—Generate → De-identify → Validate → Send—without toggles or environment variables, while the modern `/ui/interop/pipeline` page stays unchanged for V2 work. Legacy bookmarks to `/ui/standalonepipeline` automatically redirect to the new path.
 
 ## Routing and adapter
 
@@ -17,7 +17,7 @@ All standalone assets are namespaced so styles do not leak into other pages:
 ## Manual verification checklist
 
 1. Start the UI server (for example with `run.ui.bat`).
-2. Navigate to **Interoperability → Manual Pipeline** and confirm it opens `/ui/standalone/pipeline` with the classic layout.
+2. Navigate to **Interoperability → Standalone Pipeline** and confirm it opens `/ui/standalone/pipeline` with the classic layout.
 3. Exercise the Generate, De-identify, Validate, and MLLP panels; each should populate its respective output area.
 4. Run the full pipeline form and confirm validated HL7 output auto-fills and sends via the MLLP panel when enabled.
 5. Visit `/ui/interop/pipeline` to confirm the V2 interface still loads normally.

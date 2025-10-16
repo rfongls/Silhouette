@@ -109,13 +109,13 @@ def _compat_standalone_pipeline() -> RedirectResponse:
 
 @router.get("/ui/standalone/deid/templates", name="ui_deid_templates")
 def ui_deid_templates() -> Response:
-    options = "\n".join(f'<option value="{name}"></option>' for name in _list_templates(DEID_DIR))
-    markup = f"<datalist id=\"std-deid-templates\">{options}</datalist>"
-    return Response(markup, media_type="text/html")
+    items = ["<option value=\"\">— choose a rule —</option>"]
+    items.extend(f'<option value="{name}">{name}</option>' for name in _list_templates(DEID_DIR))
+    return Response("\n".join(items), media_type="text/html")
 
 
 @router.get("/ui/standalone/validate/templates", name="ui_val_templates")
 def ui_val_templates() -> Response:
-    options = "\n".join(f'<option value="{name}"></option>' for name in _list_templates(VAL_DIR))
-    markup = f"<datalist id=\"std-val-templates\">{options}</datalist>"
-    return Response(markup, media_type="text/html")
+    items = ["<option value=\"\">— choose a rule —</option>"]
+    items.extend(f'<option value="{name}">{name}</option>' for name in _list_templates(VAL_DIR))
+    return Response("\n".join(items), media_type="text/html")
