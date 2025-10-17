@@ -2,7 +2,6 @@ from __future__ import annotations
 import os
 from pathlib import Path
 from typing import Dict
-
 from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse
 from starlette.templating import Jinja2Templates
