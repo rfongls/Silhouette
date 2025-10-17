@@ -49,6 +49,17 @@ def index(request: Request) -> HTMLResponse:
     deid_include, deid_src = resolve_include("_deid_panel.html")
     val_include, val_src = resolve_include("_validate_panel.html")
 
+    def _force_legacy_if_missing(include_path: str, filename: str) -> str:
+        if include_path == f"standalone/{filename}":
+            fs_nonlegacy = Path("templates") / "standalone" / filename
+            if not fs_nonlegacy.exists():
+                return f"standalone/legacy/{filename}"
+        return include_path
+
+    gen_include = _force_legacy_if_missing(gen_include, "_generate_panel.html")
+    deid_include = _force_legacy_if_missing(deid_include, "_deid_panel.html")
+    val_include = _force_legacy_if_missing(val_include, "_validate_panel.html")
+
     ctx = {
         "request": request,
         "deid_templates": _list_templates(DEID_DIR),
@@ -57,9 +68,12 @@ def index(request: Request) -> HTMLResponse:
         "deid_include": deid_include,
         "val_include": val_include,
         "debug_standalone_includes": {
-            "generate": gen_src,
-            "deid": deid_src,
-            "validate": val_src,
+            "gen_include": gen_include,
+            "gen_src": str(gen_src),
+            "deid_include": deid_include,
+            "deid_src": str(deid_src),
+            "val_include": val_include,
+            "val_src": str(val_src),
         },
     }
     return templates.TemplateResponse(page, ctx)
