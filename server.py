@@ -47,6 +47,23 @@ app = FastAPI(
 )
 
 
+@app.middleware("http")
+async def _redirect_legacy_standalone(request: Request, call_next):
+    path = request.url.path
+    norm = path[:-1] if path != "/" and path.endswith("/") else path
+
+    if norm in ("/ui/standalone", "/ui/standalone/pipeline"):
+        return RedirectResponse(url="/standalone/", status_code=307)
+
+    old_api_prefix = "/ui/standalone/api"
+    if norm == old_api_prefix or norm.startswith(old_api_prefix + "/"):
+        suffix = norm[len(old_api_prefix):]
+        new_url = "/standalone/api" + (suffix or "")
+        return RedirectResponse(url=new_url, status_code=307)
+
+    return await call_next(request)
+
+
 def _is_truthy(value: str | None) -> bool:
     if value is None:
         return False
@@ -87,6 +104,24 @@ if _STANDALONE_ENABLED:
 
 app.include_router(ui_router)
 app.include_router(ui_pages_router)
+
+# --- Isolated Standalone Pipeline (does not touch V2) ---
+try:
+    from api.standalone.router_ui import router as standalone_ui_router
+    from api.standalone.router_api import router as standalone_api_router
+    app.include_router(
+        standalone_ui_router,
+        prefix="/standalone",
+        tags=["standalone"],
+    )
+    app.include_router(
+        standalone_api_router,
+        prefix="/standalone/api",
+        tags=["standalone-api"],
+    )
+except Exception as _e:
+    # Keep the app booting even if standalone package isn't present
+    pass
 if _ENGINE_V2_ENABLED:
     from api.engine import router as engine_router
     from api.engine_jobs import router as engine_jobs_router
