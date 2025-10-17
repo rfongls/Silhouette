@@ -47,6 +47,23 @@ app = FastAPI(
 )
 
 
+@app.middleware("http")
+async def _redirect_legacy_standalone(request: Request, call_next):
+    path = request.url.path
+    norm = path[:-1] if path != "/" and path.endswith("/") else path
+
+    if norm in ("/ui/standalone", "/ui/standalone/pipeline"):
+        return RedirectResponse(url="/standalone/", status_code=307)
+
+    old_api_prefix = "/ui/standalone/api"
+    if norm == old_api_prefix or norm.startswith(old_api_prefix + "/"):
+        suffix = norm[len(old_api_prefix):]
+        new_url = "/standalone/api" + (suffix or "")
+        return RedirectResponse(url=new_url, status_code=307)
+
+    return await call_next(request)
+
+
 def _is_truthy(value: str | None) -> bool:
     if value is None:
         return False
@@ -90,10 +107,6 @@ app.include_router(ui_pages_router)
 
 # --- Isolated Standalone Pipeline (does not touch V2) ---
 try:
-    # Helper: 307 keeps the caller's method/body (POST stays POST)
-    def _redir307(_: Request, dest: str = "/standalone/") -> RedirectResponse:
-        return RedirectResponse(url=dest, status_code=307)
-
     from api.standalone.router_ui import router as standalone_ui_router
     from api.standalone.router_api import router as standalone_api_router
     app.include_router(
@@ -105,76 +118,6 @@ try:
         standalone_api_router,
         prefix="/standalone/api",
         tags=["standalone-api"],
-    )
-
-    # ---- Back-compat redirects for legacy entry points ----
-    # Old UI pages that users/bookmarks still hit
-    app.add_api_route(
-        "/ui/standalone",
-        _redir307,
-        name="redir_ui_standalone",
-        include_in_schema=False,
-        methods=["GET", "POST"],
-    )
-    app.add_api_route(
-        "/ui/standalone/",
-        _redir307,
-        name="redir_ui_standalone_slash",
-        include_in_schema=False,
-        methods=["GET", "POST"],
-    )
-    app.add_api_route(
-        "/ui/standalone/pipeline",
-        _redir307,
-        name="redir_ui_standalone_pipeline",
-        include_in_schema=False,
-        methods=["GET", "POST"],
-    )
-    app.add_api_route(
-        "/ui/standalone/pipeline/",
-        _redir307,
-        name="redir_ui_standalone_pipeline_slash",
-        include_in_schema=False,
-        methods=["GET", "POST"],
-    )
-
-    # Optional: catch some older aliases frequently seen in code/tests
-    app.add_api_route(
-        "/ui/pipeline/standalone",
-        _redir307,
-        name="redir_ui_pipeline_standalone",
-        include_in_schema=False,
-        methods=["GET", "POST"],
-    )
-    app.add_api_route(
-        "/ui/pipeline/standalone/",
-        _redir307,
-        name="redir_ui_pipeline_standalone_slash",
-        include_in_schema=False,
-        methods=["GET", "POST"],
-    )
-
-    # If any legacy forms post to an old API path, bounce those too.
-    # (307 preserves POST body so HTMX forms keep working.)
-    def _redir307_api(_: Request) -> RedirectResponse:
-        return RedirectResponse(url="/standalone/api", status_code=307)
-
-    app.add_api_route(
-        "/ui/standalone/api",
-        _redir307_api,
-        name="redir_ui_standalone_api",
-        include_in_schema=False,
-        methods=["GET", "POST"],
-    )
-    def _redir307_api_wild(_: Request, path: str) -> RedirectResponse:
-        return RedirectResponse(url=f"/standalone/api/{path}", status_code=307)
-
-    app.add_api_route(
-        "/ui/standalone/api/{path:path}",
-        _redir307_api_wild,
-        name="redir_ui_standalone_api_wild",
-        include_in_schema=False,
-        methods=["GET", "POST"],
     )
 except Exception as _e:
     # Keep the app booting even if standalone package isn't present
