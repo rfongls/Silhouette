@@ -1,0 +1,22 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Standalone Pipeline</title>
+    <link rel="stylesheet" href="/static/standalone/legacy.css">
+    <link rel="stylesheet" href="/static/standalone/interop_extras.css">
+    <script src="/static/standalone/hl7_ui.js" defer></script>
+  </head>
+  <body class="standalone">
+    <main class="container">
+      <section class="run-card">
+        <h2>Standalone Pipeline</h2>
+        <p class="subtle">Generate → De-identify → Validate</p>
+      </section>
+      {% include gen_include %}
+      {% include deid_include %}
+      {% include val_include %}
+    </main>
+  </body>
+  </html>
