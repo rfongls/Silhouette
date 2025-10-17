@@ -60,8 +60,7 @@ def validate(
         # Try to use a template if present, else fall back to a simple <pre>
         tmpl = find_template("_validate_report.html")
         if tmpl:
-            # Use a Jinja template path (relative to 'templates' root) via resolver
-            include_path = resolve_include("_validate_report.html")
+            include_path, _ = resolve_include("_validate_report.html")
             return templates.TemplateResponse(include_path, {
                 "request": None,
                 "result": result,

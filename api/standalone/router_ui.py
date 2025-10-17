@@ -32,10 +32,34 @@ def index(request: Request) -> HTMLResponse:
     Standalone landing page. If templates/standalone/index.html exists, we use it.
     Otherwise, we render a compact index_compat.html which includes panels by resolver.
     """
+    legacy_dir = Path("templates/standalone/legacy")
+    legacy_dir.mkdir(parents=True, exist_ok=True)
+    for fname, minimal in {
+        "_generate_panel.html": "<section id='generate-panel' class='panel'><pre id='gen-output' class='mono'></pre></section>",
+        "_deid_panel.html": "<section id='deid-panel' class='panel collapsed'><pre id='deid-output' class='mono'></pre></section>",
+        "_validate_panel.html": "<section id='validate-panel' class='panel collapsed'><div id='validate-output' class='report'></div></section>",
+    }.items():
+        target = legacy_dir / fname
+        if not target.exists():
+            target.write_text(minimal, encoding="utf-8")
+
     page = find_template("index.html") or "standalone/index_compat.html"
+
+    gen_include, gen_src = resolve_include("_generate_panel.html")
+    deid_include, deid_src = resolve_include("_deid_panel.html")
+    val_include, val_src = resolve_include("_validate_panel.html")
+
     ctx = {
         "request": request,
         "deid_templates": _list_templates(DEID_DIR),
         "val_templates": _list_templates(VAL_DIR),
+        "gen_include": gen_include,
+        "deid_include": deid_include,
+        "val_include": val_include,
+        "debug_standalone_includes": {
+            "generate": gen_src,
+            "deid": deid_src,
+            "validate": val_src,
+        },
     }
     return templates.TemplateResponse(page, ctx)

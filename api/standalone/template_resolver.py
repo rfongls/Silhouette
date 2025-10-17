@@ -1,6 +1,6 @@
 from __future__ import annotations
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Tuple
 import os
 
 # Search order (highest priority first)
@@ -22,15 +22,16 @@ def find_template(rel_name: str) -> Optional[str]:
             return str(p)
     return None
 
-def resolve_include(rel_name: str) -> str:
+def resolve_include(rel_name: str) -> Tuple[str, str]:
     """
-    Return a Jinja include path for a template, preferring standalone/**, else legacy/**.
+    Return (jinja_path, source_fs_path). Prefer templates/standalone/**, then legacy/**.
+    If neither exists, return legacy path as jinja_path so missing files are obvious.
     """
     p = find_template(rel_name)
-    if not p:
-        return f"standalone/{rel_name}"
-    pth = Path(p)
-    # Normalize to a Jinja loader-relative path
-    if "templates/standalone/legacy" in str(pth):
-        return "standalone/legacy/" + rel_name
-    return "standalone/" + rel_name
+    if p:
+        pth = Path(p)
+        if "templates/standalone/legacy" in str(pth):
+            return "standalone/legacy/" + rel_name, p
+        return "standalone/" + rel_name, p
+    legacy_guess = Path("templates/standalone/legacy") / rel_name
+    return "standalone/legacy/" + rel_name, str(legacy_guess)

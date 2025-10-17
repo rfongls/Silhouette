@@ -1,6 +1,3 @@
-{% set _gen  = resolve_include("_generate_panel.html") %}
-{% set _deid = resolve_include("_deid_panel.html") %}
-{% set _val  = resolve_include("_validate_panel.html") %}
 <!doctype html>
 <html>
   <head>
@@ -17,9 +14,9 @@
         <h2>Standalone Pipeline</h2>
         <p class="subtle">Generate → De-identify → Validate</p>
       </section>
-      {% include _gen %}
-      {% include _deid %}
-      {% include _val %}
+      {% include gen_include %}
+      {% include deid_include %}
+      {% include val_include %}
     </main>
   </body>
   </html>
