@@ -1,0 +1,23 @@
+{# (Verbatim legacy HTML report template from your working build; trimmed only for whitespace) #}
+{% set result = result or {} %}
+<section class="val-report panel">
+  <h4>Validation Result</h4>
+  {% if result.get("summary") %}
+  <details open>
+    <summary><strong>Summary</strong></summary>
+    <pre class="mono">{{ result.get("summary") | tojson(indent=2) }}</pre>
+  </details>
+  {% endif %}
+  {% if result.get("errors") %}
+  <details open>
+    <summary><strong>Errors</strong></summary>
+    <pre class="mono">{{ result.get("errors") | tojson(indent=2) }}</pre>
+  </details>
+  {% endif %}
+  {% if result.get("warnings") %}
+  <details>
+    <summary><strong>Warnings</strong></summary>
+    <pre class="mono">{{ result.get("warnings") | tojson(indent=2) }}</pre>
+  </details>
+  {% endif %}
+</section>
