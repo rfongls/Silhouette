@@ -1,0 +1,28 @@
+{% set root = request.scope.get('root_path', '') if request and request.scope else '' %}
+<section id="generate-panel" class="interop-panel interop-panel-generate panel" data-open="true">
+  <div class="module-body" data-acc-body>
+    <h3 class="text-h3 mb">Generate</h3>
+    <form id="gen-form"
+          method="post" autocomplete="off" novalidate
+          action="{{ root }}/standalone/api/generate"
+          hx-post="{{ root }}/standalone/api/generate"
+          hx-encoding="application/x-www-form-urlencoded"
+          hx-target="#gen-output"
+          hx-swap="textContent"
+          hx-headers='{"Accept":"text/plain"}'
+          hx-on::afterRequest="window.InteropUI.onGenerateComplete(event)">
+      <div class="field">
+        <label>Trigger</label>
+        <input name="trigger" value="VXU^V04">
+      </div>
+      <div class="field">
+        <label>Message (optional seed)</label>
+        <textarea name="message" rows="6" placeholder="(optional) Provide a base HL7 message to refine"></textarea>
+      </div>
+      <div class="actions">
+        <button type="submit">Generate</button>
+      </div>
+    </form>
+    <pre id="gen-output" class="mono"></pre>
+  </div>
+</section>
