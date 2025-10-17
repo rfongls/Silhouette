@@ -1,30 +1,61 @@
-{% set root = request.scope.get('root_path', '') if request and request.scope else '' %}
-{% set val_options = val_templates if val_templates is defined and val_templates else [] %}
-{% set default_val_template = 'default' if 'default' in val_options else (val_options[0] if val_options else '') %}
-<section id="validate-panel" class="interop-panel interop-panel-validate panel collapsed">
-  <div class="module-body" data-acc-body>
-    <h3 class="text-h3 mb">Validate</h3>
-    <form id="validate-form"
-          method="post" autocomplete="off" novalidate
-          action="{{ root }}/standalone/api/validate?format=html"
-          hx-post="{{ root }}/standalone/api/validate?format=html"
-          hx-encoding="application/x-www-form-urlencoded"
-          hx-target="#validate-output"
-          hx-swap="innerHTML"
+<details id="validate-panel" class="card collapsible">
+  <summary>
+    <div class="summary-title">✓ Validate</div>
+    <div class="summary-meta"><span class="minimax">collapse</span></div>
+  </summary>
+  <div class="module-body">
+    <form id="validate-form" role="form"
+          hx-post="{{ urls.ui_validate }}"
+          hx-encoding="multipart/form-data"
+          hx-target="#validate-report"
+          hx-swap="outerHTML"
           hx-headers='{"Accept":"text/html"}'>
-      <input type="hidden" name="message" id="val-message-from-gen">
-      <div class="field">
-        <label>Template</label>
-        <select name="template_name">
-          {% for t in val_options %}
-          <option value="{{t}}" {% if t == default_val_template %}selected{% endif %}>{{t}}</option>
+      <input type="hidden" name="format" value="html" />
+      <label class="text-caption muted" for="validate-msg">HL7 Message (paste)</label>
+      <textarea class="codepane limit10" name="message" id="validate-msg" rows="8" placeholder="MSH|^~\&amp;|..."></textarea>
+
+      <div class="row gap small mt" role="group" aria-label="Validate options">
+        <label class="text-caption muted" for="validate-template" style="min-width:12rem;">Validation template</label>
+        <select class="input" name="val_template" id="validate-template"
+                placeholder="template id (optional)"
+                hx-get="{{ urls.ui_val_templates }}" hx-trigger="load"
+                hx-target="this" hx-swap="innerHTML">
+          <option value="">— choose a rule —</option>
+          {% for template in val_templates %}
+            <option value="{{ template }}">{{ template }}</option>
           {% endfor %}
         </select>
-      </div>
-      <div class="actions">
-        <button type="submit">Run Validate</button>
+        <span class="text-caption muted">templates in configs/standalone/validate_templates/</span>
+        <span class="text-caption muted">or upload .hl7</span>
+        <input class="input" type="file" name="file" accept=".hl7,.txt" />
+        <button class="btn" type="submit">Run Validate</button>
       </div>
     </form>
-    <div id="validate-output" class="report"></div>
+
+    <label class="text-caption muted mt" for="validate-output">Output</label>
+    <pre id="validate-output" class="codepane limit10" aria-live="polite"></pre>
+
+    <details class="card collapsible" id="validate-report-panel">
+      <summary>
+        <div class="summary-title">Validation report</div>
+        <div class="summary-meta"><span class="minimax">collapse</span></div>
+      </summary>
+      <div class="module-body">
+        <div class="toolbar">
+          <button class="chip" type="button" data-role="val-filter" data-k="status" data-v="pass" aria-pressed="false">Pass</button>
+          <button class="chip" type="button" data-role="val-filter" data-k="status" data-v="fail" aria-pressed="false">Fail</button>
+          <input class="input" id="val-filter-seg" placeholder="SEG (e.g., PV1-2)" />
+          <input class="input" id="val-filter-rule" placeholder="Rule/Profile" />
+          <button class="btn btn-sm" type="button" data-role="validate-report-refresh">Filter</button>
+          <button class="btn btn-sm" type="button" data-role="validate-report-clear">Reset</button>
+        </div>
+        <input type="hidden" name="segment" id="val-report-seg" form="validate-form" />
+        <input type="hidden" name="rule" id="val-report-rule" form="validate-form" />
+        <input type="hidden" name="status" id="val-report-status" form="validate-form" />
+        <section id="validate-report" class="codepane limit10" aria-live="polite" data-val-root></section>
+      </div>
+    </details>
+
+    {% with source_selector = '#validate-output', stage='validate' %}{% include 'standalone/legacy/_action_tray.html' %}{% endwith %}
   </div>
-</section>
+</details>

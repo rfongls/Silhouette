@@ -1,6 +1,7 @@
 from __future__ import annotations
-import json
+import os
 from pathlib import Path
+from typing import Dict
 from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse
 from starlette.templating import Jinja2Templates
@@ -26,6 +27,56 @@ for p in (DEID_DIR, VAL_DIR):
 def _list_templates(dirpath: Path) -> list[str]:
     return [p.stem for p in sorted(dirpath.glob("*.json"))]
 
+
+def _safe_url_for(request: Request, name: str, fallback: str) -> str:
+    try:
+        return str(request.url_for(name))
+    except Exception:  # pragma: no cover - defensive fallback
+        return fallback
+
+
+def _standalone_urls(request: Request) -> Dict[str, str]:
+    root = request.scope.get("root_path", "") or ""
+    return {
+        "ui_generate": _safe_url_for(request, "ui_generate", f"{root}/ui/interop/generate"),
+        "api_generate": _safe_url_for(
+            request, "generate_messages_endpoint", f"{root}/api/interop/generate"
+        ),
+        "ui_deidentify": _safe_url_for(request, "ui_deidentify", f"{root}/ui/interop/deidentify"),
+        "api_deidentify": _safe_url_for(request, "api_deidentify", f"{root}/api/interop/deidentify"),
+        "api_deidentify_summary": _safe_url_for(
+            request, "api_deidentify_summary", f"{root}/api/interop/deidentify/summary"
+        ),
+        "ui_validate": _safe_url_for(request, "ui_validate", f"{root}/ui/interop/validate"),
+        "api_validate": _safe_url_for(request, "api_validate", f"{root}/api/interop/validate"),
+        "api_validate_view": _safe_url_for(
+            request, "interop_validate_view", f"{root}/api/interop/validate/view"
+        ),
+        "api_pipeline_run": _safe_url_for(request, "run_pipeline", f"{root}/api/interop/pipeline/run"),
+        "ui_pipeline": _safe_url_for(request, "ui_interop_pipeline", f"{root}/ui/interop/pipeline"),
+        "mllp_send": _safe_url_for(request, "api_mllp_send", f"{root}/api/interop/mllp/send"),
+        "logs_content": _safe_url_for(
+            request, "interop_logs_content", f"{root}/ui/interop/logs/content"
+        ),
+        "samples": _safe_url_for(request, "list_hl7_samples", f"{root}/api/interop/samples"),
+        "sample": _safe_url_for(request, "get_hl7_sample", f"{root}/api/interop/sample"),
+        "triggers": _safe_url_for(request, "triggers_json", f"{root}/api/interop/triggers"),
+        "ui_deid_templates": _safe_url_for(
+            request, "standalone_deid_templates", f"{root}/standalone/deid/templates"
+        ),
+        "ui_val_templates": _safe_url_for(
+            request, "standalone_val_templates", f"{root}/standalone/validate/templates"
+        ),
+    }
+
+
+def _mllp_defaults() -> Dict[str, object]:
+    return {
+        "host": os.getenv("STANDALONE_MLLP_HOST", "127.0.0.1"),
+        "port": int(os.getenv("STANDALONE_MLLP_PORT", "2575") or 2575),
+        "timeout": int(os.getenv("STANDALONE_MLLP_TIMEOUT", "5") or 5),
+    }
+
 @router.get("/", name="standalone_index")
 def index(request: Request) -> HTMLResponse:
     """
@@ -38,6 +89,8 @@ def index(request: Request) -> HTMLResponse:
         "_generate_panel.html": "<section id='generate-panel' class='panel'><pre id='gen-output' class='mono'></pre></section>",
         "_deid_panel.html": "<section id='deid-panel' class='panel collapsed'><pre id='deid-output' class='mono'></pre></section>",
         "_validate_panel.html": "<section id='validate-panel' class='panel collapsed'><div id='validate-output' class='report'></div></section>",
+        "_mllp_panel.html": "<section id='mllp-panel' class='panel collapsed'><div id='mllp-output'></div></section>",
+        "_action_tray.html": "<div class='action-tray' hidden></div>",
     }.items():
         target = legacy_dir / fname
         if not target.exists():
@@ -45,35 +98,34 @@ def index(request: Request) -> HTMLResponse:
 
     page = find_template("index.html") or "standalone/index_compat.html"
 
-    gen_include, gen_src = resolve_include("_generate_panel.html")
-    deid_include, deid_src = resolve_include("_deid_panel.html")
-    val_include, val_src = resolve_include("_validate_panel.html")
-
-    def _force_legacy_if_missing(include_path: str, filename: str) -> str:
-        if include_path == f"standalone/{filename}":
-            fs_nonlegacy = Path("templates") / "standalone" / filename
-            if not fs_nonlegacy.exists():
-                return f"standalone/legacy/{filename}"
-        return include_path
-
-    gen_include = _force_legacy_if_missing(gen_include, "_generate_panel.html")
-    deid_include = _force_legacy_if_missing(deid_include, "_deid_panel.html")
-    val_include = _force_legacy_if_missing(val_include, "_validate_panel.html")
+    gen_include, _ = resolve_include("_generate_panel.html")
+    deid_include, _ = resolve_include("_deid_panel.html")
+    val_include, _ = resolve_include("_validate_panel.html")
+    mllp_include, _ = resolve_include("_mllp_panel.html")
 
     ctx = {
         "request": request,
+        "urls": _standalone_urls(request),
         "deid_templates": _list_templates(DEID_DIR),
         "val_templates": _list_templates(VAL_DIR),
+        "defaults": _mllp_defaults(),
         "gen_include": gen_include,
         "deid_include": deid_include,
         "val_include": val_include,
-        "debug_standalone_includes": {
-            "gen_include": gen_include,
-            "gen_src": str(gen_src),
-            "deid_include": deid_include,
-            "deid_src": str(deid_src),
-            "val_include": val_include,
-            "val_src": str(val_src),
-        },
+        "mllp_include": mllp_include,
     }
     return templates.TemplateResponse(page, ctx)
+
+
+@router.get("/deid/templates", name="standalone_deid_templates", response_class=HTMLResponse)
+def deid_template_options() -> HTMLResponse:
+    options = ["<option value=\"\">— choose a rule —</option>"]
+    options.extend(f'<option value="{name}">{name}</option>' for name in _list_templates(DEID_DIR))
+    return HTMLResponse("\n".join(options))
+
+
+@router.get("/validate/templates", name="standalone_val_templates", response_class=HTMLResponse)
+def validate_template_options() -> HTMLResponse:
+    options = ["<option value=\"\">— choose a rule —</option>"]
+    options.extend(f'<option value="{name}">{name}</option>' for name in _list_templates(VAL_DIR))
+    return HTMLResponse("\n".join(options))
