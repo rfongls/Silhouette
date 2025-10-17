@@ -1,0 +1,30 @@
+{% set root = request.scope.get('root_path', '') if request and request.scope else '' %}
+{% set val_options = val_templates if val_templates is defined and val_templates else [] %}
+{% set default_val_template = 'default' if 'default' in val_options else (val_options[0] if val_options else '') %}
+<section id="validate-panel" class="interop-panel interop-panel-validate panel collapsed">
+  <div class="module-body" data-acc-body>
+    <h3 class="text-h3 mb">Validate</h3>
+    <form id="validate-form"
+          method="post" autocomplete="off" novalidate
+          action="{{ root }}/standalone/api/validate?format=html"
+          hx-post="{{ root }}/standalone/api/validate?format=html"
+          hx-encoding="application/x-www-form-urlencoded"
+          hx-target="#validate-output"
+          hx-swap="innerHTML"
+          hx-headers='{"Accept":"text/html"}'>
+      <input type="hidden" name="message" id="val-message-from-gen">
+      <div class="field">
+        <label>Template</label>
+        <select name="template_name">
+          {% for t in val_options %}
+          <option value="{{t}}" {% if t == default_val_template %}selected{% endif %}>{{t}}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="actions">
+        <button type="submit">Run Validate</button>
+      </div>
+    </form>
+    <div id="validate-output" class="report"></div>
+  </div>
+</section>
