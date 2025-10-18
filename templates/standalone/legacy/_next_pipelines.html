@@ -9,7 +9,8 @@
         {% if href %}
           <a class="pipeline-link" href="{{ href }}" target="_blank" rel="noopener">{{ item.label }}</a>
         {% else %}
-          <button class="pipeline-link" type="button"
+          <button class="pipeline-link next-pipeline" type="button"
+                  data-next-pipeline
                   data-action="{{ action }}"
                   {% if item.requires %}data-requires="{{ item.requires }}"{% endif %}
                   title="{{ item.description or '' }}">

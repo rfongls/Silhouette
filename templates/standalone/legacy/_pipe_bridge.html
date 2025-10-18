@@ -1,0 +1,96 @@
+{# ---------------------------------------------------------------------------
+   Bridge the Standalone “legacy” panels to the working interop pipeline
+   contract from the original standalone build. Do not add styling here—
+   this partial only wires canonical form/targets expected by interop_ui.js.
+   ------------------------------------------------------------------------- #}
+
+{% set pipeline_run_url = urls.get('api_pipeline_run', '/api/interop/pipeline/run') %}
+{% set triggers_url = urls.get('triggers', '/api/interop/triggers') %}
+
+<link rel="stylesheet" href="{{ request.url_for('static', path='css/interop_extras.css') }}">
+<script src="{{ request.url_for('static', path='vendor/htmx.min.js') }}"></script>
+<script type="module" src="{{ request.url_for('static', path='js/interop_ui.js') }}"></script>
+
+<form id="pipe-form"
+      method="post"
+      action="{{ pipeline_run_url }}"
+      hx-post="{{ pipeline_run_url }}"
+      hx-target="#pipe-out"
+      hx-swap="innerHTML"
+      hidden>
+  <select id="pipe-version" name="version"
+          hx-get="{{ triggers_url }}"
+          hx-target="#pipe-trigger-select"
+          hx-trigger="load,change"></select>
+  <select id="pipe-trigger-select" name="trigger"></select>
+  <input id="pipe-trigger-typed" list="pipe-trigger-datalist">
+  <datalist id="pipe-trigger-datalist"></datalist>
+  <input id="pipe-template-relpath" name="template_relpath">
+  <textarea id="pipe-text" name="text"></textarea>
+  <input type="number" name="count" value="1" class="hidden">
+  <input type="number" name="seed" class="hidden">
+  <input type="checkbox" name="ensure_unique" class="hidden" checked>
+  <input type="checkbox" name="deidentify" class="hidden">
+  <input type="checkbox" name="apply_baseline" class="hidden">
+  <input type="checkbox" name="post_fhir" class="hidden">
+  <input type="text" name="fhir_endpoint" class="hidden">
+</form>
+
+<div id="pipe-out"></div>
+
+<script>
+  window.SilhouettePipeBridge = window.SilhouettePipeBridge || {};
+  (function (bridge) {
+    const hxPostTarget = "{{ pipeline_run_url }}";
+
+    bridge.mirror = bridge.mirror || function (fromSelector, toSelector) {
+      const src = document.querySelector(fromSelector);
+      const dst = document.querySelector(toSelector);
+      if (!src || !dst) {
+        return;
+      }
+      const apply = () => {
+        const value = 'value' in src ? src.value : (src.textContent || '');
+        if ('value' in dst) {
+          dst.value = value;
+          dst.dispatchEvent(new Event('input', { bubbles: true }));
+          dst.dispatchEvent(new Event('change', { bubbles: true }));
+        } else {
+          dst.textContent = value;
+        }
+      };
+      src.addEventListener('input', apply);
+      src.addEventListener('change', apply);
+      apply();
+    };
+
+    bridge.bindNextPipelines = function () {
+      const buttons = document.querySelectorAll('.next-pipeline, [data-next-pipeline]');
+      buttons.forEach((btn) => {
+        btn.setAttribute('hx-post', hxPostTarget);
+        btn.setAttribute('hx-include', '#pipe-form');
+        btn.setAttribute('hx-target', '#pipe-out');
+        btn.setAttribute('hx-swap', 'innerHTML');
+        const version = btn.getAttribute('data-version');
+        const trigger = btn.getAttribute('data-trigger');
+        const template = btn.getAttribute('data-template') || btn.getAttribute('data-template-relpath');
+        const hxVals = {};
+        if (version) hxVals.version = version;
+        if (trigger) hxVals.trigger = trigger;
+        if (template) hxVals.template_relpath = template;
+        if (Object.keys(hxVals).length) {
+          btn.setAttribute('hx-vals', JSON.stringify(hxVals));
+        } else {
+          btn.removeAttribute('hx-vals');
+        }
+      });
+    };
+
+    document.addEventListener('DOMContentLoaded', () => {
+      bridge.bindNextPipelines();
+    });
+    document.addEventListener('htmx:afterSwap', () => {
+      bridge.bindNextPipelines();
+    });
+  })(window.SilhouettePipeBridge);
+</script>

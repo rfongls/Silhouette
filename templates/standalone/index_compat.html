@@ -15,6 +15,7 @@
   </head>
   <body class="standalone">
     <main class="container legacy-interop-skin" data-skin="1006">
+      {% include "standalone/legacy/_pipe_bridge.html" %}
       <section class="run-card">
         <h2>Standalone Pipeline</h2>
         <p class="subtle">Generate → De-identify → Validate</p>
@@ -26,5 +27,28 @@
         {% include "standalone/legacy/_mllp_panel.html" ignore missing %}
       </div>
     </main>
+    <script>
+      (function () {
+        const bridge = window.SilhouettePipeBridge;
+        if (bridge && typeof bridge.mirror === 'function') {
+          bridge.mirror('#std-version', '#pipe-version');
+          bridge.mirror('#std-trigger-input', '#pipe-trigger-typed');
+          bridge.mirror('#deid-msg', '#pipe-text');
+          bridge.mirror('#validate-msg', '#pipe-text');
+        }
+        document.addEventListener('htmx:afterSwap', function (event) {
+          const target = event.detail && event.detail.target;
+          if (!target || !target.id) {
+            return;
+          }
+          if (target.id === 'gen-output' || target.id === 'deid-output' || target.id === 'validate-output') {
+            const hidden = document.getElementById('pipe-text');
+            if (hidden) {
+              hidden.value = (target.textContent || '').trim();
+            }
+          }
+        });
+      })();
+    </script>
   </body>
   </html>
