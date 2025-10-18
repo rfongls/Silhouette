@@ -195,6 +195,23 @@
   doc.addEventListener("htmx:afterSwap", afterSwap);
   doc.addEventListener("htmx:afterOnLoad", afterSwap);
 
+  doc.addEventListener(
+    "submit",
+    (event) => {
+      const form = event.target.closest("form[data-module-action]");
+      if (!form) return;
+      const tray = form.closest(".action-tray");
+      if (!tray) return;
+      const sourceSelector = tray.getAttribute("data-source") || "";
+      const source = sourceSelector ? $(sourceSelector) : null;
+      const payload = form.querySelector("input[name='payload']");
+      if (payload) {
+        payload.value = extractText(source).trim();
+      }
+    },
+    true,
+  );
+
   // Ensure trays open after initial render if content already present
   doc.addEventListener("DOMContentLoaded", () => {
     $all(".action-tray").forEach((tray) => {

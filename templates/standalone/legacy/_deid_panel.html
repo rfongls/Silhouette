@@ -65,6 +65,6 @@
       </div>
     </details>
 
-    {% with source_selector = '#deid-output', stage='deid' %}{% include 'standalone/legacy/_action_tray.html' %}{% endwith %}
+    {% with source_selector = '#deid-output', stage='deid', next_pipelines = pipeline_recs.get('deid', []) %}{% include 'standalone/legacy/_action_tray.html' %}{% endwith %}
   </div>
 </details>

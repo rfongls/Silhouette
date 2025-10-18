@@ -67,3 +67,26 @@ def validate(
             })
         return HTMLResponse(f"<div class='val-report'><h4>Validation Result</h4><pre>{json.dumps(result, indent=2)}</pre></div>")
     return PlainTextResponse(json.dumps(result))
+
+
+@router.post("/module/action", name="standalone_module_action", response_class=HTMLResponse)
+def module_action(
+    module: str = Form("interop.pipeline"),
+    function: str = Form("run"),
+    action: str = Form(""),
+    params: str = Form(""),
+    payload: str = Form(""),
+    message: str = Form(""),
+) -> HTMLResponse:
+    text = (payload or message or "").strip()
+    summary = {
+        "module": (module or "interop").strip() or "interop",
+        "function": (function or action or "run").strip() or "run",
+        "params": params or "",
+        "chars": len(text),
+        "empty": not text,
+    }
+    return templates.TemplateResponse(
+        "standalone/legacy/_module_action_result.html",
+        {"request": None, "summary": summary},
+    )

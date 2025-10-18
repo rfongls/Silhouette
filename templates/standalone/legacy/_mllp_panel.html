@@ -32,7 +32,7 @@
       </div>
     </form>
     <div id="mllp-output" class="mt"><div class="muted micro">ACK / response will appear here.</div></div>
-    {% with source_selector = '#mllp-output', stage='mllp' %}
+    {% with source_selector = '#mllp-output', stage='mllp', next_pipelines = pipeline_recs.get('mllp', []) %}
       {% include 'standalone/legacy/_action_tray.html' %}
     {% endwith %}
   </div>

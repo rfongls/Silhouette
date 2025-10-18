@@ -1,0 +1,22 @@
+{% set items = next_pipelines or [] %}
+{% if items %}
+  <div class="next-pipelines" data-role="next-pipelines">
+    <h5>Next pipelines</h5>
+    <div class="next-pipelines-list">
+      {% for item in items %}
+        {% set action = item.action or 'pipeline' %}
+        {% set href = item.href or (urls.ui_pipeline if action == 'pipeline' else None) %}
+        {% if href %}
+          <a class="pipeline-link" href="{{ href }}" target="_blank" rel="noopener">{{ item.label }}</a>
+        {% else %}
+          <button class="pipeline-link" type="button"
+                  data-action="{{ action }}"
+                  {% if item.requires %}data-requires="{{ item.requires }}"{% endif %}
+                  title="{{ item.description or '' }}">
+            {{ item.label }}
+          </button>
+        {% endif %}
+      {% endfor %}
+    </div>
+  </div>
+{% endif %}

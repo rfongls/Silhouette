@@ -28,6 +28,57 @@ def _list_templates(dirpath: Path) -> list[str]:
     return [p.stem for p in sorted(dirpath.glob("*.json"))]
 
 
+PIPELINE_SUGGESTIONS: dict[str, list[dict[str, str]]] = {
+    "gen": [
+        {
+            "action": "deid",
+            "label": "De-identify",
+            "description": "Apply configured de-identification rules",
+        },
+        {
+            "action": "validate",
+            "label": "Validate",
+            "description": "Check the generated message structure",
+        },
+    ],
+    "deid": [
+        {
+            "action": "validate",
+            "label": "Validate",
+            "description": "Review structure after de-identification",
+        },
+        {
+            "action": "pipeline",
+            "label": "HL7 → FHIR",
+            "description": "Open pipeline builder in a new tab",
+            "requires": "pipeline",
+        },
+    ],
+    "validate": [
+        {
+            "action": "mllp",
+            "label": "Send via MLLP",
+            "description": "Deliver message and view ACK",
+            "requires": "mllp",
+        },
+        {
+            "action": "pipeline",
+            "label": "HL7 → FHIR",
+            "description": "Translate the validated message",
+            "requires": "pipeline",
+        },
+    ],
+    "mllp": [
+        {
+            "action": "pipeline",
+            "label": "HL7 → FHIR",
+            "description": "Translate and validate via pipeline",
+            "requires": "pipeline",
+        }
+    ],
+}
+
+
 def _safe_url_for(request: Request, name: str, fallback: str) -> str:
     try:
         return str(request.url_for(name))
@@ -67,6 +118,9 @@ def _standalone_urls(request: Request) -> Dict[str, str]:
         "ui_val_templates": _safe_url_for(
             request, "standalone_val_templates", f"{root}/standalone/validate/templates"
         ),
+        "module_action": _safe_url_for(
+            request, "standalone_module_action", f"{root}/standalone/api/module/action"
+        ),
     }
 
 
@@ -104,6 +158,7 @@ def index(request: Request) -> HTMLResponse:
         "deid_templates": _list_templates(DEID_DIR),
         "val_templates": _list_templates(VAL_DIR),
         "defaults": _mllp_defaults(),
+        "pipeline_recs": PIPELINE_SUGGESTIONS,
     }
     return templates.TemplateResponse(page, ctx)
 

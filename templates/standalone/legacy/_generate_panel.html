@@ -46,7 +46,7 @@
     </form>
 
     <pre id="gen-output" class="codepane mt" style="min-height:9rem; white-space:pre-wrap;"></pre>
-    {% with source_selector = '#gen-output', stage='gen' %}
+    {% with source_selector = '#gen-output', stage='gen', next_pipelines = pipeline_recs.get('gen', []) %}
       {% include 'standalone/legacy/_action_tray.html' %}
     {% endwith %}
   </div>

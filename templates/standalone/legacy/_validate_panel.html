@@ -56,6 +56,6 @@
       </div>
     </details>
 
-    {% with source_selector = '#validate-output', stage='validate' %}{% include 'standalone/legacy/_action_tray.html' %}{% endwith %}
+    {% with source_selector = '#validate-output', stage='validate', next_pipelines = pipeline_recs.get('validate', []) %}{% include 'standalone/legacy/_action_tray.html' %}{% endwith %}
   </div>
 </details>
