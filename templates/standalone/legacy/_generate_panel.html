@@ -1,0 +1,53 @@
+<details id="generate-panel" class="card collapsible" open>
+  <summary>
+    <div class="summary-title">⚡ Generate</div>
+    <div class="summary-meta"><span class="minimax">collapse</span></div>
+  </summary>
+  <div class="module-body">
+    <form id="gen-form" role="form"
+          hx-post="{{ urls.api_generate }}"
+          hx-encoding="application/x-www-form-urlencoded"
+          hx-target="#gen-output"
+          hx-swap="textContent"
+          hx-headers='{"Accept":"text/plain"}'>
+      <div class="row gap small">
+        <label class="sr-only" for="std-version">HL7 version</label>
+        <select class="input" id="std-version" name="version" data-trigger-datalist="std-trigger-list">
+          <option value="hl7-v2-3">HL7 v2.3</option>
+          <option value="hl7-v2-4" selected>HL7 v2.4</option>
+          <option value="hl7-v2-5">HL7 v2.5</option>
+        </select>
+
+        <label class="sr-only" for="std-trigger-input">Trigger</label>
+        <input class="input"
+               id="std-trigger-input"
+               name="trigger"
+               placeholder="e.g., ADT^A01"
+               list="std-trigger-list"
+               autocomplete="off" />
+        <datalist id="std-trigger-list"></datalist>
+
+        <label class="sr-only" for="std-count">Count</label>
+        <input class="input" id="std-count" name="count" type="number" min="1" max="50" step="1" value="1" style="max-width:5rem;" placeholder="Count" />
+
+        <label class="row small" style="align-items:center; gap:.35rem;">
+          <input id="std-seed" name="seed" type="checkbox" value="1" />
+          <span class="text-caption muted">Seed</span>
+        </label>
+
+        <label class="row small" style="align-items:center; gap:.35rem;">
+          <input id="std-enrich" name="enrich" type="checkbox" value="1" />
+          <span class="text-caption muted">Enrich data</span>
+        </label>
+
+        <button class="btn" type="submit">Generate</button>
+        <button class="btn" type="button" id="std-load-sample">Load Sample</button>
+      </div>
+    </form>
+
+    <pre id="gen-output" class="codepane mt" style="min-height:9rem; white-space:pre-wrap;"></pre>
+    {% with source_selector = '#gen-output', stage='gen', next_pipelines = pipeline_recs.get('gen', []) %}
+      {% include 'standalone/legacy/_action_tray.html' %}
+    {% endwith %}
+  </div>
+</details>

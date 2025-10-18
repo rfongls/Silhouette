@@ -1,0 +1,18 @@
+{% set stage = stage or '' %}
+<div class="run-cards" data-role="run-cards">
+  <article class="run-card">
+    <h5>Module Function</h5>
+    <p class="muted micro">Send this message to a module function for downstream processing.</p>
+    <form data-module-action
+          hx-post="{{ urls.module_action }}"
+          hx-target="#module-action-result-{{ stage or 'current' }}"
+          hx-swap="innerHTML">
+      <input type="hidden" name="module" value="interop.pipeline" />
+      <input type="hidden" name="function" value="run" />
+      <input type="hidden" name="action" value="{{ stage }}" />
+      <input type="hidden" name="payload" value="" data-module-payload />
+      <button class="btn btn-sm" type="submit">Run Module</button>
+    </form>
+    <div id="module-action-result-{{ stage or 'current' }}" class="module-action-result micro muted"></div>
+  </article>
+</div>

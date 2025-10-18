@@ -1,0 +1,41 @@
+{% set stage = stage or '' %}
+{% set tray_id = 'action-tray-' ~ stage %}
+<div class="action-tray" id="{{ tray_id }}" data-tray data-source="{{ source_selector|default('#gen-output') }}" data-stage="{{ stage }}" aria-live="polite">
+  <div class="action-tray-header">
+    <div>
+      <h4>Next steps</h4>
+      <p class="muted small">Choose what to do with this message.</p>
+    </div>
+  </div>
+  <div class="action-tray-content">
+    <div class="action-cards left">
+      {% if stage == 'gen' %}
+        <button class="action-card" type="button" data-action="deid" title="Open De-identify with this message">
+          <strong>→ De-identify</strong><small>Apply de-id rules</small>
+        </button>
+        <button class="action-card" type="button" data-action="validate" title="Open Validate with this message">
+          <strong>→ Validate</strong><small>Check structure</small>
+        </button>
+      {% elif stage == 'deid' %}
+        <button class="action-card" type="button" data-action="validate" title="Open Validate with this message">
+          <strong>→ Validate</strong><small>Check structure</small>
+        </button>
+      {% elif stage == 'validate' %}
+        <button class="action-card" type="button" data-action="mllp" data-requires="mllp" title="Send via MLLP">
+          <strong>→ MLLP Send</strong><small>Deliver &amp; view ACK</small>
+        </button>
+        <button class="action-card" type="button" data-action="pipeline" title="Run HL7 → FHIR">
+          <strong>→ HL7 → FHIR</strong><small>Translate &amp; validate</small>
+        </button>
+      {% elif stage == 'pipeline' %}
+        <button class="action-card" type="button" data-action="mllp" data-requires="mllp" title="Send via MLLP">
+          <strong>→ MLLP Send</strong><small>Deliver &amp; view ACK</small>
+        </button>
+      {% endif %}
+    </div>
+    {% if stage in ['validate', 'mllp', 'pipeline'] %}
+      {% include 'standalone/legacy/_run_cards.html' %}
+    {% endif %}
+  </div>
+  {% include 'standalone/legacy/_next_pipelines.html' %}
+</div>
