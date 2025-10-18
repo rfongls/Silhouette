@@ -28,7 +28,7 @@
 
       <div class="row gap wrap mt">
         <button class="btn"
-                hx-post="{{ urls.ui_generate }}"
+                hx-post="/ui/interop/generate"
                 hx-include="#pipe-form"
                 hx-target="#pipe-out"
                 hx-swap="innerHTML">
@@ -36,7 +36,7 @@
         </button>
 
         <button class="btn"
-                hx-post="{{ urls.ui_validate }}"
+                hx-post="/ui/interop/validate"
                 hx-include="#pipe-form"
                 hx-target="#pipe-out"
                 hx-swap="innerHTML">
@@ -44,7 +44,7 @@
         </button>
 
         <button class="btn"
-                hx-post="{{ urls.ui_deidentify }}"
+                hx-post="/ui/interop/deidentify"
                 hx-include="#pipe-form"
                 hx-target="#pipe-out"
                 hx-swap="innerHTML">
@@ -52,7 +52,7 @@
         </button>
 
         <button class="btn"
-                hx-post="{{ urls.api_pipeline_run }}"
+                hx-post="/api/interop/pipeline/run"
                 hx-include="#pipe-form"
                 hx-target="#pipe-out"
                 hx-swap="innerHTML">
@@ -95,7 +95,7 @@
       SilhouettePipeBridge.mirror('#sa-version', '#pipe-version');
       SilhouettePipeBridge.mirror('#sa-trigger', '#pipe-trigger-typed');
       SilhouettePipeBridge.mirror('#sa-template-relpath', '#pipe-template-relpath');
-      SilhouettePipeBridge.mirror('#sa-textarea', '#pipe-text');
+      SilhouettePipeBridge.mirror('#sa-textarea', '#pipe-form textarea[name="text"]');
       SilhouettePipeBridge.bindNextPipelines();
 
       const host = document.getElementById('pipe-output-host');
