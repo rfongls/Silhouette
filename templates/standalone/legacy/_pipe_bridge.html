@@ -4,10 +4,11 @@
    this partial only wires canonical form/targets expected by interop_ui.js.
    ------------------------------------------------------------------------- #}
 
-{% set pipeline_run_url = urls.get('api_pipeline_run', '/api/interop/pipeline/run') %}
-{% set triggers_url = urls.get('triggers', '/api/interop/triggers') %}
+{% set pipeline_run_url = (urls is defined and urls.get('api_pipeline_run')) or '/api/interop/pipeline/run' %}
+{% set triggers_url = (urls is defined and urls.get('triggers')) or '/api/interop/triggers' %}
 
 <link rel="stylesheet" href="{{ request.url_for('static', path='css/interop_extras.css') }}">
+{# Update the path below if htmx is stored somewhere else in static/. #}
 <script src="{{ request.url_for('static', path='vendor/htmx.min.js') }}"></script>
 <script type="module" src="{{ request.url_for('static', path='js/interop_ui.js') }}"></script>
 
@@ -64,7 +65,7 @@
       apply();
     };
 
-    bridge.bindNextPipelines = function () {
+    bridge.bindNextPipelines = bridge.bindNextPipelines || function () {
       const buttons = document.querySelectorAll('.next-pipeline, [data-next-pipeline]');
       buttons.forEach((btn) => {
         btn.setAttribute('hx-post', hxPostTarget);
@@ -86,11 +87,7 @@
       });
     };
 
-    document.addEventListener('DOMContentLoaded', () => {
-      bridge.bindNextPipelines();
-    });
-    document.addEventListener('htmx:afterSwap', () => {
-      bridge.bindNextPipelines();
-    });
+    document.addEventListener('DOMContentLoaded', bridge.bindNextPipelines);
+    document.addEventListener('htmx:afterSwap', bridge.bindNextPipelines);
   })(window.SilhouettePipeBridge);
 </script>
