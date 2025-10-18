@@ -1,0 +1,122 @@
+{% extends "layout.html" %}
+{% block content %}
+  <section class="standalone-legacy legacy-interop-skin" style="max-width:960px;margin:0 auto;">
+    {% include "standalone/legacy/_pipe_bridge.html" %}
+
+    <div class="card" style="margin-top:1.5rem;">
+      <h2 style="margin-bottom:1rem;">Standalone Legacy Pipeline</h2>
+      <p class="muted" style="margin-bottom:1.5rem;">Generate, validate, and de-identify HL7 messages using the legacy endpoints.</p>
+
+      <div class="row gap wrap">
+        <label for="sa-version">HL7 Version</label>
+        <select id="sa-version">
+          <option value="hl7-v2-3">HL7 v2.3</option>
+          <option value="hl7-v2-4" selected>HL7 v2.4</option>
+          <option value="hl7-v2-5">HL7 v2.5</option>
+        </select>
+
+        <label for="sa-trigger">Trigger</label>
+        <input id="sa-trigger" list="pipe-trigger-datalist" placeholder="e.g., ADT_A01" autocomplete="off">
+
+        <label for="sa-template-relpath">Template</label>
+        <input id="sa-template-relpath" placeholder="hl7-v2-4/ADT_A01.hl7">
+      </div>
+
+      <div class="row mt">
+        <textarea id="sa-textarea" rows="12" class="w-full" style="width:100%;" placeholder="Paste HL7 message (optional)"></textarea>
+      </div>
+
+      <div class="row gap wrap mt">
+        <button class="btn"
+                hx-post="{{ urls.ui_generate }}"
+                hx-include="#pipe-form"
+                hx-target="#pipe-out"
+                hx-swap="innerHTML">
+          Generate
+        </button>
+
+        <button class="btn"
+                hx-post="{{ urls.ui_validate }}"
+                hx-include="#pipe-form"
+                hx-target="#pipe-out"
+                hx-swap="innerHTML">
+          Validate
+        </button>
+
+        <button class="btn"
+                hx-post="{{ urls.ui_deidentify }}"
+                hx-include="#pipe-form"
+                hx-target="#pipe-out"
+                hx-swap="innerHTML">
+          De-identify
+        </button>
+
+        <button class="btn"
+                hx-post="{{ urls.api_pipeline_run }}"
+                hx-include="#pipe-form"
+                hx-target="#pipe-out"
+                hx-swap="innerHTML">
+          Run Pipeline
+        </button>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top:1rem;">
+      <h3>Results</h3>
+      <p class="muted">Responses from legacy endpoints render below as HTMX fragments.</p>
+      <div id="pipe-output-host" class="mt"></div>
+    </div>
+
+    <div class="card" style="margin-top:1rem;">
+      <h4>Next Pipelines</h4>
+      <p class="muted">Trigger predefined pipeline steps without wiring new forms.</p>
+      <div class="row gap wrap">
+        <button class="btn next-pipeline"
+                data-next-pipeline
+                data-trigger="ADT_A01"
+                data-template="hl7-v2-4/ADT_A01.hl7">
+          ADT_A01 Quickstart
+        </button>
+        <button class="btn next-pipeline"
+                data-next-pipeline
+                data-trigger="ORU_R01"
+                data-template="hl7-v2-4/ORU_R01.hl7">
+          ORU_R01 Quickstart
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <script>
+    (function bridgeLegacy() {
+      if (!window.SilhouettePipeBridge) {
+        return;
+      }
+      SilhouettePipeBridge.mirror('#sa-version', '#pipe-version');
+      SilhouettePipeBridge.mirror('#sa-trigger', '#pipe-trigger-typed');
+      SilhouettePipeBridge.mirror('#sa-template-relpath', '#pipe-template-relpath');
+      SilhouettePipeBridge.mirror('#sa-textarea', '#pipe-text');
+      SilhouettePipeBridge.bindNextPipelines();
+
+      const host = document.getElementById('pipe-output-host');
+      const pipeOut = document.getElementById('pipe-out');
+      if (host && pipeOut && pipeOut.parentElement !== host) {
+        host.appendChild(pipeOut);
+      }
+
+      const templateVisible = document.getElementById('sa-template-relpath');
+      const templateHidden = document.getElementById('pipe-template-relpath');
+      if (templateVisible && templateHidden) {
+        const syncFromHidden = () => {
+          if (document.activeElement === templateVisible) {
+            return;
+          }
+          templateVisible.value = templateHidden.value || '';
+        };
+        templateHidden.addEventListener('input', syncFromHidden);
+        templateHidden.addEventListener('change', syncFromHidden);
+        syncFromHidden();
+      }
+    })();
+  </script>
+{% endblock %}
