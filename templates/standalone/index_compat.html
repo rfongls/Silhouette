@@ -20,10 +20,10 @@
         <p class="subtle">Generate → De-identify → Validate</p>
       </section>
       <div class="cards-stack">
-        {% include gen_include %}
-        {% include deid_include %}
-        {% include val_include %}
-        {% include mllp_include %}
+        {% include "standalone/legacy/_generate_panel.html" %}
+        {% include "standalone/legacy/_deid_panel.html" %}
+        {% include "standalone/legacy/_validate_panel.html" %}
+        {% include "standalone/legacy/_mllp_panel.html" ignore missing %}
       </div>
     </main>
   </body>

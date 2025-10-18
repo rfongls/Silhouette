@@ -2,16 +2,16 @@ from __future__ import annotations
 import os
 from pathlib import Path
 from typing import Dict
+
 from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse
 from starlette.templating import Jinja2Templates
-from .template_resolver import find_template, resolve_include
+from .template_resolver import find_template
 
 router = APIRouter()
 templates = Jinja2Templates(directory="templates")
 # Expose resolver to Jinja ONLY for standalone pages
 templates.env.globals["find_template"] = find_template
-templates.env.globals["resolve_include"] = resolve_include
 
 DEID_DIR = Path("configs/standalone/deid_templates")
 VAL_DIR  = Path("configs/standalone/validate_templates")
@@ -98,21 +98,12 @@ def index(request: Request) -> HTMLResponse:
 
     page = find_template("index.html") or "standalone/index_compat.html"
 
-    gen_include, _ = resolve_include("_generate_panel.html")
-    deid_include, _ = resolve_include("_deid_panel.html")
-    val_include, _ = resolve_include("_validate_panel.html")
-    mllp_include, _ = resolve_include("_mllp_panel.html")
-
     ctx = {
         "request": request,
         "urls": _standalone_urls(request),
         "deid_templates": _list_templates(DEID_DIR),
         "val_templates": _list_templates(VAL_DIR),
         "defaults": _mllp_defaults(),
-        "gen_include": gen_include,
-        "deid_include": deid_include,
-        "val_include": val_include,
-        "mllp_include": mllp_include,
     }
     return templates.TemplateResponse(page, ctx)
 
