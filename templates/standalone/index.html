@@ -96,7 +96,9 @@
       SilhouettePipeBridge.mirror('#sa-trigger', '#pipe-trigger-typed');
       SilhouettePipeBridge.mirror('#sa-template-relpath', '#pipe-template-relpath');
       SilhouettePipeBridge.mirror('#sa-textarea', '#pipe-form textarea[name="text"]');
-      SilhouettePipeBridge.bindNextPipelines();
+      if (typeof SilhouettePipeBridge.bindNextPipelines === 'function') {
+        SilhouettePipeBridge.bindNextPipelines();
+      }
 
       const host = document.getElementById('pipe-output-host');
       const pipeOut = document.getElementById('pipe-out');
