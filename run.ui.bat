@@ -3,6 +3,9 @@ setlocal ENABLEDELAYEDEXPANSION
 REM Silhouette Core UI runner (consolidated)
 REM Usage: run.ui.bat [port]
 
+REM Force-disable legacy standalone router so only the isolated module is active
+set SILH_STANDALONE_ENABLE=0
+
 if "%SILH_STANDALONE_ENABLE%"=="" set SILH_STANDALONE_ENABLE=1
 set PORT=%1
 if "%PORT%"=="" set PORT=8000
