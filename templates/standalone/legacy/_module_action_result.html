@@ -1,0 +1,11 @@
+{% set summary = summary or {} %}
+{% if summary.empty %}
+  <div class="module-action-feedback warn">
+    <p>No message payload was provided to the module.</p>
+  </div>
+{% else %}
+  <div class="module-action-feedback ok">
+    <p>Sent <strong>{{ summary.chars }}</strong> characters to <code>{{ summary.module }}</code> · <code>{{ summary.function }}</code>.</p>
+    {% if summary.params %}<p class="micro muted">Params: {{ summary.params }}</p>{% endif %}
+  </div>
+{% endif %}
