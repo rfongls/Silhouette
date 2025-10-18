@@ -28,7 +28,7 @@
 
       <div class="row gap wrap mt">
         <button class="btn"
-                hx-post="/ui/interop/generate"
+                hx-post="/api/interop/generate"
                 hx-include="#pipe-form"
                 hx-target="#pipe-out"
                 hx-swap="innerHTML">
@@ -36,7 +36,7 @@
         </button>
 
         <button class="btn"
-                hx-post="/ui/interop/validate"
+                hx-post="/api/interop/validate"
                 hx-include="#pipe-form"
                 hx-target="#pipe-out"
                 hx-swap="innerHTML">
@@ -44,7 +44,7 @@
         </button>
 
         <button class="btn"
-                hx-post="/ui/interop/deidentify"
+                hx-post="/api/interop/deidentify"
                 hx-include="#pipe-form"
                 hx-target="#pipe-out"
                 hx-swap="innerHTML">

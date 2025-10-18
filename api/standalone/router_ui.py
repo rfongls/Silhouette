@@ -150,7 +150,15 @@ def index(request: Request) -> HTMLResponse:
         if not target.exists():
             target.write_text(minimal, encoding="utf-8")
 
-    page = find_template("index.html") or "standalone/index_compat.html"
+    found = find_template("index.html")
+    if found:
+        page_path = Path(found)
+        try:
+            page = str(page_path.relative_to("templates"))
+        except ValueError:
+            page = str(page_path)
+    else:
+        page = "standalone/index_compat.html"
 
     ctx = {
         "request": request,
