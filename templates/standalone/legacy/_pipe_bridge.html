@@ -87,7 +87,14 @@
       });
     };
 
-    document.addEventListener('DOMContentLoaded', bridge.bindNextPipelines);
+    const onReady = () => {
+      if (!window.htmx) {
+        console.warn('HTMX not detected — confirm static/vendor/htmx.min.js is available.');
+      }
+      bridge.bindNextPipelines();
+    };
+
+    document.addEventListener('DOMContentLoaded', onReady);
     document.addEventListener('htmx:afterSwap', bridge.bindNextPipelines);
   })(window.SilhouettePipeBridge);
 </script>
